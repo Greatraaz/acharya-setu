@@ -109,9 +109,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get ('meta',     [MenteeOnboarding::class, 'meta']);      // GET  meta & streams
             Route::get ('status',   [MenteeOnboarding::class, 'status']);    // GET  current progress
     
-            Route::post('step/1',   [MenteeOnboarding::class, 'saveStep1']); // POST basic info
-            Route::post('step/2',   [MenteeOnboarding::class, 'saveStep2']); // POST education
+            Route::post('step/1',   [MenteeOnboarding::class, 'saveStep1']); // POST profile
+            Route::post('step/2',   [MenteeOnboarding::class, 'saveStep2']); // POST education details
             Route::post('step/3',   [MenteeOnboarding::class, 'saveStep3']); // POST career goals
+            Route::post('step/4',   [MenteeOnboarding::class, 'saveStep4']); // POST preferences
             Route::post('complete', [MenteeOnboarding::class, 'complete']);   // POST mark complete
         });
 

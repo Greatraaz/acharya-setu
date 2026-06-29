@@ -24,14 +24,14 @@ class User extends Authenticatable
  
     // ── Onboarding steps ─────────────────────────────────────
     // MENTOR steps: 0=role, 1=personal, 2=professional, 3=expertise, 4=rates, 5=done
-    // MENTEE steps: 0=role, 1=personal, 2=goals, 3=preferences, 4=done
+    // MENTEE steps: 0=role, 1=profile, 2=education, 3=career goals, 4=preferences, then complete
     const MENTOR_STEPS = 5;
     const MENTEE_STEPS = 4;
  
     protected $fillable = [
         'name', 'email', 'password', 'role',
         'wallet_balance', 'bio', 'expertise', 'field', 'college', 'year',
-        'gender', 'rating', 'total_sessions', 'avatar_url', 'phone',
+        'gender', 'rating', 'total_sessions', 'avatar_url', 'phone', 'location',
         'linkedin', 'company', 'designation', 'experience_years',
         'is_active', 'rate_per_minute', 'assigned_mentor_id',
         'subscription_plan', 'mentor_status', 'education_stream',
