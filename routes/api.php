@@ -19,8 +19,8 @@ use App\Http\Controllers\Api\CallsController;
 use App\Http\Controllers\Api\WellnessController;
 use App\Http\Controllers\Api\ReferralsController;
 use App\Http\Controllers\Api\ProgressController;
-use App\Http\Controllers\Api\PlansController;
 use App\Http\Controllers\Api\AssignmentsController;
+use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
@@ -202,9 +202,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         });
 
         // Availability
-        
-
         Route::get('mentors/{mentorId}/availability',[AvailabilityController::class, 'getByMentor']);
+
+        //Plans
+        Route::prefix('plans')->group(function () {
+            Route::post('/subscribe/{id}', [PlanController::class, 'subscribe']);                    
+            Route::get('/subscription/active', [PlanController::class, 'activeSubscription']);  
+            Route::get('/subscription/history', [PlanController::class, 'subscriptionHistory']);
+            Route::post('/subscription/cancel', [PlanController::class, 'cancelSubscription']); 
+        });
+
     });
 
     /**********************************************************
@@ -347,10 +354,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('/wellness/history',              [WellnessController::class, 'history']);
     Route::get('/referrals/my-code',             [ReferralsController::class, 'myCode']);
     Route::get('/progress',                      [ProgressController::class, 'index']);
-    Route::get('/plans',                         [PlansController::class, 'index']);
-    Route::post('/plans/subscribe',              [PlansController::class, 'subscribe']);
     Route::get('/assignments/my-mentees',        [AssignmentsController::class, 'myMentees']);
     Route::get('/assignments/my-mentor',         [AssignmentsController::class, 'myMentor']);
     Route::post('/assignments/assign',           [AssignmentsController::class, 'assign']);
 
+    Route::prefix('plans')->group(function () {
+        Route::get('/', [PlanController::class, 'index']);        
+        Route::get('/{id}', [PlanController::class, 'show']);  
+    });
 });

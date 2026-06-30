@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\{PremiumPlan, WalletTransaction, Notification};
+use App\Models\{Plans, WalletTransaction, Notification};
 use Illuminate\Http\{Request, JsonResponse};
 
 class PlansController extends Controller
@@ -11,14 +11,14 @@ class PlansController extends Controller
    
     public function index(): JsonResponse
     {
-        return response()->json(['plans' => PremiumPlan::where('is_active', true)->get()]);
+        return response()->json(['plans' => Plans::where('is_active', true)->get()]);
     }
 
     
     public function subscribe(Request $request): JsonResponse
     {
         $d    = $request->validate(['plan_slug' => 'required|string', 'razorpay_payment_id' => 'nullable|string']);
-        $plan = PremiumPlan::where('slug', $d['plan_slug'])->firstOrFail();
+        $plan = Plans::where('slug', $d['plan_slug'])->firstOrFail();
         $request->user()->update(['subscription_plan' => $plan->slug]);
         if ($plan->price_monthly > 0) {
             WalletTransaction::create([
