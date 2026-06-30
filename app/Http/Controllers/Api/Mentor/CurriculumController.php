@@ -285,16 +285,21 @@ class CurriculumController extends Controller
     {
         $weekModel = CurriculumWeek::findOrFail($week);
 
-        $data = $request->validate([
+        $rules = [
             'title'             => 'required|string|max:200',
             'description'       => 'nullable|string',
             'type'              => 'nullable|in:task,reading,video,project,quiz,reflection',
             'plan_id'           => 'required|integer|exists:plans,id',
-            'attachments'       => 'nullable|array',
-            'is_required'       => 'nullable|boolean',
-            'is_active'         => 'nullable|boolean',
-            'submission_type'   => 'nullable|in:none,text,file,link',
-        ]);
+            'is_required'       => 'nullable',
+            'is_active'         => 'nullable',
+            'submission_type'   => ['nullable', Rule::in(array_keys(CurriculumTask::SUBMISSION_TYPES))],
+        ];
+
+        if (!$request->hasFile('attachments')) {
+            $rules['attachments'] = 'nullable|array';
+        }
+
+        $data = $request->validate($rules);
 
         $this->validateTaskAttachmentFiles($request);
 
@@ -351,24 +356,44 @@ class CurriculumController extends Controller
     }
 
     // ─────────────────────────────────────────────
-    //  PATCH /mentor/curriculum/tasks/{task}
+    //  PATCH / POST /mentor/curriculum/tasks/{task}
+    //  Use POST (not PATCH) when sending form-data with file attachments.
     // ─────────────────────────────────────────────
     public function updateTask(Request $request, int $task): JsonResponse
     {
         $taskModel = CurriculumTask::findOrFail($task);
 
-        $data = $request->validate([
+        if (
+            $request->isMethod('PATCH')
+            && str_contains($request->header('Content-Type', ''), 'multipart/form-data')
+            && !$request->hasAny(['title', 'description', 'type', 'plan_id', 'submission_type'])
+            && !$request->hasFile('attachments')
+        ) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'File uploads on update require POST with form-data. PATCH does not support multipart in PHP.',
+            ], 422);
+        }
+
+        $rules = [
             'title'             => 'sometimes|string|max:200',
             'description'       => 'nullable|string',
             'type'              => 'sometimes|in:task,reading,video,project,quiz,reflection',
             'plan_id'           => 'sometimes|integer|exists:plans,id',
-            'attachments'       => 'nullable|array',
-            'is_required'       => 'nullable|boolean',
-            'is_active'         => 'nullable|boolean',
-            'submission_type'   => 'nullable|in:none,text,file,link',
+            'is_required'       => 'nullable',
+            'is_active'         => 'nullable',
+            'submission_type'   => ['nullable', Rule::in(array_keys(CurriculumTask::SUBMISSION_TYPES))],
             'mentee_id'         => 'nullable|integer|exists:users,id',
-            'is_completed'      => 'nullable|boolean',
-        ]);
+            'is_completed'      => 'nullable',
+            'replace_attachments' => 'nullable',
+        ];
+
+        if (!$request->hasFile('attachments')) {
+            $rules['attachments'] = 'nullable|array';
+        }
+
+        $data = $request->validate($rules);
 
         $this->validateTaskAttachmentFiles($request);
 
@@ -377,10 +402,14 @@ class CurriculumController extends Controller
         ])->filter(fn ($v) => $v !== null)->all();
 
         if ($request->hasFile('attachments')) {
-            $taskFields['attachments'] = $this->processUploadedAttachments(
-                $request,
-                $taskModel->attachments ?? []
-            );
+            $replace = $request->boolean('replace_attachments', true);
+            $existing = $replace ? [] : ($taskModel->attachments ?? []);
+
+            if ($replace) {
+                $this->deleteStoredAttachments($taskModel->attachments ?? []);
+            }
+
+            $taskFields['attachments'] = $this->processUploadedAttachments($request, $existing);
         } elseif ($request->has('attachments') && is_array($request->input('attachments'))) {
             $taskFields['attachments'] = $request->input('attachments');
         }
@@ -476,6 +505,23 @@ class CurriculumController extends Controller
         }
 
         return $attachments;
+    }
+
+    private function deleteStoredAttachments(array $attachments): void
+    {
+        foreach ($attachments as $attachment) {
+            $url = $attachment['url'] ?? '';
+            if ($url === '') {
+                continue;
+            }
+
+            $path = parse_url($url, PHP_URL_PATH) ?: '';
+            $path = ltrim(str_replace('/storage/', '', $path), '/');
+
+            if ($path !== '') {
+                Storage::disk('public')->delete($path);
+            }
+        }
     }
 
     private function deleteProgressForWeekIds(array $weekIds): void

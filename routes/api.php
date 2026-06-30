@@ -247,6 +247,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('weeks/{week}',            [MentorCurriculum::class, 'destroyWeek']);
             Route::post('weeks/{week}/tasks',        [MentorCurriculum::class, 'storeTask']);
             Route::get ('weeks/{week}/tasks',        [MentorCurriculum::class, 'tasks']);
+            Route::post('tasks/{task}',             [MentorCurriculum::class, 'updateTask']);
             Route::patch('tasks/{task}',             [MentorCurriculum::class, 'updateTask']);
             Route::delete('tasks/{task}',            [MentorCurriculum::class, 'destroyTask']);
         });

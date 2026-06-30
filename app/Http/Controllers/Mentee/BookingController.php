@@ -40,7 +40,10 @@ class BookingController extends Controller
 
         $scheduledAt = Carbon::parse($data['date'] . ' ' . $data['time'], 'Asia/Kolkata');
 
-        $alreadyBooked = ConsultationSession::where('mentor_id', $mentor->id)->where('scheduled_at', $scheduledAt)->whereNotIn('status', ['cancelled', 'completed']) // Optional->exists();
+        $alreadyBooked = ConsultationSession::where('mentor_id', $mentor->id)
+            ->where('scheduled_at', $scheduledAt)
+            ->whereNotIn('status', ['cancelled', 'completed'])
+            ->exists();
 
         if ($alreadyBooked) {
             if ($request->ajax() || $request->wantsJson()) {

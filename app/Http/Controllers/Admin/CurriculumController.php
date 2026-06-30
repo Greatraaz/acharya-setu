@@ -172,7 +172,7 @@ class CurriculumController extends Controller
             'estimated_minutes' => 'nullable|integer|min:0',
             'is_required'       => 'nullable|boolean',
             'is_active'         => 'nullable|boolean',
-            'submission_type'   => 'nullable|in:none,text,file,link',
+            'submission_type'   => 'nullable|in:none,text,file,link,pdf,video',
         ]);
  
         $data['week_id']     = $week->id;
@@ -193,7 +193,7 @@ class CurriculumController extends Controller
             'estimated_minutes' => 'nullable|integer|min:0',
             'is_required'       => 'nullable|boolean',
             'is_active'         => 'nullable|boolean',
-            'submission_type'   => 'nullable|in:none,text,file,link',
+            'submission_type'   => 'nullable|in:none,text,file,link,pdf,video',
         ]);
  
         $data['is_required'] = $request->boolean('is_required', true);

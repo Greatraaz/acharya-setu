@@ -28,10 +28,12 @@ class CurriculumTask extends Model
     ];
  
     const SUBMISSION_TYPES = [
-        'none' => 'No Submission',
-        'text' => 'Text',
-        'file' => 'File Upload',
-        'link' => 'URL Link',
+        'none'  => 'No Submission',
+        'text'  => 'Text',
+        'file'  => 'File Upload',
+        'link'  => 'URL Link',
+        'pdf'   => 'PDF',
+        'video' => 'Video',
     ];
  
     const TYPE_ICONS = [
