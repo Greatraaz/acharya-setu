@@ -187,6 +187,25 @@ class User extends Authenticatable
             'rejection_reason' => $reason,
         ]);
     }
+
+    /**
+     * Clear unique credentials so the same email/phone can be used again after account deletion.
+     */
+    public function releaseCredentialsForDeletion(): void
+    {
+        $this->update([
+            'is_active' => false,
+            'email'     => 'deleted_' . $this->id . '_' . now()->timestamp . '@deleted.acharyasetu.local',
+            'phone'     => null,
+        ]);
+    }
+
+    public function deleteAccount(): void
+    {
+        $this->tokens()->delete();
+        $this->releaseCredentialsForDeletion();
+        $this->delete();
+    }
  
     /**
      * Request a profile change — puts it in queue instead of saving directly.

@@ -305,4 +305,18 @@ class OnboardingController extends Controller
             ],
         ]);
     }
+
+    // ─────────────────────────────────────────────
+    //  DELETE /mentor/account
+    // ─────────────────────────────────────────────
+    public function destroyAccount(Request $request): JsonResponse
+    {
+        $request->user()->deleteAccount();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Account deleted successfully.',
+        ]);
+    }
 }
