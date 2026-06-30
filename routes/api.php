@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\AssignmentsController;
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
+use App\Http\Controllers\Api\Mentor\CurriculumController as MentorCurriculum;
 
 // Health
 // Health check endpoints
@@ -103,6 +104,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
      * Mentee Routes
      **********************************************************/
     Route::middleware('mentee')->prefix('mentee')->name('mentee.')->group(function () {
+        Route::delete('account', [MenteeOnboarding::class, 'destroyAccount'])->name('account.destroy');
+
         // ── Mentee Onboarding ─────────────────────────────────────────
         Route::prefix('onboarding')->name('onboarding.')->group(function () {
     
@@ -209,6 +212,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
      **********************************************************/
     // Base: /api/v1/mentor/onboarding
     Route::middleware('mentor')->prefix('mentor')->name('mentor.')->group(function () {
+        Route::delete('account', [MentorOnboarding::class, 'destroyAccount'])->name('account.destroy');
+
         // ── Mentor Onboarding ─────────────────────────────────────────
         Route::prefix('onboarding')->name('onboarding.')->group(function () {
     
@@ -220,6 +225,20 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('step/3',   [MentorOnboarding::class, 'saveStep3']); // POST expertise chips
             Route::post('step/4',   [MentorOnboarding::class, 'saveStep4']); // POST preferences & strengths
             Route::post('submit',   [MentorOnboarding::class, 'submit']);     // POST submit for approval
+        });
+
+        // ── Mentor Curriculum (Track → Month → Week → Task) ─────────────
+        Route::prefix('curriculum')->name('curriculum.')->group(function () {
+            Route::get ('tracks',                    [MentorCurriculum::class, 'tracks']);
+            Route::post('tracks/{track}/months',      [MentorCurriculum::class, 'storeMonth']);
+            Route::get ('tracks/{track}/months',      [MentorCurriculum::class, 'months']);
+            Route::patch('months/{month}',            [MentorCurriculum::class, 'updateMonth']);
+            Route::post('months/{month}/weeks',       [MentorCurriculum::class, 'storeWeek']);
+            Route::get ('months/{month}/weeks',       [MentorCurriculum::class, 'weeks']);
+            Route::patch('weeks/{week}',              [MentorCurriculum::class, 'updateWeek']);
+            Route::post('weeks/{week}/tasks',        [MentorCurriculum::class, 'storeTask']);
+            Route::get ('weeks/{week}/tasks',        [MentorCurriculum::class, 'tasks']);
+            Route::patch('tasks/{task}',             [MentorCurriculum::class, 'updateTask']);
         });
 
         Route::prefix('availability')->name('availability.')->group(function () {
