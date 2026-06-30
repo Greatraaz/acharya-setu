@@ -11,10 +11,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Traits\HasSubscription;
  
 class User extends Authenticatable
 {
-    use HasApiTokens,HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens,HasFactory, Notifiable, SoftDeletes,HasSubscription;
  
     // ── Mentor status constants ───────────────────────────────
     const MENTOR_STATUS_PENDING  = 'pending';
@@ -186,25 +187,6 @@ class User extends Authenticatable
             'is_active'     => false,
             'rejection_reason' => $reason,
         ]);
-    }
-
-    /**
-     * Clear unique credentials so the same email/phone can be used again after account deletion.
-     */
-    public function releaseCredentialsForDeletion(): void
-    {
-        $this->update([
-            'is_active' => false,
-            'email'     => 'deleted_' . $this->id . '_' . now()->timestamp . '@deleted.acharyasetu.local',
-            'phone'     => null,
-        ]);
-    }
-
-    public function deleteAccount(): void
-    {
-        $this->tokens()->delete();
-        $this->releaseCredentialsForDeletion();
-        $this->delete();
     }
  
     /**
