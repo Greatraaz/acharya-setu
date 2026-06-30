@@ -233,12 +233,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('tracks/{track}/months',      [MentorCurriculum::class, 'storeMonth']);
             Route::get ('tracks/{track}/months',      [MentorCurriculum::class, 'months']);
             Route::patch('months/{month}',            [MentorCurriculum::class, 'updateMonth']);
+            Route::delete('months/{month}',           [MentorCurriculum::class, 'destroyMonth']);
             Route::post('months/{month}/weeks',       [MentorCurriculum::class, 'storeWeek']);
             Route::get ('months/{month}/weeks',       [MentorCurriculum::class, 'weeks']);
             Route::patch('weeks/{week}',              [MentorCurriculum::class, 'updateWeek']);
+            Route::delete('weeks/{week}',            [MentorCurriculum::class, 'destroyWeek']);
             Route::post('weeks/{week}/tasks',        [MentorCurriculum::class, 'storeTask']);
             Route::get ('weeks/{week}/tasks',        [MentorCurriculum::class, 'tasks']);
             Route::patch('tasks/{task}',             [MentorCurriculum::class, 'updateTask']);
+            Route::delete('tasks/{task}',            [MentorCurriculum::class, 'destroyTask']);
         });
 
         Route::prefix('availability')->name('availability.')->group(function () {
