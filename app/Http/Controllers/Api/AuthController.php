@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
@@ -34,7 +35,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name'             => ['required', 'string', 'max:100'],
-            'email'            => ['required', 'email', 'unique:users,email'],
+            'email'            => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'password'         => ['required', 'confirmed', Password::min(6)],
             'role'             => ['nullable', 'in:mentor,mentee'],
             'college'          => ['nullable', 'string'],
@@ -56,10 +57,16 @@ class AuthController extends Controller
         }
 
         $validated = $validator->validated();
+        $email = strtolower($validated['email']);
+
+        // Legacy soft-deleted accounts may still hold the email — release it so re-registration works.
+        User::onlyTrashed()
+            ->where('email', $email)
+            ->each(fn (User $user) => $user->releaseCredentialsForDeletion());
 
         $user = User::create([
             'name'             => $validated['name'],
-            'email'            => strtolower($validated['email']),
+            'email'            => $email,
             'password'         => Hash::make($validated['password']),
             'role'             => $validated['role'] ?? 'mentee',
             'college'          => $validated['college'] ?? null,
