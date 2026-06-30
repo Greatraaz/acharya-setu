@@ -12,6 +12,7 @@ use App\Models\{
     StudentCurriculumProgress,
 };
 use Illuminate\Http\{Request, JsonResponse};
+use Illuminate\Validation\Rule;
 
 class CurriculumController extends Controller
 {
@@ -37,7 +38,13 @@ class CurriculumController extends Controller
         $trackModel = EducationStream::findOrFail($track);
 
         $data = $request->validate([
-            'month_number'      => 'required|integer|min:1|max:12',
+            'month_number'      => [
+                'required',
+                'integer',
+                'min:1',
+                'max:12',
+                Rule::unique('curriculum_months', 'month_number')->where('stream_id', $trackModel->id),
+            ],
             'title'             => 'required|string|max:200',
             'theme'             => 'nullable|string|max:100',
             'description'       => 'nullable|string',
@@ -74,7 +81,15 @@ class CurriculumController extends Controller
         $monthModel = CurriculumMonth::findOrFail($month);
 
         $data = $request->validate([
-            'month_number'        => 'sometimes|integer|min:1|max:12',
+            'month_number'        => [
+                'sometimes',
+                'integer',
+                'min:1',
+                'max:12',
+                Rule::unique('curriculum_months', 'month_number')
+                    ->where('stream_id', $monthModel->stream_id)
+                    ->ignore($monthModel->id),
+            ],
             'title'               => 'sometimes|string|max:200',
             'theme'               => 'nullable|string|max:100',
             'description'         => 'nullable|string',
@@ -148,7 +163,13 @@ class CurriculumController extends Controller
         $monthModel = CurriculumMonth::findOrFail($month);
 
         $data = $request->validate([
-            'week_number'  => 'required|integer|min:1|max:52',
+            'week_number'  => [
+                'required',
+                'integer',
+                'min:1',
+                'max:52',
+                Rule::unique('curriculum_weeks', 'week_number')->where('month_id', $monthModel->id),
+            ],
             'title'        => 'required|string|max:200',
             'focus'        => 'nullable|string',
             'description'  => 'nullable|string',
@@ -181,7 +202,15 @@ class CurriculumController extends Controller
         $weekModel = CurriculumWeek::findOrFail($week);
 
         $data = $request->validate([
-            'week_number'  => 'sometimes|integer|min:1|max:52',
+            'week_number'  => [
+                'sometimes',
+                'integer',
+                'min:1',
+                'max:52',
+                Rule::unique('curriculum_weeks', 'week_number')
+                    ->where('month_id', $weekModel->month_id)
+                    ->ignore($weekModel->id),
+            ],
             'title'        => 'sometimes|string|max:200',
             'focus'        => 'nullable|string',
             'description'  => 'nullable|string',
