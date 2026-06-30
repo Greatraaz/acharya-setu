@@ -12,6 +12,7 @@ use App\Models\{
     StudentCurriculumProgress,
 };
 use Illuminate\Http\{Request, JsonResponse};
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class CurriculumController extends Controller
@@ -295,13 +296,20 @@ class CurriculumController extends Controller
             'submission_type'   => 'nullable|in:none,text,file,link',
         ]);
 
+        $this->validateTaskAttachmentFiles($request);
+
+        $attachments = $this->processUploadedAttachments(
+            $request,
+            $data['attachments'] ?? []
+        );
+
         $task = CurriculumTask::create([
             'week_id'           => $weekModel->id,
             'plan_id'           => $data['plan_id'],
             'title'             => $data['title'],
             'description'       => $data['description'] ?? null,
             'type'              => $data['type'] ?? 'task',
-            'attachments'       => $data['attachments'] ?? [],
+            'attachments'       => $attachments,
             'is_required'       => $request->boolean('is_required', true),
             'is_active'         => $request->boolean('is_active', true),
             'submission_type'   => $data['submission_type'] ?? 'none',
@@ -362,9 +370,20 @@ class CurriculumController extends Controller
             'is_completed'      => 'nullable|boolean',
         ]);
 
+        $this->validateTaskAttachmentFiles($request);
+
         $taskFields = collect($data)->only([
-            'title', 'description', 'type', 'plan_id', 'attachments', 'submission_type',
+            'title', 'description', 'type', 'plan_id', 'submission_type',
         ])->filter(fn ($v) => $v !== null)->all();
+
+        if ($request->hasFile('attachments')) {
+            $taskFields['attachments'] = $this->processUploadedAttachments(
+                $request,
+                $taskModel->attachments ?? []
+            );
+        } elseif ($request->has('attachments') && is_array($request->input('attachments'))) {
+            $taskFields['attachments'] = $request->input('attachments');
+        }
 
         if ($request->has('is_required')) {
             $taskFields['is_required'] = $request->boolean('is_required');
@@ -420,6 +439,43 @@ class CurriculumController extends Controller
             'statuscode' => 200,
             'message'    => 'Task deleted.',
         ]);
+    }
+
+    private function validateTaskAttachmentFiles(Request $request): void
+    {
+        if (!$request->hasFile('attachments')) {
+            return;
+        }
+
+        $request->validate([
+            'attachments'   => 'array',
+            'attachments.*' => 'file|mimes:pdf,mp4,mov,avi,webm,mpeg,quicktime|max:102400',
+        ]);
+    }
+
+    private function processUploadedAttachments(Request $request, array $existing = []): array
+    {
+        $attachments = $existing;
+
+        if (!$request->hasFile('attachments')) {
+            return $attachments;
+        }
+
+        foreach ($request->file('attachments') as $file) {
+            if (!$file || !$file->isValid()) {
+                continue;
+            }
+
+            $path = $file->store('curriculum-tasks', 'public');
+            $attachments[] = [
+                'name' => $file->getClientOriginalName(),
+                'url'  => url(Storage::url($path)),
+                'mime' => $file->getMimeType(),
+                'size' => $file->getSize(),
+            ];
+        }
+
+        return $attachments;
     }
 
     private function deleteProgressForWeekIds(array $weekIds): void
