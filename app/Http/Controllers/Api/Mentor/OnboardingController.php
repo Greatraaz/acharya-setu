@@ -174,13 +174,24 @@ class OnboardingController extends Controller
         }
 
         $data = $request->validate([
-            'preferences'   => 'nullable|array',
-            'preferences.*' => 'string',
-            'strengths'     => 'nullable|array',
-            'strengths.*'   => 'string',
+            'preferences'                  => 'nullable|array',
+            'preferences.preferred_time' => 'nullable|string',
+            'preferences.session_length' => 'nullable|integer',
+            'strengths'                    => 'nullable|array',
+            'strengths.*'                  => 'string',
         ]);
 
-        $user->update(array_merge($data, ['onboarding_step' => 4]));
+        $update = ['onboarding_step' => 4];
+
+        if (array_key_exists('preferences', $data)) {
+            $update['preferences'] = $data['preferences'];
+        }
+
+        if (array_key_exists('strengths', $data)) {
+            $update['strengths'] = $data['strengths'];
+        }
+
+        $user->update($update);
 
         return response()->json([
             'status'     => true,
@@ -291,7 +302,7 @@ class OnboardingController extends Controller
                 'step4' => [
                     'completed' => $currentStep >= 4,
                     'data'      => [
-                        'preferences' => $user->preferences ?? [],
+                        'preferences' => $user->preferencesForResponse(),
                         'strengths'   => $user->strengths ?? [],
                     ],
                 ],

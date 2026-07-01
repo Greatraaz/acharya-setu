@@ -12,6 +12,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Traits\HasSubscription;
+use App\Casts\PreferencesCast;
  
 class User extends Authenticatable
 {
@@ -47,7 +48,7 @@ class User extends Authenticatable
         'expertise'            => 'array',
         'career_goals'         => 'array',
         'strengths'            => 'array',
-        'preferences'          => 'array',
+        'preferences'          => PreferencesCast::class,
         'is_active'            => 'boolean',
         'onboarding_completed' => 'boolean',
         'has_pending_changes'  => 'boolean',
@@ -61,6 +62,42 @@ class User extends Authenticatable
     public function getAuthPassword(): string
     {
         return $this->password;
+    }
+
+    public function preferencesForResponse(): object
+    {
+        $preferences = $this->preferences;
+
+        if (! is_array($preferences) || array_is_list($preferences) || $preferences === []) {
+            return new \stdClass();
+        }
+
+        return (object) $preferences;
+    }
+
+    public function only($attributes)
+    {
+        $attributes = is_array($attributes) ? $attributes : func_get_args();
+        $results = [];
+
+        foreach ($attributes as $attribute) {
+            if ($attribute === 'preferences') {
+                $results[$attribute] = $this->preferencesForResponse();
+                continue;
+            }
+
+            $results[$attribute] = $this->getAttribute($attribute);
+        }
+
+        return $results;
+    }
+
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        $array['preferences'] = $this->preferencesForResponse();
+
+        return $array;
     }
  
     // ── Role helpers ──────────────────────────────────────────

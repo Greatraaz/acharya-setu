@@ -3,13 +3,14 @@
 namespace App\Models;
  
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
  
 class EducationStream extends Model
 {
-    protected $fillable = ['name', 'slug', 'icon', 'color', 'description', 'is_active', 'sort_order'];
+    protected $fillable = ['mentee_id', 'mentor_id', 'name', 'slug', 'icon', 'color', 'description', 'is_active', 'sort_order'];
  
     protected $casts = ['is_active' => 'boolean'];
  
@@ -22,6 +23,16 @@ class EducationStream extends Model
         });
     }
  
+    public function mentee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'mentee_id');
+    }
+
+    public function mentor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'mentor_id');
+    }
+
     public function months(): HasMany
     {
         return $this->hasMany(CurriculumMonth::class, 'stream_id')->orderBy('month_number');

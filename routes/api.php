@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
 use App\Http\Controllers\Api\Mentor\CurriculumController as MentorCurriculum;
+use App\Http\Controllers\Api\Mentor\MenteeController as MentorMentee;
 
 // Health
 // Health check endpoints
@@ -237,6 +238,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // ── Mentor Curriculum (Track → Month → Week → Task) ─────────────
         Route::prefix('curriculum')->name('curriculum.')->group(function () {
             Route::get ('tracks',                    [MentorCurriculum::class, 'tracks']);
+            Route::post('tracks',                     [MentorCurriculum::class, 'storeTrack']);
             Route::post('tracks/{track}/months',      [MentorCurriculum::class, 'storeMonth']);
             Route::get ('tracks/{track}/months',      [MentorCurriculum::class, 'months']);
             Route::patch('months/{month}',            [MentorCurriculum::class, 'updateMonth']);
@@ -250,6 +252,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('tasks/{task}',             [MentorCurriculum::class, 'updateTask']);
             Route::patch('tasks/{task}',             [MentorCurriculum::class, 'updateTask']);
             Route::delete('tasks/{task}',            [MentorCurriculum::class, 'destroyTask']);
+        });
+
+        // ── Mentor Mentees ────────────────────────────────────────────
+        Route::prefix('mentees')->name('mentees.')->group(function () {
+            Route::get('/',       [MentorMentee::class, 'index'])->name('index');
+            Route::get('/{mentee}', [MentorMentee::class, 'show'])->name('show');
         });
 
         Route::prefix('availability')->name('availability.')->group(function () {

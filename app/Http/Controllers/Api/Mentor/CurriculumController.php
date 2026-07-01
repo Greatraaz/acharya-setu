@@ -13,6 +13,7 @@ use App\Models\{
 };
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class CurriculumController extends Controller
@@ -20,15 +21,59 @@ class CurriculumController extends Controller
     // ─────────────────────────────────────────────
     //  GET /mentor/curriculum/tracks
     // ─────────────────────────────────────────────
-    public function tracks(): JsonResponse
+    public function tracks(Request $request): JsonResponse
     {
-        $tracks = EducationStream::orderBy('sort_order')->get();
+        $tracks = EducationStream::with('mentee:id,name,email,avatar_url')
+            ->where('mentor_id', $request->user()->id)
+            ->when($request->filled('mentee_id'), fn ($q) => $q->where('mentee_id', $request->mentee_id))
+            ->orderBy('sort_order')
+            ->get();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'tracks'     => $tracks,
         ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  POST /mentor/curriculum/tracks
+    // ─────────────────────────────────────────────
+    public function storeTrack(Request $request): JsonResponse
+    {
+        $mentor = $request->user();
+
+        $data = $request->validate([
+            'mentee_id'   => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'name'        => 'required|string|max:100',
+            'description' => 'nullable|string',
+            'is_active'   => 'nullable',
+            'sort_order'  => 'nullable|integer',
+        ]);
+
+        $slug = Str::slug($data['name']);
+        if (EducationStream::where('slug', $slug)->exists()) {
+            $slug .= '-' . $data['mentee_id'];
+        }
+
+        $track = EducationStream::create([
+            'mentee_id'   => $data['mentee_id'],
+            'mentor_id'   => $mentor->id,
+            'name'        => $data['name'],
+            'slug'        => $slug,
+            'description' => $data['description'] ?? null,
+            'is_active'   => $request->boolean('is_active', true),
+            'sort_order'  => $data['sort_order'] ?? 0,
+        ]);
+
+        $track->load('mentee:id,name,email,avatar_url');
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 201,
+            'message'    => 'Track created.',
+            'track'      => $track,
+        ], 201);
     }
 
     // ─────────────────────────────────────────────
