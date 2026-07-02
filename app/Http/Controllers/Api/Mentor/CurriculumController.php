@@ -332,7 +332,7 @@ class CurriculumController extends Controller
         $monthModel = CurriculumMonth::findOrFail($month);
 
         $weeks = $monthModel->weeks()
-            ->withCount('tasks')
+            ->withCount(['tasks', 'mcqs'])
             ->orderBy('week_number')
             ->get();
 
@@ -428,6 +428,149 @@ class CurriculumController extends Controller
             'statuscode' => 200,
             'week_id'    => $weekModel->id,
             'tasks'      => $tasks,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  GET /mentor/curriculum/weeks/{week}/mcqs
+    // ─────────────────────────────────────────────
+    public function mcqs(Request $request, int $week): JsonResponse
+    {
+        $weekModel = CurriculumWeek::findOrFail($week);
+
+        $mcqs = $weekModel->mcqs()
+            ->when($request->filled('mentee_id'), fn ($q) => $q->where('mentee_id', $request->mentee_id))
+            ->orderBy('order_index')
+            ->get()
+            ->map(fn (CurriculumMcq $mcq) => $this->transformMcq($mcq));
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'week_id'    => $weekModel->id,
+            'mcqs'       => $mcqs,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  POST /mentor/curriculum/weeks/{week}/mcqs
+    // ─────────────────────────────────────────────
+    public function storeMcq(Request $request, int $week): JsonResponse
+    {
+        $weekModel = CurriculumWeek::findOrFail($week);
+
+        $data = $request->validate([
+            'mentee_id'      => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'question'       => 'required|string|max:2000',
+            'options'        => 'required|array|size:4',
+            'options.*'      => 'required|string|max:500',
+            'correct_option' => 'required|integer|min:1|max:4',
+            'explanation'    => 'nullable|string|max:5000',
+            'difficulty'     => 'nullable|in:easy,medium,hard',
+            'points'         => 'nullable|integer|min:1|max:100',
+            'is_active'      => 'nullable|boolean',
+            'order_index'    => 'nullable|integer|min:0',
+        ]);
+
+        if (!empty($weekModel->mentee_id) && (int) $weekModel->mentee_id !== (int) $data['mentee_id']) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'mentee_id must match this week.',
+            ], 422);
+        }
+
+        $mcq = CurriculumMcq::create([
+            'week_id'       => $weekModel->id,
+            'mentee_id'     => $data['mentee_id'],
+            'question'      => $data['question'],
+            'options'       => array_values($data['options']),
+            'correct_index' => ((int) $data['correct_option']) - 1,
+            'explanation'   => $data['explanation'] ?? null,
+            'difficulty'    => $data['difficulty'] ?? 'medium',
+            'points'        => $data['points'] ?? 1,
+            'is_active'     => $request->boolean('is_active', true),
+            'order_index'   => $data['order_index'] ?? 0,
+        ]);
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 201,
+            'message'    => 'MCQ created.',
+            'mcq'        => $this->transformMcq($mcq),
+        ], 201);
+    }
+
+    // ─────────────────────────────────────────────
+    //  PATCH /mentor/curriculum/mcqs/{mcq}
+    // ─────────────────────────────────────────────
+    public function updateMcq(Request $request, int $mcq): JsonResponse
+    {
+        $mcqModel = CurriculumMcq::findOrFail($mcq);
+        $weekModel = CurriculumWeek::findOrFail($mcqModel->week_id);
+
+        $data = $request->validate([
+            'mentee_id'      => ['sometimes', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'question'       => 'sometimes|string|max:2000',
+            'options'        => 'sometimes|array|size:4',
+            'options.*'      => 'required|string|max:500',
+            'correct_option' => 'sometimes|integer|min:1|max:4',
+            'explanation'    => 'nullable|string|max:5000',
+            'difficulty'     => 'nullable|in:easy,medium,hard',
+            'points'         => 'nullable|integer|min:1|max:100',
+            'is_active'      => 'nullable|boolean',
+            'order_index'    => 'nullable|integer|min:0',
+        ]);
+
+        $fields = collect($data)->only([
+            'question', 'options', 'explanation', 'difficulty', 'points', 'order_index', 'mentee_id',
+        ])->filter(fn ($v) => $v !== null)->all();
+
+        if (array_key_exists('mentee_id', $fields) && !empty($weekModel->mentee_id) && (int) $fields['mentee_id'] !== (int) $weekModel->mentee_id) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'mentee_id must match this week.',
+            ], 422);
+        }
+
+        if (array_key_exists('correct_option', $data)) {
+            $fields['correct_index'] = ((int) $data['correct_option']) - 1;
+        }
+
+        if ($request->has('is_active')) {
+            $fields['is_active'] = $request->boolean('is_active');
+        }
+
+        if (!empty($fields)) {
+            $mcqModel->update($fields);
+        }
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'MCQ updated.',
+            'mcq'        => $this->transformMcq($mcqModel->fresh()),
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  DELETE /mentor/curriculum/mcqs/{mcq}
+    // ─────────────────────────────────────────────
+    public function destroyMcq(int $mcq): JsonResponse
+    {
+        $mcqModel = CurriculumMcq::findOrFail($mcq);
+
+        StudentCurriculumProgress::where('item_type', 'mcq')
+            ->where('item_id', $mcqModel->id)
+            ->delete();
+
+        $mcqModel->delete();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'MCQ deleted.',
         ]);
     }
 
@@ -850,5 +993,12 @@ class CurriculumController extends Controller
                 ->whereIn('item_id', $mcqIds)
                 ->delete();
         }
+    }
+
+    private function transformMcq(CurriculumMcq $mcq): array
+    {
+        $row = $mcq->toArray();
+        $row['correct_option'] = ((int) $mcq->correct_index) + 1;
+        return $row;
     }
 }
