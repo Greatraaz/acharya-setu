@@ -10,6 +10,7 @@ use App\Models\{
     CurriculumTask,
     CurriculumMcq,
     StudentCurriculumProgress,
+    TaskSupportingMaterial,
 };
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\Storage;
@@ -543,6 +544,236 @@ class CurriculumController extends Controller
             'statuscode' => 200,
             'message'    => 'Task deleted.',
         ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  GET /mentor/curriculum/weeks/{week}/supporting-materials
+    // ─────────────────────────────────────────────
+    public function supportingMaterials(Request $request, int $week): JsonResponse
+    {
+        $weekModel = CurriculumWeek::findOrFail($week);
+
+        $materials = $weekModel->supportingMaterials()
+            ->when($request->filled('mentee_id'), fn ($q) => $q->where('mentee_id', $request->mentee_id))
+            ->orderBy('sort_order')
+            ->get();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'week_id'    => $weekModel->id,
+            'materials'  => $materials,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  POST /mentor/curriculum/weeks/{week}/supporting-materials
+    // ─────────────────────────────────────────────
+    public function storeSupportingMaterial(Request $request, int $week): JsonResponse
+    {
+        $weekModel = CurriculumWeek::findOrFail($week);
+
+        $data = $request->validate([
+            'mentee_id'  => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'type'       => ['required', Rule::in(array_keys(TaskSupportingMaterial::TYPES))],
+            'title'      => 'nullable|string|max:200',
+            'link'       => 'nullable|url|max:2000',
+            'is_active'  => 'nullable',
+            'sort_order' => 'nullable|integer',
+        ]);
+
+        if ($contextError = $this->validateSupportingMaterialContext($weekModel, (int) $data['mentee_id'])) {
+            return $contextError;
+        }
+
+        $type = $data['type'];
+
+        if ($type === 'videolink') {
+            $request->validate(['link' => 'required|url|max:2000']);
+            $fileMeta = [
+                'file_name' => null,
+                'file_path' => null,
+                'file_url'  => null,
+                'mime_type' => null,
+                'file_size' => null,
+                'link'      => $data['link'],
+            ];
+        } else {
+            $request->validate([
+                'file' => array_merge(['required'], $this->supportingMaterialFileRules($type)),
+            ]);
+            $fileMeta = $this->storeSupportingMaterialFile($request->file('file'));
+            $fileMeta['link'] = null;
+        }
+
+        $material = TaskSupportingMaterial::create([
+            'week_id'    => $weekModel->id,
+            'mentee_id'  => $data['mentee_id'],
+            'mentor_id'  => $request->user()->id,
+            'title'      => $data['title'] ?? null,
+            'type'       => $type,
+            'is_active'  => $request->boolean('is_active', true),
+            'sort_order' => $data['sort_order'] ?? 0,
+            ...$fileMeta,
+        ]);
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 201,
+            'message'    => 'Supporting material created.',
+            'material'   => $material,
+        ], 201);
+    }
+
+    // ─────────────────────────────────────────────
+    //  PATCH / POST /mentor/curriculum/supporting-materials/{material}
+    //  Use POST (not PATCH) when sending form-data with file.
+    // ─────────────────────────────────────────────
+    public function updateSupportingMaterial(Request $request, int $material): JsonResponse
+    {
+        $materialModel = TaskSupportingMaterial::findOrFail($material);
+
+        if (
+            $request->isMethod('PATCH')
+            && str_contains($request->header('Content-Type', ''), 'multipart/form-data')
+            && !$request->hasFile('file')
+        ) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'File uploads on update require POST with form-data. PATCH does not support multipart in PHP.',
+            ], 422);
+        }
+
+        $data = $request->validate([
+            'mentee_id'  => ['sometimes', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'week_id'    => ['sometimes', 'integer', 'exists:curriculum_weeks,id'],
+            'type'       => ['sometimes', Rule::in(array_keys(TaskSupportingMaterial::TYPES))],
+            'title'      => 'nullable|string|max:200',
+            'link'       => 'nullable|url|max:2000',
+            'is_active'  => 'nullable',
+            'sort_order' => 'nullable|integer',
+        ]);
+
+        $weekModel = CurriculumWeek::findOrFail((int) ($data['week_id'] ?? $materialModel->week_id));
+        $menteeId = (int) ($data['mentee_id'] ?? $materialModel->mentee_id);
+
+        if ($contextError = $this->validateSupportingMaterialContext($weekModel, $menteeId)) {
+            return $contextError;
+        }
+
+        $type = $data['type'] ?? $materialModel->type;
+
+        if ($type === 'videolink' && !$request->filled('link') && empty($materialModel->link)) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'link is required for videolink type.',
+            ], 422);
+        }
+
+        $fields = collect($data)->only([
+            'week_id', 'mentee_id', 'title', 'type', 'sort_order',
+        ])->filter(fn ($v) => $v !== null)->all();
+
+        if ($request->has('is_active')) {
+            $fields['is_active'] = $request->boolean('is_active');
+        }
+
+        if ($type === 'videolink') {
+            if ($request->filled('link')) {
+                $fields['link'] = $data['link'];
+            }
+
+            if ($request->has('type') && $type === 'videolink' && $materialModel->file_path) {
+                $this->deleteSupportingMaterialFile($materialModel);
+                $fields['file_name'] = null;
+                $fields['file_path'] = null;
+                $fields['file_url']  = null;
+                $fields['mime_type'] = null;
+                $fields['file_size'] = null;
+            }
+        } elseif ($request->hasFile('file')) {
+            $request->validate([
+                'file' => $this->supportingMaterialFileRules($type),
+            ]);
+
+            $this->deleteSupportingMaterialFile($materialModel);
+            $fields = array_merge($fields, $this->storeSupportingMaterialFile($request->file('file')));
+            $fields['link'] = null;
+        }
+
+        if (!empty($fields)) {
+            $materialModel->update($fields);
+        }
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Supporting material updated.',
+            'material'   => $materialModel->fresh(),
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  DELETE /mentor/curriculum/supporting-materials/{material}
+    // ─────────────────────────────────────────────
+    public function destroySupportingMaterial(int $material): JsonResponse
+    {
+        $materialModel = TaskSupportingMaterial::findOrFail($material);
+
+        $this->deleteSupportingMaterialFile($materialModel);
+        $materialModel->delete();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Supporting material deleted.',
+        ]);
+    }
+
+    private function validateSupportingMaterialContext(CurriculumWeek $week, int $menteeId): ?JsonResponse
+    {
+        if (!empty($week->mentee_id) && (int) $week->mentee_id !== $menteeId) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'mentee_id does not match this week.',
+            ], 422);
+        }
+
+        return null;
+    }
+
+    private function supportingMaterialFileRules(string $type): array
+    {
+        return match ($type) {
+            'pdf'   => ['file', 'mimes:pdf', 'max:20480'],
+            'doc'   => ['file', 'mimes:doc,docx', 'max:20480'],
+            'image' => ['file', 'mimes:jpg,jpeg,png,gif,webp', 'max:10240'],
+            'ppt'   => ['file', 'mimes:ppt,pptx', 'max:30720'],
+            default => ['file', 'max:20480'],
+        };
+    }
+
+    private function storeSupportingMaterialFile($file): array
+    {
+        $path = $file->store('curriculum-supporting-materials', 'public');
+
+        return [
+            'file_name' => $file->getClientOriginalName(),
+            'file_path' => $path,
+            'file_url'  => url(Storage::url($path)),
+            'mime_type' => $file->getMimeType(),
+            'file_size' => $file->getSize(),
+        ];
+    }
+
+    private function deleteSupportingMaterialFile(TaskSupportingMaterial $material): void
+    {
+        if ($material->file_path) {
+            Storage::disk('public')->delete($material->file_path);
+        }
     }
 
     private function validateTaskAttachmentFiles(Request $request): void

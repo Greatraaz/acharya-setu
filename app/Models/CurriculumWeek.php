@@ -42,6 +42,11 @@ class CurriculumWeek extends Model
     {
         return $this->hasMany(WeeklyCheckin::class, 'week_id');
     }
+
+    public function supportingMaterials(): HasMany
+    {
+        return $this->hasMany(TaskSupportingMaterial::class, 'week_id')->orderBy('sort_order');
+    }
  
     public function getProgressForUser(int $userId): array
     {
