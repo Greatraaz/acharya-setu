@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 class CurriculumMonth extends Model
 {
     protected $fillable = [
-        'stream_id', 'month_number', 'title', 'description', 'theme',
+        'stream_id', 'mentee_id', 'month_number', 'title', 'description', 'theme',
         'cover_image', 'learning_outcomes', 'milestone_badge', 'is_active', 'sort_order',
     ];
  
@@ -22,6 +22,11 @@ class CurriculumMonth extends Model
     public function stream(): BelongsTo
     {
         return $this->belongsTo(EducationStream::class, 'stream_id');
+    }
+
+    public function mentee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'mentee_id');
     }
  
     public function weeks(): HasMany

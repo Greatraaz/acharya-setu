@@ -84,6 +84,7 @@ class CurriculumController extends Controller
         $trackModel = EducationStream::findOrFail($track);
 
         $data = $request->validate([
+            'mentee_id'         => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'month_number'      => [
                 'required',
                 'integer',
@@ -100,8 +101,17 @@ class CurriculumController extends Controller
             'sort_order'        => 'nullable|integer',
         ]);
 
+        if (!empty($trackModel->mentee_id) && (int) $data['mentee_id'] !== (int) $trackModel->mentee_id) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'mentee_id must match this track.',
+            ], 422);
+        }
+
         $month = CurriculumMonth::create([
             'stream_id'         => $trackModel->id,
+            'mentee_id'         => $data['mentee_id'],
             'month_number'      => $data['month_number'],
             'title'             => $data['title'],
             'theme'             => $data['theme'] ?? null,
@@ -209,6 +219,7 @@ class CurriculumController extends Controller
         $monthModel = CurriculumMonth::findOrFail($month);
 
         $data = $request->validate([
+            'mentee_id'    => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'week_number'  => [
                 'required',
                 'integer',
@@ -223,8 +234,17 @@ class CurriculumController extends Controller
             'sort_order'   => 'nullable|integer',
         ]);
 
+        if (!empty($monthModel->mentee_id) && (int) $data['mentee_id'] !== (int) $monthModel->mentee_id) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'mentee_id must match this month.',
+            ], 422);
+        }
+
         $week = CurriculumWeek::create([
             'month_id'     => $monthModel->id,
+            'mentee_id'    => $data['mentee_id'],
             'week_number'  => $data['week_number'],
             'title'        => $data['title'],
             'focus'        => $data['focus'] ?? $data['description'] ?? null,
@@ -331,6 +351,7 @@ class CurriculumController extends Controller
         $weekModel = CurriculumWeek::findOrFail($week);
 
         $rules = [
+            'mentee_id'         => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'title'             => 'required|string|max:200',
             'description'       => 'nullable|string',
             'type'              => 'nullable|in:task,reading,video,project,quiz,reflection',
@@ -346,6 +367,14 @@ class CurriculumController extends Controller
 
         $data = $request->validate($rules);
 
+        if (!empty($weekModel->mentee_id) && (int) $data['mentee_id'] !== (int) $weekModel->mentee_id) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'mentee_id must match this week.',
+            ], 422);
+        }
+
         $this->validateTaskAttachmentFiles($request);
 
         $attachments = $this->processUploadedAttachments(
@@ -355,6 +384,7 @@ class CurriculumController extends Controller
 
         $task = CurriculumTask::create([
             'week_id'           => $weekModel->id,
+            'mentee_id'         => $data['mentee_id'],
             'plan_id'           => $data['plan_id'],
             'title'             => $data['title'],
             'description'       => $data['description'] ?? null,
@@ -369,7 +399,7 @@ class CurriculumController extends Controller
             'status'     => true,
             'statuscode' => 201,
             'message'    => 'Task created.',
-            'task'       => $task->load('plan:id,name,slug'),
+            'task'       => $task->load(['plan' => fn ($q) => $q->brief()]),
         ], 201);
     }
 
@@ -381,7 +411,7 @@ class CurriculumController extends Controller
         $weekModel = CurriculumWeek::findOrFail($week);
         $menteeId = $request->query('mentee_id');
 
-        $tasks = $weekModel->tasks()->with('plan:id,name,slug')->orderBy('order_index')->get()->map(function (CurriculumTask $task) use ($menteeId) {
+        $tasks = $weekModel->tasks()->with(['plan' => fn ($q) => $q->brief()])->orderBy('order_index')->get()->map(function (CurriculumTask $task) use ($menteeId) {
             $row = $task->toArray();
             $row['is_completed'] = false;
 
@@ -490,7 +520,7 @@ class CurriculumController extends Controller
             'status'     => true,
             'statuscode' => 200,
             'message'    => 'Task updated.',
-            'task'       => $taskModel->fresh()->load('plan:id,name,slug'),
+            'task'       => $taskModel->fresh()->load(['plan' => fn ($q) => $q->brief()]),
             'progress'   => $progress,
         ]);
     }

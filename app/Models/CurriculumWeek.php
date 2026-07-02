@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class CurriculumWeek extends Model
 {
     protected $fillable = [
-        'month_id', 'week_number', 'title', 'focus',
+        'month_id', 'mentee_id', 'week_number', 'title', 'focus',
         'mentor_guide', 'resources', 'video_url', 'is_active', 'sort_order',
     ];
  
@@ -21,6 +21,11 @@ class CurriculumWeek extends Model
     public function month(): BelongsTo
     {
         return $this->belongsTo(CurriculumMonth::class, 'month_id');
+    }
+
+    public function mentee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'mentee_id');
     }
  
     public function tasks(): HasMany

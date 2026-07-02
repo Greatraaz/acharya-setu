@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CurriculumTask extends Model
 {
     protected $fillable = [
-        'week_id', 'plan_id', 'title', 'description', 'type', 'order_index',
+        'week_id', 'mentee_id', 'plan_id', 'title', 'description', 'type', 'order_index',
         'estimated_minutes', 'is_required', 'is_active', 'attachments', 'submission_type',
     ];
  
@@ -48,6 +48,11 @@ class CurriculumTask extends Model
     public function week(): BelongsTo
     {
         return $this->belongsTo(CurriculumWeek::class, 'week_id');
+    }
+
+    public function mentee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'mentee_id');
     }
 
     public function plan(): BelongsTo
