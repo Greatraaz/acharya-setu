@@ -239,24 +239,24 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::prefix('curriculum')->name('curriculum.')->group(function () {
             Route::get ('tracks',                    [MentorCurriculum::class, 'tracks']);
             Route::post('tracks',                     [MentorCurriculum::class, 'storeTrack']);
-            Route::post('tracks/{track}/months',      [MentorCurriculum::class, 'storeMonth'])->whereNumber('track');
-            Route::get ('tracks/{track}/months',      [MentorCurriculum::class, 'months'])->whereNumber('track');
-            Route::patch('months/{month}',            [MentorCurriculum::class, 'updateMonth'])->whereNumber('month');
-            Route::delete('months/{month}',           [MentorCurriculum::class, 'destroyMonth'])->whereNumber('month');
-            Route::post('months/{month}/weeks',       [MentorCurriculum::class, 'storeWeek'])->whereNumber('month');
-            Route::get ('months/{month}/weeks',       [MentorCurriculum::class, 'weeks'])->whereNumber('month');
-            Route::patch('weeks/{week}',              [MentorCurriculum::class, 'updateWeek'])->whereNumber('week');
-            Route::delete('weeks/{week}',            [MentorCurriculum::class, 'destroyWeek'])->whereNumber('week');
-            Route::post('weeks/{week}/tasks',        [MentorCurriculum::class, 'storeTask'])->whereNumber('week');
-            Route::get ('weeks/{week}/tasks',        [MentorCurriculum::class, 'tasks'])->whereNumber('week');
-            Route::post('tasks/{task}',             [MentorCurriculum::class, 'updateTask'])->whereNumber('task');
-            Route::patch('tasks/{task}',             [MentorCurriculum::class, 'updateTask'])->whereNumber('task');
-            Route::delete('tasks/{task}',            [MentorCurriculum::class, 'destroyTask'])->whereNumber('task');
-            Route::get ('weeks/{week}/supporting-materials', [MentorCurriculum::class, 'supportingMaterials'])->whereNumber('week');
-            Route::post('weeks/{week}/supporting-materials', [MentorCurriculum::class, 'storeSupportingMaterial'])->whereNumber('week');
-            Route::post('supporting-materials/{material}', [MentorCurriculum::class, 'updateSupportingMaterial'])->whereNumber('material');
-            Route::patch('supporting-materials/{material}', [MentorCurriculum::class, 'updateSupportingMaterial'])->whereNumber('material');
-            Route::delete('supporting-materials/{material}', [MentorCurriculum::class, 'destroySupportingMaterial'])->whereNumber('material');
+            Route::post('tracks/{track}/months',      [MentorCurriculum::class, 'storeMonth']);
+            Route::get ('tracks/{track}/months',      [MentorCurriculum::class, 'months']);
+            Route::patch('months/{month}',            [MentorCurriculum::class, 'updateMonth']);
+            Route::delete('months/{month}',           [MentorCurriculum::class, 'destroyMonth']);
+            Route::post('months/{month}/weeks',       [MentorCurriculum::class, 'storeWeek']);
+            Route::get ('months/{month}/weeks',       [MentorCurriculum::class, 'weeks']);
+            Route::patch('weeks/{week}',              [MentorCurriculum::class, 'updateWeek']);
+            Route::delete('weeks/{week}',            [MentorCurriculum::class, 'destroyWeek']);
+            Route::post('weeks/{week}/tasks',        [MentorCurriculum::class, 'storeTask']);
+            Route::get ('weeks/{week}/tasks',        [MentorCurriculum::class, 'tasks']);
+            Route::post('tasks/{task}',             [MentorCurriculum::class, 'updateTask']);
+            Route::patch('tasks/{task}',             [MentorCurriculum::class, 'updateTask']);
+            Route::delete('tasks/{task}',            [MentorCurriculum::class, 'destroyTask']);
+            Route::get ('weeks/{week}/supporting-materials', [MentorCurriculum::class, 'supportingMaterials']);
+            Route::post('weeks/{week}/supporting-materials', [MentorCurriculum::class, 'storeSupportingMaterial']);
+            Route::post('supporting-materials/{material}', [MentorCurriculum::class, 'updateSupportingMaterial']);
+            Route::patch('supporting-materials/{material}', [MentorCurriculum::class, 'updateSupportingMaterial']);
+            Route::delete('supporting-materials/{material}', [MentorCurriculum::class, 'destroySupportingMaterial']);
         });
 
         // ── Mentor Mentees ────────────────────────────────────────────
