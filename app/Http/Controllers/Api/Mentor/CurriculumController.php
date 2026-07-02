@@ -942,7 +942,7 @@ class CurriculumController extends Controller
         return match ($type) {
             'pdf'   => ['file', 'mimes:pdf', 'max:20480'],
             'doc'   => ['file', 'mimes:doc,docx', 'max:20480'],
-            'image' => ['file', 'mimes:jpg,jpeg,png,gif,webp', 'max:10240'],
+            'image' => ['file', 'mimes:jpg,jpeg,png,gif,webp,heic,heif', 'max:10240'],
             'ppt'   => ['file', 'mimes:ppt,pptx', 'max:30720'],
             default => ['file', 'max:20480'],
         };
@@ -976,7 +976,7 @@ class CurriculumController extends Controller
 
         $request->validate([
             'attachments'   => 'array',
-            'attachments.*' => 'file|mimes:pdf,mp4,mov,avi,webm,mpeg,quicktime|max:102400',
+            'attachments.*' => 'file|mimes:' . implode(',', CurriculumTask::ALLOWED_ATTACHMENT_MIMES) . '|max:102400',
         ]);
     }
 

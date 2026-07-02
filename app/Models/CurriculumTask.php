@@ -44,6 +44,13 @@ class CurriculumTask extends Model
         'quiz'       => '❓',
         'reflection' => '💭',
     ];
+
+    /** Allowed attachment extensions for task create/update (multipart `attachments[]`). */
+    const ALLOWED_ATTACHMENT_MIMES = [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif',
+        'pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt',
+        'mp4', 'mov', 'avi', 'webm', 'mpeg',
+    ];
  
     public function week(): BelongsTo
     {
