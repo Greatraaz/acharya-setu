@@ -459,6 +459,55 @@ class CurriculumController extends Controller
     {
         $weekModel = CurriculumWeek::findOrFail($week);
 
+        $isBulk = $request->has('mcqs');
+
+        if ($isBulk) {
+            $payload = $request->validate([
+                'mcqs'                      => 'required|array|min:1',
+                'mcqs.*.mentee_id'          => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+                'mcqs.*.question'           => 'required|string|max:2000',
+                'mcqs.*.options'            => 'required|array|size:4',
+                'mcqs.*.options.*'          => 'required|string|max:500',
+                'mcqs.*.correct_option'     => 'required|integer|min:1|max:4',
+                'mcqs.*.explanation'        => 'nullable|string|max:5000',
+                'mcqs.*.difficulty'         => 'nullable|in:easy,medium,hard',
+                'mcqs.*.points'             => 'nullable|integer|min:1|max:100',
+                'mcqs.*.is_active'          => 'nullable|boolean',
+                'mcqs.*.order_index'        => 'nullable|integer|min:0',
+            ]);
+
+            $created = [];
+            foreach ($payload['mcqs'] as $row) {
+                if (!empty($weekModel->mentee_id) && (int) $weekModel->mentee_id !== (int) $row['mentee_id']) {
+                    return response()->json([
+                        'status'     => false,
+                        'statuscode' => 422,
+                        'message'    => 'mentee_id must match this week for all mcqs.',
+                    ], 422);
+                }
+
+                $created[] = CurriculumMcq::create([
+                    'week_id'       => $weekModel->id,
+                    'mentee_id'     => $row['mentee_id'],
+                    'question'      => $row['question'],
+                    'options'       => array_values($row['options']),
+                    'correct_index' => ((int) $row['correct_option']) - 1,
+                    'explanation'   => $row['explanation'] ?? null,
+                    'difficulty'    => $row['difficulty'] ?? 'medium',
+                    'points'        => $row['points'] ?? 1,
+                    'is_active'     => (bool) ($row['is_active'] ?? true),
+                    'order_index'   => $row['order_index'] ?? 0,
+                ]);
+            }
+
+            return response()->json([
+                'status'     => true,
+                'statuscode' => 201,
+                'message'    => 'MCQs created.',
+                'mcqs'       => collect($created)->map(fn (CurriculumMcq $mcq) => $this->transformMcq($mcq))->values(),
+            ], 201);
+        }
+
         $data = $request->validate([
             'mentee_id'      => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'question'       => 'required|string|max:2000',
