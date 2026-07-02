@@ -69,8 +69,8 @@ class BookingController extends Controller
             'status'           => 'upcoming',
             'amount'           => $amount,
             'currency'         => 'INR',
-            'booking_id'       => 'AS-' . rand(8),
-            'channel'          => $channel,
+            'booking_ref'      => 'AS-' . rand(8),
+            'meeting_channel'  => $channel,
             'meeting_link'     => url('as/' . $channel)
         ]);
 
@@ -84,7 +84,7 @@ class BookingController extends Controller
             'balance_before'       => $balanceBefore,
             'balance_after'        => $mentee->fresh()->wallet_balance,
             'description'          => "Session booked with {$mentor->name}",
-            'reference'            => $session->booking_id,
+            'reference'            => $session->booking_ref,
             'status'               => 'completed',
             'transactionable_type' => ConsultationSession::class,
             'transactionable_id'   => $session->id,
@@ -96,12 +96,12 @@ class BookingController extends Controller
             return response()->json([
                 'message'     => 'Session booked successfully!',
                 'redirect'    => route('mentee.sessions'),
-                'booking_id' => $session->booking_id,
+                'booking_ref' => $session->booking_ref,
                 'amount'      => $amount,
             ]);
         }
 
-        return redirect()->route('mentee.sessions')->with('success', 'Session booked! Ref: ' . $session->booking_id);
+        return redirect()->route('mentee.sessions')->with('success', 'Session booked! Ref: ' . $session->booking_ref);
     }
 
     public function reviewForm(int $id)

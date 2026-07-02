@@ -16,12 +16,17 @@ class ConsultationSession extends Model
     use SoftDeletes;
  
     protected $fillable = [
-        'booking_id','mentor_id','mentee_id','scheduled_at','duration_minutes','timezone','title','mentor_notes',
-        'meeting_link','channel','status','cancellation_reason','cancelled_by','amount','currency'
+        'booking_ref', 'mentor_id', 'mentee_id', 'scheduled_at', 'duration_minutes', 'timezone',
+        'title', 'agenda', 'mentor_notes', 'meeting_link', 'meeting_provider', 'meeting_channel',
+        'status', 'cancellation_reason', 'cancelled_by', 'cancelled_at', 'started_at', 'ended_at',
+        'actual_duration_seconds', 'amount', 'currency', 'payment_status', 'payment_reference',
     ];
- 
+
     protected $casts = [
         'scheduled_at'  => 'datetime',
+        'cancelled_at'  => 'datetime',
+        'started_at'    => 'datetime',
+        'ended_at'      => 'datetime',
         'amount'        => 'decimal:2',
     ];
  

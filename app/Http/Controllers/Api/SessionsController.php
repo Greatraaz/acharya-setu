@@ -92,8 +92,8 @@ class SessionsController extends Controller
             'status'           => 'upcoming',
             'amount'           => $amount,
             'currency'         => 'INR',
-            'booking_id'       => 'AS-' . mt_rand(10000000, 99999999),
-            'channel'          => $channel,
+            'booking_ref'      => 'AS-' . mt_rand(10000000, 99999999),
+            'meeting_channel'  => $channel,
             'meeting_link'     => url('as/' . $channel),
         ]);
 
