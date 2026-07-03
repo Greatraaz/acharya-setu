@@ -78,6 +78,28 @@ class VideosController extends Controller
         return response()->json(['message' => 'Marked as watched']);
     }
 
+    public function menteeMentorVideos(Request $request): JsonResponse
+    {
+        $videos = MentorVideo::where('is_active', true)
+            ->with(['files', 'mentor:id,name,avatar_url'])
+            ->latest()
+            ->get()
+            ->map(fn (MentorVideo $video) => array_merge($this->formatMentorVideo($video), [
+                'mentor' => $video->mentor ? [
+                    'id'         => $video->mentor->id,
+                    'name'       => $video->mentor->name,
+                    'avatar_url' => $video->mentor->avatar_url,
+                ] : null,
+            ]));
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'videos'     => $videos,
+            'total'      => $videos->count(),
+        ]);
+    }
+
     // ── Mentor: CRUD (name, description, videos[]) ───────────────────
 
     public function mentorIndex(Request $request): JsonResponse

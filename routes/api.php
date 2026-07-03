@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\AssignmentsController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
+use App\Http\Controllers\Api\Mentee\CurriculumController as MenteeCurriculum;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
 use App\Http\Controllers\Api\Mentor\CurriculumController as MentorCurriculum;
 use App\Http\Controllers\Api\Mentor\MenteeController as MentorMentee;
@@ -121,6 +122,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('step/4',   [MenteeOnboarding::class, 'saveStep4']); // POST preferences
             Route::post('complete', [MenteeOnboarding::class, 'complete']);   // POST mark complete
         });
+
+        // Curriculum (mentor-assigned) + admin MCQs
+        Route::prefix('curriculum')->name('curriculum.')->group(function () {
+            Route::get('/',           [MenteeCurriculum::class, 'index'])->name('index');
+            Route::get('/admin-mcqs', [MenteeCurriculum::class, 'adminMcqs'])->name('adminMcqs');
+        });
+
+        // Mentor video collections (all active)
+        Route::get('mentor-videos', [VideosController::class, 'menteeMentorVideos'])->name('mentor-videos');
 
         // Mentors
         Route::prefix('mentors')->name('mentors.')->group(function () {
