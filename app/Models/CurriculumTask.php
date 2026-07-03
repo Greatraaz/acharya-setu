@@ -51,6 +51,8 @@ class CurriculumTask extends Model
         'pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt',
         'mp4', 'mov', 'avi', 'webm', 'mpeg',
     ];
+
+    const ATTACHMENT_MAX_KB = 10240; // 10MB
  
     public function week(): BelongsTo
     {

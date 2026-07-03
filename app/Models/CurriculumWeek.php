@@ -37,6 +37,11 @@ class CurriculumWeek extends Model
     {
         return $this->hasMany(CurriculumMcq::class, 'week_id')->orderBy('order_index');
     }
+
+    public function mcqTopics(): HasMany
+    {
+        return $this->hasMany(CurriculumMcqTopic::class, 'week_id')->orderBy('order_index');
+    }
  
     public function checkins(): HasMany
     {

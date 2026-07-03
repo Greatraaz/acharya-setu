@@ -9,6 +9,7 @@ use App\Models\{
     CurriculumWeek,
     CurriculumTask,
     CurriculumMcq,
+    CurriculumMcqTopic,
     StudentCurriculumProgress,
     TaskSupportingMaterial,
 };
@@ -332,7 +333,7 @@ class CurriculumController extends Controller
         $monthModel = CurriculumMonth::findOrFail($month);
 
         $weeks = $monthModel->weeks()
-            ->withCount(['tasks', 'mcqs'])
+            ->withCount(['tasks', 'mcqTopics', 'mcqs'])
             ->orderBy('week_number')
             ->get();
 
@@ -432,96 +433,45 @@ class CurriculumController extends Controller
     }
 
     // ─────────────────────────────────────────────
-    //  GET /mentor/curriculum/weeks/{week}/mcqs
+    //  MCQ Topics + MCQs — single CRUD under /weeks/{week}/mcqs
+    //  GET    list topics with nested mcqs
+    //  POST   create topic with mcqs
+    //  PATCH  update topic + replace mcqs
+    //  DELETE delete topic and its mcqs
     // ─────────────────────────────────────────────
     public function mcqs(Request $request, int $week): JsonResponse
     {
         $weekModel = CurriculumWeek::findOrFail($week);
 
-        $mcqs = $weekModel->mcqs()
+        $mcqTopics = $weekModel->mcqTopics()
+            ->with(['mcqs' => fn ($q) => $q->orderBy('order_index')])
             ->when($request->filled('mentee_id'), fn ($q) => $q->where('mentee_id', $request->mentee_id))
             ->orderBy('order_index')
             ->get()
-            ->map(fn (CurriculumMcq $mcq) => $this->transformMcq($mcq));
+            ->map(fn (CurriculumMcqTopic $topic) => $this->transformMcqTopic($topic));
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'week_id'    => $weekModel->id,
-            'mcqs'       => $mcqs,
+            'mcq_topics' => $mcqTopics,
+            'total'      => $mcqTopics->count(),
         ]);
     }
 
-    // ─────────────────────────────────────────────
-    //  POST /mentor/curriculum/weeks/{week}/mcqs
-    // ─────────────────────────────────────────────
     public function storeMcq(Request $request, int $week): JsonResponse
     {
         $weekModel = CurriculumWeek::findOrFail($week);
 
-        $isBulk = $request->has('mcqs');
+        $data = $request->validate(array_merge([
+            'mentee_id'   => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'name'        => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'order_index' => 'nullable|integer|min:0',
+            'is_active'   => 'nullable|boolean',
+        ], $this->bulkMcqRules('mcqs')));
 
-        if ($isBulk) {
-            $payload = $request->validate([
-                'mcqs'                      => 'required|array|min:1',
-                'mcqs.*.mentee_id'          => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
-                'mcqs.*.question'           => 'required|string|max:2000',
-                'mcqs.*.options'            => 'required|array|size:4',
-                'mcqs.*.options.*'          => 'required|string|max:500',
-                'mcqs.*.correct_option'     => 'required|integer|min:1|max:4',
-                'mcqs.*.explanation'        => 'nullable|string|max:5000',
-                'mcqs.*.difficulty'         => 'nullable|in:easy,medium,hard',
-                'mcqs.*.points'             => 'nullable|integer|min:1|max:100',
-                'mcqs.*.is_active'          => 'nullable|boolean',
-                'mcqs.*.order_index'        => 'nullable|integer|min:0',
-            ]);
-
-            $created = [];
-            foreach ($payload['mcqs'] as $row) {
-                if (!empty($weekModel->mentee_id) && (int) $weekModel->mentee_id !== (int) $row['mentee_id']) {
-                    return response()->json([
-                        'status'     => false,
-                        'statuscode' => 422,
-                        'message'    => 'mentee_id must match this week for all mcqs.',
-                    ], 422);
-                }
-
-                $created[] = CurriculumMcq::create([
-                    'week_id'       => $weekModel->id,
-                    'mentee_id'     => $row['mentee_id'],
-                    'question'      => $row['question'],
-                    'options'       => array_values($row['options']),
-                    'correct_index' => ((int) $row['correct_option']) - 1,
-                    'explanation'   => $row['explanation'] ?? null,
-                    'difficulty'    => $row['difficulty'] ?? 'medium',
-                    'points'        => $row['points'] ?? 1,
-                    'is_active'     => (bool) ($row['is_active'] ?? true),
-                    'order_index'   => $row['order_index'] ?? 0,
-                ]);
-            }
-
-            return response()->json([
-                'status'     => true,
-                'statuscode' => 201,
-                'message'    => 'MCQs created.',
-                'mcqs'       => collect($created)->map(fn (CurriculumMcq $mcq) => $this->transformMcq($mcq))->values(),
-            ], 201);
-        }
-
-        $data = $request->validate([
-            'mentee_id'      => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
-            'question'       => 'required|string|max:2000',
-            'options'        => 'required|array|size:4',
-            'options.*'      => 'required|string|max:500',
-            'correct_option' => 'required|integer|min:1|max:4',
-            'explanation'    => 'nullable|string|max:5000',
-            'difficulty'     => 'nullable|in:easy,medium,hard',
-            'points'         => 'nullable|integer|min:1|max:100',
-            'is_active'      => 'nullable|boolean',
-            'order_index'    => 'nullable|integer|min:0',
-        ]);
-
-        if (!empty($weekModel->mentee_id) && (int) $weekModel->mentee_id !== (int) $data['mentee_id']) {
+        if (! empty($weekModel->mentee_id) && (int) $weekModel->mentee_id !== (int) $data['mentee_id']) {
             return response()->json([
                 'status'     => false,
                 'statuscode' => 422,
@@ -529,97 +479,94 @@ class CurriculumController extends Controller
             ], 422);
         }
 
-        $mcq = CurriculumMcq::create([
-            'week_id'       => $weekModel->id,
-            'mentee_id'     => $data['mentee_id'],
-            'question'      => $data['question'],
-            'options'       => array_values($data['options']),
-            'correct_index' => ((int) $data['correct_option']) - 1,
-            'explanation'   => $data['explanation'] ?? null,
-            'difficulty'    => $data['difficulty'] ?? 'medium',
-            'points'        => $data['points'] ?? 1,
-            'is_active'     => $request->boolean('is_active', true),
-            'order_index'   => $data['order_index'] ?? 0,
+        $topic = CurriculumMcqTopic::create([
+            'week_id'     => $weekModel->id,
+            'mentee_id'   => $data['mentee_id'],
+            'name'        => $data['name'],
+            'description' => $data['description'] ?? null,
+            'order_index' => $data['order_index'] ?? 0,
+            'is_active'   => $request->boolean('is_active', true),
         ]);
+
+        foreach ($data['mcqs'] as $row) {
+            $this->createMcqForTopic($topic, $weekModel, $row);
+        }
+
+        $topic->load(['mcqs' => fn ($q) => $q->orderBy('order_index')]);
 
         return response()->json([
             'status'     => true,
             'statuscode' => 201,
-            'message'    => 'MCQ created.',
-            'mcq'        => $this->transformMcq($mcq),
+            'message'    => 'MCQ topic created.',
+            'mcq_topic'  => $this->transformMcqTopic($topic),
         ], 201);
     }
 
-    // ─────────────────────────────────────────────
-    //  PATCH /mentor/curriculum/mcqs/{mcq}
-    // ─────────────────────────────────────────────
-    public function updateMcq(Request $request, int $mcq): JsonResponse
+    public function updateMcq(Request $request, int $week, int $topic): JsonResponse
     {
-        $mcqModel = CurriculumMcq::findOrFail($mcq);
-        $weekModel = CurriculumWeek::findOrFail($mcqModel->week_id);
+        $weekModel  = CurriculumWeek::findOrFail($week);
+        $topicModel = $this->findWeekMcqTopic($weekModel, $topic);
 
-        $data = $request->validate([
-            'mentee_id'      => ['sometimes', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
-            'question'       => 'sometimes|string|max:2000',
-            'options'        => 'sometimes|array|size:4',
-            'options.*'      => 'required|string|max:500',
-            'correct_option' => 'sometimes|integer|min:1|max:4',
-            'explanation'    => 'nullable|string|max:5000',
-            'difficulty'     => 'nullable|in:easy,medium,hard',
-            'points'         => 'nullable|integer|min:1|max:100',
-            'is_active'      => 'nullable|boolean',
-            'order_index'    => 'nullable|integer|min:0',
-        ]);
+        $data = $request->validate(array_merge([
+            'mentee_id'   => ['sometimes', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'name'        => 'sometimes|string|max:255',
+            'description' => 'nullable|string',
+            'order_index' => 'nullable|integer|min:0',
+            'is_active'   => 'nullable|boolean',
+        ], $this->bulkMcqRules('mcqs', required: false)));
 
-        $fields = collect($data)->only([
-            'question', 'options', 'explanation', 'difficulty', 'points', 'order_index', 'mentee_id',
-        ])->filter(fn ($v) => $v !== null)->all();
+        $fields = collect($data)->only(['name', 'description', 'order_index', 'mentee_id'])
+            ->filter(fn ($v) => $v !== null)
+            ->all();
 
-        if (array_key_exists('mentee_id', $fields) && !empty($weekModel->mentee_id) && (int) $fields['mentee_id'] !== (int) $weekModel->mentee_id) {
+        if (array_key_exists('mentee_id', $fields) && ! empty($weekModel->mentee_id) && (int) $fields['mentee_id'] !== (int) $weekModel->mentee_id) {
             return response()->json([
                 'status'     => false,
                 'statuscode' => 422,
                 'message'    => 'mentee_id must match this week.',
             ], 422);
-        }
-
-        if (array_key_exists('correct_option', $data)) {
-            $fields['correct_index'] = ((int) $data['correct_option']) - 1;
         }
 
         if ($request->has('is_active')) {
             $fields['is_active'] = $request->boolean('is_active');
         }
 
-        if (!empty($fields)) {
-            $mcqModel->update($fields);
+        if ($fields !== []) {
+            $topicModel->update($fields);
         }
+
+        if (array_key_exists('mcqs', $data)) {
+            $this->syncMcqsForTopic($topicModel, $weekModel, $data['mcqs']);
+        }
+
+        $topicModel->load(['mcqs' => fn ($q) => $q->orderBy('order_index')]);
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
-            'message'    => 'MCQ updated.',
-            'mcq'        => $this->transformMcq($mcqModel->fresh()),
+            'message'    => 'MCQ topic updated.',
+            'mcq_topic'  => $this->transformMcqTopic($topicModel),
         ]);
     }
 
-    // ─────────────────────────────────────────────
-    //  DELETE /mentor/curriculum/mcqs/{mcq}
-    // ─────────────────────────────────────────────
-    public function destroyMcq(int $mcq): JsonResponse
+    public function destroyMcq(int $week, int $topic): JsonResponse
     {
-        $mcqModel = CurriculumMcq::findOrFail($mcq);
+        $weekModel  = CurriculumWeek::findOrFail($week);
+        $topicModel = $this->findWeekMcqTopic($weekModel, $topic);
 
-        StudentCurriculumProgress::where('item_type', 'mcq')
-            ->where('item_id', $mcqModel->id)
-            ->delete();
+        $mcqIds = $topicModel->mcqs()->pluck('id');
+        if ($mcqIds->isNotEmpty()) {
+            StudentCurriculumProgress::where('item_type', 'mcq')
+                ->whereIn('item_id', $mcqIds)
+                ->delete();
+        }
 
-        $mcqModel->delete();
+        $topicModel->delete();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
-            'message'    => 'MCQ deleted.',
+            'message'    => 'MCQ topic deleted.',
         ]);
     }
 
@@ -976,7 +923,7 @@ class CurriculumController extends Controller
 
         $request->validate([
             'attachments'   => 'array',
-            'attachments.*' => 'file|mimes:' . implode(',', CurriculumTask::ALLOWED_ATTACHMENT_MIMES) . '|max:102400',
+            'attachments.*' => 'file|mimes:' . implode(',', CurriculumTask::ALLOWED_ATTACHMENT_MIMES) . '|max:' . CurriculumTask::ATTACHMENT_MAX_KB,
         ]);
     }
 
@@ -1049,5 +996,78 @@ class CurriculumController extends Controller
         $row = $mcq->toArray();
         $row['correct_option'] = ((int) $mcq->correct_index) + 1;
         return $row;
+    }
+
+    private function transformMcqTopic(CurriculumMcqTopic $topic): array
+    {
+        return [
+            'id'          => $topic->id,
+            'week_id'     => $topic->week_id,
+            'mentee_id'   => $topic->mentee_id,
+            'name'        => $topic->name,
+            'description' => $topic->description,
+            'order_index' => $topic->order_index,
+            'is_active'   => $topic->is_active,
+            'mcqs'        => $topic->mcqs->map(fn (CurriculumMcq $mcq) => $this->transformMcq($mcq))->values(),
+            'created_at'  => $topic->created_at,
+            'updated_at'  => $topic->updated_at,
+        ];
+    }
+
+    private function findWeekMcqTopic(CurriculumWeek $week, int $topicId): CurriculumMcqTopic
+    {
+        return CurriculumMcqTopic::where('week_id', $week->id)
+            ->with('mcqs')
+            ->findOrFail($topicId);
+    }
+
+    private function syncMcqsForTopic(CurriculumMcqTopic $topic, CurriculumWeek $week, array $mcqRows): void
+    {
+        $oldIds = $topic->mcqs()->pluck('id');
+        if ($oldIds->isNotEmpty()) {
+            StudentCurriculumProgress::where('item_type', 'mcq')
+                ->whereIn('item_id', $oldIds)
+                ->delete();
+            $topic->mcqs()->delete();
+        }
+
+        foreach ($mcqRows as $row) {
+            $this->createMcqForTopic($topic, $week, $row);
+        }
+    }
+
+    private function bulkMcqRules(string $prefix, bool $required = true): array
+    {
+        $arrayRule = $required ? 'required|array|min:1' : 'sometimes|array|min:1';
+
+        return [
+            $prefix                      => $arrayRule,
+            "{$prefix}.*.question"       => 'required|string|max:2000',
+            "{$prefix}.*.options"        => 'required|array|size:4',
+            "{$prefix}.*.options.*"      => 'required|string|max:500',
+            "{$prefix}.*.correct_option" => 'required|integer|min:1|max:4',
+            "{$prefix}.*.explanation"    => 'nullable|string|max:5000',
+            "{$prefix}.*.difficulty"     => 'nullable|in:easy,medium,hard',
+            "{$prefix}.*.points"         => 'nullable|integer|min:1|max:100',
+            "{$prefix}.*.is_active"      => 'nullable|boolean',
+            "{$prefix}.*.order_index"    => 'nullable|integer|min:0',
+        ];
+    }
+
+    private function createMcqForTopic(CurriculumMcqTopic $topic, CurriculumWeek $week, array $row): CurriculumMcq
+    {
+        return CurriculumMcq::create([
+            'week_id'       => $week->id,
+            'topic_id'      => $topic->id,
+            'mentee_id'     => $topic->mentee_id,
+            'question'      => $row['question'],
+            'options'       => array_values($row['options']),
+            'correct_index' => ((int) $row['correct_option']) - 1,
+            'explanation'   => $row['explanation'] ?? null,
+            'difficulty'    => $row['difficulty'] ?? 'medium',
+            'points'        => $row['points'] ?? 1,
+            'is_active'     => (bool) ($row['is_active'] ?? true),
+            'order_index'   => $row['order_index'] ?? 0,
+        ]);
     }
 }

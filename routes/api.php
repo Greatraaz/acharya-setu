@@ -40,6 +40,8 @@ Route::prefix('v1')->group(function () {
             'version'=> '1.0.0'
         ]);
     });
+    Route::get('/media/mentor-videos/{filename}', [VideosController::class, 'serveMentorVideoFile'])
+        ->where('filename', '[^/]+');
 });
 
 // Public Auth
@@ -249,10 +251,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('weeks/{week}',            [MentorCurriculum::class, 'destroyWeek'])->whereNumber('week');
             Route::post('weeks/{week}/tasks',        [MentorCurriculum::class, 'storeTask'])->whereNumber('week');
             Route::get ('weeks/{week}/tasks',        [MentorCurriculum::class, 'tasks'])->whereNumber('week');
-            Route::post('weeks/{week}/mcqs',         [MentorCurriculum::class, 'storeMcq'])->whereNumber('week');
-            Route::get ('weeks/{week}/mcqs',         [MentorCurriculum::class, 'mcqs'])->whereNumber('week');
-            Route::patch('mcqs/{mcq}',               [MentorCurriculum::class, 'updateMcq'])->whereNumber('mcq');
-            Route::delete('mcqs/{mcq}',              [MentorCurriculum::class, 'destroyMcq'])->whereNumber('mcq');
+            Route::get   ('weeks/{week}/mcqs',        [MentorCurriculum::class, 'mcqs'])->whereNumber('week');
+            Route::post  ('weeks/{week}/mcqs',        [MentorCurriculum::class, 'storeMcq'])->whereNumber('week');
+            Route::patch ('weeks/{week}/mcqs/{topic}', [MentorCurriculum::class, 'updateMcq'])->whereNumber('week')->whereNumber('topic');
+            Route::delete('weeks/{week}/mcqs/{topic}', [MentorCurriculum::class, 'destroyMcq'])->whereNumber('week')->whereNumber('topic');
             Route::post('tasks/{task}',             [MentorCurriculum::class, 'updateTask'])->whereNumber('task');
             Route::patch('tasks/{task}',             [MentorCurriculum::class, 'updateTask'])->whereNumber('task');
             Route::delete('tasks/{task}',            [MentorCurriculum::class, 'destroyTask'])->whereNumber('task');
@@ -312,9 +314,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // Videos
         Route::prefix('videos')->name('videos.')->group(function () {
-            Route::get('/',                    [VideosController::class, 'index'])->name('index');
-            Route::post('/',                   [VideosController::class, 'store'])->name('store');
-            Route::post('/{id}/watched',       [VideosController::class, 'markWatched'])->name('watched');
+            Route::get   ('/',              [VideosController::class, 'mentorIndex'])->name('index');
+            Route::post  ('/',              [VideosController::class, 'mentorStore'])->name('store');
+            Route::post  ('/{id}/watched',  [VideosController::class, 'markWatched'])->name('watched')->whereNumber('id');
+            Route::post  ('/{id}',          [VideosController::class, 'mentorUpdate'])->name('update')->whereNumber('id');
+            Route::delete('/{id}',          [VideosController::class, 'mentorDestroy'])->name('destroy')->whereNumber('id');
         });
 
         // Wallet

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class CurriculumMcq extends Model
 {
     protected $fillable = [
-        'week_id', 'mentee_id', 'question', 'options', 'correct_index',
+        'week_id', 'topic_id', 'mentee_id', 'question', 'options', 'correct_index',
         'explanation', 'difficulty', 'points', 'order_index', 'is_active',
     ];
  
@@ -27,6 +27,11 @@ class CurriculumMcq extends Model
     public function week(): BelongsTo
     {
         return $this->belongsTo(CurriculumWeek::class, 'week_id');
+    }
+
+    public function topic(): BelongsTo
+    {
+        return $this->belongsTo(CurriculumMcqTopic::class, 'topic_id');
     }
 
     public function mentee(): BelongsTo
