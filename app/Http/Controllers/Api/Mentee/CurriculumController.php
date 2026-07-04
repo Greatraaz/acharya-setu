@@ -11,6 +11,7 @@ use App\Models\{
     Quiz,
     QuizOption,
     QuizQuestion,
+    StudentCurriculumProgress,
 };
 use Illuminate\Http\{JsonResponse, Request};
 
@@ -61,6 +62,61 @@ class CurriculumController extends Controller
             'mentee_id'  => $menteeId,
             'tracks'     => $tracks,
             'total'      => $tracks->count(),
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  GET /mentee/curriculum/tasks
+    //  Curriculum tasks only, with status + completion summary.
+    // ─────────────────────────────────────────────
+    public function tasks(Request $request): JsonResponse
+    {
+        $menteeId = $request->user()->id;
+
+        $tasks = CurriculumTask::where('mentee_id', $menteeId)
+            ->where('is_active', true)
+            ->with([
+                'plan' => fn ($q) => $q->brief(),
+                'week:id,month_id,week_number,title,focus',
+                'week.month:id,stream_id,month_number,title',
+                'week.month.stream:id,name,slug',
+            ])
+            ->orderBy('week_id')
+            ->orderBy('order_index')
+            ->get();
+
+        $progressMap = StudentCurriculumProgress::where('user_id', $menteeId)
+            ->where('item_type', 'task')
+            ->whereIn('item_id', $tasks->pluck('id'))
+            ->get()
+            ->keyBy('item_id');
+
+        $formatted = $tasks
+            ->map(fn (CurriculumTask $task) => $this->formatTaskWithStatus($task, $progressMap->get($task->id)))
+            ->values();
+
+        $completed  = $formatted->where('status', 'completed')->count();
+        $inProgress = $formatted->where('status', 'in_progress')->count();
+        $pending    = $formatted->where('status', 'pending')->count();
+        $total      = $formatted->count();
+
+        $taskList = $formatted;
+        if ($request->filled('status')) {
+            $taskList = $formatted->filter(fn ($task) => $task['status'] === $request->status)->values();
+        }
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'mentee_id'  => $menteeId,
+            'summary'    => [
+                'total'       => $total,
+                'completed'   => $completed,
+                'in_progress' => $inProgress,
+                'pending'     => $pending,
+                'percent'     => $total ? (int) round($completed / $total * 100) : 0,
+            ],
+            'tasks'      => $taskList,
         ]);
     }
 
@@ -169,6 +225,67 @@ class CurriculumController extends Controller
         $row['is_completed'] = $task->isCompletedByUser($menteeId);
 
         return $row;
+    }
+
+    private function formatTaskWithStatus(CurriculumTask $task, ?StudentCurriculumProgress $progress): array
+    {
+        $status = $this->resolveTaskStatus($progress);
+
+        return [
+            'id'                => $task->id,
+            'week_id'           => $task->week_id,
+            'title'             => $task->title,
+            'description'       => $task->description,
+            'type'              => $task->type,
+            'order_index'       => $task->order_index,
+            'estimated_minutes' => $task->estimated_minutes,
+            'is_required'       => $task->is_required,
+            'submission_type'   => $task->submission_type,
+            'attachments'       => $task->attachments,
+            'plan'              => $task->plan,
+            'status'            => $status,
+            'is_completed'      => $status === 'completed',
+            'submission_status' => $progress?->submission_status ?? 'none',
+            'completed_at'      => $progress?->completed_at,
+            'mentor_feedback'   => $progress?->mentor_feedback,
+            'track'             => $task->week?->month?->stream ? [
+                'id'   => $task->week->month->stream->id,
+                'name' => $task->week->month->stream->name,
+                'slug' => $task->week->month->stream->slug,
+            ] : null,
+            'month'             => $task->week?->month ? [
+                'id'           => $task->week->month->id,
+                'month_number' => $task->week->month->month_number,
+                'title'        => $task->week->month->title,
+            ] : null,
+            'week'              => $task->week ? [
+                'id'          => $task->week->id,
+                'week_number' => $task->week->week_number,
+                'title'       => $task->week->title,
+                'focus'       => $task->week->focus,
+            ] : null,
+        ];
+    }
+
+    private function resolveTaskStatus(?StudentCurriculumProgress $progress): string
+    {
+        if (! $progress) {
+            return 'pending';
+        }
+
+        if ($progress->is_completed) {
+            return 'completed';
+        }
+
+        if (
+            in_array($progress->submission_status, ['submitted', 'reviewed', 'rejected'], true)
+            || $progress->submission_text
+            || $progress->submission_url
+        ) {
+            return 'in_progress';
+        }
+
+        return 'pending';
     }
 
     private function formatMcqTopic(CurriculumMcqTopic $topic): array

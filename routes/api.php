@@ -128,6 +128,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // Curriculum (mentor-assigned) + admin MCQs
         Route::prefix('curriculum')->name('curriculum.')->group(function () {
             Route::get('/',           [MenteeCurriculum::class, 'index'])->name('index');
+            Route::get('/tasks',      [MenteeCurriculum::class, 'tasks'])->name('tasks');
             Route::get('/admin-mcqs', [MenteeCurriculum::class, 'adminMcqs'])->name('adminMcqs');
         });
 
