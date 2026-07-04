@@ -24,9 +24,11 @@ use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
 use App\Http\Controllers\Api\Mentee\CurriculumController as MenteeCurriculum;
+use App\Http\Controllers\Api\Mentee\MentorRequestController as MenteeMentorRequest;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
 use App\Http\Controllers\Api\Mentor\CurriculumController as MentorCurriculum;
 use App\Http\Controllers\Api\Mentor\MenteeController as MentorMentee;
+use App\Http\Controllers\Api\Mentor\MentorRequestController as MentorMentorRequest;
 
 // Health
 // Health check endpoints
@@ -131,6 +133,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // Mentor video collections (all active)
         Route::get('mentor-videos', [VideosController::class, 'menteeMentorVideos'])->name('mentor-videos');
+
+        // Mentor selection requests
+        Route::prefix('mentor-requests')->name('mentor-requests.')->group(function () {
+            Route::get ('/',      [MenteeMentorRequest::class, 'index'])->name('index');
+            Route::post('/',      [MenteeMentorRequest::class, 'store'])->name('store');
+            Route::delete('/{id}', [MenteeMentorRequest::class, 'destroy'])->name('destroy')->whereNumber('id');
+        });
 
         // Mentors
         Route::prefix('mentors')->name('mentors.')->group(function () {
@@ -279,6 +288,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::prefix('mentees')->name('mentees.')->group(function () {
             Route::get('/',       [MentorMentee::class, 'index'])->name('index');
             Route::get('/{mentee}', [MentorMentee::class, 'show'])->name('show');
+        });
+
+        // ── Mentor Requests (accept / reject) ─────────────────────────
+        Route::prefix('mentor-requests')->name('mentor-requests.')->group(function () {
+            Route::get ('/',              [MentorMentorRequest::class, 'index'])->name('index');
+            Route::post('/{id}/accept',   [MentorMentorRequest::class, 'accept'])->name('accept')->whereNumber('id');
+            Route::post('/{id}/reject',   [MentorMentorRequest::class, 'reject'])->name('reject')->whereNumber('id');
         });
 
         Route::prefix('availability')->name('availability.')->group(function () {
