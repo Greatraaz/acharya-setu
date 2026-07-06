@@ -25,6 +25,11 @@ class CurriculumController extends Controller
     {
         $menteeId = $request->user()->id;
 
+        $taskProgressMap = StudentCurriculumProgress::where('user_id', $menteeId)
+            ->where('item_type', 'task')
+            ->get()
+            ->keyBy('item_id');
+
         $tracks = EducationStream::where('mentee_id', $menteeId)
             ->where('is_active', true)
             ->with([
@@ -54,12 +59,15 @@ class CurriculumController extends Controller
             ])
             ->orderBy('sort_order')
             ->get()
-            ->map(fn (EducationStream $track) => $this->formatTrack($track, $menteeId));
+            ->map(fn (EducationStream $track) => $this->formatTrack($track, $menteeId, $taskProgressMap));
+
+        $summary = StudentCurriculumProgress::getMenteeProgressSummary($menteeId);
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'mentee_id'  => $menteeId,
+            'summary'    => $summary,
             'tracks'     => $tracks,
             'total'      => $tracks->count(),
         ]);
@@ -121,6 +129,56 @@ class CurriculumController extends Controller
     }
 
     // ─────────────────────────────────────────────
+    //  GET /mentee/curriculum/mcqs
+    //  Mentor-created curriculum MCQs only, with status + summary.
+    // ─────────────────────────────────────────────
+    public function mcqs(Request $request): JsonResponse
+    {
+        $menteeId = $request->user()->id;
+
+        $mcqs = CurriculumMcq::where('mentee_id', $menteeId)
+            ->where('is_active', true)
+            ->with([
+                'topic:id,week_id,name,description,order_index',
+                'week:id,month_id,week_number,title,focus',
+                'week.month:id,stream_id,month_number,title',
+                'week.month.stream:id,name,slug',
+            ])
+            ->orderBy('week_id')
+            ->orderBy('topic_id')
+            ->orderBy('order_index')
+            ->get();
+
+        $formatted = $mcqs
+            ->map(fn (CurriculumMcq $mcq) => $this->formatMcqWithContext($mcq, $menteeId))
+            ->values();
+
+        $completed  = $formatted->where('status', 'completed')->count();
+        $inProgress = $formatted->where('status', 'in_progress')->count();
+        $pending    = $formatted->where('status', 'pending')->count();
+        $total      = $formatted->count();
+
+        $mcqList = $formatted;
+        if ($request->filled('status')) {
+            $mcqList = $formatted->filter(fn ($mcq) => $mcq['status'] === $request->status)->values();
+        }
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'mentee_id'  => $menteeId,
+            'summary'    => [
+                'total'       => $total,
+                'completed'   => $completed,
+                'in_progress' => $inProgress,
+                'pending'     => $pending,
+                'percent'     => $total ? (int) round($completed / $total * 100) : 0,
+            ],
+            'mcqs'       => $mcqList,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
     //  GET /mentee/curriculum/admin-mcqs
     //  Quizzes created from admin panel (quizzes + questions + options).
     // ─────────────────────────────────────────────
@@ -149,7 +207,7 @@ class CurriculumController extends Controller
         ]);
     }
 
-    private function formatTrack(EducationStream $track, int $menteeId): array
+    private function formatTrack(EducationStream $track, int $menteeId, $taskProgressMap = null): array
     {
         return [
             'id'          => $track->id,
@@ -177,8 +235,11 @@ class CurriculumController extends Controller
                     'resources'    => $week->resources,
                     'is_active'    => $week->is_active,
                     'sort_order'   => $week->sort_order,
-                    'tasks'        => $week->tasks->map(fn (CurriculumTask $task) => $this->formatTask($task, $menteeId))->values(),
-                    'mcq_topics'   => $week->mcqTopics->map(fn (CurriculumMcqTopic $topic) => $this->formatMcqTopic($topic))->values(),
+                    'tasks'        => $week->tasks->map(fn (CurriculumTask $task) => $this->formatTaskWithStatus(
+                        $task,
+                        $taskProgressMap?->get($task->id) ?? $this->getTaskProgress($menteeId, $task->id)
+                    ))->values(),
+                    'mcq_topics'   => $week->mcqTopics->map(fn (CurriculumMcqTopic $topic) => $this->formatMcqTopic($topic, $menteeId))->values(),
                     'materials'    => $week->supportingMaterials->values(),
                 ])->values(),
             ])->values(),
@@ -221,10 +282,7 @@ class CurriculumController extends Controller
 
     private function formatTask(CurriculumTask $task, int $menteeId): array
     {
-        $row = $task->toArray();
-        $row['is_completed'] = $task->isCompletedByUser($menteeId);
-
-        return $row;
+        return $this->formatTaskWithStatus($task, $this->getTaskProgress($menteeId, $task->id));
     }
 
     private function formatTaskWithStatus(CurriculumTask $task, ?StudentCurriculumProgress $progress): array
@@ -288,7 +346,15 @@ class CurriculumController extends Controller
         return 'pending';
     }
 
-    private function formatMcqTopic(CurriculumMcqTopic $topic): array
+    private function getTaskProgress(int $menteeId, int $taskId): ?StudentCurriculumProgress
+    {
+        return StudentCurriculumProgress::where('user_id', $menteeId)
+            ->where('item_type', 'task')
+            ->where('item_id', $taskId)
+            ->first();
+    }
+
+    private function formatMcqTopic(CurriculumMcqTopic $topic, int $menteeId): array
     {
         return [
             'id'          => $topic->id,
@@ -296,19 +362,59 @@ class CurriculumController extends Controller
             'description' => $topic->description,
             'order_index' => $topic->order_index,
             'is_active'   => $topic->is_active,
-            'mcqs'        => $topic->mcqs->map(fn (CurriculumMcq $mcq) => $this->formatMcqForMentee($mcq))->values(),
+            'mcqs'        => $topic->mcqs->map(fn (CurriculumMcq $mcq) => $this->formatMcqForMentee($mcq, $menteeId))->values(),
         ];
     }
 
-    private function formatMcqForMentee(CurriculumMcq $mcq): array
+    private function formatMcqForMentee(CurriculumMcq $mcq, int $menteeId): array
     {
+        $completed = $mcq->isAnsweredCorrectlyByUser($menteeId);
+        $attempt   = $mcq->getAttemptForUser($menteeId);
+
         return [
-            'id'          => $mcq->id,
-            'question'    => $mcq->question,
-            'options'     => $mcq->options,
-            'difficulty'  => $mcq->difficulty,
-            'points'      => $mcq->points,
-            'order_index' => $mcq->order_index,
+            'id'           => $mcq->id,
+            'question'     => $mcq->question,
+            'options'      => $mcq->options,
+            'difficulty'   => $mcq->difficulty,
+            'points'       => $mcq->points,
+            'order_index'  => $mcq->order_index,
+            'is_completed' => $completed,
+            'status'       => $completed ? 'completed' : ($attempt ? 'in_progress' : 'pending'),
+            'last_attempt' => $attempt ? [
+                'is_correct'    => $attempt->is_correct,
+                'points_earned' => $attempt->points_earned,
+                'attempted_at'  => $attempt->attempted_at,
+            ] : null,
         ];
+    }
+
+    private function formatMcqWithContext(CurriculumMcq $mcq, int $menteeId): array
+    {
+        return array_merge($this->formatMcqForMentee($mcq, $menteeId), [
+            'week_id'  => $mcq->week_id,
+            'topic_id' => $mcq->topic_id,
+            'topic'    => $mcq->topic ? [
+                'id'          => $mcq->topic->id,
+                'name'        => $mcq->topic->name,
+                'description' => $mcq->topic->description,
+                'order_index' => $mcq->topic->order_index,
+            ] : null,
+            'track'    => $mcq->week?->month?->stream ? [
+                'id'   => $mcq->week->month->stream->id,
+                'name' => $mcq->week->month->stream->name,
+                'slug' => $mcq->week->month->stream->slug,
+            ] : null,
+            'month'    => $mcq->week?->month ? [
+                'id'           => $mcq->week->month->id,
+                'month_number' => $mcq->week->month->month_number,
+                'title'        => $mcq->week->month->title,
+            ] : null,
+            'week'     => $mcq->week ? [
+                'id'          => $mcq->week->id,
+                'week_number' => $mcq->week->week_number,
+                'title'       => $mcq->week->title,
+                'focus'       => $mcq->week->focus,
+            ] : null,
+        ]);
     }
 }

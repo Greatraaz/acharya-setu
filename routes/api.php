@@ -18,13 +18,13 @@ use App\Http\Controllers\Api\ReviewsController;
 use App\Http\Controllers\Api\CallsController;
 use App\Http\Controllers\Api\WellnessController;
 use App\Http\Controllers\Api\ReferralsController;
-use App\Http\Controllers\Api\ProgressController;
 use App\Http\Controllers\Api\AssignmentsController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
 use App\Http\Controllers\Api\Mentee\CurriculumController as MenteeCurriculum;
 use App\Http\Controllers\Api\Mentee\MentorRequestController as MenteeMentorRequest;
+use App\Http\Controllers\Api\Mentee\ProgressController as MenteeProgress;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
 use App\Http\Controllers\Api\Mentor\CurriculumController as MentorCurriculum;
 use App\Http\Controllers\Api\Mentor\MenteeController as MentorMentee;
@@ -129,11 +129,18 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::prefix('curriculum')->name('curriculum.')->group(function () {
             Route::get('/',           [MenteeCurriculum::class, 'index'])->name('index');
             Route::get('/tasks',      [MenteeCurriculum::class, 'tasks'])->name('tasks');
+            Route::get('/mcqs',       [MenteeCurriculum::class, 'mcqs'])->name('mcqs');
             Route::get('/admin-mcqs', [MenteeCurriculum::class, 'adminMcqs'])->name('adminMcqs');
+            Route::post('/tasks/{task}/complete', [MenteeProgress::class, 'completeTask'])->name('tasks.complete')->whereNumber('task');
+            Route::post('/mcqs/{mcq}/answer',     [MenteeProgress::class, 'answerMcq'])->name('mcqs.answer')->whereNumber('mcq');
         });
+
+        // Progress dashboard
+        Route::get('progress', [MenteeProgress::class, 'index'])->name('progress');
 
         // Mentor video collections (all active)
         Route::get('mentor-videos', [VideosController::class, 'menteeMentorVideos'])->name('mentor-videos');
+        Route::post('mentor-videos/files/{file}/watched', [MenteeProgress::class, 'markVideoWatched'])->name('mentor-videos.watched')->whereNumber('file');
 
         // Mentor selection requests
         Route::prefix('mentor-requests')->name('mentor-requests.')->group(function () {
@@ -157,14 +164,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}',   [SessionsController::class, 'destroy']);
         });
 
-        // Tasks
-        Route::prefix('tasks')->name('tasks.')->group(function () {
-            Route::get('/',        [TasksController::class, 'index']);
-            Route::post('/',       [TasksController::class, 'store']);
-            Route::patch('/{id}',  [TasksController::class, 'update']);
-            Route::delete('/{id}', [TasksController::class, 'destroy']);
-        });
-
         // Assessments
         Route::prefix('assessments')->name('assessments.')->group(function () {
             Route::get('/',                 [AssessmentsController::class, 'index'])->name('index');
@@ -172,13 +171,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('/{id}/submit',     [AssessmentsController::class, 'submit'])->name('submit');
         });
 
-        // Videos
-        Route::prefix('videos')->name('videos.')->group(function () {
-            Route::get('/',                    [VideosController::class, 'index'])->name('index');
-            Route::post('/',                   [VideosController::class, 'store'])->name('store');
-            Route::post('/{id}/watched',       [VideosController::class, 'markWatched'])->name('watched');
-            Route::get('/play-video/{id}',    [VideosController::class, 'singleVideo']);
-        });
 
         // Wallet
         Route::prefix('wallet')->name('wallet.')->group(function () {
@@ -324,14 +316,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}',     [SessionsController::class, 'destroy'])->name('destroy');
         });
 
-        // Tasks
-        Route::prefix('tasks')->name('tasks.')->group(function () {
-            Route::get('/',            [TasksController::class, 'index'])->name('index');
-            Route::post('/',           [TasksController::class, 'store'])->name('store');
-            Route::patch('/{id}',      [TasksController::class, 'update'])->name('update');
-            Route::delete('/{id}',     [TasksController::class, 'destroy'])->name('destroy');
-        });
-
         // Assessments
         Route::prefix('assessments')->name('assessments.')->group(function () {
             Route::get('/',                     [AssessmentsController::class, 'index'])->name('index');
@@ -402,7 +386,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/wellness/mood',                [WellnessController::class, 'logMood']);
     Route::get('/wellness/history',              [WellnessController::class, 'history']);
     Route::get('/referrals/my-code',             [ReferralsController::class, 'myCode']);
-    Route::get('/progress',                      [ProgressController::class, 'index']);
     Route::get('/assignments/my-mentees',        [AssignmentsController::class, 'myMentees']);
     Route::get('/assignments/my-mentor',         [AssignmentsController::class, 'myMentor']);
     Route::post('/assignments/assign',           [AssignmentsController::class, 'assign']);

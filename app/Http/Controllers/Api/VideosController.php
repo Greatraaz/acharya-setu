@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\MentorVideo;
 use App\Models\MentorVideoFile;
+use App\Models\MentorVideoWatch;
 use App\Models\{Video, VideoAssignment};
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\DB;
@@ -80,11 +81,15 @@ class VideosController extends Controller
 
     public function menteeMentorVideos(Request $request): JsonResponse
     {
+        $menteeId = $request->user()->id;
+
+        $watchedFileIds = MentorVideoWatch::where('mentee_id', $menteeId)->pluck('mentor_video_file_id');
+
         $videos = MentorVideo::where('is_active', true)
             ->with(['files', 'mentor:id,name,avatar_url'])
             ->latest()
             ->get()
-            ->map(fn (MentorVideo $video) => array_merge($this->formatMentorVideo($video), [
+            ->map(fn (MentorVideo $video) => array_merge($this->formatMentorVideo($video, $watchedFileIds), [
                 'mentor' => $video->mentor ? [
                     'id'         => $video->mentor->id,
                     'name'       => $video->mentor->name,
@@ -92,11 +97,19 @@ class VideosController extends Controller
                 ] : null,
             ]));
 
+        $totalFiles   = $videos->sum(fn ($v) => count($v['videos']));
+        $watchedCount = $videos->sum(fn ($v) => collect($v['videos'])->where('is_watched', true)->count());
+
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'videos'     => $videos,
             'total'      => $videos->count(),
+            'summary'    => [
+                'total_files'   => $totalFiles,
+                'watched'       => $watchedCount,
+                'percent'       => $totalFiles ? (int) round($watchedCount / $totalFiles * 100) : 0,
+            ],
         ]);
     }
 
@@ -280,7 +293,7 @@ class VideosController extends Controller
         }
     }
 
-    private function formatMentorVideo(MentorVideo $video): array
+    private function formatMentorVideo(MentorVideo $video, $watchedFileIds = null): array
     {
         return [
             'id'          => $video->id,
@@ -292,6 +305,7 @@ class VideosController extends Controller
                 'video_url'  => $file->video_url,
                 'file_name'  => $file->file_name,
                 'sort_order' => $file->sort_order,
+                'is_watched' => $watchedFileIds ? $watchedFileIds->contains($file->id) : false,
             ])->values(),
             'created_at'  => $video->created_at,
             'updated_at'  => $video->updated_at,
