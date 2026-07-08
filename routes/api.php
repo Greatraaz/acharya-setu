@@ -257,6 +257,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::prefix('curriculum')->name('curriculum.')->group(function () {
             Route::get ('tracks',                    [MentorCurriculum::class, 'tracks']);
             Route::post('tracks',                     [MentorCurriculum::class, 'storeTrack']);
+            Route::patch('tracks/{track}',            [MentorCurriculum::class, 'updateTrack'])->whereNumber('track');
             Route::post('tracks/{track}/months',      [MentorCurriculum::class, 'storeMonth'])->whereNumber('track');
             Route::get ('tracks/{track}/months',      [MentorCurriculum::class, 'months'])->whereNumber('track');
             Route::patch('months/{month}',            [MentorCurriculum::class, 'updateMonth'])->whereNumber('month');

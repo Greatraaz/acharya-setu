@@ -79,6 +79,58 @@ class CurriculumController extends Controller
     }
 
     // ─────────────────────────────────────────────
+    //  PATCH /mentor/curriculum/tracks/{track}
+    // ─────────────────────────────────────────────
+    public function updateTrack(Request $request, int $track): JsonResponse
+    {
+        $trackModel = EducationStream::where('mentor_id', $request->user()->id)->findOrFail($track);
+
+        $data = $request->validate([
+            'mentee_id'   => ['sometimes', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'name'        => 'sometimes|string|max:100',
+            'description' => 'nullable|string',
+            'icon'        => 'nullable|string|max:100',
+            'color'       => 'nullable|string|max:50',
+            'is_active'   => 'nullable|boolean',
+            'sort_order'  => 'nullable|integer',
+        ]);
+
+        $fields = collect($data)->only([
+            'mentee_id', 'name', 'description', 'icon', 'color', 'sort_order',
+        ])->filter(fn ($v) => $v !== null)->all();
+
+        if ($request->has('is_active')) {
+            $fields['is_active'] = $request->boolean('is_active');
+        }
+
+        if (isset($fields['name'])) {
+            $slug = Str::slug($fields['name']);
+            $slugExists = EducationStream::where('slug', $slug)
+                ->where('id', '!=', $trackModel->id)
+                ->exists();
+
+            if ($slugExists) {
+                $slug .= '-' . ($fields['mentee_id'] ?? $trackModel->mentee_id);
+            }
+
+            $fields['slug'] = $slug;
+        }
+
+        if ($fields !== []) {
+            $trackModel->update($fields);
+        }
+
+        $trackModel->load('mentee:id,name,email,avatar_url');
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Track updated.',
+            'track'      => $trackModel,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
     //  POST /mentor/curriculum/tracks/{track}/months
     // ─────────────────────────────────────────────
     public function storeMonth(Request $request, int $track): JsonResponse
