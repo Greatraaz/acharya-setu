@@ -62,12 +62,16 @@ class CurriculumController extends Controller
             ->map(fn (EducationStream $track) => $this->formatTrack($track, $menteeId, $taskProgressMap));
 
         $summary = StudentCurriculumProgress::getMenteeProgressSummary($menteeId);
+        $trackSummaries = $tracks
+            ->map(fn (array $track) => $this->buildTrackSummary($track))
+            ->values();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'mentee_id'  => $menteeId,
             'summary'    => $summary,
+            'track_summaries' => $trackSummaries,
             'tracks'     => $tracks,
             'total'      => $tracks->count(),
         ]);
@@ -416,5 +420,47 @@ class CurriculumController extends Controller
                 'focus'       => $mcq->week->focus,
             ] : null,
         ]);
+    }
+
+    private function buildTrackSummary(array $track): array
+    {
+        $tasks = collect($track['months'] ?? [])
+            ->flatMap(fn (array $month) => $month['weeks'] ?? [])
+            ->flatMap(fn (array $week) => $week['tasks'] ?? []);
+
+        $mcqs = collect($track['months'] ?? [])
+            ->flatMap(fn (array $month) => $month['weeks'] ?? [])
+            ->flatMap(fn (array $week) => $week['mcq_topics'] ?? [])
+            ->flatMap(fn (array $topic) => $topic['mcqs'] ?? []);
+
+        $taskTotal = $tasks->count();
+        $taskCompleted = $tasks->where('status', 'completed')->count();
+
+        $mcqTotal = $mcqs->count();
+        $mcqCompleted = $mcqs->where('status', 'completed')->count();
+
+        $overallTotal = $taskTotal + $mcqTotal;
+        $overallCompleted = $taskCompleted + $mcqCompleted;
+
+        return [
+            'track_id'   => $track['id'] ?? null,
+            'track_name' => $track['name'] ?? null,
+            'track_slug' => $track['slug'] ?? null,
+            'overall'    => [
+                'total'     => $overallTotal,
+                'completed' => $overallCompleted,
+                'percent'   => $overallTotal ? (int) round($overallCompleted / $overallTotal * 100) : 0,
+            ],
+            'tasks'      => [
+                'total'     => $taskTotal,
+                'completed' => $taskCompleted,
+                'percent'   => $taskTotal ? (int) round($taskCompleted / $taskTotal * 100) : 0,
+            ],
+            'mcqs'       => [
+                'total'     => $mcqTotal,
+                'completed' => $mcqCompleted,
+                'percent'   => $mcqTotal ? (int) round($mcqCompleted / $mcqTotal * 100) : 0,
+            ],
+        ];
     }
 }

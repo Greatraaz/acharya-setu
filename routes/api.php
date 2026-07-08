@@ -45,6 +45,10 @@ Route::prefix('v1')->group(function () {
     });
     Route::get('/media/mentor-videos/{filename}', [VideosController::class, 'serveMentorVideoFile'])
         ->where('filename', '[^/]+');
+    Route::get('/media/curriculum-supporting-materials/{filename}', [VideosController::class, 'serveSupportingMaterialFile'])
+        ->where('filename', '[^/]+');
+    Route::get('/media/curriculum-tasks/{filename}', [VideosController::class, 'serveCurriculumTaskFile'])
+        ->where('filename', '[^/]+');
 });
 
 // Public Auth

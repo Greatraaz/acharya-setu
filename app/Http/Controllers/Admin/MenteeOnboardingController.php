@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\MentorMatcherService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
  
@@ -96,6 +97,10 @@ class MenteeOnboardingController extends Controller
             'onboarding_completed' => true,
             'is_active'            => true,
         ]);
+
+        $user->refresh();
+        app(MentorMatcherService::class)->assignBestMentor($user);
+
         return redirect()->route('mentee.dashboard')->with('success', 'Welcome! Your profile is ready.');
     }
 }

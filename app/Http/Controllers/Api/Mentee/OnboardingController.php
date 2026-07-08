@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Mentee;
 
 use App\Http\Controllers\Controller;
+use App\Services\MentorMatcherService;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -193,11 +194,22 @@ class OnboardingController extends Controller
             'onboarding_step'      => 4,
         ]);
 
+        $user->refresh();
+        $assignment = app(MentorMatcherService::class)->assignBestMentor($user);
+        $assignedMentor = $assignment['mentor'];
+
         return response()->json([
             'status'               => true,
             'statuscode'           => 200,
-            'message'              => 'Onboarding complete!',
+            'message'              => $assignment['assigned']
+                ? 'Onboarding complete! A mentor has been assigned to you.'
+                : 'Onboarding complete!',
             'onboarding_completed' => true,
+            'assigned_mentor'      => $assignedMentor ? $assignedMentor->only([
+                'id', 'name', 'field', 'expertise', 'bio', 'avatar_url',
+                'rating', 'experience_years', 'company', 'designation',
+            ]) : null,
+            'mentor_match_score'   => $assignment['match_score'],
             'user'                 => $user->fresh(),
         ]);
     }

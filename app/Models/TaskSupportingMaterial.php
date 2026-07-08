@@ -58,4 +58,18 @@ class TaskSupportingMaterial extends Model
     {
         return in_array($this->type, self::FILE_TYPES, true);
     }
+
+    public static function buildMediaUrl(string $filePath): string
+    {
+        return url('/api/v1/media/curriculum-supporting-materials/' . basename($filePath));
+    }
+
+    public function getFileUrlAttribute($value): ?string
+    {
+        if (! empty($this->attributes['file_path'])) {
+            return self::buildMediaUrl($this->attributes['file_path']);
+        }
+
+        return $value;
+    }
 }

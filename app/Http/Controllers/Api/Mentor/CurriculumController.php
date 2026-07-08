@@ -479,6 +479,28 @@ class CurriculumController extends Controller
             ], 422);
         }
 
+        $existingTopic = $this->findMcqTopicByNameInWeek($weekModel, (int) $data['mentee_id'], $data['name']);
+
+        if ($existingTopic) {
+            $nextOrder = ((int) $existingTopic->mcqs()->max('order_index')) + 1;
+
+            foreach ($data['mcqs'] as $row) {
+                if (! array_key_exists('order_index', $row)) {
+                    $row['order_index'] = $nextOrder++;
+                }
+                $this->createMcqForTopic($existingTopic, $weekModel, $row);
+            }
+
+            $existingTopic->load(['mcqs' => fn ($q) => $q->orderBy('order_index')]);
+
+            return response()->json([
+                'status'     => true,
+                'statuscode' => 200,
+                'message'    => 'MCQs added to existing topic in this week.',
+                'mcq_topic'  => $this->transformMcqTopic($existingTopic),
+            ]);
+        }
+
         $topic = CurriculumMcqTopic::create([
             'week_id'     => $weekModel->id,
             'mentee_id'   => $data['mentee_id'],
@@ -525,6 +547,19 @@ class CurriculumController extends Controller
                 'statuscode' => 422,
                 'message'    => 'mentee_id must match this week.',
             ], 422);
+        }
+
+        if (isset($fields['name'])) {
+            $menteeId = (int) ($fields['mentee_id'] ?? $topicModel->mentee_id);
+            $duplicate = $this->findMcqTopicByNameInWeek($weekModel, $menteeId, $fields['name'], $topicModel->id);
+
+            if ($duplicate) {
+                return response()->json([
+                    'status'     => false,
+                    'statuscode' => 422,
+                    'message'    => 'A topic with this name already exists in this week.',
+                ], 422);
+            }
         }
 
         if ($request->has('is_active')) {
@@ -902,7 +937,7 @@ class CurriculumController extends Controller
         return [
             'file_name' => $file->getClientOriginalName(),
             'file_path' => $path,
-            'file_url'  => url(Storage::url($path)),
+            'file_url'  => TaskSupportingMaterial::buildMediaUrl($path),
             'mime_type' => $file->getMimeType(),
             'file_size' => $file->getSize(),
         ];
@@ -943,7 +978,7 @@ class CurriculumController extends Controller
             $path = $file->store('curriculum-tasks', 'public');
             $attachments[] = [
                 'name' => $file->getClientOriginalName(),
-                'url'  => url(Storage::url($path)),
+                'url'  => CurriculumTask::buildAttachmentUrl($path),
                 'mime' => $file->getMimeType(),
                 'size' => $file->getSize(),
             ];
@@ -960,8 +995,7 @@ class CurriculumController extends Controller
                 continue;
             }
 
-            $path = parse_url($url, PHP_URL_PATH) ?: '';
-            $path = ltrim(str_replace('/storage/', '', $path), '/');
+            $path = CurriculumTask::resolveAttachmentPathFromUrl($url) ?? '';
 
             if ($path !== '') {
                 Storage::disk('public')->delete($path);
@@ -1019,6 +1053,19 @@ class CurriculumController extends Controller
         return CurriculumMcqTopic::where('week_id', $week->id)
             ->with('mcqs')
             ->findOrFail($topicId);
+    }
+
+    private function findMcqTopicByNameInWeek(
+        CurriculumWeek $week,
+        int $menteeId,
+        string $name,
+        ?int $excludeTopicId = null
+    ): ?CurriculumMcqTopic {
+        return CurriculumMcqTopic::where('week_id', $week->id)
+            ->where('mentee_id', $menteeId)
+            ->when($excludeTopicId, fn ($q) => $q->where('id', '!=', $excludeTopicId))
+            ->whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($name))])
+            ->first();
     }
 
     private function syncMcqsForTopic(CurriculumMcqTopic $topic, CurriculumWeek $week, array $mcqRows): void

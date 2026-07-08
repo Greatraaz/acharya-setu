@@ -248,6 +248,34 @@ class VideosController extends Controller
         ]);
     }
 
+    public function serveSupportingMaterialFile(string $filename)
+    {
+        $filename = basename($filename);
+        $path     = 'curriculum-supporting-materials/' . $filename;
+
+        if (! Storage::disk('public')->exists($path)) {
+            abort(404, 'File not found.');
+        }
+
+        return Storage::disk('public')->response($path, $filename, [
+            'Content-Type' => Storage::disk('public')->mimeType($path),
+        ]);
+    }
+
+    public function serveCurriculumTaskFile(string $filename)
+    {
+        $filename = basename($filename);
+        $path     = 'curriculum-tasks/' . $filename;
+
+        if (! Storage::disk('public')->exists($path)) {
+            abort(404, 'File not found.');
+        }
+
+        return Storage::disk('public')->response($path, $filename, [
+            'Content-Type' => Storage::disk('public')->mimeType($path),
+        ]);
+    }
+
     private function findOwnedMentorVideo(Request $request, int $id): MentorVideo
     {
         return MentorVideo::where('mentor_id', $request->user()->id)

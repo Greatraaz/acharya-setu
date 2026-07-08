@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mentee;
 
 use App\Http\Controllers\Controller;
+use App\Services\MentorMatcherService;
 use Illuminate\Http\Request;
 
 class OnboardingController extends Controller
@@ -49,7 +50,11 @@ class OnboardingController extends Controller
 
     public function complete(Request $request)
     {
-        auth()->user()->update(['onboarding_completed' => true, 'onboarding_step' => 4]);
+        $user = auth()->user();
+        $user->update(['onboarding_completed' => true, 'onboarding_step' => 4]);
+        $user->refresh();
+        app(MentorMatcherService::class)->assignBestMentor($user);
+
         $redirect = route('mentee.dashboard');
         if ($request->ajax()) return response()->json(['redirect' => $redirect]);
         return redirect($redirect);

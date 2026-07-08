@@ -53,6 +53,35 @@ class CurriculumTask extends Model
     ];
 
     const ATTACHMENT_MAX_KB = 10240; // 10MB
+
+    public static function buildAttachmentUrl(string $filePath): string
+    {
+        return url('/api/v1/media/curriculum-tasks/' . basename($filePath));
+    }
+
+    public static function resolveAttachmentPathFromUrl(string $url): ?string
+    {
+        if (trim($url) === '') {
+            return null;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH) ?: '';
+        if ($path === '') {
+            return null;
+        }
+
+        if (str_contains($path, '/api/v1/media/curriculum-tasks/')) {
+            $filename = basename($path);
+            return $filename !== '' ? 'curriculum-tasks/' . $filename : null;
+        }
+
+        if (str_contains($path, '/storage/curriculum-tasks/')) {
+            $relative = ltrim(str_replace('/storage/', '', $path), '/');
+            return $relative !== '' ? $relative : null;
+        }
+
+        return null;
+    }
  
     public function week(): BelongsTo
     {
@@ -67,6 +96,29 @@ class CurriculumTask extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    public function getAttachmentsAttribute($value): array
+    {
+        $attachments = is_array($value) ? $value : (json_decode((string) $value, true) ?: []);
+        if (! is_array($attachments)) {
+            return [];
+        }
+
+        return array_map(function ($attachment) {
+            if (! is_array($attachment)) {
+                return $attachment;
+            }
+
+            $url = $attachment['url'] ?? '';
+            $path = is_string($url) ? self::resolveAttachmentPathFromUrl($url) : null;
+
+            if ($path) {
+                $attachment['url'] = self::buildAttachmentUrl($path);
+            }
+
+            return $attachment;
+        }, $attachments);
     }
  
     public function getProgressForUser(int $userId): ?StudentCurriculumProgress
