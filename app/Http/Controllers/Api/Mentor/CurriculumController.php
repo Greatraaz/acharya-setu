@@ -948,6 +948,10 @@ class CurriculumController extends Controller
     {
         $materialModel = TaskSupportingMaterial::findOrFail($material);
 
+        StudentCurriculumProgress::where('item_type', 'material')
+            ->where('item_id', $materialModel->id)
+            ->delete();
+
         $this->deleteSupportingMaterialFile($materialModel);
         $materialModel->delete();
 
@@ -1063,6 +1067,7 @@ class CurriculumController extends Controller
 
         $taskIds = CurriculumTask::whereIn('week_id', $weekIds)->pluck('id');
         $mcqIds  = CurriculumMcq::whereIn('week_id', $weekIds)->pluck('id');
+        $materialIds = TaskSupportingMaterial::whereIn('week_id', $weekIds)->pluck('id');
 
         if ($taskIds->isNotEmpty()) {
             StudentCurriculumProgress::where('item_type', 'task')
@@ -1073,6 +1078,12 @@ class CurriculumController extends Controller
         if ($mcqIds->isNotEmpty()) {
             StudentCurriculumProgress::where('item_type', 'mcq')
                 ->whereIn('item_id', $mcqIds)
+                ->delete();
+        }
+
+        if ($materialIds->isNotEmpty()) {
+            StudentCurriculumProgress::where('item_type', 'material')
+                ->whereIn('item_id', $materialIds)
                 ->delete();
         }
     }

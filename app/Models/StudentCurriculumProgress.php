@@ -74,6 +74,7 @@ class StudentCurriculumProgress extends Model
     {
         $taskIds = CurriculumTask::where('mentee_id', $menteeId)->where('is_active', true)->pluck('id');
         $mcqIds  = CurriculumMcq::where('mentee_id', $menteeId)->where('is_active', true)->pluck('id');
+        $materialIds = TaskSupportingMaterial::where('mentee_id', $menteeId)->where('is_active', true)->pluck('id');
 
         $tasksCompleted = static::where('user_id', $menteeId)
             ->where('item_type', 'task')
@@ -89,6 +90,12 @@ class StudentCurriculumProgress extends Model
 
         $tasksTotal = $taskIds->count();
         $mcqsTotal  = $mcqIds->count();
+        $materialsCompleted = static::where('user_id', $menteeId)
+            ->where('item_type', 'material')
+            ->where('is_completed', true)
+            ->whereIn('item_id', $materialIds)
+            ->count();
+        $materialsTotal = $materialIds->count();
 
         $videoFileIds = MentorVideoFile::whereHas('mentorVideo', fn ($q) => $q->where('is_active', true))->pluck('id');
         $videosTotal  = $videoFileIds->count();
@@ -114,8 +121,14 @@ class StudentCurriculumProgress extends Model
             'percent' => $videosTotal ? (int) round($videosWatched / $videosTotal * 100) : 0,
         ];
 
-        $overallTotal     = $tasksTotal + $mcqsTotal + $videosTotal;
-        $overallCompleted = $tasksCompleted + $mcqsCompleted + $videosWatched;
+        $materialsBreakdown = [
+            'total'     => $materialsTotal,
+            'completed' => $materialsCompleted,
+            'percent'   => $materialsTotal ? (int) round($materialsCompleted / $materialsTotal * 100) : 0,
+        ];
+
+        $overallTotal     = $tasksTotal + $mcqsTotal + $materialsTotal + $videosTotal;
+        $overallCompleted = $tasksCompleted + $mcqsCompleted + $materialsCompleted + $videosWatched;
 
         return [
             'overall' => [
@@ -125,6 +138,7 @@ class StudentCurriculumProgress extends Model
             ],
             'tasks'  => $tasksBreakdown,
             'mcqs'   => $mcqsBreakdown,
+            'materials' => $materialsBreakdown,
             'videos' => $videosBreakdown,
         ];
     }

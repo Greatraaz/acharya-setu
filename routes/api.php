@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MentorsController;
 use App\Http\Controllers\Api\SessionsController;
@@ -43,6 +45,20 @@ Route::prefix('v1')->group(function () {
             'version'=> '1.0.0'
         ]);
     });
+     Route::post('cache-clear', function () {
+            Artisan::call('optimize:clear');
+            Cache::forget('app_configurations');
+
+            return response()->json([
+                'status'     => true,
+                'statuscode' => 200,
+                'message'    => 'Application cache cleared successfully.',
+                'cleared'    => [
+                    'optimize:clear',
+                    'app_configurations',
+                ],
+            ]);
+        });
     Route::get('/media/mentor-videos/{filename}', [VideosController::class, 'serveMentorVideoFile'])
         ->where('filename', '[^/]+');
     Route::get('/media/curriculum-supporting-materials/{filename}', [VideosController::class, 'serveSupportingMaterialFile'])
@@ -108,6 +124,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('/channels',                    [AdminController::class, 'communityChannels']);
         Route::post('/channels',                   [AdminController::class, 'createChannel']);
         Route::post('/notifications/broadcast',    [AdminController::class, 'broadcastNotification']);
+       
     });
 
     /**********************************************************
@@ -137,6 +154,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/admin-mcqs', [MenteeCurriculum::class, 'adminMcqs'])->name('adminMcqs');
             Route::post('/tasks/{task}/complete', [MenteeProgress::class, 'completeTask'])->name('tasks.complete')->whereNumber('task');
             Route::post('/mcqs/{mcq}/answer',     [MenteeProgress::class, 'answerMcq'])->name('mcqs.answer')->whereNumber('mcq');
+            Route::post('/materials/{material}/complete', [MenteeProgress::class, 'completeMaterial'])->name('materials.complete')->whereNumber('material');
         });
 
         // Progress dashboard

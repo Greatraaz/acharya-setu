@@ -11,6 +11,7 @@ use App\Models\{
     MentorVideoFile,
     MentorVideoWatch,
     StudentCurriculumProgress,
+    TaskSupportingMaterial,
 };
 use Illuminate\Http\{JsonResponse, Request};
 use Illuminate\Support\Facades\Storage;
@@ -185,6 +186,34 @@ class ProgressController extends Controller
             'message'    => 'Video marked as watched.',
             'file_id'    => $videoFile->id,
             'summary'    => $summary,
+        ]);
+    }
+
+    // POST /mentee/curriculum/materials/{material}/complete
+    public function completeMaterial(Request $request, int $material): JsonResponse
+    {
+        $menteeId = $request->user()->id;
+
+        $materialModel = TaskSupportingMaterial::where('id', $material)
+            ->where('mentee_id', $menteeId)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $progress = StudentCurriculumProgress::markComplete(
+            $menteeId,
+            'material',
+            $materialModel->id
+        );
+
+        $summary = StudentCurriculumProgress::getMenteeProgressSummary($menteeId);
+
+        return response()->json([
+            'status'      => true,
+            'statuscode'  => 200,
+            'message'     => 'Supporting material marked complete.',
+            'material_id' => $materialModel->id,
+            'progress'    => $progress,
+            'summary'     => $summary,
         ]);
     }
 }
