@@ -71,32 +71,43 @@ class PlanController extends Controller
             ], 404);
         }
 
-        // Check if user already has an active subscription for this plan
-        $alreadyActive = UserSubscription::where('user_id', $user->id)
-            ->where('plan_id', $plan->id)
-            ->where('status', 'active')
-            ->where('expires_at', '>', Carbon::now())
-            ->exists();
+        $current = $this->currentSubscription($user->id);
 
-        if ($alreadyActive) {
+        // Same plan already active — no need to subscribe again
+        if (
+            $current
+            && (int) $current->plan_id === (int) $plan->id
+            && $current->status === 'active'
+            && $current->payment_status === 'paid'
+            && $current->expires_at
+            && $current->expires_at->isFuture()
+        ) {
             return response()->json([
                 'status'  => false,
                 'message' => 'You already have an active subscription for this plan.',
             ], 422);
         }
 
+        $isUpgrade = $current
+            && $current->status === 'active'
+            && $current->payment_status === 'paid'
+            && $current->expires_at
+            && $current->expires_at->isFuture()
+            && (int) $current->plan_id !== (int) $plan->id;
+
         if ((float) $plan->price <= 0) {
-            $subscription = $this->activateSubscription($user->id, $plan, null);
+            $subscription = $this->activateOrUpgradeSubscription($user->id, $plan, null);
 
             return response()->json([
                 'status'  => true,
-                'message' => 'Plan subscribed successfully.',
+                'message' => $isUpgrade ? 'Plan upgraded successfully.' : 'Plan subscribed successfully.',
                 'data'    => [
                     'subscription_id'   => $subscription->subscription_id,
                     'plan_name'         => $plan->plan_name,
                     'amount_paid'       => $subscription->amount_paid,
                     'currency'          => $subscription->currency,
                     'payment_status'    => $subscription->payment_status,
+                    'is_upgrade'        => $isUpgrade,
                     'starts_at'         => $subscription->starts_at?->toDateTimeString(),
                     'expires_at'        => $subscription->expires_at?->toDateTimeString(),
                 ],
@@ -137,8 +148,9 @@ class PlanController extends Controller
                     'currency' => $currency,
                     'receipt'  => Str::limit($receipt, 40, ''),
                     'notes'    => [
-                        'user_id' => (string) $user->id,
-                        'plan_id' => (string) $plan->id,
+                        'user_id'    => (string) $user->id,
+                        'plan_id'    => (string) $plan->id,
+                        'is_upgrade' => $isUpgrade ? '1' : '0',
                     ],
                 ]);
 
@@ -175,20 +187,18 @@ class PlanController extends Controller
             ], 502);
         }
 
-        $subscription = UserSubscription::create([
-            'user_id'           => $user->id,
-            'plan_id'           => $plan->id,
-            'subscription_id'   => 'SUB-' . mt_rand(10000000, 99999999),
-            'amount_paid'       => $plan->price,
-            'currency'          => $currency,
-            'payment_status'    => 'pending',
-            'status'            => 'pending',
-            'razorpay_order_id' => $order['id'] ?? null,
-        ]);
+        // Reuse existing row (upgrade / change) instead of creating another subscription
+        $subscription = $this->upsertPendingSubscription(
+            $user->id,
+            $plan,
+            $currency,
+            $order['id'] ?? null,
+            $isUpgrade
+        );
 
         return response()->json([
             'status'  => true,
-            'message' => 'Payment order created.',
+            'message' => $isUpgrade ? 'Upgrade payment order created.' : 'Payment order created.',
             'data'    => [
                 'plan_id'            => $plan->id,
                 'plan_name'          => $plan->plan_name,
@@ -199,6 +209,7 @@ class PlanController extends Controller
                 'currency'           => $currency,
                 'razorpay_key'       => $creds['key'],
                 'payment_status'     => 'pending',
+                'is_upgrade'         => $isUpgrade,
             ],
         ], 201);
     }
@@ -247,7 +258,6 @@ class PlanController extends Controller
         }
 
         $subscription = UserSubscription::where('user_id', $user->id)
-            ->where('plan_id', $plan->id)
             ->where('razorpay_order_id', $data['razorpay_order_id'])
             ->latest('id')
             ->first();
@@ -259,7 +269,13 @@ class PlanController extends Controller
             ], 404);
         }
 
-        if ($subscription->payment_status === 'paid' && $subscription->status === 'active') {
+        // Already verified for this exact payment + target plan
+        if (
+            $subscription->payment_status === 'paid'
+            && $subscription->status === 'active'
+            && (int) $subscription->plan_id === (int) $plan->id
+            && $subscription->razorpay_payment_id === $data['razorpay_payment_id']
+        ) {
             return response()->json([
                 'status'  => true,
                 'message' => 'Subscription already activated.',
@@ -274,12 +290,18 @@ class PlanController extends Controller
             ], 200);
         }
 
-        $this->deactivateExistingActiveSubscriptions($user->id);
+        $isUpgrade = (int) $subscription->plan_id !== (int) $plan->id
+            && $subscription->status === 'active'
+            && $subscription->payment_status === 'paid';
 
         $startsAt = Carbon::now();
         $expiresAt = $startsAt->copy()->addDays((int) $plan->duration);
 
+        // Upgrade / change plan on the same row — never create a second active subscription
         $subscription->update([
+            'plan_id'             => $plan->id,
+            'amount_paid'         => (float) $plan->price,
+            'currency'            => strtoupper($plan->currency ?? 'INR'),
             'payment_status'      => 'paid',
             'payment_reference'   => $data['razorpay_payment_id'],
             'razorpay_payment_id' => $data['razorpay_payment_id'],
@@ -288,9 +310,14 @@ class PlanController extends Controller
             'expires_at'          => $expiresAt,
         ]);
 
+        // Clean up any leftover duplicate rows for this user (from older flow)
+        $this->expireOtherSubscriptions($user->id, $subscription->id);
+
         return response()->json([
             'status'  => true,
-            'message' => 'Payment verified and subscription activated.',
+            'message' => $isUpgrade
+                ? 'Payment verified and plan upgraded.'
+                : 'Payment verified and subscription activated.',
             'data'    => [
                 'subscription_id'   => $subscription->subscription_id,
                 'plan_name'         => $plan->plan_name,
@@ -298,6 +325,7 @@ class PlanController extends Controller
                 'currency'          => $subscription->currency,
                 'payment_reference' => $subscription->payment_reference,
                 'payment_status'    => $subscription->payment_status,
+                'is_upgrade'        => $isUpgrade,
                 'starts_at'         => $subscription->starts_at?->toDateTimeString(),
                 'expires_at'        => $subscription->expires_at?->toDateTimeString(),
             ],
@@ -366,8 +394,8 @@ class PlanController extends Controller
                     'currency'          => $sub->currency,
                     'payment_status'    => $sub->payment_status,
                     'status'            => $sub->status,
-                    'starts_at'         => $sub->starts_at->toDateTimeString(),
-                    'expires_at'        => $sub->expires_at->toDateTimeString(),
+                    'starts_at'         => $sub->starts_at?->toDateTimeString(),
+                    'expires_at'        => $sub->expires_at?->toDateTimeString(),
                     'is_active'         => $sub->isActive(),
                 ];
             });
@@ -424,25 +452,88 @@ class PlanController extends Controller
         ];
     }
 
-    private function deactivateExistingActiveSubscriptions(int $userId): void
+    /**
+     * Latest subscription row for this user (active preferred, else any latest).
+     */
+    private function currentSubscription(int $userId): ?UserSubscription
     {
-        UserSubscription::where('user_id', $userId)
+        $active = UserSubscription::where('user_id', $userId)
             ->where('status', 'active')
             ->where('payment_status', 'paid')
-            ->update(['status' => 'expired']);
+            ->where('expires_at', '>', Carbon::now())
+            ->latest('starts_at')
+            ->first();
+
+        if ($active) {
+            return $active;
+        }
+
+        return UserSubscription::where('user_id', $userId)
+            ->latest('id')
+            ->first();
     }
 
-    private function activateSubscription(int $userId, Plan $plan, ?string $paymentReference): UserSubscription
-    {
-        $this->deactivateExistingActiveSubscriptions($userId);
+    /**
+     * Create pending row only if user has none; otherwise update the same row for upgrade/change.
+     * For upgrades, keep current plan active until payment is verified.
+     */
+    private function upsertPendingSubscription(
+        int $userId,
+        Plan $plan,
+        string $currency,
+        ?string $razorpayOrderId,
+        bool $isUpgrade = false
+    ): UserSubscription {
+        $subscription = $this->currentSubscription($userId);
 
+        if ($subscription && $isUpgrade) {
+            // Keep current active plan until verify succeeds; only attach new order id
+            $subscription->update([
+                'razorpay_order_id'   => $razorpayOrderId,
+                'razorpay_payment_id' => null,
+            ]);
+
+            return $subscription->fresh();
+        }
+
+        $payload = [
+            'plan_id'             => $plan->id,
+            'amount_paid'         => (float) $plan->price,
+            'currency'            => $currency,
+            'payment_status'      => 'pending',
+            'payment_reference'   => null,
+            'razorpay_order_id'   => $razorpayOrderId,
+            'razorpay_payment_id' => null,
+            'status'              => 'pending',
+            'starts_at'           => null,
+            'expires_at'          => null,
+        ];
+
+        if ($subscription) {
+            $subscription->update($payload);
+
+            return $subscription->fresh();
+        }
+
+        return UserSubscription::create(array_merge($payload, [
+            'user_id'         => $userId,
+            'subscription_id' => 'SUB-' . mt_rand(10000000, 99999999),
+        ]));
+    }
+
+    /**
+     * Activate or upgrade on the same subscription row.
+     */
+    private function activateOrUpgradeSubscription(
+        int $userId,
+        Plan $plan,
+        ?string $paymentReference
+    ): UserSubscription {
         $startsAt = Carbon::now();
         $expiresAt = $startsAt->copy()->addDays((int) $plan->duration);
 
-        return UserSubscription::create([
-            'user_id'           => $userId,
+        $payload = [
             'plan_id'           => $plan->id,
-            'subscription_id'   => 'SUB-' . mt_rand(10000000, 99999999),
             'amount_paid'       => (float) $plan->price,
             'currency'          => strtoupper($plan->currency ?? 'INR'),
             'payment_status'    => 'paid',
@@ -450,6 +541,33 @@ class PlanController extends Controller
             'status'            => 'active',
             'starts_at'         => $startsAt,
             'expires_at'        => $expiresAt,
-        ]);
+        ];
+
+        $subscription = $this->currentSubscription($userId);
+
+        if ($subscription) {
+            $subscription->update($payload);
+            $this->expireOtherSubscriptions($userId, $subscription->id);
+
+            return $subscription->fresh();
+        }
+
+        $subscription = UserSubscription::create(array_merge($payload, [
+            'user_id'         => $userId,
+            'subscription_id' => 'SUB-' . mt_rand(10000000, 99999999),
+        ]));
+
+        return $subscription;
+    }
+
+    /**
+     * Expire any other subscription rows for this user (legacy duplicates).
+     */
+    private function expireOtherSubscriptions(int $userId, int $keepId): void
+    {
+        UserSubscription::where('user_id', $userId)
+            ->where('id', '!=', $keepId)
+            ->whereIn('status', ['active', 'pending'])
+            ->update(['status' => 'expired']);
     }
 }

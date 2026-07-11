@@ -489,7 +489,8 @@ class CurriculumController extends Controller
     //  GET    list topics with nested mcqs
     //  POST   create topic with mcqs
     //  PATCH  update topic + replace mcqs
-    //  DELETE delete topic and its mcqs
+    //  DELETE /{topic}        delete topic and its mcqs
+    //  DELETE /{topic}/{mcq}  delete a single mcq
     // ─────────────────────────────────────────────
     public function mcqs(Request $request, int $week): JsonResponse
     {
@@ -654,6 +655,29 @@ class CurriculumController extends Controller
             'status'     => true,
             'statuscode' => 200,
             'message'    => 'MCQ topic deleted.',
+        ]);
+    }
+
+    //  DELETE /mentor/curriculum/weeks/{week}/mcqs/{topic}/{mcq}
+    public function destroyMcqItem(int $week, int $topic, int $mcq): JsonResponse
+    {
+        $weekModel  = CurriculumWeek::findOrFail($week);
+        $topicModel = $this->findWeekMcqTopic($weekModel, $topic);
+
+        $mcqModel = CurriculumMcq::where('week_id', $weekModel->id)
+            ->where('topic_id', $topicModel->id)
+            ->findOrFail($mcq);
+
+        StudentCurriculumProgress::where('item_type', 'mcq')
+            ->where('item_id', $mcqModel->id)
+            ->delete();
+
+        $mcqModel->delete();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'MCQ deleted.',
         ]);
     }
 

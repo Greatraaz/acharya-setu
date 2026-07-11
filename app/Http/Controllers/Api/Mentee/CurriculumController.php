@@ -146,37 +146,47 @@ return response()->json([
 
 // ─────────────────────────────────────────────
 //  GET /mentee/curriculum/mcqs
-//  Mentor-created curriculum MCQs only, with status + summary.
+//  Mentor-created curriculum MCQs grouped by topic, with status + summary.
 // ─────────────────────────────────────────────
 public function mcqs(Request $request): JsonResponse
 {
 $menteeId = $request->user()->id;
 
-$mcqs = CurriculumMcq::where('mentee_id', $menteeId)
+$topics = CurriculumMcqTopic::where('mentee_id', $menteeId)
     ->where('is_active', true)
     ->with([
-        'topic:id,week_id,name,description,order_index',
+        'mcqs' => fn ($q) => $q->where('is_active', true)->orderBy('order_index'),
         'week:id,month_id,week_number,title,focus',
         'week.month:id,stream_id,month_number,title',
         'week.month.stream:id,name,slug',
     ])
     ->orderBy('week_id')
-    ->orderBy('topic_id')
     ->orderBy('order_index')
     ->get();
 
-$formatted = $mcqs
-    ->map(fn (CurriculumMcq $mcq) => $this->formatMcqWithContext($mcq, $menteeId))
+$formattedTopics = $topics
+    ->map(fn (CurriculumMcqTopic $topic) => $this->formatMcqTopicWithContext($topic, $menteeId))
     ->values();
 
-$completed  = $formatted->where('status', 'completed')->count();
-$inProgress = $formatted->where('status', 'in_progress')->count();
-$pending    = $formatted->where('status', 'pending')->count();
-$total      = $formatted->count();
+$allMcqs = $formattedTopics->flatMap(fn (array $topic) => $topic['mcqs'] ?? []);
 
-$mcqList = $formatted;
+$completed  = $allMcqs->where('status', 'completed')->count();
+$inProgress = $allMcqs->where('status', 'in_progress')->count();
+$pending    = $allMcqs->where('status', 'pending')->count();
+$total      = $allMcqs->count();
+
 if ($request->filled('status')) {
-    $mcqList = $formatted->filter(fn ($mcq) => $mcq['status'] === $request->status)->values();
+    $statusFilter = $request->status;
+    $formattedTopics = $formattedTopics
+        ->map(function (array $topic) use ($statusFilter) {
+            $topic['mcqs'] = collect($topic['mcqs'] ?? [])
+                ->filter(fn ($mcq) => $mcq['status'] === $statusFilter)
+                ->values();
+
+            return $topic;
+        })
+        ->filter(fn (array $topic) => $topic['mcqs']->isNotEmpty())
+        ->values();
 }
 
 return response()->json([
@@ -190,7 +200,7 @@ return response()->json([
         'pending'     => $pending,
         'percent'     => $total ? (int) round($completed / $total * 100) : 0,
     ],
-    'mcqs'       => $mcqList,
+    'mcq_topics' => $formattedTopics,
 ]);
 }
 
@@ -410,6 +420,29 @@ return [
 ];
 }
 
+private function formatMcqTopicWithContext(CurriculumMcqTopic $topic, int $menteeId): array
+{
+return array_merge($this->formatMcqTopic($topic, $menteeId), [
+    'week_id' => $topic->week_id,
+    'track'   => $topic->week?->month?->stream ? [
+        'id'   => $topic->week->month->stream->id,
+        'name' => $topic->week->month->stream->name,
+        'slug' => $topic->week->month->stream->slug,
+    ] : null,
+    'month'   => $topic->week?->month ? [
+        'id'           => $topic->week->month->id,
+        'month_number' => $topic->week->month->month_number,
+        'title'        => $topic->week->month->title,
+    ] : null,
+    'week'    => $topic->week ? [
+        'id'          => $topic->week->id,
+        'week_number' => $topic->week->week_number,
+        'title'       => $topic->week->title,
+        'focus'       => $topic->week->focus,
+    ] : null,
+]);
+}
+
 private function formatMcqForMentee(CurriculumMcq $mcq, int $menteeId): array
 {
 $completed = $mcq->isAnsweredCorrectlyByUser($menteeId);
@@ -430,36 +463,6 @@ return [
         'attempted_at'  => $attempt->attempted_at,
     ] : null,
 ];
-}
-
-private function formatMcqWithContext(CurriculumMcq $mcq, int $menteeId): array
-{
-return array_merge($this->formatMcqForMentee($mcq, $menteeId), [
-    'week_id'  => $mcq->week_id,
-    'topic_id' => $mcq->topic_id,
-    'topic'    => $mcq->topic ? [
-        'id'          => $mcq->topic->id,
-        'name'        => $mcq->topic->name,
-        'description' => $mcq->topic->description,
-        'order_index' => $mcq->topic->order_index,
-    ] : null,
-    'track'    => $mcq->week?->month?->stream ? [
-        'id'   => $mcq->week->month->stream->id,
-        'name' => $mcq->week->month->stream->name,
-        'slug' => $mcq->week->month->stream->slug,
-    ] : null,
-    'month'    => $mcq->week?->month ? [
-        'id'           => $mcq->week->month->id,
-        'month_number' => $mcq->week->month->month_number,
-        'title'        => $mcq->week->month->title,
-    ] : null,
-    'week'     => $mcq->week ? [
-        'id'          => $mcq->week->id,
-        'week_number' => $mcq->week->week_number,
-        'title'       => $mcq->week->title,
-        'focus'       => $mcq->week->focus,
-    ] : null,
-]);
 }
 
 private function buildTrackSummary(array $track): array

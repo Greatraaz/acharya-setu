@@ -290,6 +290,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get   ('weeks/{week}/mcqs',        [MentorCurriculum::class, 'mcqs'])->whereNumber('week');
             Route::post  ('weeks/{week}/mcqs',        [MentorCurriculum::class, 'storeMcq'])->whereNumber('week');
             Route::patch ('weeks/{week}/mcqs/{topic}', [MentorCurriculum::class, 'updateMcq'])->whereNumber('week')->whereNumber('topic');
+            Route::delete('weeks/{week}/mcqs/{topic}/{mcq}', [MentorCurriculum::class, 'destroyMcqItem'])->whereNumber('week')->whereNumber('topic')->whereNumber('mcq');
             Route::delete('weeks/{week}/mcqs/{topic}', [MentorCurriculum::class, 'destroyMcq'])->whereNumber('week')->whereNumber('topic');
             Route::post('tasks/{task}',             [MentorCurriculum::class, 'updateTask'])->whereNumber('task');
             Route::patch('tasks/{task}',             [MentorCurriculum::class, 'updateTask'])->whereNumber('task');
