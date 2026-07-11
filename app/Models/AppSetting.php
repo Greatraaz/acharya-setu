@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-namespace App\Models;
- 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
- 
+
 class AppSetting extends Model
 {
     protected $primaryKey = 'key';
@@ -19,12 +17,17 @@ class AppSetting extends Model
      * Get a config value by key (with optional default).
      * Results are cached for 60 minutes.
      */
-    public static function get(string $key, mixed $default = null): mixed
+    public static function allCached(): array
     {
-        $all = Cache::remember('app_configurations', 3600, function () {
+        return Cache::remember('app_configurations', 3600, function () {
             return static::all()->pluck('value', 'key')->toArray();
         });
- 
+    }
+
+    public static function get(string $key, mixed $default = null): mixed
+    {
+        $all = static::allCached();
+
         return $all[$key] ?? $default;
     }
  
@@ -82,11 +85,50 @@ class AppSetting extends Model
     {
         $s = static::allCached();
         $mode = $s['razorpay_mode'] ?? 'test';
+
         return [
-            'mode'   => $mode,
-            'key'    => $s["razorpay_{$mode}_key"]    ?? $s['razorpay_key']    ?? '',
-            'secret' => $s["razorpay_{$mode}_secret"] ?? $s['razorpay_secret'] ?? '',
+            'mode'    => $mode,
+            'enabled' => static::toBool($s['razorpay_enabled'] ?? false),
+            'key'     => static::firstNonEmpty([
+                $s["razorpay_{$mode}_key"] ?? null,
+                $s['razorpay_key_id'] ?? null,
+                $s['razorpay_key'] ?? null,
+            ]),
+            'secret'  => static::firstNonEmpty([
+                static::decryptIfNeeded($s["razorpay_{$mode}_secret"] ?? null),
+                static::decryptIfNeeded($s['razorpay_key_secret'] ?? null),
+                static::decryptIfNeeded($s['razorpay_secret'] ?? null),
+            ]),
         ];
+    }
+
+    private static function firstNonEmpty(array $values): string
+    {
+        foreach ($values as $value) {
+            if ($value !== null && $value !== '') {
+                return (string) $value;
+            }
+        }
+
+        return '';
+    }
+
+    private static function decryptIfNeeded(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return decrypt($value);
+        } catch (\Throwable) {
+            return $value;
+        }
+    }
+
+    private static function toBool(mixed $value): bool
+    {
+        return in_array((string) $value, ['1', 'true', 'yes', 'on'], true);
     }
  
     /** MSG91 SMS settings */
