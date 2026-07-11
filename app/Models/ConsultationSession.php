@@ -20,6 +20,7 @@ class ConsultationSession extends Model
         'title', 'agenda', 'mentor_notes', 'meeting_link', 'meeting_provider', 'meeting_channel',
         'status', 'cancellation_reason', 'cancelled_by', 'cancelled_at', 'started_at', 'ended_at',
         'actual_duration_seconds', 'amount', 'currency', 'payment_status', 'payment_reference',
+        'razorpay_order_id', 'razorpay_payment_id',
     ];
 
     protected $casts = [

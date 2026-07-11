@@ -182,6 +182,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::prefix('sessions')->name('sessions.')->group(function () {
             Route::get('/',          [SessionsController::class, 'index']);
             Route::post('/',         [SessionsController::class, 'store']);
+            Route::post('/verify',   [SessionsController::class, 'verifyPayment']);
             Route::patch('/{id}',    [SessionsController::class, 'update']);
             Route::delete('/{id}',   [SessionsController::class, 'destroy']);
         });
