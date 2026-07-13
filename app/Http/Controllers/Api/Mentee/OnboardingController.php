@@ -47,7 +47,7 @@ class OnboardingController extends Controller
         $data = $request->validate([
             'name'     => 'required|string|max:100',
             'gender'   => 'nullable|in:male,female,other',
-            'phone'    => 'nullable|string|regex:/^[6-9]\d{9}$/',
+            'phone'    => 'nullable|string',
             'address'  => 'nullable|string|max:200',
             'avatar'   => 'nullable|file|image|mimes:jpeg,png,webp|max:2048',
         ]);

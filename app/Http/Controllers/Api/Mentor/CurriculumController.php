@@ -824,12 +824,13 @@ class CurriculumController extends Controller
         $weekModel = CurriculumWeek::findOrFail($week);
 
         $data = $request->validate([
-            'mentee_id'  => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
-            'type'       => ['required', Rule::in(array_keys(TaskSupportingMaterial::TYPES))],
-            'title'      => 'nullable|string|max:200',
-            'link'       => 'nullable|url|max:2000',
-            'is_active'  => 'nullable',
-            'sort_order' => 'nullable|integer',
+            'mentee_id'    => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'type'         => ['required', Rule::in(array_keys(TaskSupportingMaterial::TYPES))],
+            'title'        => 'nullable|string|max:200',
+            'description'  => 'nullable|string',
+            'link'         => 'nullable|url|max:2000',
+            'is_active'    => 'nullable',
+            'sort_order'   => 'nullable|integer',
         ]);
 
         if ($contextError = $this->validateSupportingMaterialContext($weekModel, (int) $data['mentee_id'])) {
@@ -857,13 +858,14 @@ class CurriculumController extends Controller
         }
 
         $material = TaskSupportingMaterial::create([
-            'week_id'    => $weekModel->id,
-            'mentee_id'  => $data['mentee_id'],
-            'mentor_id'  => $request->user()->id,
-            'title'      => $data['title'] ?? null,
-            'type'       => $type,
-            'is_active'  => $request->boolean('is_active', true),
-            'sort_order' => $data['sort_order'] ?? 0,
+            'week_id'     => $weekModel->id,
+            'mentee_id'   => $data['mentee_id'],
+            'mentor_id'   => $request->user()->id,
+            'title'       => $data['title'] ?? null,
+            'description' => $data['description'] ?? null,
+            'type'        => $type,
+            'is_active'   => $request->boolean('is_active', true),
+            'sort_order'  => $data['sort_order'] ?? 0,
             ...$fileMeta,
         ]);
 
@@ -896,13 +898,14 @@ class CurriculumController extends Controller
         }
 
         $data = $request->validate([
-            'mentee_id'  => ['sometimes', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
-            'week_id'    => ['sometimes', 'integer', 'exists:curriculum_weeks,id'],
-            'type'       => ['sometimes', Rule::in(array_keys(TaskSupportingMaterial::TYPES))],
-            'title'      => 'nullable|string|max:200',
-            'link'       => 'nullable|url|max:2000',
-            'is_active'  => 'nullable',
-            'sort_order' => 'nullable|integer',
+            'mentee_id'    => ['sometimes', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'week_id'      => ['sometimes', 'integer', 'exists:curriculum_weeks,id'],
+            'type'         => ['sometimes', Rule::in(array_keys(TaskSupportingMaterial::TYPES))],
+            'title'        => 'nullable|string|max:200',
+            'description'  => 'nullable|string',
+            'link'         => 'nullable|url|max:2000',
+            'is_active'    => 'nullable',
+            'sort_order'   => 'nullable|integer',
         ]);
 
         $weekModel = CurriculumWeek::findOrFail((int) ($data['week_id'] ?? $materialModel->week_id));
@@ -923,8 +926,13 @@ class CurriculumController extends Controller
         }
 
         $fields = collect($data)->only([
-            'week_id', 'mentee_id', 'title', 'type', 'sort_order',
+            'week_id', 'mentee_id', 'title', 'description', 'type', 'sort_order',
         ])->filter(fn ($v) => $v !== null)->all();
+
+        // Allow clearing description by sending an empty string.
+        if (array_key_exists('description', $data) && $data['description'] === '') {
+            $fields['description'] = null;
+        }
 
         if ($request->has('is_active')) {
             $fields['is_active'] = $request->boolean('is_active');

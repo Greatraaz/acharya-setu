@@ -37,7 +37,7 @@ class SessionsController extends Controller
                 'notes'          => $s->agenda,
                 'meetingLink'    => $s->meeting_link,
                 'channel'        => $s->meeting_channel,
-                'amountPaid'     => $s->amount,
+                'amountPaid'     => (float) $s->amount,
                 'paymentStatus'  => $s->payment_status,
                 'bookingRef'     => $s->booking_ref,
             ]);

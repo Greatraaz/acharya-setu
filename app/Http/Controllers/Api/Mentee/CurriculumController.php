@@ -283,6 +283,7 @@ return [
     'mentee_id'    => $material->mentee_id,
     'mentor_id'    => $material->mentor_id,
     'title'        => $material->title,
+    'description'  => $material->description,
     'type'         => $material->type,
     'file_name'    => $material->file_name,
     'file_path'    => $material->file_path,

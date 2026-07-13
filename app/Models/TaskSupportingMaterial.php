@@ -12,6 +12,7 @@ class TaskSupportingMaterial extends Model
         'mentee_id',
         'mentor_id',
         'title',
+        'description',
         'type',
         'file_name',
         'file_path',
