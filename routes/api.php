@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
 use App\Http\Controllers\Api\Mentor\CurriculumController as MentorCurriculum;
 use App\Http\Controllers\Api\Mentor\MenteeController as MentorMentee;
 use App\Http\Controllers\Api\Mentor\MentorRequestController as MentorMentorRequest;
+use App\Http\Controllers\Api\Mentor\ProgressController as MentorProgress;
 
 // Health
 // Health check endpoints
@@ -303,10 +304,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('supporting-materials/{material}', [MentorCurriculum::class, 'destroySupportingMaterial'])->whereNumber('material');
         });
 
-        // ── Mentor Mentees ────────────────────────────────────────────
+        // ── Mentor Mentees + mentee curriculum progress ───────────────
         Route::prefix('mentees')->name('mentees.')->group(function () {
             Route::get('/',       [MentorMentee::class, 'index'])->name('index');
-            Route::get('/{mentee}', [MentorMentee::class, 'show'])->name('show');
+            Route::get('/{mentee}/curriculum', [MentorProgress::class, 'curriculum'])->name('curriculum')->whereNumber('mentee');
+            Route::get('/{mentee}', [MentorMentee::class, 'show'])->name('show')->whereNumber('mentee');
         });
 
         // ── Mentor Requests (accept / reject) ─────────────────────────

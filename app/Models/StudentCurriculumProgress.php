@@ -68,13 +68,32 @@ class StudentCurriculumProgress extends Model
     }
 
     /**
-     * Full mentee progress summary: tasks, MCQs, videos (percent calculated dynamically).
+     * Full mentee progress summary: tasks, MCQs, materials, videos.
+     * Pass $mentorId to scope to that mentor's curriculum / videos only.
      */
-    public static function getMenteeProgressSummary(int $menteeId): array
+    public static function getMenteeProgressSummary(int $menteeId, ?int $mentorId = null): array
     {
-        $taskIds = CurriculumTask::where('mentee_id', $menteeId)->where('is_active', true)->pluck('id');
-        $mcqIds  = CurriculumMcq::where('mentee_id', $menteeId)->where('is_active', true)->pluck('id');
-        $materialIds = TaskSupportingMaterial::where('mentee_id', $menteeId)->where('is_active', true)->pluck('id');
+        $taskQuery = CurriculumTask::where('mentee_id', $menteeId)->where('is_active', true);
+        $mcqQuery  = CurriculumMcq::where('mentee_id', $menteeId)->where('is_active', true);
+        $materialQuery = TaskSupportingMaterial::where('mentee_id', $menteeId)->where('is_active', true);
+        $videoQuery = MentorVideoFile::whereHas('mentorVideo', function ($q) use ($mentorId) {
+            $q->where('is_active', true);
+            if ($mentorId) {
+                $q->where('mentor_id', $mentorId);
+            }
+        });
+
+        if ($mentorId) {
+            $streamScope = fn ($q) => $q->where('mentor_id', $mentorId)->where('mentee_id', $menteeId);
+            $taskQuery->whereHas('week.month.stream', $streamScope);
+            $mcqQuery->whereHas('week.month.stream', $streamScope);
+            $materialQuery->where('mentor_id', $mentorId);
+        }
+
+        $taskIds = $taskQuery->pluck('id');
+        $mcqIds  = $mcqQuery->pluck('id');
+        $materialIds = $materialQuery->pluck('id');
+        $videoFileIds = $videoQuery->pluck('id');
 
         $tasksCompleted = static::where('user_id', $menteeId)
             ->where('item_type', 'task')
@@ -88,16 +107,15 @@ class StudentCurriculumProgress extends Model
             ->whereIn('item_id', $mcqIds)
             ->count();
 
-        $tasksTotal = $taskIds->count();
-        $mcqsTotal  = $mcqIds->count();
         $materialsCompleted = static::where('user_id', $menteeId)
             ->where('item_type', 'material')
             ->where('is_completed', true)
             ->whereIn('item_id', $materialIds)
             ->count();
-        $materialsTotal = $materialIds->count();
 
-        $videoFileIds = MentorVideoFile::whereHas('mentorVideo', fn ($q) => $q->where('is_active', true))->pluck('id');
+        $tasksTotal = $taskIds->count();
+        $mcqsTotal  = $mcqIds->count();
+        $materialsTotal = $materialIds->count();
         $videosTotal  = $videoFileIds->count();
         $videosWatched = MentorVideoWatch::where('mentee_id', $menteeId)
             ->whereIn('mentor_video_file_id', $videoFileIds)
@@ -130,6 +148,12 @@ class StudentCurriculumProgress extends Model
         $overallTotal     = $tasksTotal + $mcqsTotal + $materialsTotal + $videosTotal;
         $overallCompleted = $tasksCompleted + $mcqsCompleted + $materialsCompleted + $videosWatched;
 
+        $pendingSubmissions = static::where('user_id', $menteeId)
+            ->where('item_type', 'task')
+            ->where('submission_status', 'submitted')
+            ->whereIn('item_id', $taskIds)
+            ->count();
+
         return [
             'overall' => [
                 'total'     => $overallTotal,
@@ -140,6 +164,7 @@ class StudentCurriculumProgress extends Model
             'mcqs'   => $mcqsBreakdown,
             'materials' => $materialsBreakdown,
             'videos' => $videosBreakdown,
+            'pending_submissions' => $pendingSubmissions,
         ];
     }
 }
