@@ -99,65 +99,126 @@ class ProgressController extends Controller
         ]);
     }
 
-    // POST /mentee/curriculum/mcqs/{mcq}/answer
-    public function answerMcq(Request $request, int $mcq): JsonResponse
+    // POST /mentee/curriculum/mcqs/answer
+    // Body: { "answers": [ { "mcq_id": 1, "selected_option": 2 }, ... ] }
+    // selected_option is 1-based. Re-answers are allowed.
+    public function answerMcq(Request $request, ?int $mcq = null): JsonResponse
     {
         $menteeId = $request->user()->id;
-        $mcqModel = CurriculumMcq::where('id', $mcq)
-            ->where('mentee_id', $menteeId)
-            ->where('is_active', true)
-            ->firstOrFail();
+
+        // Legacy single-MCQ URL: /mcqs/{mcq}/answer
+        if ($mcq !== null && ! $request->has('answers')) {
+            $request->merge([
+                'answers' => [[
+                    'mcq_id'          => $mcq,
+                    'selected_option' => $request->input('selected_option'),
+                    'selected_index'  => $request->input('selected_index'),
+                ]],
+            ]);
+        }
 
         $data = $request->validate([
-            'selected_index'  => 'nullable|integer|min:0|max:5',
-            'selected_option' => 'nullable|integer|min:1|max:6',
+            'answers'                   => 'required|array|min:1',
+            'answers.*.mcq_id'          => 'required|integer|distinct',
+            'answers.*.selected_option' => 'nullable|integer|min:1|max:6',
+            'answers.*.selected_index'  => 'nullable|integer|min:0|max:5',
         ]);
 
-        if (! isset($data['selected_index']) && ! isset($data['selected_option'])) {
-            return response()->json([
-                'status'     => false,
-                'statuscode' => 422,
-                'message'    => 'Provide selected_index (0-based) or selected_option (1-based).',
-            ], 422);
-        }
+        $mcqIds = collect($data['answers'])->pluck('mcq_id')->all();
+        $mcqs = CurriculumMcq::whereIn('id', $mcqIds)
+            ->where('mentee_id', $menteeId)
+            ->where('is_active', true)
+            ->get()
+            ->keyBy('id');
 
-        if ($mcqModel->isAnsweredCorrectlyByUser($menteeId)) {
-            return response()->json([
-                'status'     => false,
-                'statuscode' => 422,
-                'message'    => 'Already answered correctly.',
-            ], 422);
-        }
+        $results = [];
 
-        $selectedIndex = isset($data['selected_index'])
-            ? (int) $data['selected_index']
-            : (int) $data['selected_option'] - 1;
+        foreach ($data['answers'] as $row) {
+            $mcqId = (int) $row['mcq_id'];
+            $mcqModel = $mcqs->get($mcqId);
 
-        $correct = $selectedIndex === (int) $mcqModel->correct_index;
-        $points  = $correct ? $mcqModel->points : 0;
+            if (! $mcqModel) {
+                $results[] = [
+                    'mcq_id'  => $mcqId,
+                    'status'  => false,
+                    'message' => 'MCQ not found.',
+                ];
+                continue;
+            }
 
-        McqAttempt::create([
-            'user_id'        => $menteeId,
-            'mcq_id'         => $mcqModel->id,
-            'selected_index' => $selectedIndex,
-            'is_correct'     => $correct,
-            'points_earned'  => $points,
-            'attempted_at'   => now(),
-        ]);
+            if (! isset($row['selected_index']) && ! isset($row['selected_option'])) {
+                $results[] = [
+                    'mcq_id'  => $mcqId,
+                    'status'  => false,
+                    'message' => 'Provide selected_option (1-based) or selected_index (0-based).',
+                ];
+                continue;
+            }
 
-        if ($correct) {
-            StudentCurriculumProgress::markComplete($menteeId, 'mcq', $mcqModel->id);
+            $selectedIndex = isset($row['selected_index'])
+                ? (int) $row['selected_index']
+                : (int) $row['selected_option'] - 1;
+
+            $options = $mcqModel->options ?? [];
+            if ($selectedIndex < 0 || $selectedIndex >= count($options)) {
+                $results[] = [
+                    'mcq_id'  => $mcqId,
+                    'status'  => false,
+                    'message' => 'selected_option is out of range for this MCQ.',
+                ];
+                continue;
+            }
+
+            $correct = $selectedIndex === (int) $mcqModel->correct_index;
+            $points  = $correct ? (int) $mcqModel->points : 0;
+
+            // Always allow re-answer — store a new attempt each time
+            McqAttempt::create([
+                'user_id'        => $menteeId,
+                'mcq_id'         => $mcqModel->id,
+                'selected_index' => $selectedIndex,
+                'is_correct'     => $correct,
+                'points_earned'  => $points,
+                'attempted_at'   => now(),
+            ]);
+
+            if ($correct) {
+                StudentCurriculumProgress::markComplete($menteeId, 'mcq', $mcqModel->id);
+            } else {
+                StudentCurriculumProgress::where('user_id', $menteeId)
+                    ->where('item_type', 'mcq')
+                    ->where('item_id', $mcqModel->id)
+                    ->delete();
+            }
+
+            $results[] = [
+                'mcq_id'         => $mcqModel->id,
+                'status'         => true,
+                'correct'        => $correct,
+                'selected_index' => $selectedIndex,
+                'correct_index'  => (int) $mcqModel->correct_index,
+                'correct_answer' => $options[(int) $mcqModel->correct_index] ?? null,
+                'points_earned'  => $points,
+                'explanation'    => $mcqModel->explanation,
+            ];
         }
 
         $summary = StudentCurriculumProgress::getMenteeProgressSummary($menteeId);
+        $answered = collect($results)->where('status', true);
+        $correctCount = $answered->where('correct', true)->count();
 
         return response()->json([
-            'status'         => true,
-            'statuscode'     => 200,
-            'correct'        => $correct,
-            'points_earned'  => $points,
-            'explanation'    => $mcqModel->explanation,
-            'summary'        => $summary,
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'MCQ answers submitted.',
+            'summary'    => [
+                'submitted' => count($data['answers']),
+                'answered'  => $answered->count(),
+                'correct'   => $correctCount,
+                'incorrect' => $answered->count() - $correctCount,
+            ],
+            'results'    => $results,
+            'progress'   => $summary,
         ]);
     }
 

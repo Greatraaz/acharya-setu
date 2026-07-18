@@ -45,16 +45,23 @@ class UserSubscription extends Model
 
     public function isActive(): bool
     {
-        return $this->status === 'active'
-            && $this->payment_status === 'paid'
-            && Carbon::now()->between($this->starts_at, $this->expires_at);
+        if (
+            $this->status !== 'active'
+            || $this->payment_status !== 'paid'
+            || ! $this->starts_at
+            || ! $this->expires_at
+        ) {
+            return false;
+        }
+
+        return Carbon::now()->between($this->starts_at, $this->expires_at);
     }
 
     public function daysRemaining(): int
     {
-       /* if (!$this->isActive()) {
+        if (! $this->expires_at) {
             return 0;
-        }*/
+        }
 
         return (int) Carbon::now()->diffInDays($this->expires_at, false);
     }

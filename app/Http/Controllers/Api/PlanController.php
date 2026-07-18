@@ -366,8 +366,8 @@ class PlanController extends Controller
                 'amount_paid'     => $subscription->amount_paid,
                 'currency'        => $subscription->currency,
                 'status'          => $subscription->status,
-                'starts_at'       => $subscription->starts_at->toDateTimeString(),
-                'expires_at'      => $subscription->expires_at->toDateTimeString(),
+                'starts_at'       => $subscription->starts_at?->toDateTimeString(),
+                'expires_at'      => $subscription->expires_at?->toDateTimeString(),
                 'days_remaining'  => $subscription->daysRemaining(),
             ],
         ], 200);
@@ -394,8 +394,9 @@ class PlanController extends Controller
                     'currency'          => $sub->currency,
                     'payment_status'    => $sub->payment_status,
                     'status'            => $sub->status,
-                    'starts_at'         => $sub->starts_at?->toDateTimeString(),
-                    'expires_at'        => $sub->expires_at?->toDateTimeString(),
+                    // Pending / unpaid rows may not have dates yet
+                    'starts_at'         => optional($sub->starts_at)->toDateTimeString(),
+                    'expires_at'        => optional($sub->expires_at)->toDateTimeString(),
                     'is_active'         => $sub->isActive(),
                 ];
             });

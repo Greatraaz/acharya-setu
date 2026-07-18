@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\{AppSetting, ConsultationSession, User};
+use App\Models\{AppSetting, ConsultationSession, SessionNote, User};
 use App\Helpers\Agora\RtcTokenBuilder;
 use Carbon\Carbon;
 use Illuminate\Http\{JsonResponse, Request};
@@ -17,7 +17,11 @@ class SessionsController extends Controller
         $u        = $request->user();
         $f        = $u->role === 'mentor' ? 'mentor_id' : 'mentee_id';
         $sessions = ConsultationSession::where($f, $u->id)
-            ->with(['mentor:id,name,avatar_url,gender', 'mentee:id,name,avatar_url'])
+            ->with([
+                'mentor:id,name,avatar_url,gender',
+                'mentee:id,name,avatar_url',
+                'notes' => fn ($q) => $q->with('author:id,name,role,avatar_url')->latest(),
+            ])
             ->orderByDesc('scheduled_at')
             ->get()
             ->map(fn ($s) => [
@@ -34,7 +38,8 @@ class SessionsController extends Controller
                 'duration'       => $s->duration_minutes,
                 'status'         => $s->status,
                 'topic'          => $s->title,
-                'notes'          => $s->agenda,
+                'agenda'         => $s->agenda,
+                'notes'          => $s->notes->map(fn (SessionNote $note) => $this->formatNote($note))->values(),
                 'meetingLink'    => $s->meeting_link,
                 'channel'        => $s->meeting_channel,
                 'amountPaid'     => (float) $s->amount,
@@ -288,10 +293,114 @@ class SessionsController extends Controller
         ]);
     }
 
+    /**
+     * List all notes on a session (mentor + mentee).
+     * GET /api/v1/{mentor|mentee}/sessions/{id}/notes
+     */
+    public function notes(Request $request, int $id): JsonResponse
+    {
+        $session = $this->findOwnedSession($request, $id);
+
+        $notes = $session->notes()
+            ->with('author:id,name,role,avatar_url')
+            ->latest()
+            ->get()
+            ->map(fn (SessionNote $note) => $this->formatNote($note));
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'session_id' => $session->id,
+            'count'      => $notes->count(),
+            'notes'      => $notes,
+        ]);
+    }
+
+    /**
+     * Add a plain-text note (may include URLs in content).
+     * POST /api/v1/{mentor|mentee}/sessions/{id}/notes
+     * Body: { "content": "Discussed roadmap https://example.com" }
+     */
+    public function addNote(Request $request, int $id): JsonResponse
+    {
+        $session = $this->findOwnedSession($request, $id);
+
+        $data = $request->validate([
+            'content' => 'required|string|max:65535',
+        ]);
+
+        $note = $session->notes()->create([
+            'author_id'    => $request->user()->id,
+            'type'         => 'note',
+            'content'      => $data['content'],
+            'resource_url' => null,
+            'is_shared'    => true,
+        ]);
+
+        $note->load('author:id,name,role,avatar_url');
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 201,
+            'message'    => 'Note added.',
+            'note'       => $this->formatNote($note),
+        ], 201);
+    }
+
+    /**
+     * Update own session note text.
+     * PATCH /api/v1/{mentor|mentee}/sessions/{id}/notes/{noteId}
+     */
+    public function updateNote(Request $request, int $id, int $noteId): JsonResponse
+    {
+        $session = $this->findOwnedSession($request, $id);
+
+        $note = $session->notes()
+            ->where('id', $noteId)
+            ->where('author_id', $request->user()->id)
+            ->firstOrFail();
+
+        $data = $request->validate([
+            'content' => 'required|string|max:65535',
+        ]);
+
+        $note->update(['content' => $data['content']]);
+        $note->load('author:id,name,role,avatar_url');
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Note updated.',
+            'note'       => $this->formatNote($note),
+        ]);
+    }
+
+    /**
+     * Delete own session note.
+     * DELETE /api/v1/{mentor|mentee}/sessions/{id}/notes/{noteId}
+     */
+    public function destroyNote(Request $request, int $id, int $noteId): JsonResponse
+    {
+        $session = $this->findOwnedSession($request, $id);
+
+        $note = $session->notes()
+            ->where('id', $noteId)
+            ->where('author_id', $request->user()->id)
+            ->firstOrFail();
+
+        $note->delete();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Note deleted.',
+        ]);
+    }
+
     public function update(Request $request, int $id): JsonResponse
     {
         try {
-            $s = ConsultationSession::findOrFail($id);
+            $s = $this->findOwnedSession($request, $id);
             $d = $request->validate([
                 'status' => 'sometimes|in:upcoming,completed,cancelled,pending',
                 'notes'  => 'nullable|string',
@@ -369,6 +478,37 @@ class SessionsController extends Controller
             'status' => true,
             'token'  => $newToken,
         ]);
+    }
+
+    private function findOwnedSession(Request $request, int $id): ConsultationSession
+    {
+        $user = $request->user();
+        $field = $user->role === 'mentor' ? 'mentor_id' : 'mentee_id';
+
+        return ConsultationSession::where('id', $id)
+            ->where($field, $user->id)
+            ->firstOrFail();
+    }
+
+    private function formatNote(SessionNote $note): array
+    {
+        return [
+            'id'           => $note->id,
+            'session_id'   => $note->session_id,
+            'author_id'    => $note->author_id,
+            'type'         => $note->type,
+            'content'      => $note->content,
+            'resource_url' => $note->resource_url,
+            'is_shared'    => (bool) $note->is_shared,
+            'created_at'   => $note->created_at,
+            'updated_at'   => $note->updated_at,
+            'author'       => $note->relationLoaded('author') && $note->author ? [
+                'id'         => $note->author->id,
+                'name'       => $note->author->name,
+                'role'       => $note->author->role,
+                'avatar_url' => $note->author->avatar_url,
+            ] : null,
+        ];
     }
 
     private function razorpayCredentials(): array

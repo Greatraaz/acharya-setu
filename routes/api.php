@@ -154,7 +154,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/mcqs',       [MenteeCurriculum::class, 'mcqs'])->name('mcqs');
             Route::get('/admin-mcqs', [MenteeCurriculum::class, 'adminMcqs'])->name('adminMcqs');
             Route::post('/tasks/{task}/complete', [MenteeProgress::class, 'completeTask'])->name('tasks.complete')->whereNumber('task');
-            Route::post('/mcqs/{mcq}/answer',     [MenteeProgress::class, 'answerMcq'])->name('mcqs.answer')->whereNumber('mcq');
+            Route::post('/mcqs/answer', [MenteeProgress::class, 'answerMcq'])->name('mcqs.answer');
+            // Legacy single-MCQ path still accepted (redirects to same batch handler via route param optional)
+            Route::post('/mcqs/{mcq}/answer', [MenteeProgress::class, 'answerMcq'])->name('mcqs.answer.single')->whereNumber('mcq');
             Route::post('/materials/{material}/complete', [MenteeProgress::class, 'completeMaterial'])->name('materials.complete')->whereNumber('material');
         });
 
@@ -184,6 +186,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/',          [SessionsController::class, 'index']);
             Route::post('/',         [SessionsController::class, 'store']);
             Route::post('/verify',   [SessionsController::class, 'verifyPayment']);
+            Route::get('/{id}/notes', [SessionsController::class, 'notes'])->whereNumber('id');
+            Route::post('/{id}/notes', [SessionsController::class, 'addNote'])->whereNumber('id');
+            Route::patch('/{id}/notes/{noteId}', [SessionsController::class, 'updateNote'])->whereNumber('id')->whereNumber('noteId');
+            Route::delete('/{id}/notes/{noteId}', [SessionsController::class, 'destroyNote'])->whereNumber('id')->whereNumber('noteId');
             Route::patch('/{id}',    [SessionsController::class, 'update']);
             Route::delete('/{id}',   [SessionsController::class, 'destroy']);
         });
@@ -340,6 +346,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::prefix('sessions')->name('sessions.')->group(function () {
             Route::get('/',            [SessionsController::class, 'index'])->name('index');
             Route::post('/',           [SessionsController::class, 'store'])->name('store');
+            Route::get('/{id}/notes', [SessionsController::class, 'notes'])->name('notes')->whereNumber('id');
+            Route::post('/{id}/notes', [SessionsController::class, 'addNote'])->name('notes.store')->whereNumber('id');
+            Route::patch('/{id}/notes/{noteId}', [SessionsController::class, 'updateNote'])->name('notes.update')->whereNumber('id')->whereNumber('noteId');
+            Route::delete('/{id}/notes/{noteId}', [SessionsController::class, 'destroyNote'])->name('notes.destroy')->whereNumber('id')->whereNumber('noteId');
             Route::patch('/{id}',      [SessionsController::class, 'update'])->name('update');
             Route::delete('/{id}',     [SessionsController::class, 'destroy'])->name('destroy');
         });

@@ -448,17 +448,24 @@ private function formatMcqForMentee(CurriculumMcq $mcq, int $menteeId): array
 {
 $completed = $mcq->isAnsweredCorrectlyByUser($menteeId);
 $attempt   = $mcq->getAttemptForUser($menteeId);
+$options   = $mcq->options ?? [];
+$correctIndex = $mcq->correct_index;
 
 return [
-    'id'           => $mcq->id,
-    'question'     => $mcq->question,
-    'options'      => $mcq->options,
-    'difficulty'   => $mcq->difficulty,
-    'points'       => $mcq->points,
-    'order_index'  => $mcq->order_index,
-    'is_completed' => $completed,
-    'status'       => $completed ? 'completed' : ($attempt ? 'in_progress' : 'pending'),
-    'last_attempt' => $attempt ? [
+    'id'             => $mcq->id,
+    'question'       => $mcq->question,
+    'options'        => $options,
+    'correct_index'  => $correctIndex,
+    'correct_answer' => is_numeric($correctIndex) && array_key_exists((int) $correctIndex, $options)
+        ? $options[(int) $correctIndex]
+        : null,
+    'explanation'    => $mcq->explanation,
+    'difficulty'     => $mcq->difficulty,
+    'points'         => $mcq->points,
+    'order_index'    => $mcq->order_index,
+    'is_completed'   => $completed,
+    'status'         => $completed ? 'completed' : ($attempt ? 'in_progress' : 'pending'),
+    'last_attempt'   => $attempt ? [
         'is_correct'    => $attempt->is_correct,
         'points_earned' => $attempt->points_earned,
         'attempted_at'  => $attempt->attempted_at,
