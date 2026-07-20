@@ -49,7 +49,7 @@
                                 <option value="">Select Mentor…</option>
                                 @foreach($mentors as $mentor)
                                 <option value="{{ $mentor->id }}" {{ old('mentor_id', $session->mentor_id) == $mentor->id ? 'selected' : '' }}>
-                                    {{ $mentor->name }} @if($mentor->mentorProfile?->expertise_area)— {{ $mentor->mentorProfile->expertise_area }}@endif
+                                    {{ $mentor->name }}@if($mentor->designation ?? $mentor->field) — {{ $mentor->designation ?? $mentor->field }}@endif
                                 </option>
                                 @endforeach
                             </select>

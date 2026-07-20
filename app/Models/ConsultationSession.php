@@ -14,6 +14,8 @@ use Illuminate\Support\Str;
 class ConsultationSession extends Model
 {
     use SoftDeletes;
+
+    public const SCHEDULE_TIMEZONE = 'Asia/Kolkata';
  
     protected $fillable = [
         'booking_ref', 'mentor_id', 'mentee_id', 'scheduled_at', 'duration_minutes', 'timezone',
@@ -24,12 +26,30 @@ class ConsultationSession extends Model
     ];
 
     protected $casts = [
-        'scheduled_at'  => 'datetime',
         'cancelled_at'  => 'datetime',
         'started_at'    => 'datetime',
         'ended_at'      => 'datetime',
         'amount'        => 'decimal:2',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $session): void {
+            if (! empty($session->booking_ref)) {
+                // continue
+            } else {
+                do {
+                    $ref = 'AS-' . now()->format('ymd') . '-' . strtoupper(Str::random(4));
+                } while (self::where('booking_ref', $ref)->exists());
+
+                $session->booking_ref = $ref;
+            }
+
+            if (empty($session->meeting_channel)) {
+                $session->meeting_channel = strtoupper(Str::random(10));
+            }
+        });
+    }
  
     // ── Status constants ──────────────────────────────────────
     const STATUS_PENDING   = 'pending';
@@ -102,7 +122,66 @@ class ConsultationSession extends Model
     public function scopeUpcoming(Builder $q): Builder
     {
         return $q->whereIn('status', ['pending', 'confirmed'])
-                 ->where('scheduled_at', '>=', now());
+                 ->where('scheduled_at', '>=', Carbon::now(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s'));
+    }
+
+    public function sessionTimezone(): string
+    {
+        return self::SCHEDULE_TIMEZONE;
+    }
+
+    protected function parseScheduledAtRaw(?string $raw): ?Carbon
+    {
+        if (! $raw) {
+            return null;
+        }
+
+        return Carbon::createFromFormat('Y-m-d H:i:s', substr(trim($raw), 0, 19), self::SCHEDULE_TIMEZONE);
+    }
+
+    public function isScheduledInFuture(): bool
+    {
+        $scheduled = $this->parseScheduledAtRaw($this->attributes['scheduled_at'] ?? null);
+
+        if (! $scheduled) {
+            return false;
+        }
+
+        return $scheduled->greaterThan(Carbon::now(self::SCHEDULE_TIMEZONE));
+    }
+
+    public function scheduledRelativeToNow(): ?string
+    {
+        $scheduled = $this->parseScheduledAtRaw($this->attributes['scheduled_at'] ?? null);
+
+        if (! $scheduled) {
+            return null;
+        }
+
+        $now = Carbon::now(self::SCHEDULE_TIMEZONE);
+
+        if ($scheduled->lessThanOrEqualTo($now)) {
+            return null;
+        }
+
+        $minutes = (int) ceil($now->diffInMinutes($scheduled));
+
+        if ($minutes < 1) {
+            return 'in 1 minute';
+        }
+
+        if ($minutes < 60) {
+            return 'in '.$minutes.' minute'.($minutes === 1 ? '' : 's');
+        }
+
+        $hours = intdiv($minutes, 60);
+        $remainingMinutes = $minutes % 60;
+
+        if ($remainingMinutes === 0) {
+            return 'in '.$hours.' hour'.($hours === 1 ? '' : 's');
+        }
+
+        return 'in '.$hours.'h '.$remainingMinutes.'m';
     }
  
     public function scopeCompleted(Builder $q): Builder
@@ -111,6 +190,33 @@ class ConsultationSession extends Model
     }
  
     // ── Accessors ─────────────────────────────────────────────
+    public function getScheduledAtAttribute(?string $value): ?Carbon
+    {
+        return $this->parseScheduledAtRaw($value);
+    }
+
+    public function setScheduledAtAttribute(mixed $value): void
+    {
+        if ($value instanceof Carbon) {
+            $this->attributes['scheduled_at'] = $value
+                ->copy()
+                ->timezone(self::SCHEDULE_TIMEZONE)
+                ->format('Y-m-d H:i:s');
+
+            return;
+        }
+
+        if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $value)) {
+            $this->attributes['scheduled_at'] = $value;
+
+            return;
+        }
+
+        $this->attributes['scheduled_at'] = $value
+            ? Carbon::parse($value, self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s')
+            : null;
+    }
+
     public function getStatusColorAttribute(): array
     {
         return match ($this->status) {
@@ -137,7 +243,7 @@ class ConsultationSession extends Model
     public function getIsUpcomingAttribute(): bool
     {
         return in_array($this->status, ['pending', 'confirmed'])
-            && $this->scheduled_at->isFuture();
+            && $this->isScheduledInFuture();
     }
  
     public function getActualDurationFormattedAttribute(): string
@@ -166,7 +272,7 @@ class ConsultationSession extends Model
             'actual_duration_seconds'  => $duration,
         ]);
         // Increment mentor stats
-        optional($this->mentor->mentorProfile)->increment('total_sessions');
+        optional($this->mentor)->increment('total_sessions');
     }
  
     public function cancel(int $cancelledBy, string $reason = ''): void

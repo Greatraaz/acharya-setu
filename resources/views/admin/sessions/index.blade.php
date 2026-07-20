@@ -144,10 +144,14 @@
                             </div>
                         </td>
                         <td class="px-4 py-4">
-                            <div class="text-sm font-medium text-gray-800">{{ $session->scheduled_at->format('d M Y') }}</div>
-                            <div class="text-xs text-gray-400 mt-0.5">{{ $session->scheduled_at->format('H:i') }} – {{ $session->scheduled_end->format('H:i') }}</div>
-                            @if($session->scheduled_at->isFuture() && $session->status !== 'cancelled')
-                            <div class="text-xs text-indigo-500 font-medium mt-0.5">{{ $session->scheduled_at->diffForHumans() }}</div>
+                            @php
+                                $st = $session->scheduled_at;
+                                $se = $session->scheduled_end;
+                            @endphp
+                            <div class="text-sm font-medium text-gray-800">{{ $st?->format('d M Y') ?? '—' }}</div>
+                            <div class="text-xs text-gray-400 mt-0.5">{{ $st?->format('H:i') ?? '—' }} – {{ $se?->format('H:i') ?? '—' }}</div>
+                            @if($session->status !== 'cancelled' && ($relative = $session->scheduledRelativeToNow()))
+                            <div class="text-xs text-indigo-500 font-medium mt-0.5">{{ $relative }}</div>
                             @endif
                         </td>
                         <td class="px-4 py-4">

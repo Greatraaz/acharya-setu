@@ -7,6 +7,7 @@ use App\Models\ConsultationSession;
 use App\Models\SessionReview;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
  
 class ConsultationSessionController extends Controller
@@ -59,6 +60,7 @@ class ConsultationSessionController extends Controller
     public function store(Request $request)
     {
         $data = $this->validateSession($request);
+        $data = $this->normalizeScheduledAt($request, $data);
         ConsultationSession::create($data);
         return redirect()->route('admin.sessions.index')->with('success', 'Session booked successfully.');
     }
@@ -73,14 +75,16 @@ class ConsultationSessionController extends Controller
     // ── Edit / Update ─────────────────────────────────────────
     public function edit(ConsultationSession $session)
     {
-        $mentors = User::whereHas('mentorProfile')->with('mentorProfile')->get();
-        $mentees = User::all();
+        $mentors = User::mentors()->active()->approved()->orderBy('name')->get();
+        $mentees = User::mentees()->active()->orderBy('name')->get();
+
         return view('admin.sessions.form', compact('session', 'mentors', 'mentees'));
     }
  
     public function update(Request $request, ConsultationSession $session)
     {
         $data = $this->validateSession($request);
+        $data = $this->normalizeScheduledAt($request, $data);
         $session->update($data);
         return redirect()->route('admin.sessions.show', $session)->with('success', 'Session updated.');
     }
@@ -172,12 +176,14 @@ class ConsultationSessionController extends Controller
  
     private function validateSession(Request $request): array
     {
-        return $request->validate([
+        $tz = ConsultationSession::SCHEDULE_TIMEZONE;
+
+        $data = $request->validate([
             'mentor_id'        => 'required|exists:users,id',
             'mentee_id'        => 'required|exists:users,id|different:mentor_id',
             'title'            => 'required|string|max:200',
             'agenda'           => 'nullable|string|max:2000',
-            'scheduled_at'     => 'required|date|after:now',
+            'scheduled_at'     => 'required|date',
             'duration_minutes' => 'required|integer|min:15|max:480',
             'timezone'         => 'nullable|string',
             'meeting_provider' => 'nullable|in:agora,zoom,google,other',
@@ -186,5 +192,44 @@ class ConsultationSessionController extends Controller
             'currency'         => 'nullable|string|size:3',
             'status'           => 'nullable|in:pending,confirmed',
         ]);
+
+        $scheduled = $this->parseScheduledInput((string) $request->input('scheduled_at'), $tz);
+        if ($scheduled->getTimestamp() <= Carbon::now($tz)->getTimestamp()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'scheduled_at' => 'The scheduled time must be in the future.',
+            ]);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Store the selected local date/time exactly as entered for the session timezone.
+     *
+     * @return array<string, mixed>
+     */
+    private function normalizeScheduledAt(Request $request, array $data): array
+    {
+        $tz = ConsultationSession::SCHEDULE_TIMEZONE;
+
+        if (! empty($request->input('scheduled_at'))) {
+            $data['scheduled_at'] = $this->parseScheduledInput((string) $request->input('scheduled_at'), $tz)
+                ->format('Y-m-d H:i:s');
+        }
+
+        $data['timezone'] = $tz;
+
+        return $data;
+    }
+
+    private function parseScheduledInput(string $value, string $tz): Carbon
+    {
+        $value = str_replace('T', ' ', trim($value));
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $value)) {
+            $value .= ':00';
+        }
+
+        return Carbon::createFromFormat('Y-m-d H:i:s', $value, $tz);
     }
 }

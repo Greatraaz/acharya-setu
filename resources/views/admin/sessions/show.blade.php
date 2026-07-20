@@ -84,8 +84,13 @@
 
                 {{-- Key details grid --}}
                 <div class="grid grid-cols-2 gap-4">
+                    @php
+                        $st = $session->scheduled_at;
+                        $se = $session->scheduled_end;
+                        $tz = $session->sessionTimezone();
+                    @endphp
                     @foreach([
-                        ['Scheduled', $session->scheduled_at->format('D, d M Y · H:i').' – '.$session->scheduled_end->format('H:i').' ('.$session->timezone.')'],
+                        ['Scheduled', ($st?->format('D, d M Y · H:i') ?? '—').' – '.($se?->format('H:i') ?? '—').' ('.$tz.')'],
                         ['Duration', $session->duration_minutes.' minutes'],
                         ['Amount', $session->amount > 0 ? '₹'.number_format($session->amount,0).' ('.$session->payment_status.')' : 'Free'],
                         ['Provider', ucfirst($session->meeting_provider ?? 'Not set')],
@@ -300,14 +305,13 @@
                         <div class="text-xs text-gray-500">{{ $session->mentor->email ?? '' }}</div>
                     </div>
                 </div>
-                @php $mp = $session->mentor->mentorProfile ?? null; @endphp
-                @if($mp)
+                @if($session->mentor)
                 <div class="space-y-1.5 text-xs">
-                    @if($mp->title)<div class="text-gray-600 font-medium">{{ $mp->title }}</div>@endif
-                    @if($mp->expertise_area)<div class="text-gray-500">{{ $mp->expertise_area }}</div>@endif
+                    @if($session->mentor->designation)<div class="text-gray-600 font-medium">{{ $session->mentor->designation }}</div>@endif
+                    @if($session->mentor->field)<div class="text-gray-500">{{ $session->mentor->field }}</div>@endif
                     <div class="flex items-center gap-1.5 pt-1">
-                        <span class="text-amber-500 font-semibold">★ {{ number_format($mp->avg_rating, 1) }}</span>
-                        <span class="text-gray-400">· {{ $mp->total_sessions }} sessions</span>
+                        <span class="text-amber-500 font-semibold">★ {{ number_format($session->mentor->rating ?? 0, 1) }}</span>
+                        <span class="text-gray-400">· {{ $session->mentor->total_sessions ?? 0 }} sessions</span>
                     </div>
                 </div>
                 @endif

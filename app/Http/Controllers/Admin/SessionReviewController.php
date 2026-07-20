@@ -67,8 +67,9 @@ class SessionReviewController extends Controller
             'submitted_at'    => now(),
         ]));
  
-        // Recalculate mentor avg rating
-        optional($session->mentor->mentorProfile)->recalculateRating();
+        if ($role === 'mentee' && $session->mentor) {
+            $session->mentor->recalculateRating();
+        }
  
         return redirect()->route('sessions.show', $session)
             ->with('success', 'Thank you for your review!');
