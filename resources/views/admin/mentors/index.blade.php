@@ -246,7 +246,7 @@ $stats = [
                                 </form>
                                 @endif
                                 @if($mentor->mentor_status === 'approved')
-                                <form method="POST" action="{{ route('admin.mentees.toggle-status', $mentor) }}">
+                                <form method="POST" action="{{ route('admin.mentors.toggle-status', $mentor) }}">
                                     @csrf
                                     <button type="submit" class="text-xs font-medium px-2.5 py-1.5 {{ $mentor->is_active ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-green-50 text-green-700 hover:bg-green-100' }} rounded-lg transition-colors">
                                         {{ $mentor->is_active ? 'Deactivate' : 'Activate' }}

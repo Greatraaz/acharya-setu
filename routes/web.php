@@ -314,8 +314,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     // ── Mentor Approvals ──────────────────────────────────────
     Route::prefix('mentors')->name('mentors.')->group(function () {
-        Route::get('/',                          [MentorApprovalController::class, 'index'])        ->name('approvals');
+        Route::get('/approvals',                 [MentorApprovalController::class, 'index'])        ->name('approvals');
         Route::get('/pending-changes',           [MentorApprovalController::class, 'pendingChanges'])->name('pending-changes');
+        Route::get('/deleted',                   [UserController::class, 'mentorTrashed'])          ->name('trashed');
         Route::get('/{mentor}',                  [MentorApprovalController::class, 'show'])         ->name('review');
         Route::post('/{mentor}/approve',         [MentorApprovalController::class, 'approve'])      ->name('approve');
         Route::post('/{mentor}/reject',          [MentorApprovalController::class, 'reject'])       ->name('reject');
@@ -350,7 +351,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     Route::prefix('mentors')->name('mentors.')->group(function () {
         Route::get('/',                        [UserController::class, 'mentorIndex'])        ->name('index');
-        Route::get('/deleted',                 [UserController::class, 'mentorTrashed'])      ->name('trashed');
         Route::post('/{mentor}/toggle-status', [UserController::class, 'mentorToggleStatus'])->name('toggle-status');
     });
 

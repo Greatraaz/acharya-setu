@@ -160,9 +160,12 @@ class MentorApprovalController extends Controller
             'users', 'danger'
         );
  
+        $name = $user->name;
+        $redirectRoute = $user->role === 'mentee' ? 'admin.mentees.index' : 'admin.mentors.index';
+
         $user->delete(); // SoftDeletes trait
- 
-        return redirect()->route('admin.mentors.approvals')->with('success', "{$user->name} has been deactivated.");
+
+        return redirect()->route($redirectRoute)->with('success', "{$name} has been deactivated.");
     }
  
     // ── Restore soft-deleted user ─────────────────────────────
