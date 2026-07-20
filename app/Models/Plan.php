@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Schema;
 
 class Plan extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'name',
         'plan_name',
@@ -34,6 +37,19 @@ class Plan extends Model
     public function getPlanNameAttribute($value): ?string
     {
         return $value ?? $this->attributes['name'] ?? null;
+    }
+
+    /** Always return an array for admin views that call count($plan->features_list). */
+    public function getFeaturesListAttribute(): array
+    {
+        $features = $this->features;
+
+        if (is_string($features)) {
+            $decoded = json_decode($features, true);
+            $features = is_array($decoded) ? $decoded : array_filter(array_map('trim', explode("\n", $features)));
+        }
+
+        return is_array($features) ? array_values($features) : [];
     }
 
     public function scopeBrief(Builder $query): Builder
@@ -64,5 +80,16 @@ class Plan extends Model
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+    public function scopeOrdered($query)
+    {
+        $table = $query->getModel()->getTable();
+
+        if (Schema::hasColumn($table, 'sort_order')) {
+            return $query->orderBy('sort_order')->orderBy('id');
+        }
+
+        return $query->orderBy('id');
     }
 }
