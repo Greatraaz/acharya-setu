@@ -15,6 +15,13 @@ if (!function_exists('config_val')) {
     }
 }
 
+if (!function_exists('storage_url')) {
+    function storage_url(?string $path): ?string
+    {
+        return \App\Services\PublicFileStorage::url($path);
+    }
+}
+
 if (!function_exists('activity')) {
     function activity(): ActivityLogger
     {

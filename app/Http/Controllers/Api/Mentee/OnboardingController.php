@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Mentee;
 
 use App\Http\Controllers\Controller;
 use App\Models\EducationStream;
+use App\Services\MenteeOnboardingService;
 use App\Services\MentorMatcherService;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\DB;
@@ -131,7 +132,7 @@ class OnboardingController extends Controller
             ], 422);
         }
 
-        $this->syncMenteeTracks($user->id, $tracks->all());
+        app(MenteeOnboardingService::class)->syncMenteeTracks($user->id, $tracks->all());
 
         $user->update(['onboarding_step' => 3]);
 
@@ -187,17 +188,7 @@ class OnboardingController extends Controller
     {
         $user = $request->user();
 
-        $missing = [];
-        if (empty($user->name))              $missing[] = 'name';
-        if (empty($user->location))          $missing[] = 'address';
-        if (empty($user->education_stream))  $missing[] = 'education_stream';
-        if (empty($user->preferences['weekly_time_commitment'] ?? null)) $missing[] = 'weekly_time_commitment';
-        if (empty($user->preferences['preferred_language'] ?? null))     $missing[] = 'preferred_language';
-        if (empty($user->preferences['mentoring_format'] ?? null))       $missing[] = 'mentoring_format';
-        $hasTracks = EducationStream::where('mentee_id', $user->id)
-            ->where('is_active', true)
-            ->exists();
-        if (! $hasTracks) $missing[] = 'tracks';
+        $missing = app(MenteeOnboardingService::class)->missingCompletionFields($user);
 
         if (!empty($missing)) {
             return response()->json([
@@ -303,40 +294,5 @@ class OnboardingController extends Controller
             'statuscode' => 200,
             'message'    => 'Account deleted successfully.',
         ]);
-    }
-
-    private function syncMenteeTracks(int $menteeId, array $trackNames): void
-    {
-        $selectedSlugs = collect($trackNames)
-            ->map(fn ($name) => Str::slug($name))
-            ->filter()
-            ->values();
-
-        if ($selectedSlugs->isEmpty()) {
-            return;
-        }
-
-        // Do not alter mentor-owned tracks.
-        EducationStream::where('mentee_id', $menteeId)
-            ->whereNull('mentor_id')
-            ->whereNotIn('slug', $selectedSlugs)
-            ->update(['is_active' => false]);
-
-        foreach ($trackNames as $index => $name) {
-            $slug = Str::slug($name);
-            if ($slug === '') {
-                continue;
-            }
-
-            EducationStream::updateOrCreate(
-                ['mentee_id' => $menteeId, 'slug' => $slug],
-                [
-                    'name'       => $name,
-                    'mentor_id'  => null,
-                    'is_active'  => true,
-                    'sort_order' => $index,
-                ]
-            );
-        }
     }
 }

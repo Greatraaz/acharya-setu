@@ -237,6 +237,10 @@ $stats = [
                                    class="text-xs font-medium px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors">
                                     View
                                 </a>
+                                <a href="{{ route('admin.mentee.edit', $mentee) }}"
+                                   class="text-xs font-medium px-2.5 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg transition-colors">
+                                    Edit
+                                </a>
                                 <form method="POST" action="{{ route('admin.mentees.toggle-status', $mentee) }}">
                                     @csrf
                                     <button type="submit"

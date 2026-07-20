@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\MenteeOnboardingService;
+use App\Services\PublicFileStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
  
 class AdminOnboardingController extends Controller
@@ -52,11 +54,9 @@ class AdminOnboardingController extends Controller
         ]);
  
         if ($request->hasFile('avatar')) {
-            $data['avatar_url'] = Storage::url(
-                $request->file('avatar')->store('avatars', 'public')
-            );
+            $data['avatar_url'] = PublicFileStorage::store($request->file('avatar'), 'avatars');
         }
- 
+
         $user = User::create(array_merge($data, [
             'password'             => Hash::make($data['password']),
             'role'                 => 'mentor',
@@ -109,9 +109,8 @@ class AdminOnboardingController extends Controller
         ]);
  
         if ($request->hasFile('avatar')) {
-            $data['avatar_url'] = Storage::url(
-                $request->file('avatar')->store('avatars', 'public')
-            );
+            PublicFileStorage::deleteByUrl($mentor->avatar_url);
+            $data['avatar_url'] = PublicFileStorage::store($request->file('avatar'), 'avatars');
         }
  
         if (!empty($data['new_password'])) {
@@ -143,129 +142,199 @@ class AdminOnboardingController extends Controller
     }
  
     // ── MENTEE ────────────────────────────────────────────────
- 
-    public function createMentee()
+
+    public function createMentee(MenteeOnboardingService $onboarding)
     {
         $mentors = User::mentors()->active()->approved()
             ->select('id', 'name', 'designation', 'field', 'rating')
             ->orderBy('name')
             ->get();
- 
-        return view('admin.mentees.create', compact('mentors'));
+
+        $streams = $this->educationStreamOptions($onboarding);
+
+        return view('admin.mentees.create', compact('mentors', 'streams'));
     }
- 
-    public function storeMentee(Request $request)
+
+    public function storeMentee(Request $request, MenteeOnboardingService $onboarding)
     {
-        $data = $request->validate([
-            // Account
-            'name'               => 'required|string|max:100',
-            'email'              => 'required|email|unique:users,email',
-            'password'           => ['required', Password::min(8)],
-            'phone'              => 'nullable|string|max:20',
-            'gender'             => 'nullable|in:male,female,other,prefer_not_to_say',
-            'avatar'             => 'nullable|image|max:2048',
- 
-            // Education
-            'college'            => 'nullable|string|max:200',
-            'year'               => 'nullable|string|max:20',
-            'field'              => 'nullable|string|max:100',
-            'education_stream'   => 'nullable|string|max:100',
- 
-            // Goals & Preferences
-            'career_goals'       => 'nullable|array',
-            'career_goals.*'     => 'string|max:200',
-            'strengths'          => 'nullable|array',
-            'strengths.*'        => 'string|max:100',
-            'preferences'        => 'nullable|array',
- 
-            // Assignment
-            'assigned_mentor_id' => 'nullable|exists:users,id',
-            'subscription_plan'  => 'nullable|in:free,basic,pro,enterprise',
-        ]);
- 
-        if ($request->hasFile('avatar')) {
-            $data['avatar_url'] = Storage::url(
-                $request->file('avatar')->store('avatars', 'public')
-            );
-        }
- 
-        $user = User::create(array_merge($data, [
-            'password'             => Hash::make($data['password']),
+        $request->merge(['tracks' => $this->normalizeMenteeTracks($request)]);
+
+        $data = $request->validate(array_merge(
+            $onboarding->adminValidationRules(),
+            ['email' => 'required|email|unique:users,email']
+        ));
+
+        $avatarUrl = $this->storeAvatar($request);
+        $preferences = $onboarding->mergePreferences(new User(), $data);
+
+        $user = User::create([
+            'name'               => $data['name'],
+            'email'              => $data['email'],
+            'password'           => Hash::make($data['password']),
+            'phone'              => $data['phone'] ?? null,
+            'gender'             => $data['gender'] ?? null,
+            'location'           => $data['address'],
+            'avatar_url'         => $avatarUrl,
+            'education_stream'   => $data['education_stream'],
+            'field'              => $data['field'] ?? null,
+            'college'            => $data['college'] ?? null,
+            'year'               => $data['year'] ?? null,
+            'career_goals'       => $data['tracks'],
+            'preferences'        => $preferences,
+            'assigned_mentor_id' => $data['assigned_mentor_id'] ?? null,
+            'subscription_plan'  => $data['subscription_plan'] ?? 'free',
             'role'                 => 'mentee',
-            'onboarding_step'      => 4,
-            'onboarding_completed' => true,
+            'onboarding_step'      => MenteeOnboardingService::TOTAL_STEPS,
+            'onboarding_completed' => false,
             'is_active'            => true,
-        ]));
- 
+        ]);
+
+        $onboarding->syncMenteeTracks($user->id, $data['tracks']);
+
+        $result = $onboarding->complete(
+            $user->fresh(),
+            autoAssignMentor: empty($data['assigned_mentor_id']) && $request->boolean('auto_assign_mentor', true)
+        );
+
+        if (! $result['completed']) {
+            return back()
+                ->withInput()
+                ->withErrors(['onboarding' => 'Missing required onboarding fields: ' . implode(', ', $result['missing'])]);
+        }
+
         ActivityLogger::record(
             'mentee_created_by_admin',
             auth()->user()->name . " created mentee account for: {$user->name}",
             'users', 'success'
         );
- 
-        return redirect()->route('admin.mentees.show', $user)
-            ->with('success', "Mentee account created for {$user->name}.");
+
+        $message = "Mentee account created for {$user->name}.";
+        if ($result['assigned'] && $result['mentor']) {
+            $message .= " Auto-assigned mentor: {$result['mentor']->name}.";
+        }
+
+        return redirect()->route('admin.mentees.show', $user)->with('success', $message);
     }
- 
-    public function editMentee(User $mentee)
+
+    public function editMentee(User $mentee, MenteeOnboardingService $onboarding)
     {
         abort_unless($mentee->isMentee(), 403);
- 
+
         $mentors = User::mentors()->active()->approved()
             ->select('id', 'name', 'designation', 'field')
             ->orderBy('name')
             ->get();
- 
-        return view('admin.mentees-edit', compact('mentee', 'mentors'));
+
+        $streams = $this->educationStreamOptions($onboarding);
+        $tracks = old('tracks', $onboarding->menteeTracks($mentee->id));
+        $preferences = $mentee->preferences ?? [];
+
+        return view('admin.mentees.edit', compact('mentee', 'mentors', 'streams', 'tracks', 'preferences'));
     }
- 
-    public function updateMentee(Request $request, User $mentee)
+
+    public function updateMentee(Request $request, User $mentee, MenteeOnboardingService $onboarding)
     {
         abort_unless($mentee->isMentee(), 403);
- 
-        $data = $request->validate([
-            'name'               => 'required|string|max:100',
-            'email'              => 'required|email|unique:users,email,' . $mentee->id,
-            'phone'              => 'nullable|string|max:20',
-            'gender'             => 'nullable|in:male,female,other,prefer_not_to_say',
-            'avatar'             => 'nullable|image|max:2048',
-            'college'            => 'nullable|string|max:200',
-            'year'               => 'nullable|string|max:20',
-            'field'              => 'nullable|string|max:100',
-            'education_stream'   => 'nullable|string|max:100',
-            'career_goals'       => 'nullable|array',
-            'career_goals.*'     => 'string|max:200',
-            'strengths'          => 'nullable|array',
-            'strengths.*'        => 'string|max:100',
-            'preferences'        => 'nullable|array',
-            'assigned_mentor_id' => 'nullable|exists:users,id',
-            'subscription_plan'  => 'nullable|in:free,basic,pro,enterprise',
-            'is_active'          => 'nullable|boolean',
-            'new_password'       => ['nullable', Password::min(8)],
-        ]);
- 
+
+        $request->merge(['tracks' => $this->normalizeMenteeTracks($request)]);
+
+        $data = $request->validate(array_merge(
+            $onboarding->adminValidationRules(isUpdate: true),
+            ['email' => ['required', 'email', Rule::unique('users', 'email')->ignore($mentee->id)]]
+        ));
+
         if ($request->hasFile('avatar')) {
-            $data['avatar_url'] = Storage::url(
-                $request->file('avatar')->store('avatars', 'public')
-            );
+            $data['avatar_url'] = $this->storeAvatar($request, $mentee->avatar_url);
         }
- 
-        if (!empty($data['new_password'])) {
+
+        if (! empty($data['new_password'])) {
             $data['password'] = Hash::make($data['new_password']);
         }
-        unset($data['new_password']);
- 
-        $data['is_active'] = $request->boolean('is_active', true);
- 
-        $mentee->update($data);
- 
+
+        $preferences = $onboarding->mergePreferences($mentee, $data);
+
+        $mentee->update([
+            'name'               => $data['name'],
+            'email'              => $data['email'],
+            'phone'              => $data['phone'] ?? null,
+            'gender'             => $data['gender'] ?? null,
+            'location'           => $data['address'],
+            'avatar_url'         => $data['avatar_url'] ?? $mentee->avatar_url,
+            'education_stream'   => $data['education_stream'],
+            'field'              => $data['field'] ?? null,
+            'college'            => $data['college'] ?? null,
+            'year'               => $data['year'] ?? null,
+            'career_goals'       => $data['tracks'],
+            'preferences'        => $preferences,
+            'assigned_mentor_id' => $data['assigned_mentor_id'] ?? null,
+            'subscription_plan'  => $data['subscription_plan'] ?? $mentee->subscription_plan ?? 'free',
+            'is_active'          => $request->boolean('is_active', true),
+            'password'           => $data['password'] ?? $mentee->password,
+        ]);
+
+        $onboarding->syncMenteeTracks($mentee->id, $data['tracks']);
+
+        $result = $onboarding->complete(
+            $mentee->fresh(),
+            autoAssignMentor: empty($data['assigned_mentor_id']) && $request->boolean('auto_assign_mentor', false)
+        );
+
+        if (! $result['completed']) {
+            $mentee->update(['onboarding_completed' => false]);
+
+            return back()
+                ->withInput()
+                ->withErrors(['onboarding' => 'Profile saved but onboarding incomplete. Missing: ' . implode(', ', $result['missing'])]);
+        }
+
         ActivityLogger::record(
             'mentee_updated_by_admin',
             auth()->user()->name . " updated mentee profile: {$mentee->name}",
             'users', 'info'
         );
- 
-        return redirect()->route('admin.mentees.show', $mentee)
-            ->with('success', "Mentee profile updated.");
+
+        $message = 'Mentee profile updated.';
+        if ($result['assigned'] && $result['mentor']) {
+            $message .= " Auto-assigned mentor: {$result['mentor']->name}.";
+        }
+
+        return redirect()->route('admin.mentees.show', $mentee)->with('success', $message);
+    }
+
+    private function storeAvatar(Request $request, ?string $existingUrl = null): ?string
+    {
+        if (! $request->hasFile('avatar')) {
+            return null;
+        }
+
+        PublicFileStorage::deleteByUrl($existingUrl);
+
+        return PublicFileStorage::store($request->file('avatar'), 'avatars');
+    }
+
+    /** @return list<string> */
+    private function normalizeMenteeTracks(Request $request): array
+    {
+        return collect($request->input('tracks', []))
+            ->flatten()
+            ->filter(fn ($track) => is_string($track) && trim($track) !== '')
+            ->map(fn ($track) => trim($track))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function educationStreamOptions(MenteeOnboardingService $onboarding): array
+    {
+        $catalog = $onboarding->catalogStreams();
+
+        if ($catalog->isNotEmpty()) {
+            return $catalog->all();
+        }
+
+        return [
+            'Technology', 'Business & Management', 'Design & Arts', 'Science & Research',
+            'Healthcare', 'Law', 'Finance', 'Marketing', 'Operations', 'Other',
+        ];
     }
 }

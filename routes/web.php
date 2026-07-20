@@ -58,12 +58,22 @@ use App\Http\Controllers\Admin\MentorProfileController as AdminMentorProfileCont
 use App\Http\Controllers\Admin\AssessmentController;
 use App\Http\Controllers\Admin\ActivityLogController;
 
+use App\Services\PublicFileStorage;
 use Illuminate\Support\Facades\Artisan;
 
 Route::get('/storage-link', function () {
-    Artisan::call('storage:link');
+    PublicFileStorage::ensureStorageReady(force: true);
 
-    return 'Storage link created successfully!';
+    $link = public_path('storage');
+    $writable = is_writable(storage_path('app/public'));
+    $linked = file_exists($link) || is_link($link);
+
+    return response()->json([
+        'message' => 'Storage setup complete.',
+        'storage_app_public_writable' => $writable,
+        'public_storage_link_exists' => $linked,
+        'serve_via' => $linked ? 'symlink' : 'laravel route /storage/{path}',
+    ]);
 });
 
 /*

@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
+use App\Services\PublicFileStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class AppSettingsController extends Controller
@@ -80,14 +80,13 @@ class AppSettingsController extends Controller
         // Handle file uploads
         foreach ($this->fileKeys as $fileKey) {
             if ($request->hasFile($fileKey)) {
-                $file = $request->file($fileKey);
-                $path = $file->store("settings/{$fileKey}", 'public');
-                // Delete old file
                 $old = AppSetting::where('key', $fileKey)->value('value');
-                if ($old && Storage::disk('public')->exists($old)) {
-                    Storage::disk('public')->delete($old);
-                }
-                $data[$fileKey] = $path;
+                PublicFileStorage::deleteByUrl($old);
+
+                $data[$fileKey] = PublicFileStorage::store(
+                    $request->file($fileKey),
+                    "settings/{$fileKey}"
+                );
             }
         }
 

@@ -97,7 +97,7 @@ class JourneyController extends Controller
  
             if ($request->hasFile('submission_file')) {
                 $path = $request->file('submission_file')->store("submissions/{$userId}", 'public');
-                $extra['submission_url'] = Storage::url($path);
+                $extra['submission_url'] = storage_url($path);
             }
  
             if ($request->submission_text) {

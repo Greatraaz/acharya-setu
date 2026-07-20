@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\ActivityLogger;
+use App\Services\MenteeOnboardingService;
 use Illuminate\Http\Request;
 use App\Models\User;
 
@@ -36,10 +37,13 @@ class UserController extends Controller
         return view('admin.mentees.index', compact('mentees'));
     }
  
-    public function menteeShow(User $mentee)
+    public function menteeShow(User $mentee, MenteeOnboardingService $onboarding)
     {
         $mentee->load(['assignedMentor', 'menteeSessions.mentor', 'enrollments.stream']);
-        return view('admin.mentees.show', compact('mentee'));
+        $tracks = $onboarding->menteeTracks($mentee->id);
+        $preferences = $mentee->preferences ?? [];
+
+        return view('admin.mentees.show', compact('mentee', 'tracks', 'preferences'));
     }
  
     public function menteeToggleStatus(User $mentee)

@@ -75,6 +75,11 @@ class User extends Authenticatable
         return (object) $preferences;
     }
 
+    public function getAvatarUrlAttribute(?string $value): ?string
+    {
+        return \App\Services\PublicFileStorage::url($value);
+    }
+
     public function only($attributes)
     {
         $attributes = is_array($attributes) ? $attributes : func_get_args();

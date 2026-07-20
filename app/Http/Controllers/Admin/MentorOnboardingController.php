@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\ActivityLog;
 use App\Services\ActivityLogger;
+use App\Services\PublicFileStorage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
  
 class MentorOnboardingController extends Controller
 {
@@ -51,8 +51,8 @@ class MentorOnboardingController extends Controller
         $user = auth()->user();
  
         if ($request->hasFile('avatar')) {
-            $path = $request->file('avatar')->store("avatars/{$user->id}", 'public');
-            $data['avatar_url'] = Storage::url($path);
+            PublicFileStorage::deleteByUrl($user->avatar_url);
+            $data['avatar_url'] = PublicFileStorage::store($request->file('avatar'), "avatars/{$user->id}");
         }
  
         $user->update(array_merge($data, [

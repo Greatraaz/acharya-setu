@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\MentorMatcherService;
+use App\Services\PublicFileStorage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
  
 class MenteeOnboardingController extends Controller
 {
@@ -49,8 +49,8 @@ class MenteeOnboardingController extends Controller
         $user = auth()->user();
  
         if ($request->hasFile('avatar')) {
-            $path = $request->file('avatar')->store("avatars/{$user->id}", 'public');
-            $data['avatar_url'] = Storage::url($path);
+            PublicFileStorage::deleteByUrl($user->avatar_url);
+            $data['avatar_url'] = PublicFileStorage::store($request->file('avatar'), "avatars/{$user->id}");
         }
  
         $user->update(array_merge($data, ['onboarding_step' => max($user->onboarding_step, 1)]));

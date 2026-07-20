@@ -12,6 +12,10 @@
             Back to Mentees
         </a>
         <div class="flex gap-2">
+            <a href="{{ route('admin.mentee.edit', $mentee) }}"
+               class="text-xs font-medium px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">
+                Edit Profile
+            </a>
             <form method="POST" action="{{ route('admin.mentees.toggle-status', $mentee) }}">
                 @csrf
                 <button type="submit"
@@ -69,6 +73,7 @@
                         ['College',   $mentee->college ?? '—'],
                         ['Field',     $mentee->field ?? '—'],
                         ['Year',      $mentee->year ?? '—'],
+                        ['Location',  $mentee->location ?? '—'],
                         ['Gender',    $mentee->gender ? ucfirst($mentee->gender) : '—'],
                         ['Stream',    $mentee->education_stream ?? '—'],
                         ['Plan',      ucfirst($mentee->subscription_plan ?? 'free')],
@@ -84,23 +89,33 @@
                     @endforeach
                 </div>
 
-                @if($mentee->career_goals && count((array)$mentee->career_goals))
+                @if(!empty($tracks))
                 <div class="px-6 pb-6">
-                    <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Career Goals</p>
+                    <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Career Tracks</p>
                     <div class="flex flex-wrap gap-1.5">
-                        @foreach((array)$mentee->career_goals as $goal)
-                        <span class="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 rounded-full">{{ $goal }}</span>
+                        @foreach($tracks as $track)
+                        <span class="text-xs bg-violet-50 text-violet-700 border border-violet-100 px-2.5 py-1 rounded-full">{{ $track }}</span>
                         @endforeach
                     </div>
                 </div>
                 @endif
 
-                @if($mentee->strengths && count((array)$mentee->strengths))
+                @if(!empty($preferences))
                 <div class="px-6 pb-6">
-                    <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Strengths</p>
-                    <div class="flex flex-wrap gap-1.5">
-                        @foreach((array)$mentee->strengths as $s)
-                        <span class="text-xs bg-violet-50 text-violet-700 border border-violet-100 px-2.5 py-1 rounded-full">{{ $s }}</span>
+                    <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Preferences</p>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        @foreach([
+                            'weekly_time_commitment' => 'Time Commitment',
+                            'monthly_budget' => 'Monthly Budget',
+                            'preferred_language' => 'Language',
+                            'mentoring_format' => 'Format',
+                        ] as $key => $label)
+                        @if(!empty($preferences[$key]))
+                        <div class="bg-gray-50 rounded-lg px-3 py-2">
+                            <span class="text-gray-400">{{ $label }}:</span>
+                            <span class="font-medium text-gray-700 ml-1">{{ $preferences[$key] }}</span>
+                        </div>
+                        @endif
                         @endforeach
                     </div>
                 </div>
