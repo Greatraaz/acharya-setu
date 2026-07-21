@@ -85,7 +85,7 @@ class QuizController extends Controller
             }
         });
  
-        return redirect()->route('quizzes.index')->with('success', 'Quiz created!');
+        return redirect()->route('admin.quizzes.index')->with('success', 'Quiz created!');
     }
  
     public function show(Quiz $quiz)
@@ -94,7 +94,7 @@ class QuizController extends Controller
         $quiz->load('questions.options');
         $attempt = $quiz->userAttempt(Auth::user());
  
-        return view('quizzes.show', compact('quiz', 'attempt'));
+        return view('admin.quizzes.show', compact('quiz', 'attempt'));
     }
  
     public function attempt(Quiz $quiz)
@@ -108,7 +108,7 @@ class QuizController extends Controller
             'started_at' => now(),
         ]);
  
-        return view('quizzes.attempt', compact('quiz', 'attempt'));
+        return view('admin.quizzes.attempt', compact('quiz', 'attempt'));
     }
  
     public function submit(Request $request, Quiz $quiz, QuizAttempt $attempt)
@@ -165,7 +165,7 @@ class QuizController extends Controller
             ]);
         });
  
-        return redirect()->route('quizzes.result', [$quiz, $attempt])
+        return redirect()->route('admin.quizzes.result', [$quiz, $attempt])
             ->with('success', 'Quiz submitted!');
     }
  
@@ -175,13 +175,13 @@ class QuizController extends Controller
         $attempt->load(['answers.question.options', 'answers.option']);
         $quiz->load('questions.options');
  
-        return view('quizzes.result', compact('quiz', 'attempt'));
+        return view('admin.quizzes.result', compact('quiz', 'attempt'));
     }
  
     public function destroy(Quiz $quiz)
     {
         abort_unless($quiz->created_by === Auth::id(), 403);
         $quiz->delete();
-        return redirect()->route('quizzes.index')->with('success', 'Quiz deleted.');
+        return redirect()->route('admin.quizzes.index')->with('success', 'Quiz deleted.');
     }
 }

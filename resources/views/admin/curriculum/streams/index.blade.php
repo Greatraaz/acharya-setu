@@ -22,6 +22,16 @@
     </div>
     @endif
 
+    @if($errors->any())
+    <div class="bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3 rounded-xl">
+        <ul class="list-disc list-inside space-y-1">
+            @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     {{-- Streams Grid --}}
     @if($streams->isEmpty())
     <div class="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-16 text-center">
@@ -59,7 +69,17 @@
                 </div>
 
                 @if($stream->description)
-                <p class="text-xs text-gray-500 leading-relaxed mb-4 line-clamp-2">{{ $stream->description }}</p>
+                <p class="text-xs text-gray-500 leading-relaxed mb-2 line-clamp-2">{{ $stream->description }}</p>
+                @endif
+
+                @if($stream->mentee)
+                <p class="text-xs text-violet-700 bg-violet-50 inline-flex items-center gap-1 px-2 py-1 rounded-lg mb-4">
+                    👤 {{ $stream->mentee->name }}
+                </p>
+                @else
+                <p class="text-xs text-amber-700 bg-amber-50 inline-flex items-center gap-1 px-2 py-1 rounded-lg mb-4">
+                    ⚠ No mentee assigned
+                </p>
                 @endif
 
                 <div class="grid grid-cols-3 gap-2 mb-4">
@@ -80,7 +100,7 @@
                        class="flex-1 text-center text-xs font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-2 rounded-lg transition-colors">
                         Manage Months
                     </a>
-                    <button onclick="openEditStream({{ $stream->toJson() }})"
+                    <button onclick='openEditStream(@json($stream))'
                             class="text-xs font-medium text-gray-600 border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors">
                         Edit
                     </button>
@@ -110,6 +130,18 @@
         </div>
         <form method="POST" action="{{ route('admin.curriculum.streams.store') }}" class="space-y-4">
             @csrf
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentee <span class="text-red-500">*</span></label>
+                <select name="mentee_id" required
+                        class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white">
+                    <option value="">— Select mentee —</option>
+                    @foreach($mentees as $mentee)
+                    <option value="{{ $mentee->id }}" @selected(old('mentee_id') == $mentee->id)>
+                        {{ $mentee->name }} ({{ $mentee->email }})
+                    </option>
+                    @endforeach
+                </select>
+            </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Stream Name <span class="text-red-500">*</span></label>
                 <input type="text" name="name" required placeholder="e.g. Full Stack Development, Product Design"
@@ -146,5 +178,80 @@
         </form>
     </div>
 </div>
+
+{{-- Edit Stream Modal --}}
+<div id="edit-stream-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <div class="flex items-center justify-between mb-5">
+            <h3 class="text-base font-bold text-gray-900">Edit Education Stream</h3>
+            <button type="button" onclick="document.getElementById('edit-stream-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form id="edit-stream-form" method="POST" class="space-y-4">
+            @csrf
+            @method('PUT')
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentee <span class="text-red-500">*</span></label>
+                <select name="mentee_id" required
+                        class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white">
+                    <option value="">— Select mentee —</option>
+                    @foreach($mentees as $mentee)
+                    <option value="{{ $mentee->id }}">{{ $mentee->name }} ({{ $mentee->email }})</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Stream Name <span class="text-red-500">*</span></label>
+                <input type="text" name="name" required
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Icon (emoji)</label>
+                    <input type="text" name="icon" maxlength="4"
+                           class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 text-center text-2xl">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Accent Color</label>
+                    <input type="color" name="color" value="#7c3aed" class="h-10 w-full rounded-lg border border-gray-200 cursor-pointer p-0.5">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                <textarea name="description" rows="2"
+                          class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"></textarea>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="hidden" name="is_active" value="0">
+                <input type="checkbox" name="is_active" value="1" class="rounded">
+                <span class="text-sm text-gray-700 font-medium">Active</span>
+            </label>
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+                    Update Stream
+                </button>
+                <button type="button" onclick="document.getElementById('edit-stream-modal').classList.add('hidden')"
+                        class="px-4 py-2.5 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditStream(stream) {
+    const form = document.getElementById('edit-stream-form');
+    form.action = '{{ url('/admin/curriculum/streams') }}/' + stream.id;
+    form.querySelector('[name=mentee_id]').value = stream.mentee_id || '';
+    form.querySelector('[name=name]').value = stream.name || '';
+    form.querySelector('[name=icon]').value = stream.icon || '';
+    form.querySelector('[name=color]').value = stream.color || '#7c3aed';
+    form.querySelector('[name=description]').value = stream.description || '';
+    form.querySelector('[name=is_active]').checked = !!stream.is_active;
+    document.getElementById('edit-stream-modal').classList.remove('hidden');
+}
+</script>
 
 @endsection

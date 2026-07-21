@@ -1,4 +1,4 @@
-@extends('adminlayouts.app')
+@extends('admin.layouts.app')
 @section('title', 'Quiz — ' . $quiz->title)
  
 @section('content')

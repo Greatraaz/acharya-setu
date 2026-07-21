@@ -16,6 +16,22 @@
     <div class="flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded-xl">✓ {{ session('success') }}</div>
     @endif
 
+    @if($errors->any())
+    <div class="bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3 rounded-xl">
+        <ul class="list-disc list-inside space-y-1">
+            @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
+    @if(!$stream->mentee_id)
+    <div class="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">
+        This stream has no mentee assigned. Edit the stream and select a mentee before adding months.
+    </div>
+    @endif
+
     {{-- Stream header --}}
     <div class="bg-white border border-gray-200 rounded-2xl p-6 flex items-center gap-5">
         <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
@@ -26,10 +42,13 @@
             <div class="flex items-center gap-4 mt-2 text-xs text-gray-400">
                 <span>{{ $months->count() }}/6 months configured</span>
                 <span>{{ $months->sum(fn($m) => $m->weeks->count()) }} weeks total</span>
+                @if($stream->mentee)
+                <span class="text-violet-700">👤 {{ $stream->mentee->name }}</span>
+                @endif
             </div>
         </div>
-        <button onclick="document.getElementById('add-month-modal').classList.remove('hidden')"
-                class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors flex-shrink-0">
+        <button onclick="openAddMonthModal()" @disabled(!$stream->mentee_id)
+                class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             Add Month
         </button>
@@ -117,7 +136,7 @@
                            class="text-xs font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg transition-colors">
                             Manage Weeks →
                         </a>
-                        <button onclick="openEditMonth({{ $month->toJson() }})"
+                        <button onclick='openEditMonth(@json($month))'
                                 class="text-xs font-medium text-gray-600 border border-gray-200 bg-white px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                             Edit Month
                         </button>
@@ -129,8 +148,8 @@
                 </div>
                 @else
                 {{-- Empty slot --}}
-                <div class="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-5 flex items-center justify-between group hover:border-violet-300 hover:bg-violet-50/30 transition-all cursor-pointer"
-                     onclick="openAddMonth({{ $m }})">
+                <div class="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-5 flex items-center justify-between group hover:border-violet-300 hover:bg-violet-50/30 transition-all {{ $stream->mentee_id ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed' }}"
+                     @if($stream->mentee_id) onclick="openAddMonth({{ $m }})" @endif>
                     <div>
                         <p class="text-sm font-semibold text-gray-400 group-hover:text-violet-600">Month {{ $m }} — Not configured</p>
                         <p class="text-xs text-gray-300 mt-0.5">Click to add content for this month</p>
@@ -153,8 +172,10 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
-        <form method="POST" action="{{ route('admin.curriculum.months.store', $stream) }}" class="space-y-4">
+        <form id="month-form" method="POST" action="{{ route('admin.curriculum.months.store', $stream) }}" class="space-y-4">
             @csrf
+            <span id="month-method-field"></span>
+            <input type="hidden" name="mentee_id" id="month-mentee-id" value="{{ $stream->mentee_id }}">
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Month Number <span class="text-red-500">*</span></label>
@@ -193,8 +214,13 @@
                        class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
                 <p class="text-xs text-gray-400 mt-1">Earned on 100% completion of this month.</p>
             </div>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="hidden" name="is_active" value="0">
+                <input type="checkbox" name="is_active" value="1" checked class="rounded">
+                <span class="text-sm text-gray-700 font-medium">Active</span>
+            </label>
             <div class="flex gap-3 pt-2">
-                <button type="submit" class="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">Save Month</button>
+                <button type="submit" id="month-form-submit" class="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">Save Month</button>
                 <button type="button" onclick="document.getElementById('add-month-modal').classList.add('hidden')"
                         class="px-4 py-2.5 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
             </div>
@@ -203,9 +229,67 @@
 </div>
 
 <script>
+const monthStoreUrl  = @json(route('admin.curriculum.months.store', $stream));
+const monthUpdateUrl = @json(url('/admin/curriculum/months'));
+const configuredMonths = @json($configured->keys()->values());
+
+function resetMonthSelectOptions(currentMonth = null) {
+    const select = document.getElementById('modal-month-number');
+    Array.from(select.options).forEach(opt => {
+        const num = parseInt(opt.value, 10);
+        opt.disabled = configuredMonths.includes(num) && num !== currentMonth;
+    });
+}
+
+function resetMonthForm() {
+    const form = document.getElementById('month-form');
+    form.action = monthStoreUrl;
+    document.getElementById('month-method-field').innerHTML = '';
+    document.getElementById('modal-month-title').textContent = 'Add Month';
+    document.getElementById('month-form-submit').textContent = 'Save Month';
+    form.reset();
+    form.querySelector('[name=is_active]').checked = true;
+    resetMonthSelectOptions();
+}
+
+function openAddMonthModal() {
+    resetMonthForm();
+    const select = document.getElementById('modal-month-number');
+    const firstAvailable = Array.from(select.options).find(opt => !opt.disabled);
+    select.value = firstAvailable ? firstAvailable.value : '1';
+    document.getElementById('modal-month-title').textContent = 'Add Month ' + select.value;
+    document.getElementById('add-month-modal').classList.remove('hidden');
+}
+
 function openAddMonth(num) {
-    document.getElementById('modal-month-number').value = num;
+    resetMonthForm();
+    document.getElementById('month-mentee-id').value = @json($stream->mentee_id);
+    const select = document.getElementById('modal-month-number');
+    select.value = num;
     document.getElementById('modal-month-title').textContent = 'Add Month ' + num;
+    document.getElementById('add-month-modal').classList.remove('hidden');
+}
+
+function openEditMonth(month) {
+    const form = document.getElementById('month-form');
+    form.action = monthUpdateUrl + '/' + month.id;
+    document.getElementById('month-method-field').innerHTML = '<input type="hidden" name="_method" value="PUT">';
+    document.getElementById('month-mentee-id').value = month.mentee_id || @json($stream->mentee_id);
+    document.getElementById('modal-month-title').textContent = 'Edit Month ' + month.month_number;
+    document.getElementById('month-form-submit').textContent = 'Update Month';
+
+    const select = document.getElementById('modal-month-number');
+    resetMonthSelectOptions(month.month_number);
+    select.value = month.month_number;
+    form.querySelector('[name=theme]').value = month.theme || '';
+    form.querySelector('[name=title]').value = month.title || '';
+    form.querySelector('[name=description]').value = month.description || '';
+    form.querySelector('[name=learning_outcomes]').value = Array.isArray(month.learning_outcomes)
+        ? month.learning_outcomes.join('\n')
+        : '';
+    form.querySelector('[name=milestone_badge]').value = month.milestone_badge || '';
+    form.querySelector('[name=is_active]').checked = month.is_active !== false;
+
     document.getElementById('add-month-modal').classList.remove('hidden');
 }
 </script>
