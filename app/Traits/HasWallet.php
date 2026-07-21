@@ -13,7 +13,7 @@ trait HasWallet
     // ─── Relationship ────────────────────────────────────────────────────
     public function walletTransactions()
     {
-        return $this->morphMany(WalletTransaction::class, 'walletable')->latest();
+        return $this->hasMany(WalletTransaction::class)->latest();
     }
 
     // ─── Balance ─────────────────────────────────────────────────────────

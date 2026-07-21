@@ -385,6 +385,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     // ── Wallet ────────────────────────────────────────────────
     Route::prefix('wallet')->name('wallet.')->group(function () {
         Route::get('/',                        [WalletTransactionController::class, 'index'])    ->name('index');
+        Route::get('/users',                   [WalletTransactionController::class, 'users'])    ->name('users');
         Route::get('/customer/{user}',         [WalletTransactionController::class, 'showUser'])->name('customer.show');
         Route::post('/adjust/{type}/{id}',     [WalletTransactionController::class, 'adjust'])  ->name('adjust');
         Route::post('/transfer',               [WalletTransactionController::class, 'transfer'])->name('transfer');

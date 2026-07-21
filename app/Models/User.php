@@ -12,11 +12,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Traits\HasSubscription;
+use App\Traits\HasWallet;
 use App\Casts\PreferencesCast;
  
 class User extends Authenticatable
 {
-    use HasApiTokens,HasFactory, Notifiable, SoftDeletes,HasSubscription;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes, HasSubscription, HasWallet;
  
     // ── Mentor status constants ───────────────────────────────
     const MENTOR_STATUS_PENDING  = 'pending';

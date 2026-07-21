@@ -30,7 +30,7 @@
     <div class="card shadow-none border mb-4">
         <div class="card-header fw-semibold">Adjust Wallet</div>
         <div class="card-body">
-            <form method="POST" action="{{ route('admin.wallet.adjust', [$customer instanceof \App\Models\Admin ? 'admin' : 'customer', $customer->id]) }}" class="row g-3">
+            <form method="POST" action="{{ route('admin.wallet.adjust', [$user->role === 'admin' ? 'admin' : 'customer', $user->id]) }}" class="row g-3">
                 @csrf
                 <div class="col-md-2">
                     <label class="form-label">Action</label>

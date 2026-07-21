@@ -178,16 +178,12 @@
 
                         {{-- User --}}
                         <td class="px-4 py-3">
-                            @if($txn->walletable)
-                                @php
-                                    $isCustomer = $txn->walletable_type === \App\Models\Customer::class;
-                                    $routeName  = $isCustomer ? 'admin.wallet.customer.show' : 'admin.wallet.admin.show';
-                                @endphp
-                                <a href="{{ route($routeName, $txn->walletable->id) }}"
+                            @if($txn->user)
+                                <a href="{{ route('admin.wallet.customer.show', $txn->user->id) }}"
                                     class="font-medium text-gray-800 hover:text-blue-600 transition-colors">
-                                    {{ $txn->walletable->name }}
+                                    {{ $txn->user->name }}
                                 </a>
-                                <p class="text-xs text-gray-400">{{ $txn->walletable->email ?? '' }}</p>
+                                <p class="text-xs text-gray-400">{{ $txn->user->email ?? '' }}</p>
                             @else
                                 <span class="text-gray-300">—</span>
                             @endif
@@ -195,13 +191,18 @@
 
                         {{-- User Type Badge --}}
                         <td class="px-4 py-3">
-                            @if($txn->walletable_type === \App\Models\Customer::class)
-                                <span class="inline-flex items-center gap-1 text-xs font-medium bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">
-                                    <iconify-icon icon="fa-solid:user"></iconify-icon> Customer
-                                </span>
-                            @elseif($txn->walletable_type === \App\Models\Admin::class)
+                            @php $role = $txn->user->role ?? null; @endphp
+                            @if($role === 'admin')
                                 <span class="inline-flex items-center gap-1 text-xs font-medium bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">
                                     <iconify-icon icon="fa-solid:user-shield"></iconify-icon> Admin
+                                </span>
+                            @elseif($role === 'mentor')
+                                <span class="inline-flex items-center gap-1 text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                                    <iconify-icon icon="fa-solid:user-tie"></iconify-icon> Mentor
+                                </span>
+                            @elseif($role === 'mentee')
+                                <span class="inline-flex items-center gap-1 text-xs font-medium bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">
+                                    <iconify-icon icon="fa-solid:user"></iconify-icon> Mentee
                                 </span>
                             @else
                                 <span class="text-gray-300 text-xs">—</span>

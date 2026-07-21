@@ -113,11 +113,11 @@ class WalletService
      */
     public function allTransactions(array $filters = [])
     {
-        return WalletTransaction::with(['walletable', 'performedByAdmin'])
-            ->when($filters['type'] ?? null, fn($q, $v) => $q->where('type', $v))
-            ->when($filters['search'] ?? null, fn($q, $v) => $q->where('reference', 'like', "%{$v}%"))
-            ->when($filters['from_date'] ?? null, fn($q, $v) => $q->whereDate('created_at', '>=', $v))
-            ->when($filters['to_date'] ?? null, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
+        return WalletTransaction::with(['user', 'performedByAdmin'])
+            ->when($filters['type'] ?? null, fn ($q, $v) => $q->where('type', $v))
+            ->when($filters['search'] ?? null, fn ($q, $v) => $q->where('reference', 'like', "%{$v}%"))
+            ->when($filters['from_date'] ?? null, fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
+            ->when($filters['to_date'] ?? null, fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
             ->latest()
             ->paginate(20);
     }
