@@ -87,14 +87,20 @@ class AdminController extends Controller
      */
     public function logout(Request $request)
     {
+        Auth::guard('web')->logout();
+
         $request->session()->forget(['admin_authenticated', 'admin_email', 'admin_login_at']);
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return response()->json([
-            'status' => 200,
-            'message'  => 'Logged out successfully.',
-            'redirect' => route('admin.login'),
-        ],200);
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'status'   => 200,
+                'message'  => 'Logged out successfully.',
+                'redirect' => route('admin.login'),
+            ], 200);
+        }
+
+        return redirect()->route('admin.login');
     }
 }

@@ -57,6 +57,8 @@ use App\Http\Controllers\Admin\MentorApprovalController;
 use App\Http\Controllers\Admin\MentorProfileController as AdminMentorProfileController;
 use App\Http\Controllers\Admin\AssessmentController;
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
+use App\Http\Controllers\Admin\NotificationController;
 
 use App\Services\PublicFileStorage;
 use Illuminate\Support\Facades\Artisan;
@@ -321,6 +323,16 @@ Route::post('/admin/logout',[AdminController::class, 'logout'])   ->name('admin.
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // ── Admin Profile ─────────────────────────────────────────
+    Route::get('/profile',                 [AdminProfileController::class, 'show'])           ->name('profile.show');
+    Route::put('/profile',                 [AdminProfileController::class, 'update'])         ->name('profile.update');
+    Route::get('/profile/password',        [AdminProfileController::class, 'editPassword'])   ->name('profile.password');
+    Route::put('/profile/password',        [AdminProfileController::class, 'updatePassword']) ->name('profile.password.update');
+
+    // ── Notifications ─────────────────────────────────────────
+    Route::get('/notifications',           [NotificationController::class, 'index'])    ->name('notifications.index');
+    Route::post('/notifications/seen',     [NotificationController::class, 'markSeen']) ->name('notifications.seen');
 
     // ── Mentor Approvals ──────────────────────────────────────
     Route::prefix('mentors')->name('mentors.')->group(function () {

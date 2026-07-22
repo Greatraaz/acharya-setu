@@ -94,6 +94,11 @@ $(document).on('submit','form.formsubmit', function(e) {
         url: url,
         method: type,
         data: data,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRF-TOKEN': token
+        },
         success: function(response) {
 
             if(response.status === 200) {

@@ -3,64 +3,64 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
- 
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
+
 class ProfileController extends Controller
 {
-    public function edit()
+    public function show()
     {
-        $user    = auth()->user();
-        $pending = $user->latestPendingChange;
-        return view('mentor.profile.edit', compact('user', 'pending'));
+        return view('admin.profile.show', [
+            'user' => auth()->user(),
+        ]);
     }
- 
+
     public function update(Request $request)
     {
-        /** @var User $user */
         $user = auth()->user();
- 
+
         $data = $request->validate([
-            'bio'              => 'nullable|string|min:50|max:1000',
-            'expertise'        => 'nullable|array',
-            'expertise.*'      => 'string|max:50',
-            'field'            => 'nullable|string|max:100',
-            'company'          => 'nullable|string|max:150',
-            'designation'      => 'nullable|string|max:150',
-            'experience_years' => 'nullable|integer|min:0|max:50',
-            'linkedin'         => 'nullable|url',
-            'rate_per_minute'  => 'nullable|numeric|min:0',
-            'phone'            => 'nullable|string|max:20',
+            'name'  => 'required|string|max:100',
+            'email' => 'required|email|max:150|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:20',
         ]);
- 
-        // Filter to only changed fields
-        $changed = array_filter($data, fn($v, $k) => $v !== $user->$k, ARRAY_FILTER_USE_BOTH);
- 
-        if (empty($changed)) {
-            return redirect()->back()->with('info', 'No changes detected.');
-        }
- 
-        // Queue for admin approval
-        $pending = $user->requestProfileChange($changed);
- 
-        ActivityLogger::record(
-            'profile_change_requested',
-            "Mentor {$user->name} submitted profile changes for approval (#{$pending->id})",
-            'users', 'info'
-        );
- 
-        return redirect()->back()->with('success', 'Your changes have been submitted for admin review. They will appear on your profile once approved.');
+
+        $user->update($data);
+
+        return redirect()
+            ->route('admin.profile.show')
+            ->with('success', 'Profile updated successfully.');
     }
- 
-    // Mentor can cancel their pending request
-    public function cancelPending()
+
+    public function editPassword()
     {
-        /** @var User $user */
+        return view('admin.profile.password', [
+            'user' => auth()->user(),
+        ]);
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'password'         => ['required', 'confirmed', Password::min(8)],
+        ]);
+
         $user = auth()->user();
-        $user->pendingChanges()->pending()->delete();
-        $user->update(['has_pending_changes' => false]);
- 
-        return redirect()->back()->with('success', 'Pending change request cancelled.');
+
+        if (! Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors([
+                'current_password' => 'Current password is incorrect.',
+            ]);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        return redirect()
+            ->route('admin.profile.password')
+            ->with('success', 'Password changed successfully.');
     }
 }
