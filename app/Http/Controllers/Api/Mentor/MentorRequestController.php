@@ -47,22 +47,16 @@ class MentorRequestController extends Controller
             ->where('role', 'mentee')
             ->firstOrFail();
 
-        if ($mentee->assigned_mentor_id && (int) $mentee->assigned_mentor_id !== (int) $request->user()->id) {
-            return response()->json([
-                'status'     => false,
-                'statuscode' => 422,
-                'message'    => 'This mentee already has another mentor assigned.',
-            ], 422);
-        }
-
         DB::transaction(function () use ($mentorRequest, $mentee, $request) {
             $mentorRequest->update([
                 'status'       => MentorRequest::STATUS_ACCEPTED,
                 'responded_at' => now(),
             ]);
 
+            // Assign (or switch) mentee to this mentor
             $mentee->update(['assigned_mentor_id' => $request->user()->id]);
 
+            // Auto-reject other pending requests from this mentee
             MentorRequest::where('mentee_id', $mentee->id)
                 ->where('id', '!=', $mentorRequest->id)
                 ->where('status', MentorRequest::STATUS_PENDING)

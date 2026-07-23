@@ -31,14 +31,6 @@ class MentorRequestController extends Controller
     {
         $mentee = $request->user();
 
-        if ($mentee->assigned_mentor_id) {
-            return response()->json([
-                'status'     => false,
-                'statuscode' => 422,
-                'message'    => 'You already have an assigned mentor.',
-            ], 422);
-        }
-
         $data = $request->validate([
             'mentor_id' => [
                 'required',
@@ -47,6 +39,15 @@ class MentorRequestController extends Controller
             ],
             'message' => 'nullable|string|max:1000',
         ]);
+
+        // Cannot request the mentor already assigned
+        if ($mentee->assigned_mentor_id && (int) $mentee->assigned_mentor_id === (int) $data['mentor_id']) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'This mentor is already assigned to you.',
+            ], 422);
+        }
 
         $mentor = User::where('id', $data['mentor_id'])
             ->where('role', 'mentor')
@@ -61,6 +62,8 @@ class MentorRequestController extends Controller
             ], 422);
         }
 
+        // Only block duplicate pending request to the *same* mentor.
+        // Mentees may send pending requests to multiple different mentors.
         $existingPending = MentorRequest::where('mentee_id', $mentee->id)
             ->where('mentor_id', $data['mentor_id'])
             ->where('status', MentorRequest::STATUS_PENDING)
