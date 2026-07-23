@@ -45,6 +45,15 @@ class UserController extends Controller
 
         return view('admin.mentees.show', compact('mentee', 'tracks', 'preferences'));
     }
+
+    public function menteeJourney(User $mentee)
+    {
+        abort_unless($mentee->role === 'mentee', 404);
+
+        return redirect()->route('admin.curriculum.streams', [
+            'mentee_id' => $mentee->id,
+        ]);
+    }
  
     public function menteeToggleStatus(User $mentee)
     {

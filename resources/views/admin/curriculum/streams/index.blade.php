@@ -7,7 +7,15 @@
 
     {{-- Page header --}}
     <div class="flex items-center justify-between">
-        <p class="text-sm text-gray-500">Build and manage the 6-month mentee learning journeys by stream.</p>
+        <div>
+            <p class="text-sm text-gray-500">Build and manage the 6-month mentee learning journeys by stream.</p>
+            @if($filterMentee ?? null)
+            <div class="mt-2 inline-flex items-center gap-2 bg-violet-50 border border-violet-100 text-violet-800 text-xs font-medium px-3 py-1.5 rounded-xl">
+                Showing journeys for <span class="font-semibold">{{ $filterMentee->name }}</span>
+                <a href="{{ route('admin.curriculum.streams') }}" class="text-violet-600 hover:text-violet-800 underline">Clear filter</a>
+            </div>
+            @endif
+        </div>
         <button onclick="document.getElementById('add-stream-modal').classList.remove('hidden')"
                 class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
@@ -19,6 +27,12 @@
     <div class="flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded-xl">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
         {{ session('success') }}
+    </div>
+    @endif
+
+    @if(session('error'))
+    <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">
+        {{ session('error') }}
     </div>
     @endif
 
@@ -36,11 +50,16 @@
     @if($streams->isEmpty())
     <div class="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-16 text-center">
         <div class="text-5xl mb-4">🎓</div>
+        @if($filterMentee ?? null)
+        <p class="text-gray-600 font-semibold mb-1">No journeys for {{ $filterMentee->name }} yet</p>
+        <p class="text-gray-400 text-sm mb-5">Create a stream for this mentee to start their 6-month plan.</p>
+        @else
         <p class="text-gray-600 font-semibold mb-1">No education streams yet</p>
         <p class="text-gray-400 text-sm mb-5">Create your first stream to start building the 6-month journey.</p>
+        @endif
         <button onclick="document.getElementById('add-stream-modal').classList.remove('hidden')"
                 class="inline-flex items-center gap-2 bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-violet-700 transition-colors">
-            Create First Stream
+            {{ ($filterMentee ?? null) ? 'Create Stream for Mentee' : 'Create First Stream' }}
         </button>
     </div>
     @else
@@ -136,7 +155,7 @@
                         class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white">
                     <option value="">— Select mentee —</option>
                     @foreach($mentees as $mentee)
-                    <option value="{{ $mentee->id }}" @selected(old('mentee_id') == $mentee->id)>
+                    <option value="{{ $mentee->id }}" @selected(old('mentee_id', $filterMentee->id ?? null) == $mentee->id)>
                         {{ $mentee->name }} ({{ $mentee->email }})
                     </option>
                     @endforeach

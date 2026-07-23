@@ -12,10 +12,17 @@ use Illuminate\Validation\ValidationException;
 class CurriculumController extends Controller
 {
     // ── Streams ───────────────────────────────────────────────
-    public function streams()
+    public function streams(Request $request)
     {
+        $filterMentee = null;
+
+        if ($request->filled('mentee_id')) {
+            $filterMentee = User::where('role', 'mentee')->find($request->mentee_id);
+        }
+
         $streams = EducationStream::with('mentee:id,name,email')
             ->withCount(['months', 'enrollments'])
+            ->when($filterMentee, fn ($q) => $q->where('mentee_id', $filterMentee->id))
             ->orderBy('sort_order')
             ->get();
 
@@ -24,7 +31,7 @@ class CurriculumController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
  
-        return view('admin.curriculum.streams.index', compact('streams', 'mentees'));
+        return view('admin.curriculum.streams.index', compact('streams', 'mentees', 'filterMentee'));
     }
  
     public function storeStream(Request $request)

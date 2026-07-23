@@ -365,6 +365,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::prefix('mentees')->name('mentees.')->group(function () {
         Route::get('/',                        [UserController::class, 'menteeIndex'])        ->name('index');
         Route::get('/deleted',                 [UserController::class, 'menteeTrashed'])      ->name('trashed');
+        Route::get('/{mentee}/journey',        [UserController::class, 'menteeJourney'])      ->name('journey');
         Route::get('/{mentee}',                [UserController::class, 'menteeShow'])         ->name('show');
         Route::post('/{mentee}/toggle-status', [UserController::class, 'menteeToggleStatus'])->name('toggle-status');
         Route::post('/{mentee}/assign-mentor', [UserController::class, 'menteeAssignMentor'])->name('assign-mentor');
