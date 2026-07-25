@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -175,6 +176,13 @@ class User extends Authenticatable
     public function enrollments(): HasMany
     {
         return $this->hasMany(MenteeEnrollment::class, 'mentee_id');
+    }
+
+    public function channels(): BelongsToMany
+    {
+        return $this->belongsToMany(Channel::class, 'channel_members')
+            ->withPivot(['role', 'last_read_at', 'muted'])
+            ->withTimestamps();
     }
  
     // ── Scopes ────────────────────────────────────────────────

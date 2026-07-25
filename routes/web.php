@@ -272,11 +272,18 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::post('/assessments/{id}/submit',[AssessmentController::class, 'menteeSubmit'])      ->name('assessments.submit');
 
     // Community
-    Route::get( '/community',             [ChannelController::class, 'index'])                 ->name('community.index');
-    Route::get( '/community/{channel}',   [ChannelController::class, 'show'])                  ->name('community.show');
-    Route::post('/community/{channel}/join',    [ChannelController::class, 'join'])            ->name('community.join');
-    Route::post('/community/{channel}/leave',   [ChannelController::class, 'leave'])           ->name('community.leave');
-    Route::post('/community/{channel}/messages',[MessageController::class, 'store'])           ->name('community.messages.store');
+    Route::get( '/community',                    [ChannelController::class, 'index'])->name('community.index');
+    Route::get( '/community/create',             [ChannelController::class, 'create'])->name('community.create');
+    Route::post('/community',                    [ChannelController::class, 'store'])->name('community.store');
+    Route::post('/community/messages/{message}/like', [MessageController::class, 'like'])->name('community.messages.like');
+    Route::delete('/community/messages/{message}',    [MessageController::class, 'destroy'])->name('community.messages.destroy');
+    Route::get( '/community/{channel:slug}',     [ChannelController::class, 'show'])->name('community.show');
+    Route::post('/community/{channel:slug}/join',    [ChannelController::class, 'join'])->name('community.join');
+    Route::post('/community/{channel:slug}/leave',   [ChannelController::class, 'leave'])->name('community.leave');
+    Route::post('/community/{channel:slug}/invite',  [ChannelController::class, 'invite'])->name('community.invite');
+    Route::delete('/community/{channel:slug}/members/{user}', [ChannelController::class, 'removeMember'])->name('community.members.remove');
+    Route::delete('/community/{channel:slug}',   [ChannelController::class, 'destroy'])->name('community.destroy');
+    Route::post('/community/{channel:slug}/messages',[MessageController::class, 'store'])->name('community.messages.store');
 
     // Jobs
     Route::get('/jobs', [JobListingController::class, 'publicIndex'])->name('jobs');
@@ -461,12 +468,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         Route::get('/',                      [ChannelController::class, 'index'])  ->name('index');
         Route::get('/create',                [ChannelController::class, 'create']) ->name('create');
         Route::post('/',                     [ChannelController::class, 'store'])  ->name('store');
+        Route::post('/messages/{message}/like', [MessageController::class, 'like'])   ->name('messages.like');
+        Route::delete('/messages/{message}',    [MessageController::class, 'destroy'])->name('messages.destroy');
         Route::get('/{channel:slug}',        [ChannelController::class, 'show'])   ->name('show');
         Route::post('/{channel:slug}/join',  [ChannelController::class, 'join'])   ->name('join');
         Route::post('/{channel:slug}/leave', [ChannelController::class, 'leave'])  ->name('leave');
+        Route::post('/{channel:slug}/invite',[ChannelController::class, 'invite'])->name('invite');
+        Route::delete('/{channel:slug}/members/{user}', [ChannelController::class, 'removeMember'])->name('members.remove');
         Route::delete('/{channel:slug}',     [ChannelController::class, 'destroy'])->name('destroy');
         Route::post('/{channel:slug}/messages', [MessageController::class, 'store'])  ->name('messages.store');
-        Route::delete('/messages/{message}',    [MessageController::class, 'destroy'])->name('messages.destroy');
     });
 
     // ── Wellness ──────────────────────────────────────────────

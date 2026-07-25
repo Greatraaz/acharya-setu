@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{User,Session,Task,Video,JobListing,Quiz,QuizQuestion,PremiumPlan,CommunityChannel,Assessment,Notification};
+use App\Models\{User,Session,Task,Video,JobListing,Quiz,QuizQuestion,PremiumPlan,Channel,Assessment,Notification};
 use Illuminate\Http\{Request,JsonResponse};
 
 class AdminController extends Controller
@@ -69,8 +69,49 @@ class AdminController extends Controller
     public function createAssessment(Request $request): JsonResponse { return response()->json(['assessment'=>Assessment::create($request->validate(['title'=>'required|string','month'=>'required|integer|min:1|max:6','description'=>'nullable|string','questions'=>'required|array']))],201); }
 
     // Community channels
-    public function communityChannels(): JsonResponse { return response()->json(['channels'=>CommunityChannel::withCount('messages')->get()]); }
-    public function createChannel(Request $request): JsonResponse { return response()->json(['channel'=>CommunityChannel::create($request->validate(['name'=>'required|string','description'=>'nullable|string','icon'=>'sometimes|string','color'=>'sometimes|string']))],201); }
+    public function communityChannels(): JsonResponse
+    {
+        $channels = Channel::withCount(['allMessages', 'members'])
+            ->latest()
+            ->get()
+            ->map(fn (Channel $c) => $c->toApiArray());
+
+        return response()->json(['channels' => $channels]);
+    }
+
+    public function createChannel(Request $request): JsonResponse
+    {
+        if (! $request->filled('slug')) {
+            $request->merge(['slug' => null]);
+        }
+
+        $data = $request->validate([
+            'name'        => 'required|string|max:100|unique:channels,name',
+            'slug'        => 'nullable|string|max:120|unique:channels,slug|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+            'description' => 'nullable|string|max:500',
+            'icon'        => 'sometimes|string|max:10',
+            'type'        => 'sometimes|in:public,private',
+            'category'    => 'nullable|string|max:50',
+        ]);
+
+        $channel = Channel::create([
+            'name'        => $data['name'],
+            'slug'        => $data['slug'] ?? null,
+            'description' => $data['description'] ?? null,
+            'icon'        => $data['icon'] ?? '💬',
+            'type'        => $data['type'] ?? Channel::TYPE_PUBLIC,
+            'category'    => $data['category'] ?? null,
+            'is_active'   => true,
+            'created_by'  => $request->user()->id,
+        ]);
+
+        $channel->members()->attach($request->user()->id, [
+            'role'         => Channel::ROLE_ADMIN,
+            'last_read_at' => now(),
+        ]);
+
+        return response()->json(['channel' => $channel->loadCount(['allMessages', 'members'])->toApiArray($request->user())], 201);
+    }
 
     // Broadcast
     public function broadcastNotification(Request $request): JsonResponse
