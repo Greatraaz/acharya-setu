@@ -273,8 +273,6 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
 
     // Community
     Route::get( '/community',                    [ChannelController::class, 'index'])->name('community.index');
-    Route::get( '/community/create',             [ChannelController::class, 'create'])->name('community.create');
-    Route::post('/community',                    [ChannelController::class, 'store'])->name('community.store');
     Route::post('/community/messages/{message}/like', [MessageController::class, 'like'])->name('community.messages.like');
     Route::delete('/community/messages/{message}',    [MessageController::class, 'destroy'])->name('community.messages.destroy');
     Route::get( '/community/{channel:slug}',     [ChannelController::class, 'show'])->name('community.show');

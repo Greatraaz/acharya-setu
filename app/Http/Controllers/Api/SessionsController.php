@@ -84,9 +84,15 @@ class SessionsController extends Controller
         $amount = round((float) ($mentor->rate_per_minute ?? 0) * (int) $data['duration'], 2);
         $scheduledAt = Carbon::parse($data['date'] . ' ' . $data['time'], 'Asia/Kolkata');
 
+        // Soft-expire abandoned unpaid checkouts (no cancel API needed)
+        ConsultationSession::expireAbandonedUnpaidPayments();
+
+        // Same mentee retrying after closing Razorpay — free their previous unpaid hold now
+        ConsultationSession::releaseOwnUnpaidHold($mentee->id, $mentor->id, $scheduledAt);
+
         $alreadyBooked = ConsultationSession::where('mentor_id', $mentor->id)
             ->where('scheduled_at', $scheduledAt)
-            ->whereNotIn('status', ['cancelled'])
+            ->occupyingSlot()
             ->exists();
 
         if ($alreadyBooked) {
@@ -266,6 +272,13 @@ class SessionsController extends Controller
                 'status'  => false,
                 'message' => 'Pending session not found for this payment order.',
             ], 404);
+        }
+
+        if ($session->status === ConsultationSession::STATUS_CANCELLED) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'This booking hold expired or was replaced. Please book the slot again.',
+            ], 422);
         }
 
         if (

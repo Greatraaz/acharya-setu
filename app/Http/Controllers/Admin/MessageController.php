@@ -29,11 +29,8 @@ class MessageController extends Controller
             return back()->withErrors(['body' => 'Message text or image is required.']);
         }
 
-        if (! $channel->isMember($user) && $channel->type === Channel::TYPE_PUBLIC) {
-            $channel->members()->attach($user->id, [
-                'role'         => Channel::roleForUser($user),
-                'last_read_at' => now(),
-            ]);
+        if (! $channel->isMember($user) && $channel->canSelfJoin($user)) {
+            $channel->addMember($user);
         }
 
         $imagePath = null;

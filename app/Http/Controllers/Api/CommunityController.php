@@ -19,6 +19,12 @@ class CommunityController extends Controller
     {
         $user = $request->user();
 
+        if ($user->isMentee()) {
+            return response()->json([
+                'message' => 'Mentees cannot create channels. Ask a mentor or admin.',
+            ], 403);
+        }
+
         if (! $request->filled('slug')) {
             $request->merge(['slug' => null]);
         }
@@ -43,7 +49,7 @@ class CommunityController extends Controller
             'created_by'  => $user->id,
         ]);
 
-        // Channel-level admin so mentor/mentee creators can invite & manage members
+        // Channel-level admin so mentor creators can invite & manage members
         $channel->members()->attach($user->id, [
             'role'         => Channel::ROLE_ADMIN,
             'last_read_at' => now(),
@@ -105,11 +111,14 @@ class CommunityController extends Controller
             ], 403);
         }
 
+        if ($channel->isRemoved($user)) {
+            return response()->json([
+                'message' => 'You were removed from this channel. A mentor must invite you again before you can rejoin.',
+            ], 403);
+        }
+
         if (! $channel->isMember($user)) {
-            $channel->members()->attach($user->id, [
-                'role'         => Channel::roleForUser($user),
-                'last_read_at' => now(),
-            ]);
+            $channel->addMember($user);
         }
 
         return response()->json([
@@ -171,7 +180,7 @@ class CommunityController extends Controller
     }
 
     /**
-     * Invite a user to a private channel (channel admin / creator / platform admin).
+     * Invite a user to the channel (clears any previous removal so they can rejoin).
      */
     public function invite(Request $request, int $channelId): JsonResponse
     {
@@ -194,12 +203,7 @@ class CommunityController extends Controller
             return response()->json(['message' => 'Only mentors and mentees can join community channels.'], 422);
         }
 
-        if (! $channel->isMember($invitee)) {
-            $channel->members()->attach($invitee->id, [
-                'role'         => Channel::roleForUser($invitee),
-                'last_read_at' => now(),
-            ]);
-        }
+        $channel->addMember($invitee);
 
         return response()->json([
             'message' => 'Member invited.',
@@ -213,7 +217,7 @@ class CommunityController extends Controller
     }
 
     /**
-     * Remove a member from a private channel.
+     * Remove a member. Removed mentees cannot self-rejoin until invited again.
      */
     public function removeMember(Request $request, int $channelId, int $userId): JsonResponse
     {
@@ -229,9 +233,10 @@ class CommunityController extends Controller
             return response()->json(['message' => 'Cannot remove the channel creator.'], 422);
         }
 
-        $channel->members()->detach($userId);
+        $target = User::findOrFail($userId);
+        $channel->removeMember($target, $user);
 
-        return response()->json(['message' => 'Member removed.']);
+        return response()->json(['message' => 'Member removed. They cannot rejoin until invited again.']);
     }
 
     /**
@@ -244,12 +249,9 @@ class CommunityController extends Controller
 
         abort_unless($channel->canAccess($user), 403);
 
-        // Auto-join public channels when reading (Discord-like browse)
-        if ($channel->type === Channel::TYPE_PUBLIC && ! $channel->isMember($user)) {
-            $channel->members()->attach($user->id, [
-                'role'         => Channel::roleForUser($user),
-                'last_read_at' => now(),
-            ]);
+        // Auto-join public channels when reading (unless previously removed)
+        if ($channel->type === Channel::TYPE_PUBLIC && ! $channel->isMember($user) && $channel->canSelfJoin($user)) {
+            $channel->addMember($user);
         }
 
         $paginator = $channel->messages()
@@ -286,7 +288,9 @@ class CommunityController extends Controller
         $user    = $request->user();
         $channel = Channel::active()->findOrFail($channelId);
 
-        abort_unless($channel->canPost($user), 403, 'You cannot post in this channel.');
+        abort_unless($channel->canPost($user), 403, $channel->isRemoved($user)
+            ? 'You were removed from this channel. A mentor must invite you again before you can post.'
+            : 'You cannot post in this channel.');
 
         $data = $request->validate([
             'body'      => 'nullable|string|max:5000',
@@ -312,11 +316,8 @@ class CommunityController extends Controller
             }
         }
 
-        if (! $channel->isMember($user) && $channel->type === Channel::TYPE_PUBLIC) {
-            $channel->members()->attach($user->id, [
-                'role'         => Channel::roleForUser($user),
-                'last_read_at' => now(),
-            ]);
+        if (! $channel->isMember($user) && $channel->canSelfJoin($user)) {
+            $channel->addMember($user);
         }
 
         $imagePath = null;

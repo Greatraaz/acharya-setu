@@ -50,13 +50,15 @@ $isAdminUi = request()->routeIs('admin.*');
         </nav>
 
         <div class="p-2 border-t border-gray-100">
-            <a href="{{ route($r.'.create') }}"
+            @if($isAdminUi)
+            <a href="{{ route('admin.community.create') }}"
                class="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-gray-400
                       hover:bg-white hover:text-gray-600 hover:shadow-sm hover:border hover:border-gray-200
                       border border-transparent transition-all">
                 <span class="w-5 h-5 rounded-md border border-dashed border-gray-300 flex items-center justify-center text-xs leading-none flex-shrink-0">+</span>
                 New channel
             </a>
+            @endif
         </div>
     </aside>
 
@@ -82,13 +84,21 @@ $isAdminUi = request()->routeIs('admin.*');
 
             <div class="flex items-center gap-2">
                 @if(!$channel->isMember(Auth::user()))
-                <form method="POST" action="{{ route($r.'.join', $channel->slug) }}">
-                    @csrf
-                    <button type="submit"
-                            class="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg transition-colors">
-                        Join channel
-                    </button>
-                </form>
+                    @if($channel->isRemoved(Auth::user()))
+                    <span class="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+                        Removed - wait for a mentor invite to rejoin
+                    </span>
+                    @elseif($channel->type === 'public')
+                    <form method="POST" action="{{ route($r.'.join', $channel->slug) }}">
+                        @csrf
+                        <button type="submit"
+                                class="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg transition-colors">
+                            Join channel
+                        </button>
+                    </form>
+                    @else
+                    <span class="text-xs text-gray-400">Private - invite only</span>
+                    @endif
                 @elseif($channel->created_by !== Auth::id())
                 <form method="POST" action="{{ route($r.'.leave', $channel->slug) }}">
                     @csrf
@@ -295,7 +305,7 @@ $isAdminUi = request()->routeIs('admin.*');
         @endif
 
         {{-- Input --}}
-        @if($channel->isMember(Auth::user()) || ($channel->type ?? '') === 'public')
+        @if($channel->canPost(Auth::user()))
         <div class="px-4 py-3 border-t border-gray-100 flex-shrink-0">
             <form method="POST"
                   action="{{ route($r.'.messages.store', $channel->slug) }}"
@@ -328,9 +338,14 @@ $isAdminUi = request()->routeIs('admin.*');
                 <img id="main-image-preview" class="hidden max-h-28 rounded-xl border border-gray-200" alt="">
             </form>
         </div>
+        @elseif($channel->isRemoved(Auth::user()))
+        <div class="px-4 py-4 border-t border-gray-100 bg-amber-50 text-center flex-shrink-0">
+            <p class="text-xs text-amber-700">You were removed from this channel. Ask a mentor to invite you again.</p>
+        </div>
         @else
         <div class="px-4 py-4 border-t border-gray-100 bg-gray-50 text-center flex-shrink-0">
             <p class="text-xs text-gray-400 mb-2">Join this channel to send messages</p>
+            @if($channel->type === 'public')
             <form method="POST" action="{{ route($r.'.join', $channel->slug) }}">
                 @csrf
                 <button type="submit"
@@ -338,6 +353,7 @@ $isAdminUi = request()->routeIs('admin.*');
                     Join #{{ $channel->name }}
                 </button>
             </form>
+            @endif
         </div>
         @endif
 
@@ -376,9 +392,10 @@ $isAdminUi = request()->routeIs('admin.*');
             @endforeach
         </div>
 
-        @if($channel->type === 'private' && ($channel->isAdmin(Auth::user()) || Auth::user()->isAdmin() || $channel->created_by === Auth::id()))
+        @if($channel->isAdmin(Auth::user()) || Auth::user()->isAdmin() || $channel->created_by === Auth::id())
         <div class="p-3 border-t border-gray-100">
             <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">Invite</p>
+            <p class="text-[10px] text-gray-400 mb-2">Re-invite removed mentees here.</p>
             <form method="POST" action="{{ route($r.'.invite', $channel->slug) }}" class="space-y-2">
                 @csrf
                 <select name="user_id" required

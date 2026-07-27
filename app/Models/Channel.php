@@ -79,6 +79,11 @@ class Channel extends Model
             ->withTimestamps();
     }
 
+    public function removals(): HasMany
+    {
+        return $this->hasMany(ChannelRemoval::class);
+    }
+
     public function mentors(): BelongsToMany
     {
         return $this->members()->wherePivotIn('role', [self::ROLE_MENTOR, self::ROLE_ADMIN]);
@@ -116,6 +121,55 @@ class Channel extends Model
             ->exists();
     }
 
+    public function isRemoved(User $user): bool
+    {
+        return $this->removals()->where('user_id', $user->id)->exists();
+    }
+
+    public function markRemoved(User $user, ?User $removedBy = null): void
+    {
+        $this->removals()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['removed_by' => $removedBy?->id]
+        );
+    }
+
+    public function clearRemoval(User $user): void
+    {
+        $this->removals()->where('user_id', $user->id)->delete();
+    }
+
+    /**
+     * Self-join is allowed for public channels only if the user was not removed.
+     * Removed members must wait for an invite.
+     */
+    public function canSelfJoin(User $user): bool
+    {
+        if ($this->type !== self::TYPE_PUBLIC || ! $this->is_active) {
+            return false;
+        }
+
+        return ! $this->isRemoved($user);
+    }
+
+    public function addMember(User $user, ?string $role = null): void
+    {
+        $this->clearRemoval($user);
+
+        if (! $this->isMember($user)) {
+            $this->members()->attach($user->id, [
+                'role'         => $role ?? self::roleForUser($user),
+                'last_read_at' => now(),
+            ]);
+        }
+    }
+
+    public function removeMember(User $user, ?User $removedBy = null): void
+    {
+        $this->members()->detach($user->id);
+        $this->markRemoved($user, $removedBy);
+    }
+
     public function memberRole(User $user): ?string
     {
         $member = $this->members()->where('channel_members.user_id', $user->id)->first();
@@ -138,11 +192,16 @@ class Channel extends Model
             return false;
         }
 
-        if ($this->type === self::TYPE_PUBLIC) {
+        if ($this->isMember($user)) {
             return true;
         }
 
-        return $this->isMember($user);
+        // Public channels: allow post/join only if not previously removed
+        if ($this->type === self::TYPE_PUBLIC) {
+            return $this->canSelfJoin($user);
+        }
+
+        return false;
     }
 
     public static function roleForUser(User $user): string
@@ -194,9 +253,11 @@ class Channel extends Model
         ];
 
         if ($user) {
-            $data['is_member']    = $this->isMember($user);
-            $data['member_role']  = $this->memberRole($user);
-            $data['unread_count'] = $this->isMember($user) ? $this->unreadCountFor($user) : 0;
+            $data['is_member']      = $this->isMember($user);
+            $data['member_role']    = $this->memberRole($user);
+            $data['is_removed']     = $this->isRemoved($user);
+            $data['can_self_join']  = $this->canSelfJoin($user);
+            $data['unread_count']   = $this->isMember($user) ? $this->unreadCountFor($user) : 0;
         }
 
         return $data;

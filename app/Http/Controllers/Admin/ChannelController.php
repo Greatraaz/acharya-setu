@@ -33,6 +33,8 @@ class ChannelController extends Controller
 
     public function create()
     {
+        abort_if(Auth::user()->isMentee(), 403, 'Mentees cannot create channels.');
+
         return view('admin.community.create', [
             'categories' => Channel::CATEGORIES,
         ]);
@@ -40,6 +42,8 @@ class ChannelController extends Controller
 
     public function store(Request $request)
     {
+        abort_if(Auth::user()->isMentee(), 403, 'Mentees cannot create channels.');
+
         if (! $request->filled('slug')) {
             $request->merge(['slug' => null]);
         }
@@ -118,11 +122,12 @@ class ChannelController extends Controller
 
         $user = Auth::user();
 
+        if ($channel->isRemoved($user)) {
+            return back()->with('error', 'You were removed from this channel. A mentor must invite you again before you can rejoin.');
+        }
+
         if (! $channel->isMember($user)) {
-            $channel->members()->attach($user->id, [
-                'role'         => Channel::roleForUser($user),
-                'last_read_at' => now(),
-            ]);
+            $channel->addMember($user);
         }
 
         return back()->with('success', 'Joined channel!');
@@ -136,6 +141,7 @@ class ChannelController extends Controller
             return back()->with('error', 'Channel creator cannot leave. Delete the channel instead.');
         }
 
+        // Voluntary leave — do not block rejoining
         $channel->members()->detach($user->id);
 
         return redirect()->route(request()->routeIs('admin.*') ? 'admin.community.index' : 'mentee.community.index')->with('success', 'Left channel.');
@@ -160,12 +166,7 @@ class ChannelController extends Controller
             return back()->with('error', 'Only mentors and mentees can be invited.');
         }
 
-        if (! $channel->isMember($invitee)) {
-            $channel->members()->attach($invitee->id, [
-                'role'         => Channel::roleForUser($invitee),
-                'last_read_at' => now(),
-            ]);
-        }
+        $channel->addMember($invitee);
 
         return back()->with('success', $invitee->name . ' invited to #' . $channel->name);
     }
@@ -183,9 +184,9 @@ class ChannelController extends Controller
             return back()->with('error', 'Cannot remove the channel creator.');
         }
 
-        $channel->members()->detach($user->id);
+        $channel->removeMember($user, $actor);
 
-        return back()->with('success', 'Member removed.');
+        return back()->with('success', 'Member removed. They cannot rejoin until invited again.');
     }
 
     public function destroy(Channel $channel)

@@ -51,6 +51,10 @@ class ConsultationSession extends Model
         });
     }
  
+    // Soft-hold for unpaid Razorpay checkouts. Abandoned payments auto-release
+    // without needing a client cancel API.
+    public const PAYMENT_HOLD_MINUTES = 10;
+
     // ── Status constants ──────────────────────────────────────
     const STATUS_PENDING   = 'pending';
     const STATUS_CONFIRMED = 'confirmed';
@@ -122,7 +126,67 @@ class ConsultationSession extends Model
     public function scopeUpcoming(Builder $q): Builder
     {
         return $q->whereIn('status', ['pending', 'confirmed'])
+                 ->where(function ($inner) {
+                     // Do not treat abandoned unpaid checkouts as real upcoming bookings
+                     $inner->where('payment_status', '!=', 'pending')
+                           ->orWhere('status', '!=', self::STATUS_PENDING)
+                           ->orWhere('created_at', '>=', now()->subMinutes(self::PAYMENT_HOLD_MINUTES));
+                 })
                  ->where('scheduled_at', '>=', Carbon::now(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s'));
+    }
+
+    /**
+     * Sessions that currently block a mentor time slot.
+     * Expired unpaid pending checkouts do not occupy the slot.
+     */
+    public function scopeOccupyingSlot(Builder $q): Builder
+    {
+        return $q->whereNotIn('status', [
+                self::STATUS_CANCELLED,
+                self::STATUS_COMPLETED,
+                self::STATUS_NO_SHOW,
+            ])
+            ->where(function ($inner) {
+                $inner->where(function ($paidOrConfirmed) {
+                    $paidOrConfirmed->where('status', '!=', self::STATUS_PENDING)
+                        ->orWhere('payment_status', '!=', 'pending');
+                })->orWhere('created_at', '>=', now()->subMinutes(self::PAYMENT_HOLD_MINUTES));
+            });
+    }
+
+    /**
+     * Cancel unpaid pending sessions whose payment hold window expired.
+     */
+    public static function expireAbandonedUnpaidPayments(): int
+    {
+        return static::query()
+            ->where('status', self::STATUS_PENDING)
+            ->where('payment_status', 'pending')
+            ->where('created_at', '<', now()->subMinutes(self::PAYMENT_HOLD_MINUTES))
+            ->update([
+                'status'              => self::STATUS_CANCELLED,
+                'cancellation_reason' => 'Payment not completed within ' . self::PAYMENT_HOLD_MINUTES . ' minutes',
+                'cancelled_at'        => now(),
+            ]);
+    }
+
+    /**
+     * Immediately release this mentee's unpaid hold on a slot (payment cancelled / retry).
+     */
+    public static function releaseOwnUnpaidHold(int $menteeId, int $mentorId, Carbon $scheduledAt): int
+    {
+        return static::query()
+            ->where('mentee_id', $menteeId)
+            ->where('mentor_id', $mentorId)
+            ->where('scheduled_at', $scheduledAt->copy()->timezone(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s'))
+            ->where('status', self::STATUS_PENDING)
+            ->where('payment_status', 'pending')
+            ->update([
+                'status'              => self::STATUS_CANCELLED,
+                'cancellation_reason' => 'Replaced by a new booking attempt (previous payment not completed)',
+                'cancelled_at'        => now(),
+                'cancelled_by'        => $menteeId,
+            ]);
     }
 
     public function sessionTimezone(): string

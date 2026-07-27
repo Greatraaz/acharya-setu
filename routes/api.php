@@ -226,7 +226,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         // Community (channels, threads, likes, members)
         Route::prefix('community')->name('community.')->group(function () {
             Route::get('/channels',                              [CommunityController::class, 'channels'])->name('channels');
-            Route::post('/channels',                             [CommunityController::class, 'createChannel'])->name('channels.create');
             Route::get('/channels/{channelId}',                   [CommunityController::class, 'showChannel'])->name('channels.show');
             Route::post('/channels/{channelId}/join',             [CommunityController::class, 'join'])->name('channels.join');
             Route::post('/channels/{channelId}/leave',            [CommunityController::class, 'leave'])->name('channels.leave');

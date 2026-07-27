@@ -40,9 +40,12 @@ class BookingController extends Controller
 
         $scheduledAt = Carbon::parse($data['date'] . ' ' . $data['time'], 'Asia/Kolkata');
 
+        ConsultationSession::expireAbandonedUnpaidPayments();
+        ConsultationSession::releaseOwnUnpaidHold($mentee->id, $mentor->id, $scheduledAt);
+
         $alreadyBooked = ConsultationSession::where('mentor_id', $mentor->id)
             ->where('scheduled_at', $scheduledAt)
-            ->whereNotIn('status', ['cancelled', 'completed'])
+            ->occupyingSlot()
             ->exists();
 
         if ($alreadyBooked) {

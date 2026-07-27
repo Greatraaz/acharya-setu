@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\SessionReview;
+use App\Models\ConsultationSession;
 use Illuminate\Http\Request;
 
 class MentorListingController extends Controller
@@ -121,12 +122,15 @@ class MentorListingController extends Controller
             $allSlots = ['09:00','10:00','11:00','12:00','14:00','15:00','16:00','17:00','18:00','19:00'];
         }
 
+        // Soft-expire abandoned unpaid checkouts so slots free without a cancel API
+        ConsultationSession::expireAbandonedUnpaidPayments();
+
         // Remove already-booked slots for this date
-        $bookedTimes = \App\Models\ConsultationSession::where('mentor_id', $id)
+        $bookedTimes = ConsultationSession::where('mentor_id', $id)
             ->whereDate('scheduled_at', $date)
-            ->whereIn('status', ['pending','confirmed'])
+            ->occupyingSlot()
             ->pluck('scheduled_at')
-            ->map(fn($dt) => \Carbon\Carbon::parse($dt)->format('H:i'))
+            ->map(fn ($dt) => \Carbon\Carbon::parse($dt)->format('H:i'))
             ->toArray();
 
         $available = array_values(array_diff($allSlots, $bookedTimes));
