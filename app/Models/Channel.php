@@ -247,6 +247,10 @@ class Channel extends Model
             'type'          => $this->type,
             'category'      => $this->category,
             'is_active'     => $this->is_active,
+            'created_by'    => $this->created_by,
+            'creator'       => $this->relationLoaded('creator')
+                ? $this->creator?->only(['id', 'name', 'avatar_url', 'role'])
+                : null,
             'messages_count'=> $this->all_messages_count ?? $this->allMessages()->count(),
             'members_count' => $this->members_count ?? $this->members()->count(),
             'created_at'    => $this->created_at,
@@ -258,6 +262,7 @@ class Channel extends Model
             $data['is_removed']     = $this->isRemoved($user);
             $data['can_self_join']  = $this->canSelfJoin($user);
             $data['unread_count']   = $this->isMember($user) ? $this->unreadCountFor($user) : 0;
+            $data['is_creator']     = (int) $this->created_by === (int) $user->id;
         }
 
         return $data;

@@ -72,6 +72,7 @@ class AdminController extends Controller
     public function communityChannels(): JsonResponse
     {
         $channels = Channel::withCount(['allMessages', 'members'])
+            ->with('creator:id,name,avatar_url,role')
             ->latest()
             ->get()
             ->map(fn (Channel $c) => $c->toApiArray());
@@ -110,7 +111,11 @@ class AdminController extends Controller
             'last_read_at' => now(),
         ]);
 
-        return response()->json(['channel' => $channel->loadCount(['allMessages', 'members'])->toApiArray($request->user())], 201);
+        return response()->json([
+            'channel' => $channel->load(['creator:id,name,avatar_url,role'])
+                ->loadCount(['allMessages', 'members'])
+                ->toApiArray($request->user()),
+        ], 201);
     }
 
     // Broadcast

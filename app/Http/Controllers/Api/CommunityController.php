@@ -57,7 +57,9 @@ class CommunityController extends Controller
 
         return response()->json([
             'message' => 'Channel created.',
-            'channel' => $channel->loadCount(['allMessages', 'members'])->toApiArray($user),
+            'channel' => $channel->load(['creator:id,name,avatar_url,role'])
+                ->loadCount(['allMessages', 'members'])
+                ->toApiArray($user),
         ], 201);
     }
 
@@ -88,7 +90,9 @@ class CommunityController extends Controller
     public function showChannel(Request $request, int $channelId): JsonResponse
     {
         $user    = $request->user();
-        $channel = Channel::withCount(['allMessages', 'members'])->findOrFail($channelId);
+        $channel = Channel::withCount(['allMessages', 'members'])
+            ->with('creator:id,name,avatar_url,role')
+            ->findOrFail($channelId);
 
         abort_unless($channel->canAccess($user), 403, 'You do not have access to this channel.');
 
@@ -123,7 +127,10 @@ class CommunityController extends Controller
 
         return response()->json([
             'message' => 'Joined channel.',
-            'channel' => $channel->fresh()->loadCount(['allMessages', 'members'])->toApiArray($user),
+            'channel' => $channel->fresh()
+                ->load(['creator:id,name,avatar_url,role'])
+                ->loadCount(['allMessages', 'members'])
+                ->toApiArray($user),
         ]);
     }
 
