@@ -84,6 +84,24 @@ class Channel extends Model
         return $this->hasMany(ChannelRemoval::class);
     }
 
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(ChannelInvitation::class);
+    }
+
+    public function pendingInvitations(): HasMany
+    {
+        return $this->invitations()->pending();
+    }
+
+    public function hasPendingInvite(User $user): bool
+    {
+        return $this->invitations()
+            ->where('user_id', $user->id)
+            ->pending()
+            ->exists();
+    }
+
     public function mentors(): BelongsToMany
     {
         return $this->members()->wherePivotIn('role', [self::ROLE_MENTOR, self::ROLE_ADMIN]);
@@ -257,12 +275,13 @@ class Channel extends Model
         ];
 
         if ($user) {
-            $data['is_member']      = $this->isMember($user);
-            $data['member_role']    = $this->memberRole($user);
-            $data['is_removed']     = $this->isRemoved($user);
-            $data['can_self_join']  = $this->canSelfJoin($user);
-            $data['unread_count']   = $this->isMember($user) ? $this->unreadCountFor($user) : 0;
-            $data['is_creator']     = (int) $this->created_by === (int) $user->id;
+            $data['is_member']       = $this->isMember($user);
+            $data['member_role']     = $this->memberRole($user);
+            $data['is_removed']      = $this->isRemoved($user);
+            $data['can_self_join']   = $this->canSelfJoin($user);
+            $data['has_pending_invite'] = $this->hasPendingInvite($user);
+            $data['unread_count']    = $this->isMember($user) ? $this->unreadCountFor($user) : 0;
+            $data['is_creator']      = (int) $this->created_by === (int) $user->id;
         }
 
         return $data;

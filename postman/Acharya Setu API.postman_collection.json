@@ -6388,7 +6388,59 @@
               "response": []
             },
             {
-              "name": "Invite member",
+              "name": "Invite candidates (users list)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/mentor/community/users?role=mentee&channel_id={{channelId}}&status=pending&search=",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "mentor",
+                    "community",
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "role",
+                      "value": "mentee",
+                      "description": "Optional: mentor | mentee"
+                    },
+                    {
+                      "key": "channel_id",
+                      "value": "{{channelId}}",
+                      "description": "Required when using status. Scopes invitation_status to this channel."
+                    },
+                    {
+                      "key": "status",
+                      "value": "pending",
+                      "description": "Optional with channel_id: pending | accepted | rejected | none"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "Optional name/email search"
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "20",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Mentor only. Lists non-member mentors & mentees. Use channel_id + status=pending|accepted|rejected|none. Top-level invitation_status matches invitations[].status."
+              },
+              "response": []
+            },
+            {
+              "name": "Invite members (bulk)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -6403,7 +6455,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"user_id\": {{inviteUserId}}\n}"
+                  "raw": "{\n  \"user_ids\": [{{inviteUserId}}]\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/{{role}}/community/channels/{{channelId}}/invite",
@@ -6418,7 +6470,120 @@
                     "invite"
                   ]
                 },
-                "description": "Only channel admin / creator / platform admin. Use for private channels."
+                "description": "Mentor only. Sends pending invitations to multiple users. Invitees must accept before joining. Body: { \"user_ids\": [1,2,3] }. Legacy { \"user_id\": 1 } also works."
+              },
+              "response": []
+            },
+            {
+              "name": "My pending invitations",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/{{role}}/community/invitations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "{{role}}",
+                    "community",
+                    "invitations"
+                  ]
+                },
+                "description": "List pending channel invitations for the authenticated user (mentee/mentor)."
+              },
+              "response": []
+            },
+            {
+              "name": "Accept invitation",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/{{role}}/community/invitations/{{invitationId}}/accept",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "{{role}}",
+                    "community",
+                    "invitations",
+                    "{{invitationId}}",
+                    "accept"
+                  ]
+                },
+                "description": "Accept a pending invitation and join the channel."
+              },
+              "response": []
+            },
+            {
+              "name": "Reject invitation",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/{{role}}/community/invitations/{{invitationId}}/reject",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "{{role}}",
+                    "community",
+                    "invitations",
+                    "{{invitationId}}",
+                    "reject"
+                  ]
+                },
+                "description": "Reject a pending channel invitation."
+              },
+              "response": []
+            },
+            {
+              "name": "Channel invitations (mentor view)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/{{role}}/community/channels/{{channelId}}/invitations?status=pending",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "{{role}}",
+                    "community",
+                    "channels",
+                    "{{channelId}}",
+                    "invitations"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "pending",
+                      "description": "Optional: pending|accepted|rejected"
+                    }
+                  ]
+                },
+                "description": "List invitations for a channel. Optional ?status=pending|accepted|rejected."
               },
               "response": []
             },

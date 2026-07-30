@@ -184,7 +184,12 @@ class User extends Authenticatable
             ->withPivot(['role', 'last_read_at', 'muted'])
             ->withTimestamps();
     }
- 
+
+    public function channelInvitations(): HasMany
+    {
+        return $this->hasMany(ChannelInvitation::class);
+    }
+
     // ── Scopes ────────────────────────────────────────────────
     public function scopeMentors(Builder $q): Builder  { return $q->where('role', 'mentor'); }
     public function scopeMentees(Builder $q): Builder  { return $q->where('role', 'mentee'); }

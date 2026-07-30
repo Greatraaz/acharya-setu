@@ -224,7 +224,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::patch('/milestones/{id}/complete',         [CareerTracksController::class, 'updateMilestone'])->name('updateMilestone');
         });
 
-        // Community (channels, threads, likes, members)
+        // Community (channels, threads, likes, members, invitations)
         Route::prefix('community')->name('community.')->group(function () {
             Route::get('/channels',                              [CommunityController::class, 'channels'])->name('channels');
             Route::get('/channels/{channelId}',                   [CommunityController::class, 'showChannel'])->name('channels.show');
@@ -233,11 +233,15 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('/channels/{channelId}/read',             [CommunityController::class, 'markRead'])->name('channels.read');
             Route::get('/channels/{channelId}/members',           [CommunityController::class, 'members'])->name('channels.members');
             Route::post('/channels/{channelId}/invite',           [CommunityController::class, 'invite'])->name('channels.invite');
+            Route::get('/channels/{channelId}/invitations',       [CommunityController::class, 'channelInvitations'])->name('channels.invitations');
             Route::delete('/channels/{channelId}/members/{userId}', [CommunityController::class, 'removeMember'])->name('channels.members.remove');
             Route::get('/channels/{channelId}/messages',          [CommunityController::class, 'messages'])->name('messages');
             Route::post('/channels/{channelId}/messages',         [CommunityController::class, 'postMessage'])->name('postMessage');
             Route::post('/messages/{msgId}/like',                 [CommunityController::class, 'likeMessage'])->name('likeMessage');
             Route::delete('/messages/{msgId}',                    [CommunityController::class, 'deleteMessage'])->name('messages.delete');
+            Route::get('/invitations',                           [CommunityController::class, 'myInvitations'])->name('invitations');
+            Route::post('/invitations/{invitationId}/accept',     [CommunityController::class, 'acceptInvitation'])->name('invitations.accept');
+            Route::post('/invitations/{invitationId}/reject',     [CommunityController::class, 'rejectInvitation'])->name('invitations.reject');
         });
 
         // Jobs
@@ -401,7 +405,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::patch('/milestones/{id}/complete',          [CareerTracksController::class, 'updateMilestone'])->name('milestone.complete');
         });
 
-        // Community (channels, threads, likes, members)
+        // Community (channels, threads, likes, members, invitations)
         Route::prefix('community')->name('community.')->group(function () {
             Route::get('/channels',                              [CommunityController::class, 'channels'])->name('channels');
             Route::post('/channels',                             [CommunityController::class, 'createChannel'])->name('channels.create');
@@ -411,11 +415,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('/channels/{channelId}/read',             [CommunityController::class, 'markRead'])->name('channels.read');
             Route::get('/channels/{channelId}/members',           [CommunityController::class, 'members'])->name('channels.members');
             Route::post('/channels/{channelId}/invite',           [CommunityController::class, 'invite'])->name('channels.invite');
+            Route::get('/channels/{channelId}/invitations',       [CommunityController::class, 'channelInvitations'])->name('channels.invitations');
+            Route::get('/users',                                 [CommunityController::class, 'inviteCandidates'])->name('users');
             Route::delete('/channels/{channelId}/members/{userId}', [CommunityController::class, 'removeMember'])->name('channels.members.remove');
             Route::get('/channels/{channelId}/messages',          [CommunityController::class, 'messages'])->name('channels.messages');
             Route::post('/channels/{channelId}/messages',         [CommunityController::class, 'postMessage'])->name('channels.messages.post');
             Route::post('/messages/{msgId}/like',                 [CommunityController::class, 'likeMessage'])->name('messages.like');
             Route::delete('/messages/{msgId}',                    [CommunityController::class, 'deleteMessage'])->name('messages.delete');
+            Route::get('/invitations',                           [CommunityController::class, 'myInvitations'])->name('invitations');
+            Route::post('/invitations/{invitationId}/accept',     [CommunityController::class, 'acceptInvitation'])->name('invitations.accept');
+            Route::post('/invitations/{invitationId}/reject',     [CommunityController::class, 'rejectInvitation'])->name('invitations.reject');
         });
 
         // Jobs

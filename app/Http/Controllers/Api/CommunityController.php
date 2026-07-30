@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Channel;
+use App\Models\ChannelInvitation;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CommunityController extends Controller
 {
@@ -111,7 +113,7 @@ class CommunityController extends Controller
 
         if ($channel->type === Channel::TYPE_PRIVATE) {
             return response()->json([
-                'message' => 'This is a private channel. Ask an admin or channel admin to invite you.',
+                'message' => 'This is a private channel. Accept a mentor invitation to join.',
             ], 403);
         }
 
@@ -187,40 +189,374 @@ class CommunityController extends Controller
     }
 
     /**
-     * Invite a user to the channel (clears any previous removal so they can rejoin).
+     * Mentor directory: list mentors & mentees with channel invitation status.
+     *
+     * Query:
+     *  - role=mentor|mentee
+     *  - channel_id=123   (required when using status; scopes invite flags to this channel)
+     *  - status=pending|accepted|rejected|none  (filter by invitation status for channel_id)
+     *  - search=name/email
+     *  - per_page=20
+     */
+    public function inviteCandidates(Request $request): JsonResponse
+    {
+        $auth = $request->user();
+
+        if (! $auth->isMentor()) {
+            return response()->json([
+                'message' => 'Only mentors can view invite candidates.',
+            ], 403);
+        }
+
+        // Prefer `status`; keep legacy `invitation_status` as alias
+        if (! $request->filled('status') && $request->filled('invitation_status')) {
+            $request->merge(['status' => $request->input('invitation_status')]);
+        }
+
+        $data = $request->validate([
+            'role'       => 'nullable|in:mentor,mentee',
+            'channel_id' => 'nullable|integer|exists:channels,id|required_with:status',
+            'status'     => 'nullable|in:pending,accepted,rejected,none',
+            'search'     => 'nullable|string|max:100',
+            'per_page'   => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $channelId = isset($data['channel_id']) ? (int) $data['channel_id'] : null;
+        $channel   = $channelId ? Channel::findOrFail($channelId) : null;
+        $status    = $data['status'] ?? null;
+
+        if ($channel && ! (
+            $channel->isMember($auth)
+            || (int) $channel->created_by === (int) $auth->id
+            || $auth->isAdmin()
+        )) {
+            return response()->json([
+                'message' => 'You must be a member of this channel to filter by it.',
+            ], 403);
+        }
+
+        $query = User::query()
+            ->select(['id', 'name', 'email', 'avatar_url', 'role', 'mentor_status', 'is_active', 'created_at'])
+            ->where('id', '!=', $auth->id)
+            ->when(! empty($data['search']), function ($q) use ($data) {
+                $term = '%' . trim($data['search']) . '%';
+                $q->where(function ($inner) use ($term) {
+                    $inner->where('name', 'like', $term)
+                        ->orWhere('email', 'like', $term);
+                });
+            });
+
+        if (($data['role'] ?? null) === 'mentor') {
+            $query->where('role', 'mentor')
+                ->where('mentor_status', User::MENTOR_STATUS_APPROVED);
+        } elseif (($data['role'] ?? null) === 'mentee') {
+            $query->where('role', 'mentee');
+        } else {
+            $query->where(function ($q) {
+                $q->where('role', 'mentee')
+                    ->orWhere(function ($m) {
+                        $m->where('role', 'mentor')
+                            ->where('mentor_status', User::MENTOR_STATUS_APPROVED);
+                    });
+            });
+        }
+
+        // Hide users who are already members of the filtered channel
+        if ($channelId) {
+            $query->whereDoesntHave('channels', fn ($q) => $q->where('channels.id', $channelId));
+        }
+
+        // Filter by invitation status for the given channel
+        if ($channelId && $status) {
+            if ($status === 'none') {
+                $query->whereDoesntHave('channelInvitations', function ($q) use ($channelId) {
+                    $q->where('channel_id', $channelId);
+                });
+            } else {
+                $query->whereHas('channelInvitations', function ($q) use ($channelId, $status) {
+                    $q->where('channel_id', $channelId)->where('status', $status);
+                });
+            }
+        }
+
+        $perPage   = $data['per_page'] ?? 20;
+        $paginator = $query->orderBy('name')->paginate($perPage);
+        $userIds   = collect($paginator->items())->pluck('id')->all();
+
+        // Prefetch invitations for these users (scoped to channel when provided)
+        $invitationsQuery = ChannelInvitation::query()
+            ->whereIn('user_id', $userIds)
+            ->with(['channel:id,name,slug,icon,type,description', 'invitedBy:id,name,avatar_url,role'])
+            ->latest();
+
+        if ($channelId) {
+            $invitationsQuery->where('channel_id', $channelId);
+        }
+
+        $invitationsByUser = $invitationsQuery->get()->groupBy('user_id');
+
+        $users = collect($paginator->items())->map(function (User $u) use ($invitationsByUser, $channelId, $channel) {
+            $userInvites = ($invitationsByUser->get($u->id) ?? collect())
+                ->map(fn (ChannelInvitation $inv) => $inv->toApiArray())
+                ->values();
+
+            // Prefer invite for the filtered channel; otherwise latest invite
+            $channelInvite = $channelId
+                ? $userInvites->firstWhere('channel_id', $channelId)
+                : $userInvites->first();
+
+            $inviteStatus = $channelInvite['status'] ?? null;
+
+            return [
+                'id'                 => $u->id,
+                'name'               => $u->name,
+                'email'              => $u->email,
+                'avatar_url'         => $u->avatar_url,
+                'role'               => $u->role,
+                'is_active'          => (bool) $u->is_active,
+                'is_channel_member'  => $channelId ? false : null,
+                'invitation_sent'    => $inviteStatus !== null,
+                'invitation_status'  => $inviteStatus,
+                'channel_invitation' => $channelInvite,
+                'invitations'        => $userInvites,
+                'channel'            => $channel ? [
+                    'id'   => $channel->id,
+                    'name' => $channel->name,
+                    'slug' => $channel->slug,
+                    'type' => $channel->type,
+                ] : null,
+            ];
+        });
+
+        return response()->json([
+            'users' => $users,
+            'meta'  => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters' => [
+                'role'       => $data['role'] ?? null,
+                'channel_id' => $channelId,
+                'status'     => $status,
+                'search'     => $data['search'] ?? null,
+            ],
+        ]);
+    }
+
+    /**
+     * Invite one or more users to the channel (mentor only).
+     * Creates pending invitations — invitees must accept before joining.
+     *
+     * Body: { "user_ids": [1, 2, 3] }  or legacy { "user_id": 1 }
      */
     public function invite(Request $request, int $channelId): JsonResponse
     {
         $user    = $request->user();
         $channel = Channel::findOrFail($channelId);
 
-        abort_unless(
-            $channel->isAdmin($user) || (int) $channel->created_by === (int) $user->id || $user->isAdmin(),
-            403,
-            'Only channel admins can invite members.'
-        );
-
-        $data = $request->validate([
-            'user_id' => 'required|exists:users,id',
-        ]);
-
-        $invitee = User::findOrFail($data['user_id']);
-
-        if (! in_array($invitee->role, ['mentor', 'mentee', 'admin'], true)) {
-            return response()->json(['message' => 'Only mentors and mentees can join community channels.'], 422);
+        if (! $user->isMentor()) {
+            return response()->json([
+                'message' => 'Only mentors can send channel invitations.',
+            ], 403);
         }
 
-        $channel->addMember($invitee);
+        abort_unless(
+            $channel->isAdmin($user)
+                || (int) $channel->created_by === (int) $user->id
+                || $channel->isMember($user),
+            403,
+            'You must be a member of this channel to invite others.'
+        );
+
+        // Normalise: accept user_ids[] or single user_id
+        if (! $request->filled('user_ids') && $request->filled('user_id')) {
+            $request->merge(['user_ids' => [(int) $request->input('user_id')]]);
+        }
+
+        $data = $request->validate([
+            'user_ids'   => 'required|array|min:1|max:50',
+            'user_ids.*' => 'required|integer|distinct|exists:users,id',
+        ]);
+
+        $invitees = User::whereIn('id', $data['user_ids'])->get()->keyBy('id');
+
+        $invited  = [];
+        $skipped  = [];
+
+        DB::transaction(function () use ($channel, $user, $data, $invitees, &$invited, &$skipped) {
+            foreach ($data['user_ids'] as $uid) {
+                $invitee = $invitees->get($uid);
+
+                if (! $invitee || ! in_array($invitee->role, ['mentor', 'mentee'], true)) {
+                    $skipped[] = [
+                        'user_id' => $uid,
+                        'reason'  => 'Only mentors and mentees can be invited.',
+                    ];
+                    continue;
+                }
+
+                if ((int) $invitee->id === (int) $user->id) {
+                    $skipped[] = [
+                        'user_id' => $uid,
+                        'reason'  => 'Cannot invite yourself.',
+                    ];
+                    continue;
+                }
+
+                if ($channel->isMember($invitee)) {
+                    $skipped[] = [
+                        'user_id' => $uid,
+                        'name'    => $invitee->name,
+                        'reason'  => 'Already a member.',
+                    ];
+                    continue;
+                }
+
+                $invitation = ChannelInvitation::updateOrCreate(
+                    [
+                        'channel_id' => $channel->id,
+                        'user_id'    => $invitee->id,
+                    ],
+                    [
+                        'invited_by'   => $user->id,
+                        'status'       => ChannelInvitation::STATUS_PENDING,
+                        'responded_at' => null,
+                    ]
+                );
+
+                $invited[] = [
+                    'invitation_id' => $invitation->id,
+                    'user_id'       => $invitee->id,
+                    'name'          => $invitee->name,
+                    'role'          => $invitee->role,
+                    'status'        => $invitation->status,
+                ];
+            }
+        });
 
         return response()->json([
-            'message' => 'Member invited.',
-            'member'  => [
-                'id'           => $invitee->id,
-                'name'         => $invitee->name,
-                'role'         => $invitee->role,
-                'channel_role' => Channel::roleForUser($invitee),
-            ],
+            'message'  => count($invited) . ' invitation(s) sent. Users must accept before joining.',
+            'invited'  => $invited,
+            'skipped'  => $skipped,
         ], 201);
+    }
+
+    /**
+     * List pending channel invitations for the authenticated user.
+     */
+    public function myInvitations(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $invitations = ChannelInvitation::pending()
+            ->where('user_id', $user->id)
+            ->with([
+                'channel:id,name,slug,icon,type,description,is_active',
+                'invitedBy:id,name,avatar_url,role',
+            ])
+            ->latest()
+            ->get()
+            ->map(fn (ChannelInvitation $inv) => $inv->toApiArray());
+
+        return response()->json([
+            'invitations' => $invitations,
+            'count'       => $invitations->count(),
+        ]);
+    }
+
+    /**
+     * List pending invitations sent for a channel (mentor view).
+     */
+    public function channelInvitations(Request $request, int $channelId): JsonResponse
+    {
+        $user    = $request->user();
+        $channel = Channel::findOrFail($channelId);
+
+        abort_unless($channel->isMember($user) || $user->isAdmin(), 403);
+
+        $status = $request->query('status');
+
+        $invitations = $channel->invitations()
+            ->with(['user:id,name,avatar_url,role', 'invitedBy:id,name,avatar_url,role'])
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->latest()
+            ->get()
+            ->map(fn (ChannelInvitation $inv) => $inv->toApiArray());
+
+        return response()->json([
+            'invitations' => $invitations,
+        ]);
+    }
+
+    /**
+     * Accept a pending channel invitation — joins the channel.
+     */
+    public function acceptInvitation(Request $request, int $invitationId): JsonResponse
+    {
+        $user       = $request->user();
+        $invitation = ChannelInvitation::with('channel')->findOrFail($invitationId);
+
+        if ((int) $invitation->user_id !== (int) $user->id) {
+            return response()->json(['message' => 'This invitation is not for you.'], 403);
+        }
+
+        if (! $invitation->isPending()) {
+            return response()->json([
+                'message' => 'This invitation is already ' . $invitation->status . '.',
+            ], 422);
+        }
+
+        $channel = $invitation->channel;
+
+        if (! $channel || ! $channel->is_active) {
+            return response()->json(['message' => 'This channel is no longer available.'], 422);
+        }
+
+        DB::transaction(function () use ($invitation, $channel, $user) {
+            $channel->addMember($user);
+            $invitation->update([
+                'status'       => ChannelInvitation::STATUS_ACCEPTED,
+                'responded_at' => now(),
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'Invitation accepted. You have joined the channel.',
+            'channel' => $channel->fresh()
+                ->load(['creator:id,name,avatar_url,role'])
+                ->loadCount(['allMessages', 'members'])
+                ->toApiArray($user),
+        ]);
+    }
+
+    /**
+     * Reject a pending channel invitation.
+     */
+    public function rejectInvitation(Request $request, int $invitationId): JsonResponse
+    {
+        $user       = $request->user();
+        $invitation = ChannelInvitation::findOrFail($invitationId);
+
+        if ((int) $invitation->user_id !== (int) $user->id) {
+            return response()->json(['message' => 'This invitation is not for you.'], 403);
+        }
+
+        if (! $invitation->isPending()) {
+            return response()->json([
+                'message' => 'This invitation is already ' . $invitation->status . '.',
+            ], 422);
+        }
+
+        $invitation->update([
+            'status'       => ChannelInvitation::STATUS_REJECTED,
+            'responded_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Invitation rejected.',
+        ]);
     }
 
     /**
