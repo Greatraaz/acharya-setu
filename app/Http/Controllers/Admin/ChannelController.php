@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Channel;
+use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 
 class ChannelController extends Controller
 {
@@ -197,8 +200,31 @@ class ChannelController extends Controller
             403
         );
 
-        $channel->delete();
+        $channelName = $channel->name;
+        $channelId   = $channel->id;
 
-        return redirect()->route(request()->routeIs('admin.*') ? 'admin.community.index' : 'mentee.community.index')->with('success', 'Channel deleted.');
+        DB::transaction(function () use ($channel) {
+            // Clean image files (DB cascade would skip model events)
+            Message::withTrashed()
+                ->where('channel_id', $channel->id)
+                ->get()
+                ->each(function (Message $message) {
+                    $message->deleteStoredImage();
+                    $message->forceDelete();
+                });
+
+            $channel->members()->detach();
+            $channel->removals()->delete();
+            $channel->delete();
+        });
+
+        $uploadDir = public_path('upload/community/' . $channelId);
+        if (is_dir($uploadDir)) {
+            File::deleteDirectory($uploadDir);
+        }
+
+        return redirect()
+            ->route(request()->routeIs('admin.*') ? 'admin.community.index' : 'mentee.community.index')
+            ->with('success', 'Channel #' . $channelName . ' deleted.');
     }
 }

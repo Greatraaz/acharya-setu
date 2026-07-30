@@ -53,17 +53,17 @@
 </script>
 </head>
 
-<body class="bg-slate-50 text-slate-800 antialiased">
+<body class="bg-slate-50 text-slate-800 antialiased overflow-x-hidden">
 
 <div class="min-h-screen flex">
 
     @include('admin.layouts.sidebar')
 
-    <div class="flex-1 ml-72 flex flex-col min-h-screen">
+    <div class="flex-1 ml-72 flex flex-col min-h-screen min-w-0">
 
         @include('admin.layouts.header')
 
-        <main class="p-8 flex-1">
+        <main class="p-8 flex-1 min-w-0 max-w-full">
             @yield('content')
         </main>
 

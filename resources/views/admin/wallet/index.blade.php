@@ -1,10 +1,10 @@
 @extends('admin.layouts.app')
 @section('content')
 
-<div class="p-6">
+<div class="min-w-0 max-w-full space-y-6">
 
     {{-- Page Header --}}
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
             <h6 class="text-lg font-semibold text-gray-800">Wallet Transactions</h6>
             <p class="text-sm text-gray-500 mt-0.5">Manage and monitor all wallet activity</p>
@@ -28,7 +28,7 @@
         $totalTransfer = $allTxns->whereIn('type', ['transfer_in','transfer_out'])->count();
     @endphp
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 
         {{-- Total Credited --}}
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
@@ -77,9 +77,9 @@
     </div>
 
     {{-- Filters --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 min-w-0">
         <form method="GET" action="{{ route('admin.wallet.index') }}">
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="flex flex-wrap items-end gap-3 min-w-0">
 
                 <div class="flex flex-col gap-1 min-w-[140px]">
                     <label class="text-xs font-medium text-gray-600">From Date</label>
@@ -133,7 +133,7 @@
     </div>
 
     {{-- Transactions Table --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-w-0">
 
         {{-- Table Header --}}
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
@@ -143,8 +143,8 @@
             </span>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+        <div class="overflow-x-auto max-w-full">
+            <table class="w-full min-w-[960px] text-sm">
                 <thead>
                     <tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         <th class="px-4 py-3 text-left">#</th>
@@ -177,13 +177,14 @@
                         </td>
 
                         {{-- User --}}
-                        <td class="px-4 py-3">
+                        <td class="px-4 py-3 max-w-[180px]">
                             @if($txn->user)
                                 <a href="{{ route('admin.wallet.customer.show', $txn->user->id) }}"
-                                    class="font-medium text-gray-800 hover:text-blue-600 transition-colors">
+                                    class="font-medium text-gray-800 hover:text-blue-600 transition-colors block truncate"
+                                    title="{{ $txn->user->name }}">
                                     {{ $txn->user->name }}
                                 </a>
-                                <p class="text-xs text-gray-400">{{ $txn->user->email ?? '' }}</p>
+                                <p class="text-xs text-gray-400 truncate" title="{{ $txn->user->email ?? '' }}">{{ $txn->user->email ?? '' }}</p>
                             @else
                                 <span class="text-gray-300">—</span>
                             @endif
@@ -210,8 +211,9 @@
                         </td>
 
                         {{-- Reference --}}
-                        <td class="px-4 py-3">
-                            <span class="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        <td class="px-4 py-3 max-w-[140px]">
+                            <span class="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded inline-block max-w-full truncate"
+                                title="{{ $txn->reference ?? '—' }}">
                                 {{ $txn->reference ?? '—' }}
                             </span>
                             @if($txn->transfer_pair_id)

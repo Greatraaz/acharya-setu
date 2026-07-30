@@ -99,7 +99,7 @@ $isAdminUi = request()->routeIs('admin.*');
                     @else
                     <span class="text-xs text-gray-400">Private - invite only</span>
                     @endif
-                @elseif($channel->created_by !== Auth::id())
+                @elseif((int) $channel->created_by !== (int) Auth::id())
                 <form method="POST" action="{{ route($r.'.leave', $channel->slug) }}">
                     @csrf
                     <button type="submit"
@@ -107,12 +107,14 @@ $isAdminUi = request()->routeIs('admin.*');
                         Leave
                     </button>
                 </form>
-                @elseif($channel->created_by === Auth::id() || Auth::user()->isAdmin())
+                @endif
+
+                @if((int) $channel->created_by === (int) Auth::id() || Auth::user()->isAdmin())
                 <form method="POST" action="{{ route($r.'.destroy', $channel->slug) }}"
-                      onsubmit="return confirm('Permanently delete #{{ $channel->name }} and all messages?')">
+                      onsubmit="return confirm('Permanently delete #{{ $channel->name }} and all messages? This cannot be undone.')">
                     @csrf @method('DELETE')
                     <button type="submit"
-                            class="text-xs font-medium text-gray-400 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-transparent hover:border-red-100 transition-all">
+                            class="text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 transition-all">
                         Delete channel
                     </button>
                 </form>

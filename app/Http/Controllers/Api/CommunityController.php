@@ -329,10 +329,7 @@ class CommunityController extends Controller
 
         $imagePath = null;
         if ($hasImage) {
-            $imagePath = $request->file('image')->store(
-                'community/' . $channel->id,
-                'public'
-            );
+            $imagePath = Message::storeUploadedImage($request->file('image'), $channel->id);
         }
 
         $message = Message::create([

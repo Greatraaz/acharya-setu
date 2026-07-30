@@ -7,6 +7,7 @@ use App\Models\{AppSetting, ConsultationSession, SessionNote, User};
 use App\Helpers\Agora\RtcTokenBuilder;
 use Carbon\Carbon;
 use Illuminate\Http\{JsonResponse, Request};
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\{Http, Log};
 use Illuminate\Support\Str;
 
@@ -55,7 +56,10 @@ class SessionsController extends Controller
     }
 
     /**
-     * Book a session (mentee). Creates a Razorpay order when amount > 0.
+     * Book a session (mentee).
+     * Wallet-first flow:
+     * - If wallet balance is sufficient, deduct from wallet and confirm immediately.
+     * - Otherwise, create Razorpay order and wait for verifyPayment().
      * POST /api/v1/mentee/sessions
      */
     public function store(Request $request): JsonResponse
@@ -131,7 +135,66 @@ class SessionsController extends Controller
             ], 201);
         }
 
-        // Paid sessions require Razorpay
+        // Wallet-first: if mentee has enough balance, book directly using wallet.
+        if ($mentee->hasSufficientBalance($amount)) {
+            try {
+                $session = DB::transaction(function () use ($mentor, $mentee, $scheduledAt, $data, $amount, $currency, $bookingRef, $channel) {
+                    $session = ConsultationSession::create([
+                        'mentor_id'           => $mentor->id,
+                        'mentee_id'           => $mentee->id,
+                        'scheduled_at'        => $scheduledAt,
+                        'duration_minutes'    => $data['duration'],
+                        'timezone'            => 'Asia/Kolkata',
+                        'title'               => $data['title'] ?? 'Mentorship Session',
+                        'status'              => ConsultationSession::STATUS_UPCOMING,
+                        'amount'              => $amount,
+                        'currency'            => $currency,
+                        'payment_status'      => 'paid',
+                        'payment_reference'   => 'WAL-' . $bookingRef,
+                        'booking_ref'         => $bookingRef,
+                        'meeting_channel'     => $channel,
+                        'meeting_link'        => url('as/' . $channel),
+                    ]);
+
+                    $mentee->debitWallet(
+                        $amount,
+                        "Session booking {$bookingRef}",
+                        [
+                            'reference'            => 'WAL-' . $bookingRef,
+                            'transactionable_type' => ConsultationSession::class,
+                            'transactionable_id'   => $session->id,
+                            'meta'                 => [
+                                'booking_ref' => $bookingRef,
+                                'mentor_id'   => $mentor->id,
+                                'source'      => 'session_booking_wallet',
+                            ],
+                        ]
+                    );
+
+                    return $session;
+                });
+            } catch (\Throwable $e) {
+                Log::error('Wallet booking failed for session.', [
+                    'mentee_id' => $mentee->id,
+                    'mentor_id' => $mentor->id,
+                    'amount'    => $amount,
+                    'error'     => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Unable to complete wallet payment right now.',
+                ], 500);
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Session booked successfully using wallet.',
+                'data'    => $this->sessionPaymentPayload($session->fresh(), null, null),
+            ], 201);
+        }
+
+        // Paid sessions fallback to Razorpay when wallet is insufficient.
         $creds = $this->razorpayCredentials();
         if (empty($creds['key']) || empty($creds['secret'])) {
             return response()->json([

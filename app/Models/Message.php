@@ -27,9 +27,7 @@ class Message extends Model
     protected static function booted(): void
     {
         static::deleting(function (self $message) {
-            if ($message->image_path && Storage::disk('public')->exists($message->image_path)) {
-                Storage::disk('public')->delete($message->image_path);
-            }
+            $message->deleteStoredImage();
         });
     }
 
@@ -53,13 +51,82 @@ class Message extends Model
         return $this->belongsTo(self::class, 'parent_id');
     }
 
+    /**
+     * Absolute public URL for the message image (same style as avatar uploads).
+     */
     public function getImageUrlAttribute(): ?string
     {
         if (! $this->image_path) {
             return null;
         }
 
-        return Storage::disk('public')->url($this->image_path);
+        $path = $this->image_path;
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // New uploads: public/upload/community/...
+        if (str_starts_with($path, 'upload/')) {
+            return url($path);
+        }
+
+        // Legacy Storage::disk('public') paths: community/{id}/file.jpg
+        if (str_starts_with($path, '/storage/')) {
+            return url(ltrim($path, '/'));
+        }
+
+        return url('storage/' . ltrim($path, '/'));
+    }
+
+    public function deleteStoredImage(): void
+    {
+        if (! $this->image_path) {
+            return;
+        }
+
+        $path = $this->image_path;
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $path = parse_url($path, PHP_URL_PATH) ?: '';
+            $path = ltrim((string) $path, '/');
+        }
+
+        if (str_starts_with($path, 'upload/')) {
+            $absolute = public_path($path);
+            if (is_file($absolute)) {
+                @unlink($absolute);
+            }
+
+            return;
+        }
+
+        $storagePath = str_starts_with($path, 'storage/')
+            ? substr($path, strlen('storage/'))
+            : ltrim($path, '/');
+
+        if ($storagePath && Storage::disk('public')->exists($storagePath)) {
+            Storage::disk('public')->delete($storagePath);
+        }
+    }
+
+    /**
+     * Store an uploaded community image under public/upload/community/{channelId}.
+     * Returns relative path like upload/community/5/xxx.jpg (converted to full URL via image_url).
+     */
+    public static function storeUploadedImage($file, int $channelId): string
+    {
+        $directory = public_path('upload/community/' . $channelId);
+
+        if (! is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
+        $fileName = 'msg_' . time() . '_' . uniqid() . '.' . $extension;
+        $file->move($directory, $fileName);
+
+        return 'upload/community/' . $channelId . '/' . $fileName;
     }
 
     public function isLikedBy(int $userId): bool
@@ -87,14 +154,16 @@ class Message extends Model
 
     public function toApiArray(?int $viewerId = null): array
     {
+        $imageUrl = $this->image_url;
+
         return [
             'id'           => $this->id,
             'channel_id'   => $this->channel_id,
             'user_id'      => $this->user_id,
             'body'         => $this->body,
             'message'      => $this->body,
-            'image_path'   => $this->image_path,
-            'image_url'    => $this->image_url,
+            'image_path'   => $imageUrl, // full absolute URL for clients
+            'image_url'    => $imageUrl,
             'parent_id'    => $this->parent_id,
             'likes'        => (int) $this->likes_count,
             'likes_count'  => (int) $this->likes_count,

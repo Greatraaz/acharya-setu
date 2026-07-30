@@ -204,9 +204,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // Wallet
         Route::prefix('wallet')->name('wallet.')->group(function () {
-            Route::get('/balance',         [WalletController::class, 'balance'])->name('balance');
-            Route::get('/transactions',    [WalletController::class, 'transactions'])->name('transactions');
-            Route::post('/topup',          [WalletController::class, 'topup'])->name('topup');
+            Route::get('/balance',              [WalletController::class, 'balance'])->name('balance');
+            Route::get('/transactions',         [WalletController::class, 'transactions'])->name('transactions');
+            Route::post('/topup/initiate',      [WalletController::class, 'initiateTopup'])->name('topup.initiate');
+            Route::post('/topup/verify',        [WalletController::class, 'verifyTopup'])->name('topup.verify');
         });
 
         // Notifications
@@ -380,9 +381,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // Wallet
         Route::prefix('wallet')->name('wallet.')->group(function () {
-            Route::get('/balance',           [WalletController::class, 'balance'])->name('balance');
-            Route::get('/transactions',      [WalletController::class, 'transactions'])->name('transactions');
-            Route::post('/topup',            [WalletController::class, 'topup'])->name('topup');
+            Route::get('/balance',              [WalletController::class, 'balance'])->name('balance');
+            Route::get('/transactions',         [WalletController::class, 'transactions'])->name('transactions');
+            Route::post('/topup/initiate',      [WalletController::class, 'initiateTopup'])->name('topup.initiate');
+            Route::post('/topup/verify',        [WalletController::class, 'verifyTopup'])->name('topup.verify');
         });
 
         // Notifications
