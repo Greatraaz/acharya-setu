@@ -23,7 +23,22 @@ class JobsController extends Controller
             $q->where('mode', $m);
         }
 
-        return response()->json($q->latest()->paginate(20));
+        $jobs = $q->latest()->paginate(20);
+
+        $appliedJobIds = JobApplication::where('user_id', $request->user()->id)
+            ->whereIn('jobId', $jobs->getCollection()->pluck('id'))
+            ->pluck('jobId')
+            ->flip();
+
+        $jobs->getCollection()->transform(function (JobListing $job) use ($appliedJobIds) {
+            $applied = $appliedJobIds->has($job->id);
+            $job->applied = $applied;
+            $job->application_status = $applied ? 'applied' : null;
+
+            return $job;
+        });
+
+        return response()->json($jobs);
     }
 
     public function store(Request $request): JsonResponse
