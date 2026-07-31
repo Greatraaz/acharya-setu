@@ -6,6 +6,7 @@ namespace App\Traits;
 
 use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 trait HasWallet
@@ -81,6 +82,9 @@ trait HasWallet
 
             $this->refresh();
 
+            // Persist IST wall-clock explicitly (string) so MySQL never gets UTC-shifted values
+            $nowIst = Carbon::now('Asia/Kolkata')->format('Y-m-d H:i:s');
+
             return $this->walletTransactions()->create([
                 'type'                   => $type,
                 'amount'                 => $amount,
@@ -94,6 +98,8 @@ trait HasWallet
                 'transactionable_id'     => $options['transactionable_id'] ?? null,
                 'performed_by'           => $options['performed_by'] ?? null,
                 'meta'                   => $options['meta'] ?? null,
+                'created_at'             => $nowIst,
+                'updated_at'             => $nowIst,
             ]);
         });
     }

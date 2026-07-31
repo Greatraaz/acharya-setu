@@ -45,7 +45,9 @@ class WalletController extends Controller
         return response()->json([
             'status'       => true,
             'statuscode'   => 200,
-            'transactions' => $transactions->items(),
+            'transactions' => collect($transactions->items())
+                ->map(fn (WalletTransaction $txn) => $this->formatTransaction($txn))
+                ->values(),
             'pagination'   => [
                 'total'        => $transactions->total(),
                 'per_page'     => $transactions->perPage(),
@@ -211,7 +213,7 @@ class WalletController extends Controller
                 'status'  => true,
                 'message' => 'Wallet already credited for this payment.',
                 'balance' => round((float) $user->fresh()->wallet_balance, 2),
-                'transaction' => $existing,
+                'transaction' => $this->formatTransaction($existing),
             ]);
         }
 
@@ -244,8 +246,32 @@ class WalletController extends Controller
             'status'      => true,
             'message'     => '₹' . number_format($amount, 0) . ' added to your wallet.',
             'balance'     => round((float) $user->fresh()->wallet_balance, 2),
-            'transaction' => $txn,
+            'transaction' => $this->formatTransaction($txn),
         ], 200);
+    }
+
+    /**
+     * Normalize wallet txn timestamps to IST for API clients.
+     */
+    private function formatTransaction(WalletTransaction $txn): array
+    {
+        $data = $txn->toArray();
+
+        // Read naive DB clock as IST (how we store it), never shift as if it were UTC
+        $created = $txn->created_at
+            ? \Illuminate\Support\Carbon::parse($txn->getRawOriginal('created_at'), 'Asia/Kolkata')
+            : null;
+        $updated = $txn->updated_at
+            ? \Illuminate\Support\Carbon::parse($txn->getRawOriginal('updated_at'), 'Asia/Kolkata')
+            : null;
+
+        $data['created_at']     = $created?->format('Y-m-d\TH:i:sP');
+        $data['updated_at']     = $updated?->format('Y-m-d\TH:i:sP');
+        $data['created_at_ist'] = $created?->format('d M Y, h:i A');
+        $data['updated_at_ist'] = $updated?->format('d M Y, h:i A');
+        $data['timezone']       = 'Asia/Kolkata';
+
+        return $data;
     }
 
     private function razorpayCredentials(): array

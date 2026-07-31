@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
 class WalletTransaction extends Model
 {
@@ -23,6 +25,17 @@ class WalletTransaction extends Model
         'balance_after'  => 'decimal:2',
         'meta'           => 'array',
     ];
+
+    /**
+     * Keep API timestamps in app timezone (IST), not UTC.
+     * Default Laravel JSON serialization converts Carbon to UTC (...Z).
+     */
+    protected function serializeDate(DateTimeInterface $date): string
+    {
+        return Carbon::instance($date)
+            ->timezone(config('app.timezone', 'Asia/Kolkata'))
+            ->format('Y-m-d\TH:i:sP');
+    }
 
     public function user(): BelongsTo
     {
