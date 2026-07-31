@@ -72,6 +72,11 @@ class JobListing extends Model
     {
         return $this->belongsTo(User::class, 'posted_by');
     }
+
+    public function applications(): HasMany
+    {
+        return $this->hasMany(JobApplication::class, 'jobId');
+    }
  
  
     // ── Scopes ────────────────────────────────────────────────

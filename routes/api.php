@@ -248,6 +248,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::prefix('jobs')->name('jobs.')->group(function () {
             Route::get('/',      [JobsController::class, 'index'])->name('index');
             Route::post('/',     [JobsController::class, 'store'])->name('store');
+            Route::get('my-applications', [JobsController::class, 'myApplications'])->name('myApplications');
             Route::post('apply-job', [JobsController::class, 'applyJob']);
         });
 
