@@ -23,59 +23,7 @@
 @endphp
 
 <div class="dash-layout">
-
-    {{-- SIDEBAR --}}
-    <aside class="sidebar">
-        <div class="sidebar-section-label">Overview</div>
-        <a href="{{ route('mentor.dashboard') }}" class="sidebar-item @if(request()->routeIs('mentor.dashboard')) active @endif">
-            <span class="si-icon">📊</span> Dashboard
-        </a>
-
-        <div class="sidebar-section-label">Sessions</div>
-        <a href="{{ route('mentor.sessions') }}" class="sidebar-item @if(request()->routeIs('mentor.sessions*')) active @endif">
-            <span class="si-icon">📅</span> My Sessions
-            @if(($stats['pending_sessions'] ?? 0) > 0)
-                <span class="si-badge">{{ $stats['pending_sessions'] }}</span>
-            @endif
-        </a>
-        <a href="{{ route('mentor.availability') }}" class="sidebar-item @if(request()->routeIs('mentor.availability')) active @endif">
-            <span class="si-icon">⏰</span> Set Availability
-        </a>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">📝</span> Session Notes
-        </a>
-
-        <div class="sidebar-section-label">Mentees</div>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">🎓</span> My Mentees
-        </a>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">🗺️</span> Journey Tracker
-        </a>
-
-        <div class="sidebar-section-label">Content</div>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">💬</span> Community
-        </a>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">🧠</span> Assessments
-        </a>
-
-        <div class="sidebar-section-label">Account</div>
-        <a href="{{ route('mentor.wallet') }}" class="sidebar-item @if(request()->routeIs('mentor.wallet')) active @endif">
-            <span class="si-icon">💰</span> Earnings
-            <span style="margin-left:auto;font-size:11px;color:var(--success);">₹{{ number_format($user->wallet_balance, 0) }}</span>
-        </a>
-        <a href="{{ route('mentor.profile.edit') }}" class="sidebar-item @if(request()->routeIs('mentor.profile.*')) active @endif">
-            <span class="si-icon">✏️</span> Edit Profile
-        </a>
-        <form action="{{ route('logout') }}" method="POST" style="margin-top:auto;">
-            @csrf
-            <button type="submit" class="sidebar-item w-full" style="background:none;cursor:pointer;color:var(--error);border:none;text-align:left;">
-                <span class="si-icon">🚪</span> Sign Out
-            </button>
-        </form>
-    </aside>
+    @include('frontend.mentors.partials.sidebar', ['pendingCount' => $stats['pending_sessions'] ?? 0])
 
     {{-- CONTENT --}}
     <div class="dash-content">

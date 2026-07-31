@@ -131,7 +131,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     /**********************************************************
      * Mentee Routes
      **********************************************************/
-    Route::middleware('mentee')->prefix('mentee')->name('mentee.')->group(function () {
+    Route::middleware('mentee')->prefix('mentee')->name('api.mentee.')->group(function () {
         Route::delete('account', [MenteeOnboarding::class, 'destroyAccount'])->name('account.destroy');
 
         // ── Mentee Onboarding ─────────────────────────────────────────
@@ -277,7 +277,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
      * Mentor Routes
      **********************************************************/
     // Base: /api/v1/mentor/onboarding
-    Route::middleware('mentor')->prefix('mentor')->name('mentor.')->group(function () {
+    Route::middleware('mentor')->prefix('mentor')->name('api.mentor.')->group(function () {
         Route::delete('account', [MentorOnboarding::class, 'destroyAccount'])->name('account.destroy');
 
         // ── Mentor Onboarding ─────────────────────────────────────────

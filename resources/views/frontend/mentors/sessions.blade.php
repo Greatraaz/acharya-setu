@@ -4,19 +4,7 @@
 
 @section('content')
 <div class="dash-layout">
-    <aside class="sidebar">
-        <div class="sidebar-section-label">Overview</div>
-        <a href="{{ route('mentor.dashboard') }}" class="sidebar-item"><span class="si-icon">📊</span> Dashboard</a>
-        <div class="sidebar-section-label">Sessions</div>
-        <a href="{{ route('mentor.sessions') }}" class="sidebar-item active"><span class="si-icon">📅</span> My Sessions @if($pendingCount ?? 0)<span class="si-badge">{{ $pendingCount }}</span>@endif</a>
-        <a href="{{ route('mentor.availability') ?? '#' }}" class="sidebar-item"><span class="si-icon">⏰</span> Set Availability</a>
-        <div class="sidebar-section-label">Mentees</div>
-        <a href="{{ route('mentor.mentees') ?? '#' }}" class="sidebar-item"><span class="si-icon">🎓</span> My Mentees</a>
-        <div class="sidebar-section-label">Account</div>
-        <a href="{{ route('mentor.wallet') }}" class="sidebar-item"><span class="si-icon">💰</span> Earnings</a>
-        <a href="{{ route('mentor.profile.edit') }}" class="sidebar-item"><span class="si-icon">✏️</span> Edit Profile</a>
-        <form action="{{ route('logout') }}" method="POST" style="margin-top:auto;">@csrf<button class="sidebar-item w-full" style="background:none;cursor:pointer;color:var(--error);"><span class="si-icon">🚪</span> Sign Out</button></form>
-    </aside>
+    @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
         <div class="dash-header flex-between">
@@ -38,14 +26,13 @@
         @endif
 
         {{-- Filter tabs --}}
-        <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--bg-2);border-radius:var(--radius-sm);padding:4px;width:fit-content;">
-            @foreach(['all'=>'All','pending'=>'Pending','confirmed'=>'Confirmed','completed'=>'Completed','cancelled'=>'Cancelled'] as $key=>$label)
+        <div class="session-filter-tabs">
+            @foreach(['all'=>'All','pending'=>'Pending','confirmed'=>'Confirmed','completed'=>'Completed','missed'=>'Missed','cancelled'=>'Cancelled'] as $key=>$label)
             <a href="{{ route('mentor.sessions', ['filter'=>$key]) }}"
-               style="padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;transition:all .15s;
-               {{ (request('filter','all') === $key) ? 'background:white;color:var(--text);box-shadow:var(--shadow-sm);' : 'color:var(--text-2);' }}">
+               class="session-filter-tab {{ ($filter ?? request('filter','all')) === $key ? 'active' : '' }}">
                {{ $label }}
                @if($key==='pending' && ($pendingCount??0))
-                   <span style="background:var(--error);color:white;border-radius:99px;font-size:10px;padding:1px 5px;margin-left:4px;">{{ $pendingCount }}</span>
+                   <span class="session-filter-count">{{ $pendingCount }}</span>
                @endif
             </a>
             @endforeach
@@ -53,28 +40,39 @@
 
         {{-- Sessions --}}
         @forelse($sessions ?? [] as $session)
+        @php
+            $statusKey = $session->status;
+            $statusLabel = $session->status_label;
+            $barColor = match($statusKey) {
+                'confirmed' => 'var(--success)',
+                'pending', 'upcoming' => 'var(--warning)',
+                'completed' => 'var(--brand)',
+                'no_show' => 'var(--text-3)',
+                default => 'var(--error)',
+            };
+        @endphp
         <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden;">
             <div style="display:flex;align-items:stretch;">
-                <div style="width:4px;flex-shrink:0;background:{{ $session->status==='confirmed'?'var(--success)':($session->status==='pending'?'var(--warning)':($session->status==='completed'?'var(--brand)':'var(--error)')) }};"></div>
+                <div style="width:4px;flex-shrink:0;background:{{ $barColor }};"></div>
                 <div style="flex:1;padding:18px;display:flex;gap:16px;align-items:flex-start;">
 
                     <div class="mentor-avatar-lg" style="width:50px;height:50px;font-size:18px;">
-                        @if($session->mentee->avatar_url ?? false)<img src="{{ $session->mentee->avatar_url }}" alt="">@else{{ strtoupper(substr($session->mentee->name,0,1)) }}@endif
+                        @if($session->mentee->avatar_url ?? false)<img src="{{ $session->mentee->avatar_url }}" alt="">@else{{ strtoupper(substr($session->mentee->name ?? '?',0,1)) }}@endif
                     </div>
 
                     <div style="flex:1;min-width:0;">
                         <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
                             <div>
                                 <div style="font-size:15px;font-weight:700;margin-bottom:3px;">{{ $session->title }}</div>
-                                <div style="font-size:13px;color:var(--text-2);">Mentee: <strong>{{ $session->mentee->name }}</strong></div>
+                                <div style="font-size:13px;color:var(--text-2);">Mentee: <strong>{{ $session->mentee->name ?? '—' }}</strong></div>
                             </div>
-                            <span class="session-status {{ $session->status }}">{{ ucfirst($session->status) }}</span>
+                            <span class="session-status {{ str_replace('_', '-', $statusKey) }}">{{ $statusLabel }}</span>
                         </div>
                         <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:10px;">
                             <span style="font-size:12px;color:var(--text-2);">📅 {{ $session->scheduled_at->format('D, d M Y') }}</span>
                             <span style="font-size:12px;color:var(--text-2);">🕐 {{ $session->scheduled_at->format('g:i A') }}</span>
                             <span style="font-size:12px;color:var(--text-2);">⏱ {{ $session->duration_minutes }} min</span>
-                            <span style="font-size:12px;color:var(--success);">💰 ₹{{ number_format($session->mentor_earning ?? 0, 0) }}</span>
+                            <span style="font-size:12px;color:var(--success);">💰 ₹{{ number_format($session->mentor_earning ?? $session->amount ?? 0, 0) }}</span>
                         </div>
                         @if($session->topic_notes ?? false)
                         <div style="margin-top:10px;padding:10px;background:var(--bg);border-radius:var(--radius-sm);font-size:12px;color:var(--text-2);">
@@ -84,29 +82,66 @@
                     </div>
 
                     <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:flex-end;">
-                        @if($session->status === 'pending')
+                        @if($statusKey === 'pending')
                             <button class="btn btn-success btn-sm" onclick="acceptSession({{ $session->id }})">✓ Accept</button>
                             <button class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="declineSession({{ $session->id }})">✗ Decline</button>
-                        @elseif($session->status === 'confirmed')
+                        @elseif(in_array($statusKey, ['confirmed', 'upcoming'], true) && $session->scheduled_at->isFuture())
                             @if($session->meeting_link)
                                 <a href="{{ $session->meeting_link }}" target="_blank" class="btn btn-primary btn-sm">🎥 Start Session</a>
                             @endif
-                            <button class="btn btn-outline btn-sm" onclick="addMeetingLink({{ $session->id }})">🔗 Add Link</button>
-                        @elseif($session->status === 'completed')
-                            <a href="{{ route('mentor.sessions.notes', $session) }}" class="btn btn-outline btn-sm">📝 Session Notes</a>
+                            <button type="button" class="btn btn-outline btn-sm"
+                                    onclick="addMeetingLink({{ $session->id }}, {{ json_encode($session->meeting_link) }})">
+                                🔗 {{ $session->meeting_link ? 'Edit Link' : 'Add Link' }}
+                            </button>
+                        @elseif($statusKey === 'completed')
+                            <a href="{{ route('mentor.sessions.show', $session->id) }}" class="btn btn-outline btn-sm">📝 Session Notes</a>
+                        @elseif($statusKey === 'no_show')
+                            <span style="font-size:11px;color:var(--text-3);">Session time passed</span>
                         @endif
                     </div>
                 </div>
             </div>
         </div>
         @empty
+        @php
+            $activeFilter = $filter ?? request('filter', 'all');
+            $filterLabels = [
+                'all'       => 'sessions',
+                'pending'   => 'pending sessions',
+                'confirmed' => 'confirmed sessions',
+                'completed' => 'completed sessions',
+                'missed'    => 'missed sessions',
+                'cancelled' => 'cancelled sessions',
+                'upcoming'  => 'upcoming sessions',
+            ];
+            $u = auth()->user();
+            $profileComplete = (bool) $u->avatar_url
+                && strlen(trim((string) ($u->bio ?? ''))) >= 50
+                && ! empty($u->expertise)
+                && filled($u->designation)
+                && (float) ($u->rate_per_minute ?? 0) > 0;
+        @endphp
         <div class="empty-state" style="padding:80px 0;">
             <div style="font-size:64px;margin-bottom:16px;">📅</div>
-            <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No sessions yet</div>
-            <p style="font-size:14px;color:var(--text-2);max-width:360px;margin:0 auto 24px;">
-                Complete your profile and go live so mentees can discover and book sessions with you.
-            </p>
-            <a href="{{ route('mentor.profile.edit') }}" class="btn btn-primary btn-lg">Complete Profile</a>
+            @if($activeFilter !== 'all')
+                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No {{ $filterLabels[$activeFilter] ?? 'sessions' }} found</div>
+                <p style="font-size:14px;color:var(--text-2);max-width:360px;margin:0 auto 24px;">
+                    Nothing matches this filter right now. Try another status or view all sessions.
+                </p>
+                <a href="{{ route('mentor.sessions') }}" class="btn btn-primary btn-lg">View all sessions</a>
+            @elseif(! $profileComplete)
+                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No sessions yet</div>
+                <p style="font-size:14px;color:var(--text-2);max-width:360px;margin:0 auto 24px;">
+                    Complete your profile and go live so mentees can discover and book sessions with you.
+                </p>
+                <a href="{{ route('mentor.profile.edit') }}" class="btn btn-primary btn-lg">Complete Profile</a>
+            @else
+                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No sessions yet</div>
+                <p style="font-size:14px;color:var(--text-2);max-width:360px;margin:0 auto 24px;">
+                    Your profile looks ready. Keep your availability up to date so mentees can book you.
+                </p>
+                <a href="{{ route('mentor.availability') }}" class="btn btn-primary btn-lg">Set Availability</a>
+            @endif
         </div>
         @endforelse
 
@@ -116,23 +151,29 @@
     </div>
 </div>
 
-{{-- Add meeting link modal --}}
-<div id="link-modal" class="modal-overlay" style="display:none;">
+{{-- Add meeting link modal — uses .open class (see app.css), not display toggles --}}
+<div id="link-modal" class="modal-overlay">
     <div class="modal" style="max-width:400px;">
-        <div class="modal-title">Add Meeting Link</div>
-        <div class="modal-sub">Paste your Google Meet / Zoom / Teams link</div>
-        <form id="link-form" method="POST">
-            @csrf @method('PATCH')
-            <div class="form-group">
-                <input type="url" name="meeting_link" id="meeting-link-input" class="form-input" placeholder="https://meet.google.com/..." required>
-            </div>
-            <div style="display:flex;gap:10px;">
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('link-modal').style.display='none'">Cancel</button>
-                <button type="submit" class="btn btn-primary" style="flex:1;">Save Link</button>
-            </div>
-        </form>
+        <div class="modal-header">
+            <span class="modal-title">Add Meeting Link</span>
+            <button type="button" class="modal-close" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:13px;color:var(--text-2);margin:0 0 14px;">Paste your Google Meet / Zoom / Teams link</p>
+            <form id="link-form" method="POST">
+                @csrf @method('PATCH')
+                <div class="form-group">
+                    <input type="url" name="meeting_link" id="meeting-link-input" class="form-input" placeholder="https://meet.google.com/..." required>
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <button type="button" class="btn btn-ghost" onclick="closeModal('link-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:1;">Save Link</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+@endsection
 
 @push('scripts')
 <script>
@@ -145,26 +186,52 @@ function acceptSession(id) {
 }
 function declineSession(id) {
     if (!confirm('Decline this session request?')) return;
-    AjaxPost(`/mentor/sessions/${id}/decline`, {}, {
+    AjaxPost(`/mentor/sessions/${id}/cancel`, {}, {
         loader: true,
         onSuccess: () => { showToast('info', 'Session declined.'); location.reload(); },
         onError: e => showToast('error', e.message || 'Could not decline session.')
     });
 }
-function addMeetingLink(id) {
-    document.getElementById('link-modal').style.display = 'flex';
-    document.getElementById('link-form').action = `/mentor/sessions/${id}/meeting-link`;
-}
-document.getElementById('link-modal')?.addEventListener('click', function(e) {
-    if(e.target === this) this.style.display = 'none';
-});
-document.getElementById('link-form')?.addEventListener('submit', async function(e) {
+window.addMeetingLink = function (id, currentLink) {
+    const form = document.getElementById('link-form');
+    const input = document.getElementById('meeting-link-input');
+    if (!form || !input) {
+        showToast('error', 'Link form not found.');
+        return;
+    }
+    form.action = `/mentor/sessions/${id}/meeting-link`;
+    input.value = currentLink || '';
+    openModal('link-modal');
+    setTimeout(() => input.focus(), 50);
+};
+document.getElementById('link-form')?.addEventListener('submit', async function (e) {
     e.preventDefault();
+    if (!this.action) {
+        showToast('error', 'Session not selected.');
+        return;
+    }
     const fd = new FormData(this);
-    const r = await fetch(this.action, { method: 'POST', headers: {'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content}, body: fd });
-    if (r.ok) { showToast('success', '🔗 Meeting link saved!'); document.getElementById('link-modal').style.display = 'none'; location.reload(); }
-    else showToast('error', 'Could not save link.');
+    try {
+        const r = await fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: fd,
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) {
+            showToast('success', '🔗 Meeting link saved!');
+            closeModal('link-modal');
+            location.reload();
+        } else {
+            showToast('error', data.message || Object.values(data.errors || {})[0]?.[0] || 'Could not save link.');
+        }
+    } catch (err) {
+        showToast('error', 'Could not save link.');
+    }
 });
 </script>
 @endpush
-@endsection

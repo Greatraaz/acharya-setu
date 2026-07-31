@@ -51,18 +51,18 @@
        return fetch(url, fetchOptions)
            .then((res) => {
                if (!res.ok) {
-                   return res
-                       .json()
-                       .then((err) => {
+                   return res.json().then(
+                       (err) => {
                            throw {
-                               message: err.message || "An error occurred.",
+                               message: err.message || Object.values(err.errors || {})[0]?.[0] || "An error occurred.",
                                errors: err.errors || {},
                                status: res.status,
                            };
-                       })
-                       .catch(() => {
+                       },
+                       () => {
                            throw { message: "Server error. Please try again.", status: res.status };
-                       });
+                       }
+                   );
                }
                const ct = res.headers.get("Content-Type") || "";
                return ct.includes("application/json") ? res.json() : res.text();

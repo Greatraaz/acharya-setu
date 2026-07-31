@@ -317,6 +317,56 @@ class ConsultationSession extends Model
     }
  
     // ── Business logic ────────────────────────────────────────
+
+    /**
+     * Mark only truly missed sessions as no_show.
+     *
+     * Never touches: completed, cancelled, ongoing, or any session that was
+     * started/attended (started_at / ended_at / actual duration present).
+     * Only pending / confirmed / upcoming whose scheduled end time has passed.
+     */
+    public static function expireMissedSessions(?int $mentorId = null, ?int $menteeId = null): int
+    {
+        $query = static::query()
+            ->whereIn('status', [
+                self::STATUS_PENDING,
+                self::STATUS_CONFIRMED,
+                self::STATUS_UPCOMING,
+            ])
+            ->whereNotIn('status', [
+                self::STATUS_COMPLETED,
+                self::STATUS_CANCELLED,
+                self::STATUS_ONGOING,
+                self::STATUS_NO_SHOW,
+            ])
+            // Attended / started sessions must never become no_show
+            ->whereNull('started_at')
+            ->whereNull('ended_at')
+            ->where(function ($q) {
+                $q->whereNull('actual_duration_seconds')
+                    ->orWhere('actual_duration_seconds', 0);
+            })
+            ->whereRaw(
+                'DATE_ADD(scheduled_at, INTERVAL COALESCE(duration_minutes, 0) MINUTE) < ?',
+                [now()->timezone(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s')]
+            );
+
+        if ($mentorId) {
+            $query->where('mentor_id', $mentorId);
+        }
+
+        if ($menteeId) {
+            $query->where('mentee_id', $menteeId);
+        }
+
+        return $query->update(['status' => self::STATUS_NO_SHOW]);
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return self::STATUSES[$this->status] ?? ucfirst(str_replace('_', ' ', (string) $this->status));
+    }
+
     public function confirm(): void
     {
         $this->update(['status' => self::STATUS_CONFIRMED]);

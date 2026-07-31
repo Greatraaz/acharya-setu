@@ -7,7 +7,7 @@ class ProfileController extends Controller
 {
     public function edit()
     {
-        return view('mentor.profile-edit', ['user' => auth()->user()]);
+        return view('frontend.mentors.profile-edit', ['user' => auth()->user()]);
     }
 
     public function update(Request $request)

@@ -4,16 +4,7 @@
 
 @section('content')
 <div class="dash-layout">
-    <aside class="sidebar">
-        <div class="sidebar-section-label">Overview</div>
-        <a href="{{ route('mentor.dashboard') }}" class="sidebar-item"><span class="si-icon">📊</span> Dashboard</a>
-        <div class="sidebar-section-label">Sessions</div>
-        <a href="{{ route('mentor.sessions') }}" class="sidebar-item"><span class="si-icon">📅</span> My Sessions</a>
-        <div class="sidebar-section-label">Account</div>
-        <a href="{{ route('mentor.wallet') }}" class="sidebar-item active"><span class="si-icon">💰</span> Earnings</a>
-        <a href="{{ route('mentor.profile.edit') }}" class="sidebar-item"><span class="si-icon">✏️</span> Edit Profile</a>
-        <form action="{{ route('logout') }}" method="POST" style="margin-top:auto;">@csrf<button class="sidebar-item w-full" style="background:none;cursor:pointer;color:var(--error);"><span class="si-icon">🚪</span> Sign Out</button></form>
-    </aside>
+    @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
         <div class="dash-header">
@@ -57,7 +48,7 @@
         <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <h3 style="font-size:15px;font-weight:700;">Earnings History</h3>
-                <a href="{{ route('mentor.wallet.export') ?? '#' }}" class="btn btn-outline btn-sm">⬇ Export CSV</a>
+                <a href="#" class="btn btn-outline btn-sm">⬇ Export CSV</a>
             </div>
             <table class="data-table">
                 <thead>

@@ -17,7 +17,7 @@ class WalletController extends Controller
             'total_earned'  => WalletTransaction::where('user_id',$user->id)->where('type','credit')->sum('amount'),
             'this_month'    => WalletTransaction::where('user_id',$user->id)->where('type','credit')->whereMonth('created_at',now()->month)->sum('amount'),
         ];
-        return view('frontend.mentor.wallet', compact('transactions','stats'));
+        return view('frontend.mentors.wallet', compact('transactions','stats'));
     }
 
     public function withdraw(Request $request)

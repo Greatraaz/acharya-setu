@@ -27,6 +27,7 @@ use App\Http\Controllers\Mentor\SessionController      as MentorSessionControlle
 use App\Http\Controllers\Mentor\WalletController       as MentorWalletController;
 use App\Http\Controllers\Mentor\ProfileController      as MentorProfileController;
 use App\Http\Controllers\Mentor\AvailabilityController as MentorAvailabilityController;
+use App\Http\Controllers\Mentor\PortalController       as MentorPortalController;
 
 use App\Http\Controllers\Mentee\OnboardingController   as MenteeOnboardingController;
 use App\Http\Controllers\Mentee\DashboardController    as MenteeDashboardController;
@@ -203,10 +204,16 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::post('/sessions/{id}/complete',[MentorSessionController::class, 'complete'])->name('sessions.complete');
     Route::post('/sessions/{id}/no-show', [MentorSessionController::class, 'noShow'])  ->name('sessions.noshow');
     Route::post('/sessions/{id}/notes',   [MentorSessionController::class, 'addNote']) ->name('sessions.notes');
+    Route::match(['patch', 'post'], '/sessions/{id}/meeting-link', [MentorSessionController::class, 'updateMeetingLink'])
+        ->name('sessions.meeting-link');
 
     // Availability
     Route::get( '/availability',       [MentorAvailabilityController::class, 'show'])  ->name('availability');
     Route::post('/availability',       [MentorAvailabilityController::class, 'update'])->name('availability.update');
+    Route::post('/availability/settings', [MentorAvailabilityController::class, 'updateSettings'])->name('availability.settings');
+    Route::post('/availability/toggle-live', [MentorAvailabilityController::class, 'toggleLive'])->name('availability.toggle-live');
+    Route::post('/availability/block', [MentorAvailabilityController::class, 'blockDate'])->name('availability.block');
+    Route::delete('/availability/block/{date}', [MentorAvailabilityController::class, 'unblockDate'])->name('availability.unblock');
 
     // Wallet / Earnings
     Route::get('/wallet',              [MentorWalletController::class, 'index'])        ->name('wallet');
@@ -216,6 +223,20 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::get( '/profile/edit',  [MentorProfileController::class, 'edit'])   ->name('profile.edit');
     Route::put( '/profile',       [MentorProfileController::class, 'update']) ->name('profile.update');
     Route::post('/profile/avatar',[MentorProfileController::class, 'avatar']) ->name('profile.avatar');
+
+    // Session notes / mentees / journey / community / assessments
+    Route::get('/notes',                          [MentorPortalController::class, 'notes'])->name('notes');
+    Route::get('/mentees',                        [MentorPortalController::class, 'mentees'])->name('mentees');
+    Route::get('/mentees/{id}',                   [MentorPortalController::class, 'menteeShow'])->name('mentees.show');
+    Route::get('/journey',                        [MentorPortalController::class, 'journey'])->name('journey');
+    Route::get('/journey/{mentee}',               [MentorPortalController::class, 'journeyShow'])->name('journey.show');
+    Route::get('/community',                      [MentorPortalController::class, 'community'])->name('community');
+    Route::get('/community/{channel:slug}',       [MentorPortalController::class, 'communityShow'])->name('community.show');
+    Route::post('/community/{channel:slug}/join', [MentorPortalController::class, 'communityJoin'])->name('community.join');
+    Route::post('/community/{channel:slug}/messages', [MessageController::class, 'store'])->name('community.messages.store');
+    Route::post('/community/messages/{message}/like', [MessageController::class, 'like'])->name('community.messages.like');
+    Route::delete('/community/messages/{message}', [MessageController::class, 'destroy'])->name('community.messages.destroy');
+    Route::get('/assessments',                    [MentorPortalController::class, 'assessments'])->name('assessments');
 });
 
 /*

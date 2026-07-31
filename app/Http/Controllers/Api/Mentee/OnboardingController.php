@@ -50,24 +50,44 @@ class OnboardingController extends Controller
             'gender'   => 'nullable|in:male,female,other',
             'phone'    => 'nullable|string',
             'address'  => 'nullable|string|max:200',
-            'avatar'   => 'nullable|file|image|mimes:jpeg,png,webp|max:2048',
+            // File upload OR base64 string (data URI or raw base64)
+            'avatar'   => 'nullable',
+            'mimeType' => 'nullable|string|in:image/jpeg,image/png,image/webp,image/jpg',
         ]);
 
         if ($request->hasFile('avatar')) {
-            if ($user->avatar_url && str_starts_with($user->avatar_url, '/storage/')) {
-                Storage::disk('public')->delete(str_replace('/storage/', '', $user->avatar_url));
-            }
+            $request->validate([
+                'avatar' => 'file|image|mimes:jpeg,png,webp,jpg|max:2048',
+            ]);
+
+            $this->deleteOldAvatar($user->avatar_url);
             $path = $request->file('avatar')->store('avatars', 'public');
             $data['avatar_url'] = '/storage/' . $path;
+        } elseif (is_string($request->input('avatar')) && trim((string) $request->input('avatar')) !== '') {
+            $avatarUrl = $this->storeAvatarFromBase64(
+                $user,
+                (string) $request->input('avatar'),
+                $request->input('mimeType')
+            );
+
+            if ($avatarUrl === null) {
+                return response()->json([
+                    'status'     => false,
+                    'statuscode' => 422,
+                    'message'    => 'Invalid base64 image data for avatar.',
+                ], 422);
+            }
+
+            $data['avatar_url'] = $avatarUrl;
         }
 
-        $data['location'] = $data['address'];
-        unset($data['address']);
-        unset($data['avatar']);
+        $data['location'] = $data['address'] ?? $user->location;
+        unset($data['address'], $data['avatar'], $data['mimeType']);
+
         $user->update(array_merge($data, ['onboarding_step' => 1]));
         $freshUser = $user->fresh();
         $fullAvatarUrl = $freshUser->avatar_url;
-        if ($fullAvatarUrl && !str_starts_with($fullAvatarUrl, 'http://') && !str_starts_with($fullAvatarUrl, 'https://')) {
+        if ($fullAvatarUrl && ! str_starts_with($fullAvatarUrl, 'http://') && ! str_starts_with($fullAvatarUrl, 'https://')) {
             $fullAvatarUrl = url($fullAvatarUrl);
         }
         $freshUser->avatar_url = $fullAvatarUrl;
@@ -80,6 +100,73 @@ class OnboardingController extends Controller
             'avatar_url' => $fullAvatarUrl,
             'user'       => $freshUser,
         ]);
+    }
+
+    /**
+     * Decode base64 (raw or data:image/...;base64,...) and store under public/upload/avatar.
+     */
+    private function storeAvatarFromBase64($user, string $base64, ?string $mimeType = null): ?string
+    {
+        $mime = $mimeType;
+
+        if (preg_match('/^data:(image\/\w+);base64,/', $base64, $matches)) {
+            $mime = $mime ?: $matches[1];
+            $base64 = substr($base64, strpos($base64, ',') + 1);
+        }
+
+        $base64 = str_replace(' ', '+', trim($base64));
+        $imageData = base64_decode($base64, true);
+
+        if ($imageData === false || $imageData === '') {
+            return null;
+        }
+
+        // Reject obviously non-image / huge payloads (~2MB decoded)
+        if (strlen($imageData) > 2 * 1024 * 1024) {
+            return null;
+        }
+
+        $mime = $mime ?: 'image/jpeg';
+        $extension = match ($mime) {
+            'image/png'  => 'png',
+            'image/webp' => 'webp',
+            'image/jpg', 'image/jpeg' => 'jpg',
+            default => 'jpg',
+        };
+
+        $this->deleteOldAvatar($user->avatar_url);
+
+        $fileName = 'avatar_' . $user->id . '_' . time() . '.' . $extension;
+        $uploadPath = public_path('upload/avatar');
+
+        if (! is_dir($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
+
+        file_put_contents($uploadPath . DIRECTORY_SEPARATOR . $fileName, $imageData);
+
+        return url('upload/avatar/' . $fileName);
+    }
+
+    private function deleteOldAvatar(?string $avatarUrl): void
+    {
+        if (! $avatarUrl) {
+            return;
+        }
+
+        if (str_starts_with($avatarUrl, '/storage/')) {
+            Storage::disk('public')->delete(str_replace('/storage/', '', $avatarUrl));
+
+            return;
+        }
+
+        $path = parse_url($avatarUrl, PHP_URL_PATH);
+        if (is_string($path) && str_contains($path, '/upload/avatar/')) {
+            $full = public_path(ltrim($path, '/'));
+            if (is_file($full)) {
+                @unlink($full);
+            }
+        }
     }
 
     // ─────────────────────────────────────────────
@@ -262,11 +349,13 @@ class OnboardingController extends Controller
                 'step3' => [
                     'completed' => $currentStep >= 3,
                     'data'      => [
-                        'tracks' => EducationStream::where('mentee_id', $user->id)
-                            ->where('is_active', true)
-                            ->orderBy('sort_order')
-                            ->pluck('name')
-                            ->values(),
+                        'tracks' => ! empty($user->career_goals)
+                            ? array_values($user->career_goals)
+                            : EducationStream::where('mentee_id', $user->id)
+                                ->where('is_active', true)
+                                ->orderBy('sort_order')
+                                ->pluck('name')
+                                ->values(),
                     ],
                 ],
                 'step4' => [

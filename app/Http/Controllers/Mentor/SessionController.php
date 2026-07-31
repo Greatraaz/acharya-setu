@@ -13,26 +13,44 @@ class SessionController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ConsultationSession::where('mentor_id', auth()->id())
+        $mentorId = auth()->id();
+
+        // Past pending/confirmed/upcoming sessions with no join → no_show
+        ConsultationSession::expireMissedSessions($mentorId);
+
+        $query = ConsultationSession::where('mentor_id', $mentorId)
             ->with('mentee')
             ->latest('scheduled_at');
 
-        if ($status = $request->status) {
-            if ($status === 'upcoming') {
-                $query->whereIn('status',['pending','confirmed'])->where('scheduled_at','>',now());
+        $filter = $request->input('filter', $request->input('status', 'all'));
+
+        if ($filter && $filter !== 'all') {
+            if ($filter === 'upcoming') {
+                $query->whereIn('status', ['pending', 'confirmed', 'upcoming'])
+                    ->where('scheduled_at', '>', now());
+            } elseif ($filter === 'pending') {
+                $query->where('status', 'pending');
+            } elseif ($filter === 'missed') {
+                $query->where('status', 'no_show');
             } else {
-                $query->where('status', $status);
+                $query->where('status', $filter);
             }
         }
 
-        $sessions = $query->paginate(15);
-        return view('mentor.sessions', compact('sessions'));
+        $sessions = $query->paginate(15)->withQueryString();
+        $pendingCount = ConsultationSession::where('mentor_id', $mentorId)
+            ->where('status', 'pending')
+            ->count();
+
+        return view('frontend.mentors.sessions', compact('sessions', 'pendingCount', 'filter'));
     }
 
     public function show(int $id)
     {
-        $session = ConsultationSession::where('mentor_id', auth()->id())->with(['mentee','notes','review'])->findOrFail($id);
-        return view('mentor.session-detail', compact('session'));
+        $session = ConsultationSession::where('mentor_id', auth()->id())
+            ->with(['mentee', 'notes', 'menteeReview'])
+            ->findOrFail($id);
+        return view('frontend.mentors.session-show', compact('session'));
     }
 
     public function confirm(int $id)
@@ -67,17 +85,62 @@ class SessionController extends Controller
         return response()->json(['message' => 'Marked as no-show.']);
     }
 
+    public function updateMeetingLink(int $id, Request $request)
+    {
+        $data = $request->validate([
+            'meeting_link' => 'required|url|max:500',
+        ]);
+
+        $session = ConsultationSession::where('mentor_id', auth()->id())
+            ->whereIn('status', ['pending', 'confirmed', 'upcoming'])
+            ->findOrFail($id);
+
+        $session->update([
+            'meeting_link' => $data['meeting_link'],
+        ]);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'message'      => 'Meeting link saved.',
+                'meeting_link' => $session->meeting_link,
+            ]);
+        }
+
+        return back()->with('success', 'Meeting link saved.');
+    }
+
     public function addNote(int $id, Request $request)
     {
-        $request->validate(['content'=>'required|string','type'=>'in:note,resource,action_item','is_shared'=>'boolean']);
-        $session = ConsultationSession::where('mentor_id', auth()->id())->findOrFail($id);
-        $note = $session->notes()->create([
-            'author_id' => auth()->id(),
-            'type'      => $request->type ?? 'note',
-            'content'   => $request->content,
-            'is_shared' => $request->boolean('is_shared'),
+        $request->validate([
+            'content'   => 'required|string',
+            'type'      => 'nullable|in:note,resource,action_item',
+            'is_shared' => 'nullable|boolean',
         ]);
-        return response()->json(['message' => 'Note added.', 'note' => $note]);
+
+        $session = ConsultationSession::where('mentor_id', auth()->id())->findOrFail($id);
+        $type = $request->input('type', 'note');
+
+        $note = $session->notes()
+            ->where('author_id', auth()->id())
+            ->where('type', $type)
+            ->latest()
+            ->first();
+
+        $payload = [
+            'content'   => $request->content,
+            'is_shared' => $request->boolean('is_shared', true),
+            'type'      => $type,
+        ];
+
+        if ($note) {
+            $note->update($payload);
+        } else {
+            $note = $session->notes()->create(array_merge($payload, [
+                'author_id' => auth()->id(),
+            ]));
+        }
+
+        return response()->json(['message' => 'Notes saved.', 'note' => $note]);
     }
 
     public function notes(int $id)

@@ -4,16 +4,7 @@
 
 @section('content')
 <div class="dash-layout">
-    <aside class="sidebar">
-        <div class="sidebar-section-label">Overview</div>
-        <a href="{{ route('mentor.dashboard') }}" class="sidebar-item"><span class="si-icon">📊</span> Dashboard</a>
-        <div class="sidebar-section-label">Sessions</div>
-        <a href="{{ route('mentor.sessions') }}" class="sidebar-item"><span class="si-icon">📅</span> My Sessions</a>
-        <div class="sidebar-section-label">Account</div>
-        <a href="{{ route('mentor.wallet') }}" class="sidebar-item"><span class="si-icon">💰</span> Earnings</a>
-        <a href="{{ route('mentor.profile.edit') }}" class="sidebar-item active"><span class="si-icon">✏️</span> Edit Profile</a>
-        <form action="{{ route('logout') }}" method="POST" style="margin-top:auto;">@csrf<button class="sidebar-item w-full" style="background:none;cursor:pointer;color:var(--error);"><span class="si-icon">🚪</span> Sign Out</button></form>
-    </aside>
+    @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
         <div class="dash-header flex-between">

@@ -49,32 +49,78 @@ class MenteeOnboardingService
             return;
         }
 
+        // Keep career goals on the user (used by mentor matching / web onboarding).
+        User::where('id', $menteeId)->update([
+            'career_goals' => $tracks->all(),
+        ]);
+
         $selectedSlugs = $tracks
+            ->map(fn ($name) => $this->menteeTrackSlug($name, $menteeId))
+            ->filter()
+            ->values()
+            ->all();
+
+        // Also recognize legacy rows that used the bare goal slug.
+        $legacySlugs = $tracks
             ->map(fn ($name) => Str::slug($name))
             ->filter()
-            ->values();
+            ->values()
+            ->all();
 
         EducationStream::where('mentee_id', $menteeId)
             ->whereNull('mentor_id')
-            ->whereNotIn('slug', $selectedSlugs)
+            ->where(function ($q) use ($selectedSlugs, $legacySlugs) {
+                $q->whereNotIn('slug', $selectedSlugs)
+                    ->whereNotIn('slug', $legacySlugs);
+            })
             ->update(['is_active' => false]);
 
         foreach ($tracks as $index => $name) {
-            $slug = Str::slug($name);
-            if ($slug === '') {
+            $baseSlug = Str::slug($name);
+            if ($baseSlug === '') {
                 continue;
             }
 
-            EducationStream::updateOrCreate(
-                ['mentee_id' => $menteeId, 'slug' => $slug],
-                [
+            $slug = $this->menteeTrackSlug($name, $menteeId);
+
+            $existing = EducationStream::where('mentee_id', $menteeId)
+                ->whereNull('mentor_id')
+                ->where(function ($q) use ($slug, $baseSlug, $name) {
+                    $q->where('slug', $slug)
+                        ->orWhere('slug', $baseSlug)
+                        ->orWhereRaw('LOWER(name) = ?', [Str::lower($name)]);
+                })
+                ->first();
+
+            if ($existing) {
+                // Move legacy bare slugs onto a mentee-scoped unique slug.
+                $existing->update([
                     'name'       => $name,
+                    'slug'       => $slug,
                     'mentor_id'  => null,
                     'is_active'  => true,
                     'sort_order' => $index,
-                ]
-            );
+                ]);
+                continue;
+            }
+
+            EducationStream::create([
+                'mentee_id'  => $menteeId,
+                'slug'       => $slug,
+                'name'       => $name,
+                'mentor_id'  => null,
+                'is_active'  => true,
+                'sort_order' => $index,
+            ]);
         }
+    }
+
+    /** Globally unique slug for mentee goal/track rows (slug column is unique). */
+    private function menteeTrackSlug(string $name, int $menteeId): string
+    {
+        $base = Str::slug($name) ?: 'track';
+
+        return $base . '-mentee-' . $menteeId;
     }
 
     public function mergePreferences(User $user, array $data): array
@@ -125,9 +171,10 @@ class MenteeOnboardingService
             $missing[] = 'mentoring_format';
         }
 
-        $hasTracks = EducationStream::where('mentee_id', $user->id)
-            ->where('is_active', true)
-            ->exists();
+        $hasTracks = ! empty($user->career_goals)
+            || EducationStream::where('mentee_id', $user->id)
+                ->where('is_active', true)
+                ->exists();
 
         if (! $hasTracks) {
             $missing[] = 'tracks';

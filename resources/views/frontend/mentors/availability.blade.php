@@ -4,49 +4,7 @@
 
 @section('content')
 <div class="dash-layout">
-
-    {{-- SIDEBAR --}}
-    <aside class="sidebar">
-        <div class="sidebar-section-label">Overview</div>
-        <a href="{{ route('mentor.dashboard') }}" class="sidebar-item">
-            <span class="si-icon">📊</span> Dashboard
-        </a>
-        <div class="sidebar-section-label">Sessions</div>
-        <a href="{{ route('mentor.sessions') }}" class="sidebar-item">
-            <span class="si-icon">📅</span> My Sessions
-            @if($pendingCount ?? 0)<span class="si-badge">{{ $pendingCount }}</span>@endif
-        </a>
-        <a href="{{ route('mentor.availability') }}" class="sidebar-item active">
-            <span class="si-icon">⏰</span> Set Availability
-        </a>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">📝</span> Session Notes
-        </a>
-        <div class="sidebar-section-label">Mentees</div>
-        <a href="{{ route('mentor.mentees') }}" class="sidebar-item">
-            <span class="si-icon">🎓</span> My Mentees
-        </a>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">🗺️</span> Journey Tracker
-        </a>
-        <div class="sidebar-section-label">Content</div>
-        <a href="#" class="sidebar-item"><span class="si-icon">💬</span> Community</a>
-        <a href="#" class="sidebar-item"><span class="si-icon">🧠</span> Assessments</a>
-        <div class="sidebar-section-label">Account</div>
-        <a href="{{ route('mentor.wallet') }}" class="sidebar-item">
-            <span class="si-icon">💰</span> Earnings
-            <span style="margin-left:auto;font-size:11px;color:var(--success);">₹{{ number_format(auth()->user()->wallet_balance ?? 0, 0) }}</span>
-        </a>
-        <a href="{{ route('mentor.profile.edit') }}" class="sidebar-item">
-            <span class="si-icon">✏️</span> Edit Profile
-        </a>
-        <form action="{{ route('logout') }}" method="POST" style="margin-top:auto;">
-            @csrf
-            <button class="sidebar-item w-full" style="background:none;cursor:pointer;color:var(--error);">
-                <span class="si-icon">🚪</span> Sign Out
-            </button>
-        </form>
-    </aside>
+    @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
 
@@ -56,10 +14,10 @@
                 <div class="dash-subtitle">Define when mentees can book sessions with you.</div>
             </div>
             <div style="display:flex;gap:10px;">
-                <form action="{{ route('mentor.toggle-availability') }}" method="POST">
-                    @csrf @method('PATCH')
-                    <button class="btn {{ (auth()->user()->is_available ?? false) ? 'btn-outline' : 'btn-success' }}" type="submit">
-                        {{ (auth()->user()->is_available ?? false) ? '⏸ Go Unavailable' : '✅ Go Live' }}
+                <form action="{{ route('mentor.availability.toggle-live') }}" method="POST">
+                    @csrf
+                    <button class="btn {{ auth()->user()->is_active ? 'btn-outline' : 'btn-success' }}" type="submit">
+                        {{ auth()->user()->is_active ? '⏸ Go Unavailable' : '✅ Go Live' }}
                     </button>
                 </form>
             </div>
@@ -72,9 +30,9 @@
                 <h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">Weekly Schedule</h3>
                 <p style="font-size:13px;color:var(--text-2);margin-bottom:24px;">Set your regular availability for each day. Mentees will see these slots when booking.</p>
 
-                <form action="{{ route('mentor.availability.save') }}" method="POST"
-                      data-ajax-form="{{ route('mentor.availability.save') }}"
-                      data-success="Availability saved successfully!">
+                    <form action="{{ route('mentor.availability.update') }}" method="POST"
+                          data-ajax-form="{{ route('mentor.availability.update') }}"
+                          data-success="Availability saved successfully!">
                     @csrf
 
                     @php
@@ -85,11 +43,12 @@
                     @foreach($days as $day)
                     @php
                     $dayKey = strtolower($day);
-                    $dayData = $defaultSlots[$dayKey] ?? ['enabled' => false, 'from' => '09:00', 'to' => '18:00'];
+                    $dayData = $defaultSlots[$dayKey] ?? ['enabled' => false, 'from' => '09:00', 'to' => '18:00', 'slot_duration' => 30];
                     @endphp
                     <div class="avail-day" id="day-{{ $dayKey }}" style="display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--border);">
                         {{-- Toggle --}}
                         <label class="toggle-switch" style="flex-shrink:0;">
+                            <input type="hidden" name="days[{{ $dayKey }}][enabled]" value="0">
                             <input type="checkbox" name="days[{{ $dayKey }}][enabled]" value="1"
                                    {{ ($dayData['enabled'] ?? false) ? 'checked' : '' }}
                                    onchange="toggleDay('{{ $dayKey }}', this.checked)">
@@ -174,10 +133,12 @@
                     <p style="font-size:12px;color:var(--text-2);margin-bottom:14px;">Mark dates when you're unavailable (vacations, holidays, etc.)</p>
                     <form action="{{ route('mentor.availability.block') }}" method="POST"
                           data-ajax-form="{{ route('mentor.availability.block') }}"
-                          data-success="Date blocked!" id="block-form">
+                          data-success="Date blocked!"
+                          data-redirect="{{ route('mentor.availability') }}"
+                          data-reset-on-success id="block-form">
                         @csrf
                         <div style="display:flex;gap:8px;margin-bottom:12px;">
-                            <input type="date" name="blocked_date" class="form-input" id="block-date-input" min="{{ date('Y-m-d') }}">
+                            <input type="date" name="blocked_date" class="form-input" id="block-date-input" min="{{ date('Y-m-d') }}" required>
                             <button type="submit" class="btn btn-outline btn-sm">Block</button>
                         </div>
                     </form>
@@ -185,7 +146,10 @@
                         @forelse($blockedDates ?? [] as $blocked)
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
                             <span>{{ \Carbon\Carbon::parse($blocked->date)->format('D, d M Y') }}</span>
-                            <form action="{{ route('mentor.availability.unblock', $blocked->id) }}" method="POST">
+                            <form action="{{ route('mentor.availability.unblock', $blocked->date) }}" method="POST"
+                                  data-ajax-form="{{ route('mentor.availability.unblock', $blocked->date) }}"
+                                  data-success="Date unblocked."
+                                  data-redirect="{{ route('mentor.availability') }}">
                                 @csrf @method('DELETE')
                                 <button class="btn btn-ghost btn-sm" style="color:var(--error);padding:2px 8px;" type="submit">Remove</button>
                             </form>
@@ -233,7 +197,7 @@ function toggleDay(day, enabled) {
 
 function applyWeekdays() {
     ['monday','tuesday','wednesday','thursday','friday'].forEach(day => {
-        const cb = document.querySelector(`input[name="days[${day}][enabled]"]`);
+        const cb = document.querySelector(`input[type="checkbox"][name="days[${day}][enabled]"]`);
         if (cb && !cb.checked) { cb.checked = true; toggleDay(day, true); }
         const from = document.querySelector(`input[name="days[${day}][from]"]`);
         const to   = document.querySelector(`input[name="days[${day}][to]"]`);
@@ -241,7 +205,7 @@ function applyWeekdays() {
         if (to)   to.value   = '18:00';
     });
     ['saturday','sunday'].forEach(day => {
-        const cb = document.querySelector(`input[name="days[${day}][enabled]"]`);
+        const cb = document.querySelector(`input[type="checkbox"][name="days[${day}][enabled]"]`);
         if (cb && cb.checked) { cb.checked = false; toggleDay(day, false); }
     });
     showToast('info', 'Mon–Fri 9am–6pm applied. Save to confirm.');

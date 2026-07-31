@@ -4,30 +4,7 @@
 
 @section('content')
 <div class="dash-layout">
-
-    <aside class="sidebar">
-        <div class="sidebar-section-label">Overview</div>
-        <a href="{{ route('mentor.dashboard') }}" class="sidebar-item"><span class="si-icon">📊</span> Dashboard</a>
-        <div class="sidebar-section-label">Sessions</div>
-        <a href="{{ route('mentor.sessions') }}" class="sidebar-item active"><span class="si-icon">📅</span> My Sessions</a>
-        <a href="{{ route('mentor.availability') }}" class="sidebar-item"><span class="si-icon">⏰</span> Set Availability</a>
-        <a href="#" class="sidebar-item"><span class="si-icon">📝</span> Session Notes</a>
-        <div class="sidebar-section-label">Mentees</div>
-        <a href="{{ route('mentor.mentees') }}" class="sidebar-item"><span class="si-icon">🎓</span> My Mentees</a>
-        <a href="#" class="sidebar-item"><span class="si-icon">🗺️</span> Journey Tracker</a>
-        <div class="sidebar-section-label">Content</div>
-        <a href="#" class="sidebar-item"><span class="si-icon">💬</span> Community</a>
-        <a href="#" class="sidebar-item"><span class="si-icon">🧠</span> Assessments</a>
-        <div class="sidebar-section-label">Account</div>
-        <a href="{{ route('mentor.wallet') }}" class="sidebar-item">
-            <span class="si-icon">💰</span> Earnings
-            <span style="margin-left:auto;font-size:11px;color:var(--success);">₹{{ number_format(auth()->user()->wallet_balance ?? 0, 0) }}</span>
-        </a>
-        <a href="{{ route('mentor.profile.edit') }}" class="sidebar-item"><span class="si-icon">✏️</span> Edit Profile</a>
-        <form action="{{ route('logout') }}" method="POST" style="margin-top:auto;">
-            @csrf<button class="sidebar-item w-full" style="background:none;cursor:pointer;color:var(--error);"><span class="si-icon">🚪</span> Sign Out</button>
-        </form>
-    </aside>
+    @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
 
@@ -90,20 +67,18 @@
                         @endif
                     </div>
                     @if($session->status === 'completed' || $session->status === 'confirmed')
-                    <form action="{{ route('mentor.sessions.notes', $session->id ?? 0) }}" method="POST"
-                          data-ajax-form="{{ route('mentor.sessions.notes', $session->id ?? 0) }}"
-                          data-success="Notes saved!">
+                    <form action="{{ route('mentor.sessions.notes', $session->id) }}" method="POST"
+                          data-ajax-form="{{ route('mentor.sessions.notes', $session->id) }}"
+                          data-success="Notes saved!"
+                          data-redirect="{{ route('mentor.sessions.show', $session->id) }}">
                         @csrf
-                        <div class="form-group">
-                            <label class="form-label">Key Discussion Points</label>
-                            <textarea name="mentor_notes" class="form-textarea" rows="4"
-                                      placeholder="Summarize what was discussed, insights shared, resources mentioned…">{{ $session->mentor_notes ?? '' }}</textarea>
-                        </div>
+                        <input type="hidden" name="type" value="note">
+                        <input type="hidden" name="is_shared" value="1">
                         <div class="form-group" style="margin-bottom:0;">
-                            <label class="form-label">Action Items for Mentee</label>
-                            <textarea name="action_items" class="form-textarea" rows="3"
-                                      placeholder="List specific tasks or steps for the mentee to work on…">{{ $session->action_items ?? '' }}</textarea>
-                            <div class="form-hint">Shared with the mentee after the session.</div>
+                            <label class="form-label">Key Discussion Points</label>
+                            <textarea name="content" class="form-textarea" rows="5"
+                                      placeholder="Summarize what was discussed, insights shared, resources mentioned…"
+                                      required>{{ $session->notes->first()->content ?? $session->mentor_notes ?? '' }}</textarea>
                         </div>
                         <button type="submit" class="btn btn-primary" style="margin-top:14px;">💾 Save Notes</button>
                     </form>
@@ -115,14 +90,14 @@
                 </div>
 
                 {{-- Review received --}}
-                @if($session->review ?? false)
+                @if($session->menteeReview)
                 <div class="card" style="margin-bottom:20px;border:1px solid rgba(245,158,11,.3);background:var(--brand-muted);">
                     <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">⭐ Review from Mentee</h3>
-                    <div class="stars" style="margin-bottom:8px;">{{ str_repeat('★', $session->review->overall_rating ?? 5) }}</div>
-                    <p style="font-size:13px;color:var(--text-2);line-height:1.8;margin-bottom:12px;">"{{ $session->review->review_text ?? '' }}"</p>
+                    <div class="stars" style="margin-bottom:8px;">{{ str_repeat('★', $session->menteeReview->overall_rating ?? 5) }}</div>
+                    <p style="font-size:13px;color:var(--text-2);line-height:1.8;margin-bottom:12px;">"{{ $session->menteeReview->review_text ?? '' }}"</p>
                     <div style="display:flex;gap:16px;font-size:12px;">
-                        <span>Communication: <strong>{{ $session->review->communication_rating ?? '—' }}/5</strong></span>
-                        <span>Expertise: <strong>{{ $session->review->expertise_rating ?? '—' }}/5</strong></span>
+                        <span>Communication: <strong>{{ $session->menteeReview->communication_rating ?? '—' }}/5</strong></span>
+                        <span>Expertise: <strong>{{ $session->menteeReview->expertise_rating ?? '—' }}/5</strong></span>
                     </div>
                 </div>
                 @endif
@@ -165,8 +140,10 @@
                         <div>Total sessions with you: <strong>{{ $session->mentee->sessions_with_mentor ?? 0 }}</strong></div>
                     </div>
                     <div style="display:flex;gap:8px;margin-top:14px;">
-                        <a href="{{ route('mentor.mentees.show', $session->mentee->id ?? 0) }}" class="btn btn-outline btn-sm" style="flex:1;text-align:center;">View Profile</a>
-                        <a href="{{ route('mentor.sessions', ['mentee' => $session->mentee->id ?? 0]) }}" class="btn btn-ghost btn-sm" style="flex:1;text-align:center;">All Sessions</a>
+                        @if($session->mentee_id)
+                        <a href="{{ route('mentor.mentees.show', $session->mentee_id) }}" class="btn btn-outline btn-sm" style="flex:1;text-align:center;">View Profile</a>
+                        <a href="{{ route('mentor.sessions', ['filter' => 'all', 'mentee' => $session->mentee_id]) }}" class="btn btn-ghost btn-sm" style="flex:1;text-align:center;">All Sessions</a>
+                        @endif
                     </div>
                 </div>
 
@@ -208,25 +185,30 @@
 </div>
 
 {{-- Add Meeting Link Modal --}}
-<div id="meeting-link-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center;">
-    <div class="card" style="max-width:440px;width:90%;padding:28px;">
-        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;">Add Meeting Link</h3>
-        <p style="font-size:13px;color:var(--text-2);margin-bottom:16px;">Paste your Google Meet, Zoom, or any video call link below. It will be shared with the mentee.</p>
-        <form action="{{ route('mentor.sessions.meeting-link', $session->id ?? 0) }}" method="POST"
-              data-ajax-form="{{ route('mentor.sessions.meeting-link', $session->id ?? 0) }}"
-              data-success="Meeting link added!">
-            @csrf @method('PATCH')
-            <div class="form-group">
-                <label class="form-label">Meeting Link *</label>
-                <input type="url" name="meeting_link" class="form-input" required
-                       value="{{ $session->meeting_link ?? '' }}"
-                       placeholder="https://meet.google.com/xxx-yyy-zzz">
-            </div>
-            <div style="display:flex;gap:10px;margin-top:4px;">
-                <button type="button" class="btn btn-ghost" onclick="closeMeetingLinkModal()">Cancel</button>
-                <button type="submit" class="btn btn-primary" style="flex:1;">Save Link</button>
-            </div>
-        </form>
+<div id="meeting-link-modal" class="modal-overlay">
+    <div class="modal" style="max-width:440px;">
+        <div class="modal-header">
+            <span class="modal-title">Add Meeting Link</span>
+            <button type="button" class="modal-close" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:13px;color:var(--text-2);margin:0 0 16px;">Paste your Google Meet, Zoom, or any video call link below. It will be shared with the mentee.</p>
+            <form id="meeting-link-form"
+                  action="{{ route('mentor.sessions.meeting-link', $session->id) }}"
+                  method="POST">
+                @csrf @method('PATCH')
+                <div class="form-group">
+                    <label class="form-label">Meeting Link *</label>
+                    <input type="url" name="meeting_link" class="form-input" required
+                           value="{{ $session->meeting_link ?? '' }}"
+                           placeholder="https://meet.google.com/xxx-yyy-zzz">
+                </div>
+                <div style="display:flex;gap:10px;margin-top:4px;">
+                    <button type="button" class="btn btn-ghost" onclick="closeModal('meeting-link-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="flex:1;">Save Link</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 @endsection
@@ -242,20 +224,39 @@ function acceptSession(id) {
 }
 function declineSession(id) {
     if (!confirm('Decline this session?')) return;
-    AjaxPost(`/mentor/sessions/${id}/decline`, {}, {
+    AjaxPost(`/mentor/sessions/${id}/cancel`, {}, {
         loader: true,
         onSuccess: () => { showToast('info', 'Session declined.'); location.href = '{{ route("mentor.sessions") }}'; },
         onError: () => showToast('error', 'Could not decline.')
     });
 }
 function openMeetingLinkModal() {
-    document.getElementById('meeting-link-modal').style.display = 'flex';
+    openModal('meeting-link-modal');
 }
-function closeMeetingLinkModal() {
-    document.getElementById('meeting-link-modal').style.display = 'none';
-}
-document.getElementById('meeting-link-modal')?.addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeMeetingLinkModal();
+document.getElementById('meeting-link-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const fd = new FormData(this);
+    try {
+        const r = await fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: fd,
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) {
+            showToast('success', '🔗 Meeting link saved!');
+            closeModal('meeting-link-modal');
+            location.reload();
+        } else {
+            showToast('error', data.message || Object.values(data.errors || {})[0]?.[0] || 'Could not save link.');
+        }
+    } catch (err) {
+        showToast('error', 'Could not save link.');
+    }
 });
 </script>
 @endpush
