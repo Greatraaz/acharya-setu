@@ -18,6 +18,26 @@
     <div class="flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded-xl">✓ {{ session('success') }}</div>
     @endif
 
+    @if(session('error'))
+    <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">{{ session('error') }}</div>
+    @endif
+
+    @if($errors->any())
+    <div class="bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3 rounded-xl">
+        <ul class="list-disc list-inside space-y-1">
+            @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
+    @if(!($month->mentee_id || $month->stream?->mentee_id))
+    <div class="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">
+        This stream/month has no mentee assigned. Content can still be added, but assign a mentee on the stream for mentee-specific curriculum.
+    </div>
+    @endif
+
     {{-- Month overview --}}
     <div class="bg-white border border-gray-200 rounded-2xl p-5 flex items-center gap-4">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
@@ -99,7 +119,7 @@
                             @if($task->estimated_minutes)<p class="text-xs text-gray-400 mt-0.5">⏱ {{ $task->estimated_minutes }} min</p>@endif
                         </div>
                         <div class="flex items-center gap-1 flex-shrink-0">
-                            <button onclick="openEditTask({{ $task->toJson() }})" class="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg hover:bg-blue-100 transition-colors">Edit</button>
+                            <button type="button" onclick='openEditTask(@json($task))' class="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg hover:bg-blue-100 transition-colors">Edit</button>
                             <form method="POST" action="{{ route('admin.curriculum.tasks.destroy', $task) }}" onsubmit="return confirm('Delete?')">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="text-xs font-medium text-red-500 bg-red-50 px-2.5 py-1 rounded-lg hover:bg-red-100 transition-colors">Del</button>
@@ -164,7 +184,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Week Number</label>
-                            <input type="number" name="week_number" value="{{ $week->week_number }}" min="1" max="4" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                            <input type="number" name="week_number" value="{{ $week->week_number }}" min="1" max="5" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
@@ -190,13 +210,13 @@
                             <span class="text-sm text-gray-700 font-medium">Active</span>
                         </label>
                     </div>
-                    <div class="flex gap-3">
+                    <div class="flex gap-3 items-center">
                         <button type="submit" class="bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">Update Week</button>
-                        <form method="POST" action="{{ route('admin.curriculum.weeks.destroy', $week) }}" onsubmit="return confirm('Delete this week and all its content?')">
-                            @csrf @method('DELETE')
-                            <button type="submit" class="text-sm font-medium text-red-600 border border-red-200 px-4 py-2.5 rounded-xl hover:bg-red-50 transition-colors">Delete Week</button>
-                        </form>
                     </div>
+                </form>
+                <form method="POST" action="{{ route('admin.curriculum.weeks.destroy', $week) }}" onsubmit="return confirm('Delete this week and all its content?')" class="mt-3">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="text-sm font-medium text-red-600 border border-red-200 px-4 py-2.5 rounded-xl hover:bg-red-50 transition-colors">Delete Week</button>
                 </form>
             </div>
         </div>
@@ -204,7 +224,7 @@
     @empty
     <div class="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center">
         <p class="text-gray-500 font-medium mb-2">No weeks yet for Month {{ $month->month_number }}</p>
-        <p class="text-gray-400 text-sm">Add up to 4 weeks to structure this month's content.</p>
+        <p class="text-gray-400 text-sm">Add weeks to structure this month's content.</p>
     </div>
     @endforelse
 </div>
@@ -218,23 +238,30 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Week Number <span class="text-red-500">*</span></label>
+                    @php $usedWeeks = $month->weeks->pluck('week_number')->map(fn ($n) => (int) $n)->all(); @endphp
                     <select name="week_number" required class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white">
-                        @for($i=1;$i<=4;$i++)
-                        <option value="{{ $i }}" {{ $month->weeks->pluck('week_number')->contains($i) ? 'disabled' : '' }}>
-                            Week {{ $i }}{{ $month->weeks->pluck('week_number')->contains($i) ? ' (exists)' : '' }}
-                        </option>
+                        <option value="">— Select —</option>
+                        @for($i = 1; $i <= 5; $i++)
+                            @unless(in_array($i, $usedWeeks, true))
+                            <option value="{{ $i }}" @selected((string) old('week_number') === (string) $i)>Week {{ $i }}</option>
+                            @endunless
                         @endfor
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Title <span class="text-red-500">*</span></label>
-                    <input type="text" name="title" required placeholder="Week title…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                    <input type="text" name="title" required value="{{ old('title') }}" placeholder="Week title…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
                 </div>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Focus Statement</label>
-                <input type="text" name="focus" placeholder="Core focus of this week…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                <input type="text" name="focus" value="{{ old('focus') }}" placeholder="Core focus of this week…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
             </div>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="hidden" name="is_active" value="0">
+                <input type="checkbox" name="is_active" value="1" checked class="rounded">
+                <span class="text-sm text-gray-700 font-medium">Active</span>
+            </label>
             <div class="flex gap-3">
                 <button type="submit" class="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">Add Week</button>
                 <button type="button" onclick="document.getElementById('add-week-modal').classList.add('hidden')" class="px-4 py-2.5 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
@@ -264,6 +291,15 @@
                     <select name="type" id="task-type" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white">
                         @foreach(\App\Models\CurriculumTask::TYPES as $val => $label)
                         <option value="{{ $val }}">{{ \App\Models\CurriculumTask::TYPE_ICONS[$val] }} {{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Plan</label>
+                    <select name="plan_id" id="task-plan" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white">
+                        <option value="">— Optional —</option>
+                        @foreach(($plans ?? collect()) as $plan)
+                        <option value="{{ $plan->id }}">{{ $plan->plan_name ?? $plan->name ?? ('Plan #'.$plan->id) }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -378,9 +414,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (first) {
         const id = first.id.replace('week-body-','');
         first.style.display = 'block';
-        document.getElementById('chevron-'+id).style.transform = 'rotate(180deg)';
+        const chevron = document.getElementById('chevron-'+id);
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
         openWeeks.add(parseInt(id));
     }
+
+    @if($errors->any())
+    @if($errors->has('week_number') || $errors->has('title') || $errors->has('focus'))
+    document.getElementById('add-week-modal')?.classList.remove('hidden');
+    @elseif($errors->has('type') || $errors->has('plan_id') || $errors->has('submission_type'))
+    document.getElementById('task-modal')?.classList.remove('hidden');
+    @endif
+    @endif
 });
 
 // Tab switching
@@ -404,10 +449,18 @@ const TASK_STORE_URLS = {
 
 function openAddTask(weekId) {
     document.getElementById('task-modal-title').textContent = 'Add Task';
-    document.getElementById('task-form').action = TASK_STORE_URLS[weekId];
+    document.getElementById('task-form').action = TASK_STORE_URLS[weekId] || (`{{ url('/admin/curriculum/weeks') }}/` + weekId + '/tasks');
     document.getElementById('task-method-field').innerHTML = '';
     document.getElementById('task-title').value = '';
     document.getElementById('task-description').value = '';
+    document.getElementById('task-type').value = 'task';
+    const plan = document.getElementById('task-plan');
+    if (plan) plan.value = '';
+    document.getElementById('task-submission-type').value = 'none';
+    document.getElementById('task-minutes').value = 30;
+    document.getElementById('task-order').value = 0;
+    document.getElementById('task-required').checked = true;
+    document.getElementById('task-active').checked = true;
     document.getElementById('task-modal').classList.remove('hidden');
 }
 
@@ -418,6 +471,8 @@ function openEditTask(task) {
     document.getElementById('task-title').value = task.title || '';
     document.getElementById('task-description').value = task.description || '';
     document.getElementById('task-type').value = task.type || 'task';
+    const plan = document.getElementById('task-plan');
+    if (plan) plan.value = task.plan_id || '';
     document.getElementById('task-submission-type').value = task.submission_type || 'none';
     document.getElementById('task-minutes').value = task.estimated_minutes || 0;
     document.getElementById('task-order').value = task.order_index || 0;

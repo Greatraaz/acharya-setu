@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{EducationStream, CurriculumMonth, CurriculumWeek, CurriculumTask, CurriculumMcq, MenteeEnrollment, StudentCurriculumProgress, User};
+use App\Models\{EducationStream, CurriculumMonth, CurriculumWeek, CurriculumTask, CurriculumMcq, MenteeEnrollment, Plan, StudentCurriculumProgress, User};
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -152,8 +152,13 @@ class CurriculumController extends Controller
     // ── Weeks ─────────────────────────────────────────────────
     public function weeks(CurriculumMonth $month)
     {
-        $month->load(['stream', 'weeks.tasks', 'weeks.mcqs']);
-        return view('admin.curriculum.weeks.index', compact('month'));
+        $month->load(['stream.mentee:id,name,email', 'weeks.tasks', 'weeks.mcqs']);
+        $plans = Plan::query()->orderBy('id')->get(['id', 'plan_name', 'slug', 'status']);
+        if ($plans->contains(fn ($p) => ($p->status ?? null) === 'active')) {
+            $plans = $plans->where('status', 'active')->values();
+        }
+
+        return view('admin.curriculum.weeks.index', compact('month', 'plans'));
     }
  
     public function storeWeek(Request $request, CurriculumMonth $month)
@@ -161,7 +166,13 @@ class CurriculumController extends Controller
         $month->load('stream');
 
         $data = $request->validate([
-            'week_number'  => 'required|integer|min:1|max:4',
+            'week_number'  => [
+                'required',
+                'integer',
+                'min:1',
+                'max:5',
+                Rule::unique('curriculum_weeks', 'week_number')->where('month_id', $month->id),
+            ],
             'title'        => 'required|string|max:200',
             'focus'        => 'nullable|string',
             'mentor_guide' => 'nullable|string',
@@ -170,8 +181,9 @@ class CurriculumController extends Controller
         ]);
  
         $data['month_id']  = $month->id;
-        $data['mentee_id'] = $this->resolveMenteeIdForStream($month->stream, $month->mentee_id);
+        $data['mentee_id'] = $this->resolveMenteeIdForStream($month->stream, $month->mentee_id, required: false);
         $data['is_active'] = $request->boolean('is_active', true);
+        $data['sort_order'] = $data['week_number'];
  
         CurriculumWeek::create($data);
         return redirect()->back()->with('success', 'Week created.');
@@ -182,7 +194,15 @@ class CurriculumController extends Controller
         $week->load('month.stream');
 
         $data = $request->validate([
-            'week_number'  => 'required|integer|min:1|max:4',
+            'week_number'  => [
+                'required',
+                'integer',
+                'min:1',
+                'max:5',
+                Rule::unique('curriculum_weeks', 'week_number')
+                    ->where('month_id', $week->month_id)
+                    ->ignore($week->id),
+            ],
             'title'        => 'required|string|max:200',
             'focus'        => 'nullable|string',
             'mentor_guide' => 'nullable|string',
@@ -191,7 +211,11 @@ class CurriculumController extends Controller
         ]);
  
         $data['is_active']  = $request->boolean('is_active', true);
-        $data['mentee_id']  = $this->resolveMenteeIdForStream($week->month->stream, $week->month->mentee_id);
+        $data['mentee_id']  = $this->resolveMenteeIdForStream(
+            $week->month->stream,
+            $week->month->mentee_id ?? $week->mentee_id,
+            required: false
+        );
         $week->update($data);
         return redirect()->back()->with('success', 'Week updated.');
     }
@@ -211,6 +235,7 @@ class CurriculumController extends Controller
             'title'             => 'required|string|max:200',
             'description'       => 'nullable|string',
             'type'              => 'required|in:task,reading,video,project,quiz,reflection',
+            'plan_id'           => 'nullable|integer|exists:plans,id',
             'order_index'       => 'nullable|integer|min:0',
             'estimated_minutes' => 'nullable|integer|min:0',
             'is_required'       => 'nullable|boolean',
@@ -219,9 +244,15 @@ class CurriculumController extends Controller
         ]);
  
         $data['week_id']     = $week->id;
-        $data['mentee_id']   = $this->resolveMenteeIdForStream($week->month->stream, $week->mentee_id ?? $week->month->mentee_id);
+        $data['mentee_id']   = $this->resolveMenteeIdForStream(
+            $week->month->stream,
+            $week->mentee_id ?? $week->month->mentee_id,
+            required: false
+        );
+        $data['plan_id']     = $data['plan_id'] ?? null;
         $data['is_required'] = $request->boolean('is_required', true);
         $data['is_active']   = $request->boolean('is_active', true);
+        $data['submission_type'] = $data['submission_type'] ?? 'none';
  
         CurriculumTask::create($data);
         return redirect()->back()->with('success', 'Task created.');
@@ -233,6 +264,7 @@ class CurriculumController extends Controller
             'title'             => 'required|string|max:200',
             'description'       => 'nullable|string',
             'type'              => 'required|in:task,reading,video,project,quiz,reflection',
+            'plan_id'           => 'nullable|integer|exists:plans,id',
             'order_index'       => 'nullable|integer|min:0',
             'estimated_minutes' => 'nullable|integer|min:0',
             'is_required'       => 'nullable|boolean',
@@ -270,7 +302,11 @@ class CurriculumController extends Controller
         ]);
  
         $data['week_id']   = $week->id;
-        $data['mentee_id'] = $this->resolveMenteeIdForStream($week->month->stream, $week->mentee_id ?? $week->month->mentee_id);
+        $data['mentee_id'] = $this->resolveMenteeIdForStream(
+            $week->month->stream,
+            $week->mentee_id ?? $week->month->mentee_id,
+            required: false
+        );
  
         CurriculumMcq::create($data);
         return redirect()->back()->with('success', 'MCQ created.');
@@ -379,14 +415,18 @@ class CurriculumController extends Controller
         }
     }
 
-    private function resolveMenteeIdForStream(EducationStream $stream, ?int $fallbackMenteeId = null): int
+    private function resolveMenteeIdForStream(EducationStream $stream, ?int $fallbackMenteeId = null, bool $required = true): ?int
     {
         $menteeId = $stream->mentee_id ?? $fallbackMenteeId;
 
         if (! $menteeId) {
-            throw ValidationException::withMessages([
-                'mentee_id' => 'Assign a mentee to this stream before adding curriculum content.',
-            ]);
+            if ($required) {
+                throw ValidationException::withMessages([
+                    'mentee_id' => 'Assign a mentee to this stream before adding curriculum content.',
+                ]);
+            }
+
+            return null;
         }
 
         return (int) $menteeId;

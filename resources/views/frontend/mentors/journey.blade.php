@@ -6,9 +6,12 @@
     @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
-        <div class="dash-header">
-            <div class="dash-title">Journey Tracker</div>
-            <div class="dash-subtitle">Track curriculum progress for your mentees.</div>
+        <div class="dash-header flex-between" style="flex-wrap:wrap;gap:12px;">
+            <div>
+                <div class="dash-title">Progress Tracker</div>
+                <div class="dash-subtitle">Track curriculum progress for your mentees.</div>
+            </div>
+            <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-primary btn-sm">Build curriculum</a>
         </div>
 
         @forelse($enrollments as $enrollment)
@@ -39,7 +42,8 @@
         <div class="empty-state" style="padding:48px 0;">
             <div style="font-size:48px;margin-bottom:12px;">🗺️</div>
             <div style="font-size:16px;font-weight:700;margin-bottom:8px;">No active journeys</div>
-            <p style="font-size:13px;color:var(--text-2);max-width:380px;margin:0 auto;">When mentees enroll in a curriculum stream with you, their progress will appear here.</p>
+            <p style="font-size:13px;color:var(--text-2);max-width:380px;margin:0 auto 16px;">Create a mentee curriculum track, then progress will appear here as they complete work.</p>
+            <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-primary">Create curriculum</a>
         </div>
         @endforelse
 
@@ -47,9 +51,12 @@
         <div class="card" style="margin-top:20px;">
             <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Mentees without a curriculum</h3>
             @foreach($menteesWithoutEnrollment as $mentee)
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;align-items:center;gap:8px;">
                 <span>{{ $mentee->name }}</span>
-                <a href="{{ route('mentor.mentees.show', $mentee->id) }}" class="btn btn-ghost btn-sm">Profile</a>
+                <div style="display:flex;gap:6px;">
+                    <a href="{{ route('mentor.curriculum.tracks', ['mentee_id' => $mentee->id]) }}" class="btn btn-outline btn-sm">Create track</a>
+                    <a href="{{ route('mentor.mentees.show', $mentee->id) }}" class="btn btn-ghost btn-sm">Profile</a>
+                </div>
             </div>
             @endforeach
         </div>

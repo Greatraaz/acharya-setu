@@ -25,8 +25,11 @@
     <a href="{{ route('mentor.mentees') }}" class="sidebar-item @if(request()->routeIs('mentor.mentees*')) active @endif">
         <span class="si-icon">🎓</span> My Mentees
     </a>
+    <a href="{{ route('mentor.curriculum.tracks') }}" class="sidebar-item @if(request()->routeIs('mentor.curriculum*')) active @endif">
+        <span class="si-icon">🗺️</span> Curriculum
+    </a>
     <a href="{{ route('mentor.journey') }}" class="sidebar-item @if(request()->routeIs('mentor.journey*')) active @endif">
-        <span class="si-icon">🗺️</span> Journey Tracker
+        <span class="si-icon">📈</span> Progress Tracker
     </a>
 
     <div class="sidebar-section-label">Content</div>

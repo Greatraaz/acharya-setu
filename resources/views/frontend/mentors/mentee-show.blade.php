@@ -11,7 +11,10 @@
                 <div class="dash-title">{{ $mentee->name }}</div>
                 <div class="dash-subtitle">{{ $mentee->email }}@if($mentee->phone) · {{ $mentee->phone }}@endif</div>
             </div>
-            <a href="{{ route('mentor.journey.show', $mentee->id) }}" class="btn btn-outline">🗺️ Journey</a>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <a href="{{ route('mentor.curriculum.tracks', ['mentee_id' => $mentee->id]) }}" class="btn btn-primary">Curriculum</a>
+                <a href="{{ route('mentor.journey.show', $mentee->id) }}" class="btn btn-outline">Progress</a>
+            </div>
         </div>
 
         <div class="card" style="margin-bottom:20px;">
@@ -27,7 +30,27 @@
             @endif
         </div>
 
-        @if($enrollments->isNotEmpty())
+        @if(($tracks ?? collect())->isNotEmpty())
+        <div class="card" style="margin-bottom:20px;">
+            <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Curriculum</h3>
+            @foreach($tracks as $track)
+            @php
+                $enrollment = $enrollments->firstWhere('stream_id', $track->id);
+            @endphp
+            <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;align-items:center;">
+                <div>
+                    <strong>{{ $track->name }}</strong>
+                    · {{ $track->months_count }} month(s)
+                    · {{ $track->is_active ? 'Active' : 'Inactive' }}
+                    @if($enrollment)
+                    · Enrolled · Month {{ $enrollment->current_month }} / Week {{ $enrollment->current_week }}
+                    @endif
+                </div>
+                <a href="{{ route('mentor.curriculum.months', $track) }}" class="btn btn-ghost btn-sm">Manage</a>
+            </div>
+            @endforeach
+        </div>
+        @elseif($enrollments->isNotEmpty())
         <div class="card" style="margin-bottom:20px;">
             <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Enrollments</h3>
             @foreach($enrollments as $enrollment)

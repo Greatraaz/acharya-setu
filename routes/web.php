@@ -28,6 +28,7 @@ use App\Http\Controllers\Mentor\WalletController       as MentorWalletController
 use App\Http\Controllers\Mentor\ProfileController      as MentorProfileController;
 use App\Http\Controllers\Mentor\AvailabilityController as MentorAvailabilityController;
 use App\Http\Controllers\Mentor\PortalController       as MentorPortalController;
+use App\Http\Controllers\Mentor\CurriculumController  as MentorCurriculumController;
 
 use App\Http\Controllers\Mentee\OnboardingController   as MenteeOnboardingController;
 use App\Http\Controllers\Mentee\DashboardController    as MenteeDashboardController;
@@ -237,6 +238,36 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::post('/community/messages/{message}/like', [MessageController::class, 'like'])->name('community.messages.like');
     Route::delete('/community/messages/{message}', [MessageController::class, 'destroy'])->name('community.messages.destroy');
     Route::get('/assessments',                    [MentorPortalController::class, 'assessments'])->name('assessments');
+
+    // Curriculum builder (mirrors /api/v1/mentor/curriculum/*)
+    Route::prefix('curriculum')->name('curriculum.')->group(function () {
+        Route::get('/',                                 [MentorCurriculumController::class, 'tracks'])->name('tracks');
+        Route::post('/tracks',                          [MentorCurriculumController::class, 'storeTrack'])->name('tracks.store');
+        Route::put('/tracks/{track}',                   [MentorCurriculumController::class, 'updateTrack'])->name('tracks.update');
+
+        Route::get('/tracks/{track}/months',            [MentorCurriculumController::class, 'months'])->name('months');
+        Route::post('/tracks/{track}/months',           [MentorCurriculumController::class, 'storeMonth'])->name('months.store');
+        Route::put('/months/{month}',                   [MentorCurriculumController::class, 'updateMonth'])->name('months.update');
+        Route::delete('/months/{month}',                [MentorCurriculumController::class, 'destroyMonth'])->name('months.destroy');
+
+        Route::get('/months/{month}/weeks',             [MentorCurriculumController::class, 'weeks'])->name('weeks');
+        Route::post('/months/{month}/weeks',            [MentorCurriculumController::class, 'storeWeek'])->name('weeks.store');
+        Route::put('/weeks/{week}',                     [MentorCurriculumController::class, 'updateWeek'])->name('weeks.update');
+        Route::delete('/weeks/{week}',                  [MentorCurriculumController::class, 'destroyWeek'])->name('weeks.destroy');
+
+        Route::post('/weeks/{week}/tasks',              [MentorCurriculumController::class, 'storeTask'])->name('tasks.store');
+        Route::match(['put', 'post'], '/tasks/{task}',  [MentorCurriculumController::class, 'updateTask'])->name('tasks.update');
+        Route::delete('/tasks/{task}',                  [MentorCurriculumController::class, 'destroyTask'])->name('tasks.destroy');
+
+        Route::post('/weeks/{week}/mcqs',               [MentorCurriculumController::class, 'storeMcqTopic'])->name('mcqs.store');
+        Route::put('/weeks/{week}/mcqs/{topic}',        [MentorCurriculumController::class, 'updateMcqTopic'])->name('mcqs.update');
+        Route::delete('/weeks/{week}/mcqs/{topic}',     [MentorCurriculumController::class, 'destroyMcqTopic'])->name('mcqs.destroy');
+        Route::delete('/weeks/{week}/mcqs/{topic}/{mcq}', [MentorCurriculumController::class, 'destroyMcqItem'])->name('mcqs.item.destroy');
+
+        Route::post('/weeks/{week}/supporting-materials', [MentorCurriculumController::class, 'storeSupportingMaterial'])->name('materials.store');
+        Route::match(['put', 'post'], '/supporting-materials/{material}', [MentorCurriculumController::class, 'updateSupportingMaterial'])->name('materials.update');
+        Route::delete('/supporting-materials/{material}', [MentorCurriculumController::class, 'destroySupportingMaterial'])->name('materials.destroy');
+    });
 });
 
 /*

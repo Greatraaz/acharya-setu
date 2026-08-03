@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\Channel;
 use App\Models\ConsultationSession;
+use App\Models\EducationStream;
 use App\Models\MenteeEnrollment;
 use App\Models\SessionNote;
+use App\Models\StudentCurriculumProgress;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
 
@@ -46,6 +48,8 @@ class PortalController extends Controller
         $mentee = $this->findMentorMentee($id);
         $mentorId = auth()->id();
 
+        $this->syncEnrollmentsFromTracks($mentorId, $mentee->id);
+
         $sessions = ConsultationSession::where('mentor_id', $mentorId)
             ->where('mentee_id', $mentee->id)
             ->latest('scheduled_at')
@@ -57,12 +61,20 @@ class PortalController extends Controller
             ->with('stream')
             ->get();
 
-        return view('frontend.mentors.mentee-show', compact('mentee', 'sessions', 'enrollments'));
+        $tracks = EducationStream::where('mentor_id', $mentorId)
+            ->where('mentee_id', $mentee->id)
+            ->withCount('months')
+            ->orderBy('sort_order')
+            ->get();
+
+        return view('frontend.mentors.mentee-show', compact('mentee', 'sessions', 'enrollments', 'tracks'));
     }
 
     public function journey()
     {
         $mentorId = auth()->id();
+
+        $this->syncEnrollmentsFromTracks($mentorId);
 
         $enrollments = MenteeEnrollment::where('mentor_id', $mentorId)
             ->with(['mentee', 'stream'])
@@ -73,8 +85,16 @@ class PortalController extends Controller
                 return $enrollment;
             });
 
+        $assignedMenteeIds = EducationStream::where('mentor_id', $mentorId)
+            ->whereNotNull('mentee_id')
+            ->pluck('mentee_id')
+            ->merge($enrollments->pluck('mentee_id'))
+            ->unique()
+            ->filter()
+            ->values();
+
         $menteesWithoutEnrollment = $this->mentorMenteesQuery()
-            ->whereDoesntHave('enrollments', fn ($q) => $q->where('mentor_id', $mentorId))
+            ->whereNotIn('id', $assignedMenteeIds)
             ->limit(20)
             ->get();
 
@@ -86,6 +106,8 @@ class PortalController extends Controller
         $mentee = $this->findMentorMentee($menteeId);
         $mentorId = auth()->id();
 
+        $this->syncEnrollmentsFromTracks($mentorId, $mentee->id);
+
         $enrollments = MenteeEnrollment::where('mentor_id', $mentorId)
             ->where('mentee_id', $mentee->id)
             ->with('stream')
@@ -95,7 +117,17 @@ class PortalController extends Controller
                 return $enrollment;
             });
 
-        return view('frontend.mentors.journey-show', compact('mentee', 'enrollments'));
+        // Fallback: show tracks even if enrollment sync somehow missed them.
+        $tracks = EducationStream::where('mentor_id', $mentorId)
+            ->where('mentee_id', $mentee->id)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function (EducationStream $track) use ($mentee) {
+                $track->progress_data = StudentCurriculumProgress::getOverallProgress($mentee->id, $track->id);
+                return $track;
+            });
+
+        return view('frontend.mentors.journey-show', compact('mentee', 'enrollments', 'tracks'));
     }
 
     public function community()
@@ -175,6 +207,31 @@ class PortalController extends Controller
         return view('frontend.mentors.assessments', compact('assessments', 'menteeCount'));
     }
 
+    private function syncEnrollmentsFromTracks(int $mentorId, ?int $menteeId = null): void
+    {
+        $tracks = EducationStream::where('mentor_id', $mentorId)
+            ->whereNotNull('mentee_id')
+            ->when($menteeId, fn ($q) => $q->where('mentee_id', $menteeId))
+            ->get(['id', 'mentee_id', 'mentor_id']);
+
+        foreach ($tracks as $track) {
+            MenteeEnrollment::firstOrCreate(
+                [
+                    'mentee_id' => $track->mentee_id,
+                    'mentor_id' => $track->mentor_id,
+                    'stream_id' => $track->id,
+                ],
+                [
+                    'start_date'        => now()->toDateString(),
+                    'expected_end_date' => now()->addMonths(6)->toDateString(),
+                    'status'            => 'active',
+                    'current_month'     => 1,
+                    'current_week'      => 1,
+                ]
+            );
+        }
+    }
+
     private function mentorMenteesQuery()
     {
         $mentorId = auth()->id();
@@ -182,8 +239,9 @@ class PortalController extends Controller
         $sessionIds = ConsultationSession::where('mentor_id', $mentorId)->pluck('mentee_id');
         $assignedIds = User::where('assigned_mentor_id', $mentorId)->where('role', 'mentee')->pluck('id');
         $enrolledIds = MenteeEnrollment::where('mentor_id', $mentorId)->pluck('mentee_id');
+        $trackIds = EducationStream::where('mentor_id', $mentorId)->pluck('mentee_id');
 
-        $ids = $sessionIds->merge($assignedIds)->merge($enrolledIds)->unique()->filter()->values();
+        $ids = $sessionIds->merge($assignedIds)->merge($enrolledIds)->merge($trackIds)->unique()->filter()->values();
 
         return User::where('role', 'mentee')
             ->whereIn('id', $ids)
