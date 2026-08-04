@@ -2,7 +2,7 @@
 
 /*
 |=============================================================
-|  AcharyaSetu  —  routes/web.php  (FRONTEND)
+|  Vedrix  —  routes/web.php  (FRONTEND)
 |  Covers: Public pages, Auth (email+OTP), Mentor onboarding,
 |  Mentee onboarding, Mentor dashboard, Mentee dashboard,
 |  Sessions, Wallet, Journey, Community, Jobs, Wellness, Quiz

@@ -1,6 +1,6 @@
 {{-- resources/views/frontend/mentor/profile-edit.blade.php --}}
 @extends('frontend.layouts.app')
-@section('title', 'Edit Profile — AcharyaSetu Mentor')
+@section('title', 'Edit Profile — Vedrix Mentor')
 
 @section('content')
 <div class="dash-layout">
@@ -157,7 +157,7 @@
             {{-- ── Section: Pricing ─────────────────── --}}
             <div class="card" style="margin-bottom:20px;">
                 <h3 style="font-size:15px;font-weight:700;margin-bottom:4px;">Session Pricing</h3>
-                <p style="font-size:12px;color:var(--text-2);margin-bottom:16px;">AcharyaSetu charges a 20% platform fee. You keep 80%.</p>
+                <p style="font-size:12px;color:var(--text-2);margin-bottom:16px;">Vedrix charges a 20% platform fee. You keep 80%.</p>
 
                 <div class="form-group">
                     <label class="form-label">Rate per Minute (₹) *</label>

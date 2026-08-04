@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'Create Account — AcharyaSetu')
+@section('title', 'Create Account — Vedrix')
 
 @section('content')
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(var(--nav-h) + 40px) 16px 40px;">
@@ -7,7 +7,7 @@
 
     {{-- Logo --}}
     <div class="text-center" style="margin-bottom:32px;">
-        <img src="{{ asset('images/logo.png') }}" alt="AcharyaSetu" style="height:40px;margin:0 auto 12px;">
+        <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin:0 auto 12px;">
         <h1 style="font-size:24px;font-weight:800;">Create your account</h1>
         <p style="font-size:14px;color:var(--text-2);">Join 45,000+ learners & mentors</p>
     </div>

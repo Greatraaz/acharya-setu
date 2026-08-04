@@ -1,6 +1,6 @@
 @extends('frontend.layouts.app')
-@section('title', 'Contact Us — AcharyaSetu')
-@section('meta_description', 'Get in touch with the AcharyaSetu team. We respond within 24 hours.')
+@section('title', 'Contact Us — Vedrix')
+@section('meta_description', 'Get in touch with the Vedrix team. We respond within 24 hours.')
 
 @section('content')
 <div style="padding-top:var(--nav-h);">
@@ -28,7 +28,7 @@
                     <h2 style="font-size:18px; font-weight:800; margin-bottom:24px;">Contact Information</h2>
 
                     @foreach([
-                        ['📧','Email',        'hello@acharyasetu.com',   'For general enquiries & partnerships'],
+                        ['📧','Email',        'hello@vedrix.com',   'For general enquiries & partnerships'],
                         ['📱','WhatsApp',     '+91 98765 43210',         'Mon–Sat, 9 AM – 8 PM IST'],
                         ['🏢','Our Office',   'Koramangala, Bangalore',  'Karnataka, India – 560034'],
                         ['🕐','Working Hours','Mon – Sat, 9 AM – 8 PM', 'IST (UTC +5:30)'],

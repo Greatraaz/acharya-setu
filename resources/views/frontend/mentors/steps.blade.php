@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'Become a Mentor — Step ' . $step . ' of 5 — AcharyaSetu')
+@section('title', 'Become a Mentor — Step ' . $step . ' of 5 — Vedrix')
 
 @section('content')
 <div style="min-height:100vh; padding:calc(var(--nav-h) + 40px) 16px 60px; background:var(--bg);">
@@ -7,7 +7,7 @@
 
     {{-- ── HEADER ────────────────────────────────────────── --}}
     <div class="text-center" style="margin-bottom:32px;">
-        <img src="{{ asset('images/logo.png') }}" alt="AcharyaSetu" style="height:38px; margin:0 auto 14px;">
+        <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin:0 auto 14px;">
         <h1 style="font-size:22px; font-weight:800; margin-bottom:4px;">Become a Mentor</h1>
         <p style="font-size:13px; color:var(--text-2);">Step {{ $step }} of 5 — Complete your profile to start mentoring</p>
     </div>

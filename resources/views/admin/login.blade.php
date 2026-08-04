@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>Admin Login — AcharyaSetu</title>
+  <title>Admin Login — Vedrix</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=202608041559">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=202608041559">
+  <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=202608041559">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
@@ -13,7 +16,7 @@
 <body class="min-h-screen flex items-center justify-center" style="background:linear-gradient(135deg,#1B3A5C 0%,#2d5a8e 100%)">
   <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 p-10">
     <div class="text-center mb-8">
-      <img src="{{ asset('admin/images/logo.jpg') }}" alt="AcharyaSetu" class="h-16 mx-auto object-contain mb-4">
+      <img src="{{ asset('admin/images/logo.png') }}" alt="Vedrix" class="w-[200px] max-w-full h-auto mx-auto object-contain mb-4">
       <p class="text-gray-500 text-sm mt-1">Sign in to continue</p>
     </div>
 

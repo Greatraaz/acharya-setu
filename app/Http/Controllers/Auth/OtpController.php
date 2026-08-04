@@ -44,7 +44,7 @@ class OtpController extends Controller
         }
 
         // ── Send SMS OTP ──────────────────────────────────────
-        $this->sendSms($request->phone, "Your AcharyaSetu OTP is {$phoneOtp}. Valid for 10 minutes. Do not share.");
+        $this->sendSms($request->phone, "Your Vedrix OTP is {$phoneOtp}. Valid for 10 minutes. Do not share.");
 
         return response()->json([
             'message'    => 'OTPs sent to your email and phone.',
@@ -72,7 +72,7 @@ class OtpController extends Controller
         $otp = $this->generateOtp();
         OtpCode::storeOtp($request->phone, 'phone', $otp);
 
-        $this->sendSms($request->phone, "Your AcharyaSetu login OTP is {$otp}. Valid for 10 minutes.");
+        $this->sendSms($request->phone, "Your Vedrix login OTP is {$otp}. Valid for 10 minutes.");
 
         return response()->json(['message' => 'OTP sent to your phone.', 'expires_in' => 600]);
     }
@@ -162,7 +162,7 @@ class OtpController extends Controller
     private function sendViaMSG91(string $phone, string $message): void
     {
         $authKey  = config('services.msg91.auth_key');
-        $senderId = config('services.msg91.sender_id', 'ACHSETU');
+        $senderId = config('services.msg91.sender_id', 'VEDRIX');
         $route    = config('services.msg91.route', '4');
 
         // Ensure +91 format

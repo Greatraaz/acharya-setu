@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use OpenApi\Attributes as OA;
 
 #[OA\Info(
-    title: "Acharya Setu API",
+    title: "Vedrix API",
     version: "1.0.0",
     description: "API documentation"
 )]
 #[OA\Server(
-    url: "http://localhost/acharya-setu/public/api/v1",  // ✅ Fixed URL
+    url: "http://localhost/vedrix/public/api/v1",
     description: "Local server"
 )]
 #[OA\Server(

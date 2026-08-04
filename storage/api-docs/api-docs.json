@@ -1,13 +1,13 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "Acharya Setu API",
+        "title": "Vedrix API",
         "description": "API documentation",
         "version": "1.0.0"
     },
     "servers": [
         {
-            "url": "http://localhost/acharya-setu/public/api/v1",
+            "url": "http://localhost/vedrix/public/api/v1",
             "description": "Local server"
         },
         {
@@ -534,7 +534,7 @@
                                 ],
                                 "properties": {
                                     "email": {
-                                        "description": "👩‍💼 Mentor: priya.sharma@example.com | 🎓 Mentee: eshaan.bose@student.com",
+                                        "description": "ðŸ‘©â€ðŸ’¼ Mentor: priya.sharma@example.com | ðŸŽ“ Mentee: eshaan.bose@student.com",
                                         "type": "string",
                                         "format": "email",
                                         "example": "priya.sharma@example.com"
@@ -553,7 +553,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Login successful — copy token → click Authorize → paste into mentorAuth or menteeAuth",
+                        "description": "Login successful â€” copy token â†’ click Authorize â†’ paste into mentorAuth or menteeAuth",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1854,7 +1854,7 @@
                 "tags": [
                     "Mentee Onboarding"
                 ],
-                "summary": "Save onboarding step 1 — Basic personal info",
+                "summary": "Save onboarding step 1 â€” Basic personal info",
                 "operationId": "5f03b674c6d39d4e0005ec90c9b5408a",
                 "requestBody": {
                     "required": true,
@@ -1938,7 +1938,7 @@
                 "tags": [
                     "Mentee Onboarding"
                 ],
-                "summary": "Save onboarding step 2 — Education details",
+                "summary": "Save onboarding step 2 â€” Education details",
                 "operationId": "693d1500cd57faa258d5cdfb362aaca2",
                 "requestBody": {
                     "required": false,
@@ -2009,7 +2009,7 @@
                 "tags": [
                     "Mentee Onboarding"
                 ],
-                "summary": "Save onboarding step 3 — Career goals",
+                "summary": "Save onboarding step 3 â€” Career goals",
                 "operationId": "5909776628bab431ae32097bd4bd07df",
                 "requestBody": {
                     "required": false,
@@ -2278,7 +2278,7 @@
                                 ],
                                 "properties": {
                                     "slots": {
-                                        "description": "Full weekly schedule — existing slots are deleted and replaced",
+                                        "description": "Full weekly schedule â€” existing slots are deleted and replaced",
                                         "type": "array",
                                         "items": {
                                             "required": [
@@ -2399,7 +2399,7 @@
                                 ],
                                 "properties": {
                                     "slots": {
-                                        "description": "One or more slots to add — existing slots are NOT deleted",
+                                        "description": "One or more slots to add â€” existing slots are NOT deleted",
                                         "type": "array",
                                         "items": {
                                             "required": [
@@ -2717,7 +2717,7 @@
                         }
                     },
                     "403": {
-                        "description": "Forbidden — slot does not belong to this mentor"
+                        "description": "Forbidden â€” slot does not belong to this mentor"
                     },
                     "404": {
                         "description": "Slot not found"
@@ -2861,7 +2861,7 @@
                         }
                     },
                     "403": {
-                        "description": "Forbidden — slot does not belong to this mentor"
+                        "description": "Forbidden â€” slot does not belong to this mentor"
                     },
                     "404": {
                         "description": "Slot not found"
@@ -2949,7 +2949,7 @@
                 "tags": [
                     "Mentor Onboarding"
                 ],
-                "summary": "Save onboarding step 1 — Basic info and avatar",
+                "summary": "Save onboarding step 1 â€” Basic info and avatar",
                 "operationId": "792aec050a98d0cc0219da931b1bcf1a",
                 "requestBody": {
                     "required": true,
@@ -3048,7 +3048,7 @@
                 "tags": [
                     "Mentor Onboarding"
                 ],
-                "summary": "Save onboarding step 2 — Professional details",
+                "summary": "Save onboarding step 2 â€” Professional details",
                 "operationId": "c94000b6b8267b91145247f2539cac2f",
                 "requestBody": {
                     "required": true,
@@ -3141,7 +3141,7 @@
                 "tags": [
                     "Mentor Onboarding"
                 ],
-                "summary": "Save onboarding step 3 — Areas of expertise",
+                "summary": "Save onboarding step 3 â€” Areas of expertise",
                 "operationId": "3663d08a93540250a85f5e0a996a0a4f",
                 "requestBody": {
                     "required": true,
@@ -3212,7 +3212,7 @@
                 "tags": [
                     "Mentor Onboarding"
                 ],
-                "summary": "Save onboarding step 4 — Mentoring preferences and strengths",
+                "summary": "Save onboarding step 4 â€” Mentoring preferences and strengths",
                 "operationId": "d7ae351206dfd155b78da1e829c6b0ff",
                 "requestBody": {
                     "required": false,
@@ -3321,7 +3321,7 @@
                         }
                     },
                     "422": {
-                        "description": "Profile incomplete — required sections missing",
+                        "description": "Profile incomplete â€” required sections missing",
                         "content": {
                             "application/json": {
                                 "schema": {

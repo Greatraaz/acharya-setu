@@ -152,7 +152,7 @@ class WalletController extends Controller
                 'amount'        => $amountRupees,
                 'amount_paise'  => $amountPaise,
                 'currency'      => 'INR',
-                'name'          => 'AcharyaSetu',
+                'name'          => 'Vedrix',
                 'description'   => 'Wallet Top-up',
                 'prefill'       => [
                     'name'    => $user->name,

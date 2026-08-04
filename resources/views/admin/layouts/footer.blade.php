@@ -1,6 +1,6 @@
 <footer class="bg-white border-t border-slate-200 px-8 py-5">
     <div class="flex justify-between items-center text-sm text-slate-500">
-        <p>© {{ date('Y') }} AcharyaSetu. All rights reserved.</p>
+        <p>© {{ date('Y') }} Vedrix. All rights reserved.</p>
 
         <div class="flex gap-6">
             <a href="#" class="hover:text-orange-500">Privacy</a>

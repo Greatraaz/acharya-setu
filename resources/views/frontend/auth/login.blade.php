@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'Sign In — AcharyaSetu')
+@section('title', 'Sign In — Vedrix')
 
 @section('content')
 <div style="min-height:100vh;display:grid;grid-template-columns:1fr 1fr;padding-top:var(--nav-h);">
@@ -8,7 +8,7 @@
     <div style="background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;padding:60px;position:relative;overflow:hidden;">
         <div style="position:absolute;inset:0;background:radial-gradient(ellipse 70% 70% at 50% 50%,rgba(245,158,11,.07) 0%,transparent 70%);pointer-events:none;"></div>
         <div style="position:relative;">
-            <img src="{{ asset('images/logo.png') }}" alt="AcharyaSetu" style="height:44px;margin-bottom:36px;">
+            <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin-bottom:36px;">
             <h2 style="font-size:32px;font-weight:800;line-height:1.15;margin-bottom:16px;">
                 Your career journey<br><span class="text-brand">starts here.</span>
             </h2>

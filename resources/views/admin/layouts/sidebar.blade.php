@@ -1,12 +1,10 @@
 <aside class="fixed left-0 top-0 h-screen w-72 bg-white border-r border-slate-200 shadow-soft z-50 flex flex-col">
-    <div class="rounded-2xl bg-white/20 flex items-center justify-center text-2xl">
-        <img src="{{ asset('admin/images/logo.jpg') }}" alt="AcharyaSetu" class="h-16 mx-auto object-contain mb-4">
-    </div>
-    <div>
-        <h2 class="font-bold text-xl">Admin Platform</h2>
+    <div class="px-5 pt-5 pb-4 border-b border-slate-100">
+        <img src="{{ asset('admin/images/logo.png') }}" alt="Vedrix" class="w-[200px] max-w-full h-auto object-contain">
+        <p class="mt-2 text-xl font-bold text-black">Admin Platform</p>
     </div>
 
-    <div class="px-5 py-6 overflow-y-auto flex-1 space-y-1">
+    <div class="px-5 pt-3 pb-6 overflow-y-auto flex-1 space-y-1">
 
         @php
         $current = request()->route()->getName();
@@ -49,7 +47,7 @@
         @foreach($menuSections as $section => $menus)
 
             {{-- Section Divider --}}
-            <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest px-2 pt-4 pb-1">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest px-2 pb-1 {{ $loop->first ? 'pt-1' : 'pt-4' }}">
                 {{ $section }}
             </p>
 

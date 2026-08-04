@@ -252,7 +252,7 @@ class User extends Authenticatable
     {
         $this->update([
             'is_active' => false,
-            'email'     => 'deleted_' . $this->id . '_' . now()->timestamp . '@deleted.acharyasetu.local',
+            'email'     => 'deleted_' . $this->id . '_' . now()->timestamp . '@deleted.vedrix.local',
             'phone'     => null,
         ]);
     }

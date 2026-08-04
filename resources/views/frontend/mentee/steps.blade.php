@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'Set Up Your Profile — Step ' . $step . ' of 4 — AcharyaSetu')
+@section('title', 'Set Up Your Profile — Step ' . $step . ' of 4 — Vedrix')
 
 @section('content')
 <div style="min-height:100vh; padding:calc(var(--nav-h) + 40px) 16px 60px; background:var(--bg);">
@@ -7,7 +7,7 @@
 
     {{-- ── HEADER ────────────────────────────────────────── --}}
     <div class="text-center" style="margin-bottom:32px;">
-        <img src="{{ asset('images/logo.png') }}" alt="AcharyaSetu" style="height:38px; margin:0 auto 14px;">
+        <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin:0 auto 14px;">
         @if($step < 4)
         <h1 style="font-size:22px; font-weight:800; margin-bottom:4px;">Set Up Your Profile</h1>
         <p style="font-size:13px; color:var(--text-2);">Step {{ $step }} of 4 — Takes less than 3 minutes</p>

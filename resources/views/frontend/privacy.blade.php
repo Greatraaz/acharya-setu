@@ -1,6 +1,6 @@
 {{-- resources/views/pages/privacy.blade.php --}}
 @extends('frontend.layouts.app')
-@section('title', 'Privacy Policy — AcharyaSetu')
+@section('title', 'Privacy Policy — Vedrix')
 
 @section('content')
 <div style="padding-top:var(--nav-h);">
@@ -17,10 +17,10 @@
         ['Data Security','All data is encrypted in transit using TLS 1.3 and at rest using AES-256 encryption. Payment data is handled by Razorpay (PCI-DSS Level 1 certified). Video calls are end-to-end encrypted via Agora, Zoom, or Google Meet.'],
         ['Data Sharing','We share data only with service providers necessary to operate the platform (payment processors, SMS gateways, video call providers). We may disclose data when required by law. We never sell data to third parties for advertising purposes.'],
         ['Cookies','We use essential cookies for session management, theme preferences, and security. Analytics cookies help us improve the platform. You can disable non-essential cookies in your browser settings.'],
-        ['Your Rights','You may request access to, correction of, or deletion of your personal data at any time by emailing privacy@acharyasetu.com. We will respond within 30 days. You may also deactivate your account from Settings.'],
-        ['Children\'s Privacy','AcharyaSetu is intended for users 16 years and older. We do not knowingly collect personal information from children under 16. If you believe a child has registered, contact us immediately.'],
+        ['Your Rights','You may request access to, correction of, or deletion of your personal data at any time by emailing privacy@vedrix.com. We will respond within 30 days. You may also deactivate your account from Settings.'],
+        ['Children\'s Privacy','Vedrix is intended for users 16 years and older. We do not knowingly collect personal information from children under 16. If you believe a child has registered, contact us immediately.'],
         ['Changes to This Policy','We may update this policy from time to time. Significant changes will be communicated via email or an in-app notification. Continued use of the platform after changes constitutes acceptance.'],
-        ['Contact Us','Questions about privacy? Email privacy@acharyasetu.com or write to: AcharyaSetu, Koramangala, Bangalore – 560034, Karnataka, India.'],
+        ['Contact Us','Questions about privacy? Email privacy@vedrix.com or write to: Vedrix, Koramangala, Bangalore – 560034, Karnataka, India.'],
     ];
     @endphp
 

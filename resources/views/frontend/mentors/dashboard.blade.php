@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'Mentor Dashboard — AcharyaSetu')
+@section('title', 'Mentor Dashboard — Vedrix')
 
 @section('content')
 @php

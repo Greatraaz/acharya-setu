@@ -280,12 +280,7 @@ class PlanController extends Controller
                 'status'  => true,
                 'message' => 'Subscription already activated.',
                 'data'    => [
-                    'subscription_id' => $subscription->subscription_id,
-                    'plan_name'       => $plan->plan_name,
-                    'amount_paid'     => $subscription->amount_paid,
-                    'currency'        => $subscription->currency,
-                    'starts_at'       => $subscription->starts_at?->toDateTimeString(),
-                    'expires_at'      => $subscription->expires_at?->toDateTimeString(),
+                    'subscription' => $this->formatVerifiedSubscription($subscription, $plan),
                 ],
             ], 200);
         }
@@ -312,6 +307,7 @@ class PlanController extends Controller
 
         // Clean up any leftover duplicate rows for this user (from older flow)
         $this->expireOtherSubscriptions($user->id, $subscription->id);
+        $subscription->refresh();
 
         return response()->json([
             'status'  => true,
@@ -319,15 +315,14 @@ class PlanController extends Controller
                 ? 'Payment verified and plan upgraded.'
                 : 'Payment verified and subscription activated.',
             'data'    => [
-                'subscription_id'   => $subscription->subscription_id,
-                'plan_name'         => $plan->plan_name,
-                'amount_paid'       => $subscription->amount_paid,
-                'currency'          => $subscription->currency,
-                'payment_reference' => $subscription->payment_reference,
-                'payment_status'    => $subscription->payment_status,
-                'is_upgrade'        => $isUpgrade,
-                'starts_at'         => $subscription->starts_at?->toDateTimeString(),
-                'expires_at'        => $subscription->expires_at?->toDateTimeString(),
+                'subscription' => array_merge(
+                    $this->formatVerifiedSubscription($subscription, $plan),
+                    [
+                        'payment_reference' => $subscription->payment_reference,
+                        'payment_status'    => $subscription->payment_status,
+                        'is_upgrade'        => $isUpgrade,
+                    ]
+                ),
             ],
         ], 200);
     }
@@ -559,6 +554,23 @@ class PlanController extends Controller
         ]));
 
         return $subscription;
+    }
+
+    /**
+     * Verified subscription payload for subscribe verify responses.
+     */
+    private function formatVerifiedSubscription(UserSubscription $subscription, Plan $plan): array
+    {
+        return [
+            'id'              => (int) $subscription->id,
+            'subscription_id' => $subscription->subscription_id,
+            'plan_id'         => (int) $subscription->plan_id,
+            'plan_name'       => $plan->plan_name,
+            'amount_paid'     => $subscription->amount_paid,
+            'currency'        => $subscription->currency,
+            'starts_at'       => $subscription->starts_at?->toDateTimeString(),
+            'expires_at'      => $subscription->expires_at?->toDateTimeString(),
+        ];
     }
 
     /**

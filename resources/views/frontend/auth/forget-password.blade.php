@@ -1,11 +1,11 @@
 {{-- resources/views/auth/forgot-password.blade.php --}}
 @extends('layouts.app')
-@section('title', 'Forgot Password — AcharyaSetu')
+@section('title', 'Forgot Password — Vedrix')
 @section('content')
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(var(--nav-h)+20px) 16px 40px;">
 <div style="width:100%;max-width:400px;">
     <div class="text-center" style="margin-bottom:32px;">
-        <img src="{{ asset('images/logo.png') }}" alt="" style="height:38px;margin:0 auto 12px;">
+        <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin:0 auto 12px;">
         <h1 style="font-size:22px;font-weight:800;">Reset your password</h1>
         <p style="font-size:13px;color:var(--text-2);">Enter your email and we'll send a reset link.</p>
     </div>

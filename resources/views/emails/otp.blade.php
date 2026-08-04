@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Your OTP — AcharyaSetu</title>
+        <title>Your OTP — Vedrix</title>
         <style>
             * {
                 margin: 0;
@@ -34,6 +34,13 @@
                 font-weight: 800;
                 color: #f59e0b;
                 letter-spacing: -0.5px;
+            }
+            .logo img {
+                height: 56px;
+                width: auto;
+                max-width: 240px;
+                object-fit: contain;
+                display: inline-block;
             }
             .logo span {
                 color: #fff;
@@ -124,7 +131,9 @@
     <body>
         <div class="wrapper">
             <div class="header">
-                <div class="logo">Acharya<span>Setu</span></div>
+                <div class="logo">
+                    <img src="{{ url('frontend/images/logo.png') }}" alt="Vedrix" width="220" height="56">
+                </div>
             </div>
             <div class="body">
                 <div class="greeting">
@@ -133,8 +142,8 @@
                 </div>
                 <p class="desc">
                     @if($type === 'registration') Thanks for signing up! Enter the OTP below to verify your email and
-                    complete registration. @elseif($type === 'login') Use this OTP to sign in to your AcharyaSetu
-                    account. @else Use this OTP to reset your AcharyaSetu account password. @endif
+                    complete registration. @elseif($type === 'login') Use this OTP to sign in to your Vedrix
+                    account. @else Use this OTP to reset your Vedrix account password. @endif
                 </p>
 
                 <div class="otp-box">
@@ -144,20 +153,20 @@
                 </div>
 
                 <div class="warning">
-                    🔒 <strong>Never share this OTP</strong> with anyone — including AcharyaSetu team members. We will
+                    🔒 <strong>Never share this OTP</strong> with anyone — including Vedrix team members. We will
                     never ask for your OTP.
                 </div>
 
                 <p style="font-size: 13px; color: #71717a; line-height: 1.7">
                     If you didn't request this, please ignore this email. Your account is safe.<br /><br />
-                    — The AcharyaSetu Team
+                    — The Vedrix Team
                 </p>
             </div>
             <div class="footer">
                 <p>
-                    © {{ date('Y') }} AcharyaSetu &nbsp;|&nbsp;
-                    <a href="{{ config('app.url') }}">acharyasetu.com</a> &nbsp;|&nbsp;
-                    <a href="mailto:hello@acharyasetu.com">hello@acharyasetu.com</a>
+                    © {{ date('Y') }} Vedrix &nbsp;|&nbsp;
+                    <a href="{{ config('app.url') }}">vedrix.com</a> &nbsp;|&nbsp;
+                    <a href="mailto:hello@vedrix.com">hello@vedrix.com</a>
                 </p>
                 <p style="margin-top: 6px">Bangalore, India 🇮🇳</p>
             </div>

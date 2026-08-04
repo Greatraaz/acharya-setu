@@ -1,6 +1,6 @@
 @extends('frontend.layouts.app')
 
-@section('title', 'AcharyaSetu — Connect with World-Class Mentors')
+@section('title', 'Vedrix — Connect with World-Class Mentors')
 
 @section('content')
 
@@ -139,7 +139,7 @@
     <div class="container">
         <div class="section-head">
             <h2>Everything you need to <span class="text-brand">grow your career</span></h2>
-            <p>AcharyaSetu combines expert mentorship, structured learning, and community support in one platform.</p>
+            <p>Vedrix combines expert mentorship, structured learning, and community support in one platform.</p>
         </div>
         <div class="grid-3" style="gap:20px;">
             <div class="feature-card">
@@ -180,7 +180,7 @@
 <section class="section" style="background:var(--bg-2);">
     <div class="container">
         <div class="section-head">
-            <h2>How AcharyaSetu Works</h2>
+            <h2>How Vedrix Works</h2>
             <p>Getting started takes less than 5 minutes.</p>
         </div>
         <div class="grid-4" style="gap:16px;">
@@ -350,7 +350,7 @@
                 Ready to <span class="text-brand">accelerate</span> your career?
             </h2>
             <p style="font-size:16px;color:var(--text-2);margin-bottom:32px;line-height:1.7;">
-                Join 45,000+ learners who are growing with AcharyaSetu. Start for free — no subscription required.
+                Join 45,000+ learners who are growing with Vedrix. Start for free — no subscription required.
             </p>
             <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
                 <a href="{{ route('register') }}" class="btn btn-primary btn-xl">Create Free Account</a>

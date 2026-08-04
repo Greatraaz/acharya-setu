@@ -49,7 +49,7 @@ class WalletController extends Controller
                 'amount'   => $amountPaise,
                 'currency' => 'INR',
                 'key'      => config('services.razorpay.key'),
-                'name'     => 'AcharyaSetu',
+                'name'     => 'Vedrix',
                 'description' => 'Wallet Top-up',
                 'prefill'  => [
                     'name'  => auth()->user()->name,

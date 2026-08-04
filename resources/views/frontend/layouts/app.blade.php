@@ -4,9 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'AcharyaSetu') — Mentorship Platform</title>
-    <meta name="description" content="@yield('meta_description', 'Connect with world-class mentors. Grow your career with AcharyaSetu.')">
-    <link rel="stylesheet" href="{{ asset('frontend/css/app.css') }}">
+    <title>@yield('title', 'Vedrix') — Mentorship Platform</title>
+    <meta name="description" content="@yield('meta_description', 'Connect with world-class mentors. Grow your career with Vedrix.')">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=202608041559">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=202608041559">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=202608041559">
+    <link rel="stylesheet" href="{{ asset('frontend/css/app.css') }}?v=202608041630">
+    {{-- Critical: only one theme logo visible (also works if app.css is cached/old on prod) --}}
+    <style>
+        .navbar-brand .logo-for-light,
+        .footer-brand .logo-for-light { display: none !important; }
+        .navbar-brand .logo-for-dark,
+        .footer-brand .logo-for-dark { display: block !important; height: 48px; width: auto; max-width: 200px; object-fit: contain; }
+        .footer-brand .logo-for-dark { height: 52px; max-width: 220px; margin-bottom: 16px; }
+        html[data-theme="light"] .navbar-brand .logo-for-light,
+        html[data-theme="light"] .footer-brand .logo-for-light { display: block !important; height: 48px; width: auto; max-width: 200px; object-fit: contain; }
+        html[data-theme="light"] .footer-brand .logo-for-light { height: 52px; max-width: 220px; margin-bottom: 16px; }
+        html[data-theme="light"] .navbar-brand .logo-for-dark,
+        html[data-theme="light"] .footer-brand .logo-for-dark { display: none !important; }
+    </style>
     @stack('styles')
 
     {{-- Flash data for JS toast --}}
@@ -24,7 +40,8 @@
     <div class="navbar-inner">
         {{-- Brand --}}
         <a href="{{ route('home') }}" class="navbar-brand">
-            <img src="{{ asset('frontend/images/logo.png') }}" alt="AcharyaSetu">
+            <img class="logo-for-dark" src="{{ asset('frontend/images/logo-dark.png') }}" alt="Vedrix">
+            <img class="logo-for-light" src="{{ asset('frontend/images/logo-light.png') }}" alt="Vedrix">
         </a>
 
         {{-- Desktop Nav --}}
@@ -141,7 +158,8 @@
     <div class="container">
         <div class="footer-grid">
             <div class="footer-brand">
-                <img src="{{ asset('frontend/images/logo.png') }}" alt="AcharyaSetu">
+                <img class="logo-for-dark" src="{{ asset('frontend/images/logo-dark.png') }}" alt="Vedrix">
+                <img class="logo-for-light" src="{{ asset('frontend/images/logo-light.png') }}" alt="Vedrix">
                 <p>Learning beyond the classroom. Connect with world-class mentors and accelerate your career — one session at a time.</p>
                 <div class="footer-social">
                     <a href="#" class="social-btn">𝕏</a>
@@ -179,8 +197,8 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p>© {{ date('Y') }} AcharyaSetu. All rights reserved. Made in India 🇮🇳</p>
-            <p>hello@acharyasetu.com</p>
+            <p>© {{ date('Y') }} Vedrix. All rights reserved. Made in India 🇮🇳</p>
+            <p>hello@vedrix.com</p>
         </div>
     </div>
 </footer>

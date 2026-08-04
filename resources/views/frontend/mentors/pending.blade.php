@@ -1,13 +1,13 @@
 {{-- resources/views/onboarding/mentor/pending.blade.php --}}
 @extends('layouts.app')
-@section('title','Application Under Review — AcharyaSetu')
+@section('title','Application Under Review — Vedrix')
 @section('content')
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(var(--nav-h)+40px) 16px 60px;">
 <div style="max-width:520px;width:100%;text-align:center;">
     <div style="font-size:72px;margin-bottom:20px;">⏳</div>
     <h1 style="font-size:28px;font-weight:800;margin-bottom:12px;">Application Under Review</h1>
     <p style="font-size:15px;color:var(--text-2);line-height:1.75;margin-bottom:32px;">
-        Thank you for applying to be a mentor on AcharyaSetu! Our team is reviewing your profile.
+        Thank you for applying to be a mentor on Vedrix! Our team is reviewing your profile.
         You'll receive an email notification within <strong style="color:var(--brand);">24–48 hours</strong>.
     </p>
     <div class="card" style="text-align:left;margin-bottom:24px;">
@@ -35,7 +35,7 @@
     @else
     <a href="{{ route('home') }}" class="btn btn-outline">Back to Home</a>
     &nbsp;
-    <a href="mailto:mentors@acharyasetu.com" class="btn btn-ghost">Contact Support</a>
+    <a href="mailto:mentors@vedrix.com" class="btn btn-ghost">Contact Support</a>
     @endif
 </div>
 </div>

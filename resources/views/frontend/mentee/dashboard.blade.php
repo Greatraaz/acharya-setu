@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'My Dashboard — AcharyaSetu')
+@section('title', 'My Dashboard — Vedrix')
 
 @section('content')
 <div class="dash-layout">

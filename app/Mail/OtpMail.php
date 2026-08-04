@@ -33,12 +33,12 @@ class OtpMail extends Mailable
     public function build()
     {
         $subjects = [
-            'registration' => 'Verify your AcharyaSetu account',
-            'login'        => 'Your AcharyaSetu login OTP',
-            'reset'        => 'Reset your AcharyaSetu password',
+            'registration' => 'Verify your Vedrix account',
+            'login'        => 'Your Vedrix login OTP',
+            'reset'        => 'Reset your Vedrix password',
         ];
 
-        $subject = $subjects[$this->type] ?? 'Your AcharyaSetu OTP';
+        $subject = $subjects[$this->type] ?? 'Your Vedrix OTP';
 
         return $this->subject($subject)
                     ->view('emails.otp')

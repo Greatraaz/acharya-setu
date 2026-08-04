@@ -1,6 +1,6 @@
 {{-- resources/views/frontend/mentor/availability.blade.php --}}
 @extends('frontend.layouts.app')
-@section('title', 'Set Availability — AcharyaSetu')
+@section('title', 'Set Availability — Vedrix')
 
 @section('content')
 <div class="dash-layout">

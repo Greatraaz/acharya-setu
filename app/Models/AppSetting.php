@@ -75,8 +75,8 @@ class AppSetting extends Model
             'encryption' => $s['smtp_encryption']  ?? 'tls',
             'username'   => $s['smtp_username']    ?? '',
             'password'   => $s['smtp_password']    ?? '',
-            'from_address' => $s['mail_from_address'] ?? 'hello@acharyasetu.com',
-            'from_name'    => $s['mail_from_name']    ?? ($s['app_name'] ?? 'AcharyaSetu'),
+            'from_address' => $s['mail_from_address'] ?? 'hello@vedrix.com',
+            'from_name'    => $s['mail_from_name']    ?? ($s['app_name'] ?? 'Vedrix'),
         ];
     }
  
@@ -137,7 +137,7 @@ class AppSetting extends Model
         $s = static::allCached();
         return [
             'auth_key'    => $s['msg91_auth_key']        ?? '',
-            'sender_id'   => $s['msg91_sender_id']       ?? 'ACHSETU',
+            'sender_id'   => $s['msg91_sender_id']       ?? 'VEDRIX',
             'route'       => $s['msg91_route']            ?? '4',
             'template_id' => $s['msg91_otp_template_id'] ?? '',
         ];
@@ -175,7 +175,7 @@ class AppSetting extends Model
     {
         $s = static::allCached();
         return [
-            'name'              => $s['app_name']      ?? 'AcharyaSetu',
+            'name'              => $s['app_name']      ?? 'Vedrix',
             'url'               => $s['app_url']       ?? config('app.url'),
             'timezone'          => $s['timezone']      ?? 'Asia/Kolkata',
             'currency'          => $s['default_currency'] ?? 'INR',

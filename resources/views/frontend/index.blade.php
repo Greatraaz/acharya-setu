@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acharya Setu - Coming Soon</title>
-    <link rel="shortcut icon" type="image/x-icon" href="favicon.svg"/>
+    <title>Vedrix - Coming Soon</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=202608041559">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=202608041559">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=202608041559">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -14,8 +16,8 @@
     
     <style>
         :root {
-            --acharya-yellow: #f5a91b;
-            --setu-navy: #1a2942;
+            --vedrix-yellow: #f5a91b;
+            --vedrix-navy: #1a2942;
             --dark-bg: #0f1419;
             --card-bg: #1a1f2e;
             --text-light: #e4e6eb;
@@ -51,7 +53,7 @@
         }
         
         .navbar-brand:hover {
-            color: var(--acharya-yellow) !important;
+            color: var(--vedrix-yellow) !important;
             transform: scale(1.05);
         }
         
@@ -67,25 +69,25 @@
         }
         
         .nav-btn-primary {
-            background-color: var(--acharya-yellow);
+            background-color: var(--vedrix-yellow);
             color: var(--dark-bg);
         }
         
         .nav-btn-primary:hover {
             background-color: transparent;
-            border-color: var(--acharya-yellow);
-            color: var(--acharya-yellow);
+            border-color: var(--vedrix-yellow);
+            color: var(--vedrix-yellow);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(255, 215, 0, 0.3);
         }
         
         .nav-btn-outline {
-            border: 2px solid var(--setu-navy);
+            border: 2px solid var(--vedrix-navy);
             color: var(--text-light);
         }
         
         .nav-btn-outline:hover {
-            background-color: var(--setu-navy);
+            background-color: var(--vedrix-navy);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(26, 41, 66, 0.4);
         }
@@ -141,7 +143,7 @@
             font-weight: 800;
             line-height: 1.2;
             margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, var(--text-light) 0%, var(--acharya-yellow) 100%);
+            background: linear-gradient(135deg, var(--text-light) 0%, var(--vedrix-yellow) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -169,7 +171,7 @@
         }
         
         .cta-primary {
-            background-color: var(--acharya-yellow);
+            background-color: var(--vedrix-yellow);
             color: var(--dark-bg);
         }
         
@@ -180,13 +182,13 @@
         }
         
         .cta-secondary {
-            border: 2px solid var(--acharya-yellow);
-            color: var(--acharya-yellow);
+            border: 2px solid var(--vedrix-yellow);
+            color: var(--vedrix-yellow);
             background: transparent;
         }
         
         .cta-secondary:hover {
-            background-color: var(--acharya-yellow);
+            background-color: var(--vedrix-yellow);
             color: var(--dark-bg);
             transform: translateY(-3px);
         }
@@ -198,7 +200,7 @@
         }
         
         .hero-microcopy i {
-            color: var(--acharya-yellow);
+            color: var(--vedrix-yellow);
             margin-right: 0.5rem;
         }
         
@@ -243,7 +245,7 @@
         
         .value-icon {
             font-size: 3rem;
-            color: var(--acharya-yellow);
+            color: var(--vedrix-yellow);
             margin-bottom: 1.5rem;
             transition: all 0.3s ease;
         }
@@ -341,7 +343,7 @@
         }
         
         .step-card:hover {
-            border-color: var(--acharya-yellow);
+            border-color: var(--vedrix-yellow);
             transform: translateX(10px);
         }
         
@@ -352,7 +354,7 @@
         .step-number {
             font-size: 3rem;
             font-weight: 800;
-            color: var(--acharya-yellow);
+            color: var(--vedrix-yellow);
             opacity: 0.3;
             position: absolute;
             top: 1rem;
@@ -361,7 +363,7 @@
         
         .step-icon {
             font-size: 2.5rem;
-            color: var(--acharya-yellow);
+            color: var(--vedrix-yellow);
             margin-bottom: 1.5rem;
             background: #fff;
             padding: 0 10px;
@@ -371,7 +373,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 1px 1px 20px var(--acharya-yellow);
+            box-shadow: 1px 1px 20px var(--vedrix-yellow);
         }
         
         .step-title {
@@ -426,14 +428,14 @@
         }
         
         .audience-card:hover {
-            border-color: var(--acharya-yellow);
+            border-color: var(--vedrix-yellow);
             transform: translateY(-15px);
             box-shadow: 0 20px 40px rgba(255, 215, 0, 0.2);
         }
         
         .audience-icon {
             font-size: 4rem;
-            color: var(--acharya-yellow);
+            color: var(--vedrix-yellow);
             margin-bottom: 2rem;
             transition: all 0.3s ease;
         }
@@ -490,7 +492,7 @@
         
         .form-control:focus, .form-select:focus {
             background-color: rgba(255, 255, 255, 0.08);
-            border-color: var(--acharya-yellow);
+            border-color: var(--vedrix-yellow);
             box-shadow: 0 0 0 0.2rem rgba(255, 215, 0, 0.15);
             color: var(--text-light);
         }
@@ -507,7 +509,7 @@
         .btn-submit {
             width: 100%;
             padding: 1.2rem;
-            background-color: var(--acharya-yellow);
+            background-color: var(--vedrix-yellow);
             color: var(--dark-bg);
             border: none;
             border-radius: 12px;
@@ -567,7 +569,7 @@
         }
         
         .footer-tagline {
-            color: var(--acharya-yellow);
+            color: var(--vedrix-yellow);
             font-weight: 600;
             font-size: 1.1rem;
             margin-bottom: 1rem;
@@ -627,7 +629,7 @@
             left: 5%;
             width: 100px;
             height: 100px;
-            border: 3px solid var(--acharya-yellow);
+            border: 3px solid var(--vedrix-yellow);
             border-radius: 50%;
             animation: float 6s ease-in-out infinite;
         }
@@ -637,7 +639,7 @@
             right: 10%;
             width: 80px;
             height: 80px;
-            border: 3px solid var(--setu-navy);
+            border: 3px solid var(--vedrix-navy);
             transform: rotate(45deg);
             animation: float 8s ease-in-out infinite;
         }
@@ -647,7 +649,7 @@
             left: 15%;
             width: 60px;
             height: 60px;
-            background: var(--acharya-yellow);
+            background: var(--vedrix-yellow);
             border-radius: 50%;
             animation: float 7s ease-in-out infinite;
         }
@@ -712,7 +714,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="#home" style="width: 200px;"><img src="{{ asset('frontend/images/logo.png');}}" style="width: 100%;"></a>
+            <a class="navbar-brand" href="#home" style="display:flex;align-items:center;line-height:0;"><img src="{{ asset('frontend/images/logo-dark.png');}}" alt="Vedrix" style="height:48px;width:auto;max-width:200px;object-fit:contain;"></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -737,7 +739,7 @@
                     <div class="hero-content text-center animate-fade-in">
                         <h1 class="hero-title">Mentorship that turns ambition into direction.</h1>
                         <p class="hero-subtitle mx-auto">
-                            Acharya Setu is a mentorship-first platform built to help students and early professionals make smarter career choices—with structured guidance, real mentors, and measurable progress.
+                            Vedrix is a mentorship-first platform built to help students and early professionals make smarter career choices—with structured guidance, real mentors, and measurable progress.
                         </p>
                         <div class="cta-buttons">
                             <a href="#waitlist" class="cta-btn cta-primary">
@@ -763,9 +765,9 @@
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-10 text-center">
-                    <h2 class="section-title">Why Acharya Setu Exists</h2>
+                    <h2 class="section-title">Why Vedrix Exists</h2>
                     <p class="section-text">
-                        Talent is everywhere—direction isn't. Many capable people still choose the wrong roles, get stuck, and lose motivation due to lack of guidance. Acharya Setu bridges this gap by offering mentorship journeys that are structured, supportive, and built for real outcomes.
+                        Talent is everywhere—direction isn't. Many capable people still choose the wrong roles, get stuck, and lose motivation due to lack of guidance. Vedrix bridges this gap by offering mentorship journeys that are structured, supportive, and built for real outcomes.
                     </p>
                 </div>
             </div>
@@ -932,7 +934,7 @@
 
             <div id="thankYouBox" class="thankyou-card" style="display: none;">
                 <div class="icon">🎉</div>
-                <h2 class="text-dark">Thanks for joining <strong>Acharya Setu</strong></h2>
+                <h2 class="text-dark">Thanks for joining <strong>Vedrix</strong></h2>
                 <h4 class="text-dark m-3">You're on the list! 💚</h4>
                 <p>We’ll reach out soon with exclusive updates and early access.</p>
 
@@ -973,9 +975,9 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <a class="navbar-brand" href="#home"><img src="{{ asset('frontend/images/logo-footer.png');}}" style="width: 300px;margin-bottom: 30px;"></a>
+            <a class="navbar-brand" href="#home"><img src="{{ asset('frontend/images/logo-light.png');}}" alt="Vedrix" style="height:56px;width:auto;max-width:240px;object-fit:contain;margin-bottom:30px;"></a>
             <p class="footer-tagline">Learning Beyond Classroom</p>
-            <p class="footer-text">© 2026 Acharya Setu. All rights reserved.</p>
+            <p class="footer-text">© 2026 Vedrix. All rights reserved.</p>
         </div>
     </footer>
 

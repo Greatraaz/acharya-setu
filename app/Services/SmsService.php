@@ -50,7 +50,7 @@ class SmsService
     public static function sendOtp(string $phone, string $otp): bool
     {
         $provider = AppSetting::smsProvider();
-        $appName  = AppSetting::get('app_name', 'AcharyaSetu');
+        $appName  = AppSetting::get('app_name', 'Vedrix');
 
         try {
             if ($provider === 'msg91') {
@@ -129,7 +129,7 @@ class SmsService
         }
 
         // Fallback: plain SMS via MSG91 send endpoint
-        $appName = AppSetting::get('app_name', 'AcharyaSetu');
+        $appName = AppSetting::get('app_name', 'Vedrix');
         $message = "{$otp} is your {$appName} OTP. Valid 10 minutes. Do not share.";
 
         $response = Http::withHeaders(['authkey' => $authKey])

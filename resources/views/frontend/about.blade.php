@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'About AcharyaSetu')
+@section('title', 'About Vedrix')
 
 @section('content')
 <div style="padding-top:var(--nav-h);">
@@ -12,7 +12,7 @@
                 Learning beyond the <span class="text-brand">classroom</span>
             </h1>
             <p style="font-size:17px;color:var(--text-2);max-width:620px;margin:0 auto 36px;line-height:1.75;">
-                AcharyaSetu bridges the gap between motivated learners and world-class mentors. In India, your network determines your trajectory. We're changing that.
+                Vedrix bridges the gap between motivated learners and world-class mentors. In India, your network determines your trajectory. We're changing that.
             </p>
             <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-xl">Find Your Mentor</a>
         </div>
@@ -42,7 +42,7 @@
                         Every student deserves a <span class="text-brand">world-class mentor</span>
                     </h2>
                     <p style="font-size:15px;color:var(--text-2);line-height:1.8;margin-bottom:16px;">
-                        IIT and IIM graduates have access to elite alumni networks. Brilliant students from tier-2 and tier-3 cities don't. AcharyaSetu is the equalizer.
+                        IIT and IIM graduates have access to elite alumni networks. Brilliant students from tier-2 and tier-3 cities don't. Vedrix is the equalizer.
                     </p>
                     <p style="font-size:15px;color:var(--text-2);line-height:1.8;">
                         We connect every motivated learner with the expert guidance they deserve — on-demand, affordable, and at transparent pricing. No subscriptions. No guesswork.
@@ -65,7 +65,7 @@
     <section class="section" style="background:var(--bg-2);">
         <div class="container">
             <div class="section-head">
-                <h2>The team behind <span class="text-brand">AcharyaSetu</span></h2>
+                <h2>The team behind <span class="text-brand">Vedrix</span></h2>
                 <p>Built by people who've been mentored — and who mentor.</p>
             </div>
             <div class="grid-4" style="gap:20px;">
@@ -84,7 +84,7 @@
     {{-- CTA --}}
     <section class="cta-section">
         <div class="container text-center">
-            <h2 style="font-size:32px;font-weight:800;margin-bottom:12px;">Join the AcharyaSetu community</h2>
+            <h2 style="font-size:32px;font-weight:800;margin-bottom:12px;">Join the Vedrix community</h2>
             <p style="color:var(--text-2);margin-bottom:28px;">45,000+ learners trust us. Your career deserves the same attention.</p>
             <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
                 <a href="{{ route('register') }}" class="btn btn-primary btn-xl">Get Started Free</a>

@@ -56,7 +56,7 @@
     </head>
     <body>
         <div class="wrap">
-            <div class="header">📬 New Contact Message — AcharyaSetu</div>
+            <div class="header">📬 New Contact Message — Vedrix</div>
             <div class="body">
                 <div class="row">
                     <div class="label">From</div>

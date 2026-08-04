@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'Earnings — AcharyaSetu Mentor')
+@section('title', 'Earnings — Vedrix Mentor')
 
 @section('content')
 @php
@@ -58,7 +58,7 @@
             <span class="alert-icon">ℹ️</span>
             <div style="font-size:13px;">
                 <strong>Your rate: ₹{{ number_format(auth()->user()->rate_per_minute ?? 0, 2) }}/min</strong> ·
-                AcharyaSetu retains a <strong>{{ (int) ($feeRate * 100) }}% platform fee</strong>.
+                Vedrix retains a <strong>{{ (int) ($feeRate * 100) }}% platform fee</strong>.
                 You receive ₹{{ number_format((auth()->user()->rate_per_minute ?? 0) * $netRate, 1) }}/min.
                 <a href="{{ route('mentor.profile.edit') }}" style="color:var(--brand);margin-left:8px;">Change rate →</a>
             </div>

@@ -1,11 +1,11 @@
 {{-- resources/views/auth/reset-password.blade.php --}}
 @extends('layouts.app')
-@section('title','Reset Password — AcharyaSetu')
+@section('title','Reset Password — Vedrix')
 @section('content')
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(var(--nav-h)+20px) 16px 40px;">
 <div style="width:100%;max-width:400px;">
     <div class="text-center" style="margin-bottom:32px;">
-        <img src="{{ asset('images/logo.png') }}" alt="" style="height:38px;margin:0 auto 12px;">
+        <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin:0 auto 12px;">
         <h1 style="font-size:22px;font-weight:800;">Set new password</h1>
     </div>
     <div class="card">

@@ -1,6 +1,6 @@
 {{-- resources/views/frontend/mentor/sessions.blade.php --}}
 @extends('frontend.layouts.app')
-@section('title', 'My Sessions — AcharyaSetu Mentor')
+@section('title', 'My Sessions — Vedrix Mentor')
 
 @section('content')
 <div class="dash-layout">

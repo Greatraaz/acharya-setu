@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'Find Mentors — AcharyaSetu')
+@section('title', 'Find Mentors — Vedrix')
 
 @section('content')
 <div style="padding-top:var(--nav-h);">
