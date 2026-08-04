@@ -89,6 +89,7 @@ Route::get('/storage-link', function () {
 
 // ── Home ────────────────────────────────────────────────────
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::post('/waitlist', [HomeController::class, 'waitlist'])->name('waitlist.store');
 
 // ── Mentor Listing & Profile ────────────────────────────────
 Route::get('/mentors',      [MentorListingController::class, 'index'])->name('mentors.search');

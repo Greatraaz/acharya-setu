@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vedrix - Coming Soon</title>
+    <title>Vedrix — Coming Soon</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Vedrix is a mentorship-first platform helping students and early professionals make smarter career choices.">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=202608041559">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=202608041559">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=202608041559">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v=202608041559">
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}?v=202608041559">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -309,7 +313,7 @@
         
         /* How It Works */
         .how-it-works-section {
-            background: #fff;
+            background: #f7f8fa;
             position: relative;
         }
         
@@ -458,7 +462,7 @@
         
         /* Lead Capture */
         .lead-capture {
-            background: linear-gradient(180deg, #fff, rgb(15 20 25 / 0%) 100%), url(parallax-bg.jpg) bottom / contain;
+            background: linear-gradient(180deg, #ffffff 0%, #f7f8fa 35%, var(--dark-bg) 100%);
             padding: 5rem 0;
             position: relative;
         }
@@ -714,7 +718,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="#home" style="display:flex;align-items:center;line-height:0;"><img src="{{ asset('frontend/images/logo-dark.png');}}" alt="Vedrix" style="height:48px;width:auto;max-width:200px;object-fit:contain;"></a>
+            <a class="navbar-brand" href="#home" style="display:flex;align-items:center;line-height:0;"><img src="{{ asset('frontend/images/logo-dark.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:200px;object-fit:contain;"></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -798,10 +802,10 @@
     </section>
 
     <!-- How It Works -->
-    <section class="section how-it-works-section" id="how-it-work" style="background: url('white.png') center/cover;">
+    <section class="section how-it-works-section" id="how-it-work">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="section-title" style="color: #000;">How It Works</h2>
+                <h2 class="section-title" style="color: #0f1419;">How It Works</h2>
             </div>
             <div class="row">
                 <div class="col-lg-4 mb-4">
@@ -901,17 +905,18 @@
                     <p class="section-text">Drop your email or WhatsApp number—we'll share early access, onboarding, and launch updates.</p>
                 </div>
                 <form id="submitForm">
+                    @csrf
                     <div class="row">
                         <div class="col-md-6">
-                            <input type="text" name="name" class="form-control" placeholder="Your Name *" required>
+                            <input type="text" name="name" class="form-control" placeholder="Your Name *" required maxlength="100">
                         </div>
                         <div class="col-md-6">
-                            <input type="email" name="email" class="form-control" placeholder="Email Address *" required>
+                            <input type="email" name="email" class="form-control" placeholder="Email Address *" required maxlength="191">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
-                            <input type="tel" name="phone" class="form-control" placeholder="WhatsApp Number *" required>
+                            <input type="tel" name="phone" class="form-control" placeholder="WhatsApp Number *" required maxlength="20">
                         </div>
                         <div class="col-md-6">
                             <select class="form-select" name="who" required>
@@ -975,9 +980,9 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <a class="navbar-brand" href="#home"><img src="{{ asset('frontend/images/logo-light.png');}}" alt="Vedrix" style="height:56px;width:auto;max-width:240px;object-fit:contain;margin-bottom:30px;"></a>
+            <a class="navbar-brand" href="#home"><img src="{{ asset('frontend/images/logo-dark.png') }}" alt="Vedrix" style="height:56px;width:auto;max-width:240px;object-fit:contain;margin-bottom:30px;"></a>
             <p class="footer-tagline">Learning Beyond Classroom</p>
-            <p class="footer-text">© 2026 Vedrix. All rights reserved.</p>
+            <p class="footer-text">© {{ date('Y') }} Vedrix. All rights reserved.</p>
         </div>
     </footer>
 
@@ -1001,26 +1006,32 @@
                 $('#formMsg').html('');
 
                 $.ajax({
-                    url: "submit.php", 
+                    url: "{{ route('waitlist.store') }}",
                     type: "POST",
                     data: form.serialize(),
                     dataType: "json",
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
                     success: function (res) {
                         if (res.status === 1) {
                             $('.lead-form').fadeOut(300, function () {
                                 $('#thankYouBox').fadeIn(300);
                             });
-
                             form[0].reset();
                         } else {
-                            $('#formMsg').html('<div class="alert alert-danger">'+res.message+'</div>');
+                            $('#formMsg').html('<div class="alert alert-danger">'+(res.message || 'Something went wrong')+'</div>');
                         }
                     },
                     error: function (xhr) {
-                        console.log(xhr.responseText);
-                        $('#formMsg').html('<div class="alert alert-danger">Server Error</div>');
+                        let message = 'Server Error';
+                        if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                            message = Object.values(xhr.responseJSON.errors).flat().join('<br>');
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        }
+                        $('#formMsg').html('<div class="alert alert-danger">'+message+'</div>');
                     },
-
                     complete: function () {
                         btn.prop('disabled', false);
                         btnText.removeClass('d-none');
