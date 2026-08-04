@@ -355,12 +355,20 @@ class SessionsController extends Controller
             ]);
         }
 
+        $wasCompleted = $session->status === ConsultationSession::STATUS_COMPLETED;
+
         $session->update([
             'payment_status'      => 'paid',
             'payment_reference'   => $data['razorpay_payment_id'],
             'razorpay_payment_id' => $data['razorpay_payment_id'],
-            'status'              => ConsultationSession::STATUS_UPCOMING,
+            'status'              => $wasCompleted
+                ? ConsultationSession::STATUS_COMPLETED
+                : ConsultationSession::STATUS_UPCOMING,
         ]);
+
+        if ($wasCompleted) {
+            $session->settleMentorPayout();
+        }
 
         return response()->json([
             'status'  => true,
@@ -481,9 +489,12 @@ class SessionsController extends Controller
                 'status' => 'sometimes|in:upcoming,completed,cancelled,pending',
                 'notes'  => 'nullable|string',
             ]);
-            $s->update($d);
+
             if (($d['status'] ?? null) === 'completed') {
-                User::where('id', $s->mentor_id)->increment('total_sessions');
+                $s->complete();
+                $s->refresh();
+            } else {
+                $s->update($d);
             }
 
             return response()->json([

@@ -42,6 +42,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\AppSettingsController;
 use App\Http\Controllers\Admin\WalletTransactionController;
+use App\Http\Controllers\Admin\WithdrawalRequestController;
 use App\Http\Controllers\Admin\VideoCallLogController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\PlanController;
@@ -459,6 +460,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         Route::get('/customer/{user}',         [WalletTransactionController::class, 'showUser'])->name('customer.show');
         Route::post('/adjust/{type}/{id}',     [WalletTransactionController::class, 'adjust'])  ->name('adjust');
         Route::post('/transfer',               [WalletTransactionController::class, 'transfer'])->name('transfer');
+    });
+
+    // ── Withdrawals ───────────────────────────────────────────
+    Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
+        Route::get('/',                              [WithdrawalRequestController::class, 'index'])  ->name('index');
+        Route::post('/{withdrawal}/approve',         [WithdrawalRequestController::class, 'approve'])->name('approve');
+        Route::post('/{withdrawal}/reject',          [WithdrawalRequestController::class, 'reject']) ->name('reject');
     });
 
     // ── Call Logs ─────────────────────────────────────────────

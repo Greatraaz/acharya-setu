@@ -387,8 +387,91 @@ class ConsultationSession extends Model
         ]);
         // Increment mentor stats
         optional($this->mentor)->increment('total_sessions');
+
+        $this->settleMentorPayout();
     }
- 
+
+    /**
+     * Credit mentor wallet with 80% of session amount when:
+     * - session is completed
+     * - mentee payment_status is paid
+     * - amount > 0
+     * Idempotent: skips if payout already recorded for this session.
+     */
+    public function settleMentorPayout(): ?WalletTransaction
+    {
+        $this->refresh();
+
+        if ($this->status !== self::STATUS_COMPLETED) {
+            return null;
+        }
+
+        if ($this->payment_status !== 'paid') {
+            return null;
+        }
+
+        $gross = round((float) $this->amount, 2);
+        if ($gross <= 0) {
+            return null;
+        }
+
+        $reference = 'SES-EARN-' . $this->id;
+
+        $existing = WalletTransaction::where('reference', $reference)->first()
+            ?? WalletTransaction::where('user_id', $this->mentor_id)
+                ->where('transactionable_type', self::class)
+                ->where('transactionable_id', $this->id)
+                ->whereIn('type', ['credit', 'transfer_in'])
+                ->where('meta->source', 'session_mentor_payout')
+                ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $mentor = $this->mentor ?? User::find($this->mentor_id);
+        if (! $mentor) {
+            return null;
+        }
+
+        $feeRate = 0.20;
+        $fee = round($gross * $feeRate, 2);
+        $net = round($gross - $fee, 2);
+
+        if ($net <= 0) {
+            return null;
+        }
+
+        $durationMinutes = $this->duration_minutes;
+        if ($this->actual_duration_seconds) {
+            $durationMinutes = (int) max(1, ceil($this->actual_duration_seconds / 60));
+        }
+
+        $this->loadMissing('mentee:id,name');
+
+        return $mentor->creditWallet(
+            $net,
+            'Session earning: ' . ($this->title ?: ('Session #' . $this->id)),
+            [
+                'reference'            => $reference,
+                'transactionable_type' => self::class,
+                'transactionable_id'   => $this->id,
+                'meta'                 => [
+                    'source'            => 'session_mentor_payout',
+                    'booking_ref'       => $this->booking_ref,
+                    'session_id'        => $this->id,
+                    'mentee_id'         => $this->mentee_id,
+                    'mentee_name'       => $this->mentee?->name,
+                    'duration_minutes' => $durationMinutes,
+                    'gross_amount'      => $gross,
+                    'platform_fee'      => $fee,
+                    'platform_fee_rate' => $feeRate,
+                    'net_amount'        => $net,
+                ],
+            ]
+        );
+    }
+
     public function cancel(int $cancelledBy, string $reason = ''): void
     {
         $this->update([

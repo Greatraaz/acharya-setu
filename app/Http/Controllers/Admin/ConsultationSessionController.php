@@ -85,7 +85,23 @@ class ConsultationSessionController extends Controller
     {
         $data = $this->validateSession($request);
         $data = $this->normalizeScheduledAt($request, $data);
-        $session->update($data);
+        $becomingCompleted = ($data['status'] ?? null) === ConsultationSession::STATUS_COMPLETED
+            && $session->status !== ConsultationSession::STATUS_COMPLETED;
+
+        if ($becomingCompleted) {
+            $session->fill(collect($data)->except(['status', 'ended_at', 'actual_duration_seconds'])->all());
+            $session->save();
+            $session->complete();
+        } else {
+            $session->update($data);
+            if (
+                $session->status === ConsultationSession::STATUS_COMPLETED
+                && $session->payment_status === 'paid'
+            ) {
+                $session->settleMentorPayout();
+            }
+        }
+
         return redirect()->route('admin.sessions.show', $session)->with('success', 'Session updated.');
     }
  

@@ -35,7 +35,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name', 'email', 'password', 'role',
         'wallet_balance', 'bio', 'expertise', 'field', 'college', 'year',
-        'gender', 'rating', 'total_sessions', 'avatar_url', 'phone', 'location',
+        'gender', 'rating', 'total_sessions', 'avatar_url', 'phone', 'bank_details', 'location',
         'linkedin', 'company', 'designation', 'experience_years',
         'is_active', 'rate_per_minute', 'assigned_mentor_id',
         'subscription_plan', 'mentor_status', 'education_stream',

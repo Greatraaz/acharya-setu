@@ -36,9 +36,9 @@
     <a href="{{ route('mentor.community') }}" class="sidebar-item @if(request()->routeIs('mentor.community*')) active @endif">
         <span class="si-icon">💬</span> Community
     </a>
-    <a href="{{ route('mentor.assessments') }}" class="sidebar-item @if(request()->routeIs('mentor.assessments*')) active @endif">
+    {{-- <a href="{{ route('mentor.assessments') }}" class="sidebar-item @if(request()->routeIs('mentor.assessments*')) active @endif">
         <span class="si-icon">🧠</span> Assessments
-    </a>
+    </a> --}}
 
     <div class="sidebar-section-label">Account</div>
     <a href="{{ route('mentor.wallet') }}" class="sidebar-item @if(request()->routeIs('mentor.wallet*')) active @endif">

@@ -72,10 +72,17 @@ class SessionController extends Controller
 
     public function complete(int $id)
     {
-        $session = ConsultationSession::where('mentor_id', auth()->id())->where('status','confirmed')->findOrFail($id);
-        $session->update(['status'=>'completed','ended_at'=>now()]);
-        // TODO: transfer payment to mentor wallet
-        return response()->json(['message' => 'Session marked complete.']);
+        $session = ConsultationSession::where('mentor_id', auth()->id())
+            ->whereIn('status', ['confirmed', 'upcoming', 'ongoing', 'pending'])
+            ->findOrFail($id);
+
+        $session->complete();
+
+        return response()->json([
+            'message' => $session->payment_status === 'paid'
+                ? 'Session marked complete. Earnings credited to your wallet.'
+                : 'Session marked complete. Earnings will appear after mentee payment is confirmed.',
+        ]);
     }
 
     public function noShow(int $id)
