@@ -260,8 +260,9 @@ function openBookingModal(mentorId, mentorName, ratePerMin) {
     document.getElementById('booking-mentor-name').textContent = `Book: ${mentorName}`;
     document.getElementById('bk-mentor').textContent = mentorName;
     document.getElementById('bk-rate').textContent = `₹${ratePerMin}/min`;
-    BookingWidget.init(ratePerMin);
     openModal('booking-modal');
+    // Init after modal is open so date/time grids are interactive
+    setTimeout(() => BookingWidget.init(ratePerMin, mentorId), 0);
 }
 
 function confirmBooking() {
@@ -275,23 +276,75 @@ function confirmBooking() {
     if (!data) return;
 
     data.mentor_id = document.getElementById('booking-mentor-id').value;
-    data.agenda    = document.getElementById('booking-agenda').value;
+    data.agenda    = document.getElementById('booking-agenda')?.value || '';
 
-    AjaxPost('/sessions', data, {
+    AjaxPost('{{ route('mentee.sessions.book') }}', data, {
         btn: document.getElementById('confirm-booking-btn'), loader: true,
         onSuccess: res => {
+            if (res.requires_payment) {
+                openSessionPayment(res);
+                return;
+            }
             closeModal('booking-modal');
-            showToast('success','🎉 Session booked! Check your email for confirmation.');
-            setTimeout(() => window.location.href = res.redirect || '/dashboard', 2000);
+            showToast('success', res.message || '🎉 Session booked!');
+            setTimeout(() => window.location.href = res.redirect || '{{ route('mentee.sessions') }}', 1500);
         },
         onError: err => {
             if (err.status === 401) {
                 window.location.href = '/login?redirect=/mentors';
+            } else if (err.topup_url) {
+                showToast('error', err.message || 'Insufficient wallet balance.');
+                setTimeout(() => window.location.href = err.topup_url, 1800);
             } else {
                 showToast('error', err.message || 'Could not book session. Please try again.');
             }
         }
     });
+}
+
+function openSessionPayment(order) {
+    if (typeof Razorpay === 'undefined') {
+        const s = document.createElement('script');
+        s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        s.onload = () => launchSessionRzp(order);
+        s.onerror = () => showToast('error', 'Could not load payment gateway.');
+        document.head.appendChild(s);
+        return;
+    }
+    launchSessionRzp(order);
+}
+
+function launchSessionRzp(order) {
+    const options = {
+        key: order.key,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        name: order.name || 'Vedrix',
+        description: order.description || 'Session booking',
+        order_id: order.order_id,
+        prefill: order.prefill || {},
+        theme: { color: '#f59e0b' },
+        handler: function (response) {
+            AjaxPost('{{ route('mentee.sessions.verify') }}', {
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+            }, {
+                loader: true,
+                onSuccess: (data) => {
+                    closeModal('booking-modal');
+                    showToast('success', data.message || 'Payment successful!');
+                    setTimeout(() => window.location.href = data.redirect || '{{ route('mentee.sessions') }}', 1200);
+                },
+                onError: (err) => showToast('error', err.message || 'Payment verification failed.'),
+            });
+        },
+    };
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function () {
+        showToast('error', 'Payment failed. Your slot hold will expire if unpaid.');
+    });
+    rzp.open();
 }
 </script>
 @endpush

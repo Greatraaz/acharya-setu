@@ -86,19 +86,27 @@ class AppSetting extends Model
         $s = static::allCached();
         $mode = $s['razorpay_mode'] ?? 'test';
 
+        $key = static::firstNonEmpty([
+            $s["razorpay_{$mode}_key"] ?? null,
+            $s['razorpay_key_id'] ?? null,
+            $s['razorpay_key'] ?? null,
+            config('services.razorpay.key'),
+            env('RAZORPAY_KEY_ID'),
+        ]);
+
+        $secret = static::firstNonEmpty([
+            static::decryptIfNeeded($s["razorpay_{$mode}_secret"] ?? null),
+            static::decryptIfNeeded($s['razorpay_key_secret'] ?? null),
+            static::decryptIfNeeded($s['razorpay_secret'] ?? null),
+            config('services.razorpay.secret'),
+            env('RAZORPAY_KEY_SECRET'),
+        ]);
+
         return [
             'mode'    => $mode,
             'enabled' => static::toBool($s['razorpay_enabled'] ?? false),
-            'key'     => static::firstNonEmpty([
-                $s["razorpay_{$mode}_key"] ?? null,
-                $s['razorpay_key_id'] ?? null,
-                $s['razorpay_key'] ?? null,
-            ]),
-            'secret'  => static::firstNonEmpty([
-                static::decryptIfNeeded($s["razorpay_{$mode}_secret"] ?? null),
-                static::decryptIfNeeded($s['razorpay_key_secret'] ?? null),
-                static::decryptIfNeeded($s['razorpay_secret'] ?? null),
-            ]),
+            'key'     => $key,
+            'secret'  => $secret,
         ];
     }
 
@@ -119,11 +127,28 @@ class AppSetting extends Model
             return null;
         }
 
-        try {
-            return decrypt($value);
-        } catch (\Throwable) {
-            return $value;
+        $current = $value;
+
+        // Secrets may have been encrypted more than once when re-saving settings.
+        for ($i = 0; $i < 3; $i++) {
+            $looksEncrypted = strlen($current) > 80 || str_starts_with($current, 'eyJpdiI6');
+            if (! $looksEncrypted) {
+                return $current;
+            }
+
+            try {
+                $plain = decrypt($current);
+                if (! is_string($plain) || $plain === '') {
+                    return null;
+                }
+                $current = $plain;
+            } catch (\Throwable) {
+                // Undecryptable ciphertext — force re-entry in admin settings.
+                return null;
+            }
         }
+
+        return strlen($current) > 80 ? null : $current;
     }
 
     private static function toBool(mixed $value): bool

@@ -57,6 +57,9 @@
                                message: err.message || Object.values(err.errors || {})[0]?.[0] || "An error occurred.",
                                errors: err.errors || {},
                                status: res.status,
+                               topup_url: err.topup_url || null,
+                               wallet_balance: err.wallet_balance,
+                               required_amount: err.required_amount,
                            };
                        },
                        () => {
@@ -420,8 +423,54 @@
        let selectedDate = null,
            selectedTime = null,
            selectedDuration = 30,
-           ratePerMin = 0;
-   
+           ratePerMin = 0,
+           mentorId = null;
+
+       const DEFAULT_SLOTS = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+
+       function resolveMentorId() {
+           return (
+               mentorId ||
+               document.getElementById("booking-mentor-id")?.value ||
+               document.querySelector("[name='booking_mentor_id']")?.value ||
+               document.querySelector("[data-mentor-id]")?.dataset.mentorId ||
+               null
+           );
+       }
+
+       function localDateString(d) {
+           const y = d.getFullYear();
+           const m = String(d.getMonth() + 1).padStart(2, "0");
+           const day = String(d.getDate()).padStart(2, "0");
+           return `${y}-${m}-${day}`;
+       }
+
+       function renderSlots(slots) {
+           const grid = document.getElementById("timeGrid");
+           if (!grid) return;
+           grid.innerHTML = "";
+           if (!slots || !slots.length) {
+               grid.innerHTML =
+                   '<div class="text-sm text-muted" style="grid-column:1/-1;">No slots available for this date</div>';
+               return;
+           }
+           slots.forEach((slot) => {
+               const div = document.createElement("button");
+               div.type = "button";
+               div.className = "time-slot";
+               div.textContent = slot;
+               div.addEventListener("click", function (e) {
+                   e.preventDefault();
+                   e.stopPropagation();
+                   document.querySelectorAll("#timeGrid .time-slot").forEach((s) => s.classList.remove("selected"));
+                   div.classList.add("selected");
+                   selectedTime = slot;
+                   updateSummary();
+               });
+               grid.appendChild(div);
+           });
+       }
+
        function updateSummary() {
            const el = (id) => document.getElementById(id);
            if (el("bk-date")) el("bk-date").textContent = selectedDate || "—";
@@ -431,10 +480,9 @@
            if (el("bk-total")) el("bk-total").textContent = "₹" + total.toLocaleString("en-IN");
            const confirmTotal = document.querySelector("[data-confirm-total]");
            if (confirmTotal) confirmTotal.textContent = "₹" + total.toLocaleString("en-IN");
-           // Hidden inputs
            ["date", "time", "duration", "amount"].forEach((k) => {
                const inp = document.querySelector(`[name="booking_${k}"]`);
-               if (inp)
+               if (inp) {
                    inp.value =
                        k === "date"
                            ? selectedDate
@@ -443,96 +491,97 @@
                              : k === "duration"
                                ? selectedDuration
                                : total;
+               }
            });
        }
-   
+
+       function selectDate(btn) {
+           if (!btn) return;
+           document.querySelectorAll("#dateGrid .cal-day").forEach((c) => c.classList.remove("selected"));
+           btn.classList.add("selected");
+           selectedDate = btn.dataset.date;
+           selectedTime = null;
+           updateSummary();
+           // Show slots immediately so UI never stays stuck on "Pick a date first"
+           renderSlots(DEFAULT_SLOTS);
+           loadSlots(selectedDate);
+       }
+
+       function loadSlots(date) {
+           const id = resolveMentorId();
+           if (!id || !date) return;
+
+           fetch(`/api/mentors/${id}/availability?date=${encodeURIComponent(date)}`, {
+               headers: {
+                   "X-Requested-With": "XMLHttpRequest",
+                   Accept: "application/json",
+               },
+           })
+               .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+               .then(({ ok, data }) => {
+                   if (ok && Array.isArray(data.slots)) {
+                       renderSlots(data.slots.length ? data.slots : DEFAULT_SLOTS);
+                   }
+                   // keep default slots already shown if API fails / empty
+               })
+               .catch(() => {
+                   /* defaults already visible */
+               });
+       }
+
        return {
-           init(rate) {
-               ratePerMin = rate;
-               // Generate 7-day date options
+           init(rate, id = null) {
+               ratePerMin = Number(rate) || 0;
+               mentorId = id != null && id !== "" ? String(id) : null;
+               if (!mentorId) {
+                   mentorId = resolveMentorId();
+               }
+               selectedDate = null;
+               selectedTime = null;
+               selectedDuration = 30;
+
+               document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
+               document.querySelector('.duration-btn[data-min="30"]')?.classList.add("selected");
+
+               const timeGrid = document.getElementById("timeGrid");
+               if (timeGrid) {
+                   timeGrid.innerHTML =
+                       '<div class="text-sm text-muted" style="grid-column:1/-1;">Pick a date first</div>';
+               }
+
                const grid = document.getElementById("dateGrid");
                if (grid) {
                    grid.innerHTML = "";
                    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                    for (let i = 0; i < 7; i++) {
                        const d = new Date();
+                       d.setHours(12, 0, 0, 0);
                        d.setDate(d.getDate() + i + 1);
-                       const btn = document.createElement("div");
+                       const btn = document.createElement("button");
+                       btn.type = "button";
                        btn.className = "cal-day";
                        btn.innerHTML = `<span class="cal-day-label">${days[d.getDay()]}</span>${d.getDate()}`;
-                       btn.dataset.date = d.toISOString().split("T")[0];
-                       btn.addEventListener("click", () => {
-                           document.querySelectorAll(".cal-day").forEach((c) => c.classList.remove("selected"));
-                           btn.classList.add("selected");
-                           selectedDate = btn.dataset.date;
-                           updateSummary();
-                           this.loadSlots(btn.dataset.date);
+                       btn.dataset.date = localDateString(d);
+                       btn.addEventListener("click", function (e) {
+                           e.preventDefault();
+                           e.stopPropagation();
+                           selectDate(btn);
                        });
                        grid.appendChild(btn);
                    }
                }
-           },
-   
-           loadSlots(date) {
-               const mentorId = document.querySelector("[data-mentor-id]")?.dataset.mentorId;
-               const grid = document.getElementById("timeGrid");
-               if (!grid || !mentorId) return;
-   
-               grid.innerHTML = '<div class="text-sm text-muted">Loading slots…</div>';
-               AjaxGet(`/api/mentors/${mentorId}/availability?date=${date}`, {
-                   onSuccess: (data) => {
-                       grid.innerHTML = "";
-                       const slots = data.slots || [
-                           "09:00",
-                           "10:00",
-                           "11:00",
-                           "12:00",
-                           "14:00",
-                           "15:00",
-                           "16:00",
-                           "17:00",
-                           "18:00",
-                       ];
-                       slots.forEach((slot) => {
-                           const div = document.createElement("div");
-                           div.className = "time-slot";
-                           div.textContent = slot;
-                           div.addEventListener("click", () => {
-                               document.querySelectorAll(".time-slot").forEach((s) => s.classList.remove("selected"));
-                               div.classList.add("selected");
-                               selectedTime = slot;
-                               updateSummary();
-                           });
-                           grid.appendChild(div);
-                       });
-                   },
-                   onError: () => {
-                       // Show default slots on error
-                       const defaults = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00"];
-                       grid.innerHTML = "";
-                       defaults.forEach((slot) => {
-                           const div = document.createElement("div");
-                           div.className = "time-slot";
-                           div.textContent = slot;
-                           div.addEventListener("click", () => {
-                               document.querySelectorAll(".time-slot").forEach((s) => s.classList.remove("selected"));
-                               div.classList.add("selected");
-                               selectedTime = slot;
-                               updateSummary();
-                           });
-                           grid.appendChild(div);
-                       });
-                   },
-               });
-           },
-   
-           setDuration(min) {
-               selectedDuration = min;
-               document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
-               document.querySelector(`.duration-btn[data-min="${min}"]`)?.classList.add("selected");
                updateSummary();
            },
-   
+
+           selectDate,
+           loadSlots,
+           setDuration(min) {
+               selectedDuration = Number(min) || 30;
+               document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
+               document.querySelector(`.duration-btn[data-min="${selectedDuration}"]`)?.classList.add("selected");
+               updateSummary();
+           },
+
            getBookingData() {
                if (!selectedDate) {
                    showToast("error", "Please select a date.");

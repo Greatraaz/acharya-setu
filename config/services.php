@@ -42,6 +42,12 @@ return [
         'token_expiry'    => env('AGORA_TOKEN_EXPIRY', 7200),
     ],
  
+    // ── Razorpay ───────────────────────────────────────────────
+    'razorpay' => [
+        'key'    => env('RAZORPAY_KEY_ID', ''),
+        'secret' => env('RAZORPAY_KEY_SECRET', ''),
+    ],
+
     // ── Zoom ───────────────────────────────────────────────────
     'zoom' => [
         'client_id'       => env('ZOOM_CLIENT_ID'),

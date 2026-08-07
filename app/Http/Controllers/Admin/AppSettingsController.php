@@ -18,6 +18,8 @@ class AppSettingsController extends Controller
     private array $sensitiveKeys = [
         'mail_password',
         'razorpay_key_secret', 'razorpay_webhook_secret',
+        'razorpay_test_secret', 'razorpay_live_secret',
+        'razorpay_secret',
         'stripe_secret_key', 'stripe_webhook_secret',
         'paypal_client_secret',
         'paytm_merchant_key',
@@ -90,9 +92,23 @@ class AppSettingsController extends Controller
             }
         }
 
-        // Encrypt sensitive keys before saving
+        // Encrypt sensitive keys before saving (skip blanks so we never wipe secrets)
         foreach ($data as $key => $value) {
-            if (in_array($key, $this->sensitiveKeys) && !empty($value)) {
+            if (in_array($key, $this->sensitiveKeys, true)) {
+                if ($value === null || $value === '') {
+                    unset($data[$key]);
+                    continue;
+                }
+                // Avoid double-encrypting an already-encrypted payload
+                if (is_string($value) && (strlen($value) > 80 || str_starts_with($value, 'eyJpdiI6'))) {
+                    try {
+                        decrypt($value);
+                        // Already encrypted — store as-is
+                        continue;
+                    } catch (\Throwable) {
+                        // Not valid ciphertext; encrypt the raw value below
+                    }
+                }
                 $data[$key] = encrypt($value);
             }
         }

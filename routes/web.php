@@ -297,6 +297,7 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
 
     // Book a session (called from mentor profile / search)
     Route::post('/sessions',          [BookingController::class, 'store'])       ->name('sessions.book');
+    Route::post('/sessions/verify-payment', [BookingController::class, 'verifyPayment'])->name('sessions.verify');
     Route::get( '/sessions/{id}/review', [BookingController::class, 'reviewForm'])->name('sessions.review');
     Route::post('/sessions/{id}/review', [BookingController::class, 'submitReview'])->name('sessions.review.post');
 

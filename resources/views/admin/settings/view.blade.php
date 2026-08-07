@@ -519,7 +519,13 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Key Secret <span class="key-badge">razorpay_key_secret</span></label>
-                                <input type="password" name="razorpay_key_secret" class="form-input font-mono text-sm" placeholder="Your secret key">
+                                <input type="password" name="razorpay_key_secret" class="form-input font-mono text-sm" placeholder="Paste Key Secret from Razorpay dashboard" autocomplete="new-password">
+                                @php $rzpOk = filled(\App\Models\AppSetting::razorpay()['secret'] ?? null); @endphp
+                                @unless($rzpOk)
+                                <p class="text-xs text-red-600 mt-1 font-medium">Key Secret is missing. Paste it from Razorpay → Settings → API Keys and save.</p>
+                                @else
+                                <p class="text-xs text-green-600 mt-1">Key Secret is saved. Leave blank to keep the current value.</p>
+                                @endunless
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Webhook Secret</label>

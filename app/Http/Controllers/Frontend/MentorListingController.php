@@ -133,13 +133,16 @@ class MentorListingController extends Controller
         $dayName = strtolower(date('l', strtotime($date)));
 
         // Load mentor's weekly availability preference (stored in JSON)
-        $weeklySlots = $mentor->preferences['weekly_slots'] ?? null;
+        $weeklySlots = $mentor->preferences['weekly_slots']
+            ?? $mentor->preferences['weekly_schedule']
+            ?? null;
 
-        if ($weeklySlots && isset($weeklySlots[$dayName])) {
-            $allSlots = $weeklySlots[$dayName];
+        $defaults = ['09:00','10:00','11:00','12:00','14:00','15:00','16:00','17:00','18:00','19:00'];
+
+        if (is_array($weeklySlots) && isset($weeklySlots[$dayName]) && is_array($weeklySlots[$dayName]) && count($weeklySlots[$dayName])) {
+            $allSlots = array_values($weeklySlots[$dayName]);
         } else {
-            // Default fallback slots
-            $allSlots = ['09:00','10:00','11:00','12:00','14:00','15:00','16:00','17:00','18:00','19:00'];
+            $allSlots = $defaults;
         }
 
         // Soft-expire abandoned unpaid checkouts so slots free without a cancel API
