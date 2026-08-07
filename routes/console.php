@@ -20,3 +20,10 @@ Artisan::command('storage:ensure', function () {
 
     return 0;
 })->purpose('Create upload directories and public/storage symlink for production');
+
+Artisan::command('mentors:backfill-slugs', function () {
+    $fixed = \App\Models\User::backfillMissingSlugs();
+    $this->info("Backfilled {$fixed} mentor slug(s).");
+
+    return 0;
+})->purpose('Generate missing public profile slugs for mentors');

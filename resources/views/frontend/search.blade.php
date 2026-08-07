@@ -157,7 +157,7 @@
                             <span class="mentor-rating">⭐ {{ number_format($mentor->rating,1) }} ({{ $mentor->total_sessions }})</span>
                         </div>
                         <div class="mentor-card-actions">
-                            <a href="/mentors/{{ $mentor->id }}" class="btn btn-outline btn-sm">View Profile</a>
+                            <a href="{{ $mentor->profile_url }}" class="btn btn-outline btn-sm">View Profile</a>
                             <button class="btn btn-primary btn-sm" onclick="openBookingModal({{ $mentor->id }},'{{ addslashes($mentor->name) }}',{{ $mentor->rate_per_minute }})">Book Session</button>
                         </div>
                     </div>

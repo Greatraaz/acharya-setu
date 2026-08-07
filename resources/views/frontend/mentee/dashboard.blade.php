@@ -170,7 +170,7 @@
             </div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
                 @forelse($recommendedMentors ?? [] as $mentor)
-                <div class="mentor-card" style="cursor:pointer;" onclick="window.location='/mentors/{{ $mentor->id }}'">
+                <div class="mentor-card" style="cursor:pointer;" onclick="window.location='{{ $mentor->profile_url }}'">
                     <div class="mentor-card-head">
                         <div class="mentor-avatar-lg">{{ strtoupper(substr($mentor->name, 0, 1)) }}</div>
                         <div class="mentor-card-info">

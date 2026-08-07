@@ -74,6 +74,13 @@ class MentorListingController extends Controller
 
         $mentors = $query->paginate(12)->withQueryString();
 
+        // Live DBs may have the slug column before backfill ran — heal missing values.
+        foreach ($mentors as $mentor) {
+            if (blank($mentor->slug)) {
+                $mentor->ensureSlug();
+            }
+        }
+
         // AJAX request — return JSON for JS rendering
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -88,12 +95,25 @@ class MentorListingController extends Controller
     }
 
     // ── Public mentor profile ─────────────────────────────────
-    public function show(int $id)
+    public function show(string $slug)
     {
+        // Old numeric URLs → permanent redirect to slug
+        if (ctype_digit($slug)) {
+            $mentor = User::where('role', 'mentor')
+                ->where('mentor_status', 'approved')
+                ->where('is_active', true)
+                ->findOrFail((int) $slug);
+
+            if ($mentor->slug) {
+                return redirect()->route('mentors.show', $mentor->slug, 301);
+            }
+        }
+
         $mentor = User::where('role', 'mentor')
             ->where('mentor_status', 'approved')
             ->where('is_active', true)
-            ->findOrFail($id);
+            ->where('slug', $slug)
+            ->firstOrFail();
 
         $reviews = [];
 

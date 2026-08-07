@@ -610,7 +610,7 @@
              <span class="mentor-rating">⭐ ${m.rating || "—"} (${m.total_sessions || 0} sessions)</span>
            </div>
            <div class="mentor-card-actions">
-             <a href="/mentors/${m.id}" class="btn btn-outline btn-sm">View Profile</a>
+             <a href="/mentors/${m.slug || m.id}" class="btn btn-outline btn-sm">View Profile</a>
              <button class="btn btn-primary btn-sm" onclick="openBookingModal(${m.id})">Book Session</button>
            </div>
          </div>`

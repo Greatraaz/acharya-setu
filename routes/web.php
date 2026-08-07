@@ -93,7 +93,7 @@ Route::post('/waitlist', [HomeController::class, 'waitlist'])->name('waitlist.st
 
 // ── Mentor Listing & Profile ────────────────────────────────
 Route::get('/mentors',      [MentorListingController::class, 'index'])->name('mentors.search');
-Route::get('/mentors/{id}', [MentorListingController::class, 'show'])->name('mentors.show');
+Route::get('/mentors/{slug}', [MentorListingController::class, 'show'])->name('mentors.show');
 
 // Mentor availability (called by booking widget via AJAX)
 Route::get('/api/mentors/{id}/availability', [MentorListingController::class, 'availability'])

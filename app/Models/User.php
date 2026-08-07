@@ -15,6 +15,7 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Traits\HasSubscription;
 use App\Traits\HasWallet;
 use App\Casts\PreferencesCast;
+use Illuminate\Support\Str;
  
 class User extends Authenticatable
 {
@@ -33,7 +34,7 @@ class User extends Authenticatable
     const MENTEE_STEPS = 4;
  
     protected $fillable = [
-        'name', 'email', 'password', 'role',
+        'name', 'email', 'password', 'role', 'slug',
         'wallet_balance', 'bio', 'expertise', 'field', 'college', 'year',
         'gender', 'rating', 'total_sessions', 'avatar_url', 'phone', 'bank_details', 'location',
         'linkedin', 'company', 'designation', 'experience_years',
@@ -107,6 +108,86 @@ class User extends Authenticatable
         return $array;
     }
  
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if ($user->role !== 'mentor') {
+                return;
+            }
+
+            if ($user->isDirty('name') || blank($user->slug)) {
+                $user->slug = static::generateUniqueSlug($user->name ?: 'mentor', $user->id);
+            }
+        });
+    }
+
+    public static function generateUniqueSlug(string $name, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($name);
+        if ($base === '') {
+            $base = 'mentor';
+        }
+
+        $slug = $base;
+        $i = 2;
+
+        while (
+            static::withTrashed()
+                ->where('slug', $slug)
+                ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+                ->exists()
+        ) {
+            $slug = $base . '-' . $i;
+            $i++;
+        }
+
+        return $slug;
+    }
+
+    public function getProfileUrlAttribute(): string
+    {
+        return route('mentors.show', $this->slug ?: $this->id);
+    }
+
+    /**
+     * Ensure this mentor has a unique public profile slug.
+     */
+    public function ensureSlug(): string
+    {
+        if ($this->role !== 'mentor') {
+            return (string) ($this->slug ?: $this->id);
+        }
+
+        if (filled($this->slug)) {
+            return $this->slug;
+        }
+
+        $this->forceFill([
+            'slug' => static::generateUniqueSlug($this->name ?: 'mentor', $this->id),
+        ])->saveQuietly();
+
+        return $this->slug;
+    }
+
+    /**
+     * Backfill missing slugs for all mentors.
+     */
+    public static function backfillMissingSlugs(): int
+    {
+        $fixed = 0;
+
+        static::query()
+            ->where('role', 'mentor')
+            ->where(fn ($q) => $q->whereNull('slug')->orWhere('slug', ''))
+            ->orderBy('id')
+            ->each(function (User $user) use (&$fixed) {
+                $user->ensureSlug();
+                $fixed++;
+            });
+
+        return $fixed;
+    }
+
     // ── Role helpers ──────────────────────────────────────────
     public function isMentor(): bool   { return $this->role === 'mentor'; }
     public function isMentee(): bool   { return $this->role === 'mentee'; }

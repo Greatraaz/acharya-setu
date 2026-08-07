@@ -12,7 +12,7 @@
                 <div class="dash-title">Edit Your Profile</div>
                 <div class="dash-subtitle">Keep your profile up to date to attract more mentees.</div>
             </div>
-            <a href="/mentors/{{ auth()->user()->id }}" target="_blank" class="btn btn-outline">👁 Preview Profile</a>
+            <a href="{{ auth()->user()->profile_url }}" target="_blank" class="btn btn-outline">👁 Preview Profile</a>
         </div>
 
         @if($errors->any())

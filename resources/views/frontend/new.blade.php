@@ -217,7 +217,7 @@
         </div>
         <div class="grid-4" style="gap:20px;">
             @forelse($featuredMentors ?? [] as $mentor)
-            <div class="mentor-card" onclick="window.location='/mentors/{{ $mentor->id }}'">
+            <div class="mentor-card" onclick="window.location='{{ $mentor->profile_url }}'">
                 <div class="mentor-card-head">
                     <div class="mentor-avatar-lg">
                         @if($mentor->avatar_url)<img src="{{ $mentor->avatar_url }}" alt="{{ $mentor->name }}">
@@ -239,8 +239,8 @@
                     <span class="mentor-rating">⭐ {{ number_format($mentor->rating, 1) }}</span>
                 </div>
                 <div class="mentor-card-actions" onclick="event.stopPropagation()">
-                    <a href="/mentors/{{ $mentor->id }}" class="btn btn-outline btn-sm">View</a>
-                    <a href="/mentors/{{ $mentor->id }}#book" class="btn btn-primary btn-sm">Book</a>
+                    <a href="{{ $mentor->profile_url }}" class="btn btn-outline btn-sm">View</a>
+                    <a href="{{ $mentor->profile_url }}#book" class="btn btn-primary btn-sm">Book</a>
                 </div>
             </div>
             @empty
