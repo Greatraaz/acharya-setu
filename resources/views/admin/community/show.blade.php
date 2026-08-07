@@ -193,7 +193,7 @@ $isAdminUi = request()->routeIs('admin.*');
                     @if($message->image_url)
                     <a href="{{ $message->image_url }}" target="_blank" rel="noopener" class="block mt-2">
                         <img src="{{ $message->image_url }}" alt="Attachment"
-                             class="max-h-64 max-w-full rounded-xl border border-gray-200 object-contain">
+                             class="w-full max-w-[320px] h-[200px] rounded-xl border border-gray-200 object-cover object-center bg-gray-50">
                     </a>
                     @endif
 
@@ -236,7 +236,7 @@ $isAdminUi = request()->routeIs('admin.*');
                                 @if($reply->image_url)
                                 <a href="{{ $reply->image_url }}" target="_blank" rel="noopener" class="block mt-1">
                                     <img src="{{ $reply->image_url }}" alt="Attachment"
-                                         class="max-h-40 max-w-full rounded-lg border border-gray-200 object-contain">
+                                         class="w-full max-w-[220px] h-[140px] rounded-lg border border-gray-200 object-cover object-center bg-gray-50">
                                 </a>
                                 @endif
                             </div>

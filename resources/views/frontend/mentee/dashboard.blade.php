@@ -4,57 +4,7 @@
 @section('content')
 <div class="dash-layout">
 
-    {{-- SIDEBAR --}}
-    <aside class="sidebar">
-        <div class="sidebar-section-label">Overview</div>
-        <a href="{{ route('mentee.dashboard') }}" class="sidebar-item @if(request()->routeIs('mentee.dashboard')) active @endif">
-            <span class="si-icon">📊</span> Dashboard
-        </a>
-
-        <div class="sidebar-section-label">Learning</div>
-        <a href="{{ route('mentee.journey.index') }}" class="sidebar-item @if(request()->routeIs('mentee.journey.*')) active @endif">
-            <span class="si-icon">🗺️</span> My Journey
-        </a>
-        <a href="{{ route('mentors.search') }}" class="sidebar-item">
-            <span class="si-icon">🔍</span> Find Mentors
-        </a>
-        <a href="{{ route('mentee.sessions') }}" class="sidebar-item @if(request()->routeIs('mentee.sessions')) active @endif">
-            <span class="si-icon">📅</span> My Sessions
-            @if($upcomingCount ?? 0) <span class="si-badge">{{ $upcomingCount }}</span> @endif
-        </a>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">📝</span> Assessments
-        </a>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">🧠</span> Quizzes
-        </a>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">🏥</span> Wellness Survey
-        </a>
-
-        <div class="sidebar-section-label">Community</div>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">💬</span> Channels
-        </a>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">💼</span> Job Listings
-        </a>
-
-        <div class="sidebar-section-label">Account</div>
-        <a href="{{ route('mentee.wallet') }}" class="sidebar-item @if(request()->routeIs('mentee.wallet')) active @endif">
-            <span class="si-icon">💰</span> Wallet
-            <span style="margin-left:auto;font-size:11px;color:var(--brand);">₹{{ number_format(auth()->user()->wallet_balance,0) }}</span>
-        </a>
-        <a href="#" class="sidebar-item">
-            <span class="si-icon">👤</span> Profile Settings
-        </a>
-        <form action="{{ route('logout') }}" method="POST" style="margin-top:auto;">
-            @csrf
-            <button class="sidebar-item w-full" style="background:none;cursor:pointer;color:var(--error);">
-                <span class="si-icon">🚪</span> Sign Out
-            </button>
-        </form>
-    </aside>
+    @include('frontend.mentee.partials.sidebar')
 
     {{-- CONTENT --}}
     <div class="dash-content">

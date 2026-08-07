@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=202608041559">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=202608041559">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=202608041559">
-    <link rel="stylesheet" href="{{ asset('frontend/css/app.css') }}?v=202608041630">
+    <link rel="stylesheet" href="{{ asset('frontend/css/app.css') }}?v=202608071310">
     {{-- Critical: only one theme logo visible (also works if app.css is cached/old on prod) --}}
     <style>
         .navbar-brand .logo-for-light,

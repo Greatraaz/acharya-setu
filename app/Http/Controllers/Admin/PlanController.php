@@ -22,17 +22,9 @@ class PlanController extends Controller
 
     public function store(Request $request)
     {
-        $data = $this->validate($request);
-        $data['slug'] = Str::slug($data['name']);
-        $data['features'] = $this->parseFeatures($request->features_raw);
-        $data['limits']   = [
-            'users'    => $request->limit_users,
-            'storage'  => $request->limit_storage,
-            'calls'    => $request->limit_calls,
-            'sessions' => $request->limit_sessions,
-        ];
-
+        $data = $this->validated($request);
         Plan::create($data);
+
         return redirect()->route('admin.plans.index')->with('success', 'Plan created successfully.');
     }
 
@@ -43,16 +35,9 @@ class PlanController extends Controller
 
     public function update(Request $request, Plan $plan)
     {
-        $data = $this->validate($request);
-        $data['features'] = $this->parseFeatures($request->features_raw);
-        $data['limits']   = [
-            'users'    => $request->limit_users,
-            'storage'  => $request->limit_storage,
-            'calls'    => $request->limit_calls,
-            'sessions' => $request->limit_sessions,
-        ];
-
+        $data = $this->validated($request, $plan);
         $plan->update($data);
+
         return redirect()->route('admin.plans.index')->with('success', 'Plan updated successfully.');
     }
 
@@ -70,7 +55,7 @@ class PlanController extends Controller
 
     public function toggleStatus(Plan $plan)
     {
-        $plan->update(['is_active' => !$plan->is_active]);
+        $plan->update(['is_active' => ! $plan->is_active]);
         return redirect()->back()->with('success', 'Plan status updated.');
     }
 
@@ -83,9 +68,9 @@ class PlanController extends Controller
         return response()->json(['success' => true]);
     }
 
-    private function validate(Request $request): array
+    private function validated(Request $request, ?Plan $plan = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name'          => 'required|string|max:100',
             'description'   => 'nullable|string|max:500',
             'badge_label'   => 'nullable|string|max:50',
@@ -103,11 +88,47 @@ class PlanController extends Controller
             'razorpay_monthly_plan_id' => 'nullable|string',
             'razorpay_yearly_plan_id'  => 'nullable|string',
         ]);
+
+        $data['slug'] = $plan?->slug ?: Str::slug($data['name']);
+        $data['features'] = $this->parseFeatures($request->features_raw);
+        $data['limits'] = [
+            'users'    => $request->limit_users,
+            'storage'  => $request->limit_storage,
+            'calls'    => $request->limit_calls,
+            'sessions' => $request->limit_sessions,
+        ];
+        $data['is_active'] = $request->boolean('is_active');
+        $data['is_featured'] = $request->boolean('is_featured');
+        $data['currency'] = $data['currency'] ?? 'INR';
+        $data['trial_days'] = (int) ($data['trial_days'] ?? 0);
+        $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
+
+        // Legacy columns used by mobile/API (NOT NULL in older schema).
+        $data['plan_name'] = $data['name'];
+        $data['price'] = $data['price_monthly'];
+        $data['status'] = $data['is_active'] ? 'active' : 'inactive';
+        $data['duration'] = $plan?->duration ?? 30;
+        $data['level'] = $plan?->level ?: $this->resolveLevel((float) $data['price_monthly']);
+
+        return $data;
+    }
+
+    private function resolveLevel(float $priceMonthly): string
+    {
+        return match (true) {
+            $priceMonthly <= 0 => 'basic',
+            $priceMonthly < 500 => 'standard',
+            $priceMonthly < 2000 => 'premium',
+            default => 'enterprise',
+        };
     }
 
     private function parseFeatures(?string $raw): array
     {
-        if (!$raw) return [];
+        if (! $raw) {
+            return [];
+        }
+
         return array_values(array_filter(array_map('trim', explode("\n", $raw))));
     }
 }

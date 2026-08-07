@@ -5,29 +5,7 @@
 @section('content')
 <div class="dash-layout">
 
-    <aside class="sidebar">
-        <div class="sidebar-section-label">Overview</div>
-        <a href="{{ route('mentor.dashboard') }}" class="sidebar-item"><span class="si-icon">📊</span> Dashboard</a>
-        <div class="sidebar-section-label">Sessions</div>
-        <a href="{{ route('mentor.sessions') }}" class="sidebar-item active"><span class="si-icon">📅</span> My Sessions</a>
-        <a href="{{ route('mentor.availability') }}" class="sidebar-item"><span class="si-icon">⏰</span> Set Availability</a>
-        <a href="#" class="sidebar-item"><span class="si-icon">📝</span> Session Notes</a>
-        <div class="sidebar-section-label">Mentees</div>
-        <a href="{{ route('mentor.mentees') }}" class="sidebar-item"><span class="si-icon">🎓</span> My Mentees</a>
-        <a href="#" class="sidebar-item"><span class="si-icon">🗺️</span> Journey Tracker</a>
-        <div class="sidebar-section-label">Content</div>
-        <a href="#" class="sidebar-item"><span class="si-icon">💬</span> Community</a>
-        <a href="#" class="sidebar-item"><span class="si-icon">🧠</span> Assessments</a>
-        <div class="sidebar-section-label">Account</div>
-        <a href="{{ route('mentor.wallet') }}" class="sidebar-item">
-            <span class="si-icon">💰</span> Earnings
-            <span style="margin-left:auto;font-size:11px;color:var(--success);">₹{{ number_format(auth()->user()->wallet_balance ?? 0, 0) }}</span>
-        </a>
-        <a href="{{ route('mentor.profile.edit') }}" class="sidebar-item"><span class="si-icon">✏️</span> Edit Profile</a>
-        <form action="{{ route('logout') }}" method="POST" style="margin-top:auto;">
-            @csrf<button class="sidebar-item w-full" style="background:none;cursor:pointer;color:var(--error);"><span class="si-icon">🚪</span> Sign Out</button>
-        </form>
-    </aside>
+    @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
 

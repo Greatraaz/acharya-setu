@@ -4,7 +4,7 @@
 @section('content')
 @php $canPost = $channel->canPost(auth()->user()); @endphp
 <div class="dash-layout">
-    @include('frontend.mentors.partials.sidebar')
+    @include('frontend.mentee.partials.sidebar')
 
     <div class="dash-content">
         <div class="dash-header flex-between">
@@ -12,7 +12,7 @@
                 <div class="dash-title">{{ $channel->icon }} {{ $channel->name }}</div>
                 <div class="dash-subtitle">{{ $channel->description ?: 'Channel discussion' }}</div>
             </div>
-            <a href="{{ route('mentor.community') }}" class="btn btn-ghost">← All channels</a>
+            <a href="{{ route('mentee.community.index') }}" class="btn btn-ghost">← All channels</a>
         </div>
 
         @unless($channel->isMember(auth()->user()))
@@ -20,7 +20,7 @@
             <span class="alert-icon">ℹ️</span>
             <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;width:100%;">
                 <span style="font-size:13px;">Join this channel to post and reply.</span>
-                <form action="{{ route('mentor.community.join', $channel->slug) }}" method="POST">
+                <form action="{{ route('mentee.community.join', $channel->slug) }}" method="POST">
                     @csrf
                     <button class="btn btn-primary btn-sm" type="submit">Join channel</button>
                 </form>
@@ -30,7 +30,7 @@
 
         @if($canPost)
         <div class="card" style="margin-bottom:16px;">
-            <form action="{{ route('mentor.community.messages.store', $channel->slug) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('mentee.community.messages.store', $channel->slug) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <textarea name="body" class="form-input" rows="3" placeholder="Share an update with the channel..." style="resize:vertical;"></textarea>
                 <div style="display:flex;justify-content:space-between;gap:10px;margin-top:10px;align-items:center;">
@@ -49,7 +49,7 @@
                     <span style="font-weight:500;color:var(--text-3);">· {{ $message->created_at?->diffForHumans() }}</span>
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;">
-                    <form action="{{ route('mentor.community.messages.like', $message->id) }}" method="POST">
+                    <form action="{{ route('mentee.community.messages.like', $message->id) }}" method="POST">
                         @csrf
                         <button type="submit" class="btn btn-ghost btn-sm">👍 {{ is_array($message->liked_by) ? count($message->liked_by) : 0 }}</button>
                     </form>
@@ -95,7 +95,7 @@
 
             @if($canPost)
             <div id="reply-{{ $message->id }}" style="display:none;margin-top:12px;">
-                <form action="{{ route('mentor.community.messages.store', $channel->slug) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('mentee.community.messages.store', $channel->slug) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="parent_id" value="{{ $message->id }}">
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">

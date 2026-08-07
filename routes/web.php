@@ -34,8 +34,13 @@ use App\Http\Controllers\Mentee\OnboardingController   as MenteeOnboardingContro
 use App\Http\Controllers\Mentee\DashboardController    as MenteeDashboardController;
 use App\Http\Controllers\Mentee\SessionController      as MenteeSessionController;
 use App\Http\Controllers\Mentee\WalletController       as MenteeWalletController;
+use App\Http\Controllers\Mentee\PlanController         as MenteePlanController;
 use App\Http\Controllers\Mentee\BookingController;
 use App\Http\Controllers\Mentee\JourneyController;
+use App\Http\Controllers\Mentee\AssessmentController as MenteeAssessmentController;
+use App\Http\Controllers\Mentee\QuizController as MenteeQuizController;
+use App\Http\Controllers\Mentee\CommunityController as MenteeCommunityController;
+use App\Http\Controllers\Mentee\JobController as MenteeJobController;
 
 // ── Admin controllers (already exist in your backend) ───────
 use App\Http\Controllers\Admin\AdminController;
@@ -308,12 +313,18 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::post('/wallet/topup/initiate', [MenteeWalletController::class, 'initiateTopup']) ->name('wallet.topup');
     Route::post('/wallet/topup/verify',   [MenteeWalletController::class, 'verifyTopup'])   ->name('wallet.topup.verify');
 
+    // Subscription plans (mirrors mobile app flow)
+    Route::get( '/plans',                    [MenteePlanController::class, 'index'])    ->name('plans');
+    Route::post('/plans/{plan}/subscribe',   [MenteePlanController::class, 'subscribe'])->name('plans.subscribe');
+    Route::post('/plans/{plan}/verify',      [MenteePlanController::class, 'verify'])   ->name('plans.verify');
+    Route::post('/plans/cancel',             [MenteePlanController::class, 'cancel'])   ->name('plans.cancel');
+
     // Quizzes
-    Route::get( '/quizzes',                               [QuizController::class, 'index'])  ->name('quizzes.index');
-    Route::get( '/quizzes/{quiz}',                        [QuizController::class, 'show'])   ->name('quizzes.show');
-    Route::post('/quizzes/{quiz}/attempt',                [QuizController::class, 'attempt'])->name('quizzes.attempt');
-    Route::post('/quizzes/{quiz}/attempt/{attempt}/submit',[QuizController::class, 'submit'])->name('quizzes.submit');
-    Route::get( '/quizzes/{quiz}/attempt/{attempt}/result',[QuizController::class, 'result'])->name('quizzes.result');
+    Route::get( '/quizzes',                               [MenteeQuizController::class, 'index'])  ->name('quizzes.index');
+    Route::get( '/quizzes/{quiz}',                        [MenteeQuizController::class, 'show'])   ->name('quizzes.show');
+    Route::post('/quizzes/{quiz}/attempt',                [MenteeQuizController::class, 'attempt'])->name('quizzes.attempt');
+    Route::post('/quizzes/{quiz}/attempt/{attempt}/submit',[MenteeQuizController::class, 'submit'])->name('quizzes.submit');
+    Route::get( '/quizzes/{quiz}/attempt/{attempt}/result',[MenteeQuizController::class, 'result'])->name('quizzes.result');
 
     // Wellness
     Route::get( '/wellness',              [WellnessSurveyController::class, 'index'])         ->name('wellness.index');
@@ -321,24 +332,26 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::post('/wellness/{survey}/respond', [WellnessSurveyController::class, 'respond'])   ->name('wellness.respond');
 
     // Assessments
-    Route::get( '/assessments',           [AssessmentController::class, 'menteeIndex'])        ->name('assessments.index');
-    Route::get( '/assessments/{id}',      [AssessmentController::class, 'menteeShow'])         ->name('assessments.show');
-    Route::post('/assessments/{id}/submit',[AssessmentController::class, 'menteeSubmit'])      ->name('assessments.submit');
+    Route::get( '/assessments',           [MenteeAssessmentController::class, 'index'])  ->name('assessments.index');
+    Route::get( '/assessments/{id}',      [MenteeAssessmentController::class, 'show'])   ->name('assessments.show');
+    Route::post('/assessments/{id}/submit',[MenteeAssessmentController::class, 'submit'])->name('assessments.submit');
 
     // Community
-    Route::get( '/community',                    [ChannelController::class, 'index'])->name('community.index');
+    Route::get( '/community',                    [MenteeCommunityController::class, 'index'])->name('community.index');
     Route::post('/community/messages/{message}/like', [MessageController::class, 'like'])->name('community.messages.like');
     Route::delete('/community/messages/{message}',    [MessageController::class, 'destroy'])->name('community.messages.destroy');
-    Route::get( '/community/{channel:slug}',     [ChannelController::class, 'show'])->name('community.show');
-    Route::post('/community/{channel:slug}/join',    [ChannelController::class, 'join'])->name('community.join');
-    Route::post('/community/{channel:slug}/leave',   [ChannelController::class, 'leave'])->name('community.leave');
+    Route::get( '/community/{channel:slug}',     [MenteeCommunityController::class, 'show'])->name('community.show');
+    Route::post('/community/{channel:slug}/join',    [MenteeCommunityController::class, 'join'])->name('community.join');
+    Route::post('/community/{channel:slug}/leave',   [MenteeCommunityController::class, 'leave'])->name('community.leave');
     Route::post('/community/{channel:slug}/invite',  [ChannelController::class, 'invite'])->name('community.invite');
     Route::delete('/community/{channel:slug}/members/{user}', [ChannelController::class, 'removeMember'])->name('community.members.remove');
     Route::delete('/community/{channel:slug}',   [ChannelController::class, 'destroy'])->name('community.destroy');
     Route::post('/community/{channel:slug}/messages',[MessageController::class, 'store'])->name('community.messages.store');
 
     // Jobs
-    Route::get('/jobs', [JobListingController::class, 'publicIndex'])->name('jobs');
+    Route::get('/jobs', [MenteeJobController::class, 'index'])->name('jobs');
+    Route::get('/jobs/{id}', [MenteeJobController::class, 'show'])->name('jobs.show');
+    Route::post('/jobs/{id}/apply', [MenteeJobController::class, 'apply'])->name('jobs.apply');
 });
 
 /*

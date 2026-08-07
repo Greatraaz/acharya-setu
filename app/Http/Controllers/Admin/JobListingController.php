@@ -34,6 +34,30 @@ class JobListingController extends Controller
         return view('admin.jobs.index', compact('jobs', 'stats', 'departments'));
     }
 
+    /** Public / guest job board */
+    public function publicIndex(Request $request)
+    {
+        $query = JobListing::query()->active()->latest('published_at');
+
+        if ($s = $request->search) {
+            $query->where(fn ($q) => $q
+                ->where('title', 'like', "%{$s}%")
+                ->orWhere('department', 'like', "%{$s}%")
+                ->orWhere('location', 'like', "%{$s}%"));
+        }
+
+        $jobs = $query->paginate(12)->withQueryString();
+
+        return view('frontend.jobs', compact('jobs'));
+    }
+
+    public function publicShow(int $id)
+    {
+        $job = JobListing::query()->active()->findOrFail($id);
+
+        return view('frontend.job-show', compact('job'));
+    }
+
     public function create()
     {
         return view('admin.jobs.form', ['job' => new JobListing()]);
