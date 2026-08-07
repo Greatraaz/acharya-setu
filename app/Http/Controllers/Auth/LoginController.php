@@ -46,7 +46,7 @@ class LoginController extends Controller
             ]);
         }
 
-        return redirect()->intended($redirect);
+        return redirect()->to($redirect);
     }
 
     // Logout

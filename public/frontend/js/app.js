@@ -783,8 +783,9 @@
                    loader: true,
                    onSuccess: (data) => {
                        showToast("success", data.message || successMsg);
-                       if (redirectTo) setTimeout(() => (location.href = redirectTo), 1200);
-                       else if (data.redirect) setTimeout(() => (location.href = data.redirect), 1200);
+                       const loginRedirect = document.getElementById("login-redirect")?.value;
+                       const target = loginRedirect || data.redirect || redirectTo;
+                       if (target) setTimeout(() => (location.href = target), 1200);
                        if (form.dataset.resetOnSuccess !== undefined) form.reset();
                    },
                    onError: (err) => {

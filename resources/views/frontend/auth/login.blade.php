@@ -53,7 +53,7 @@
 
             {{-- Email tab --}}
             <div id="tab-email" class="tab-content active">
-                <form action="{{ route('login') }}" method="POST" id="email-login-form" data-ajax-form="{{ route('login') }}" data-redirect="{{ route('home') }}" data-success="Welcome back!">
+                <form action="{{ route('login') }}" method="POST" id="email-login-form" data-ajax-form="{{ route('login') }}" data-success="Welcome back!">
                     @csrf
                     <div class="form-group">
                         <label class="form-label">Email Address</label>
