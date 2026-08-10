@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\Plan;
 use App\Models\UserSubscription;
+use App\Services\PlanInvoiceService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -28,7 +29,7 @@ class PlanController extends Controller
             ->latest('starts_at')
             ->first();
 
-        $history = UserSubscription::with('plan')
+        $history = UserSubscription::with(['plan', 'invoice'])
             ->where('user_id', $user->id)
             ->latest()
             ->limit(10)
@@ -71,10 +72,12 @@ class PlanController extends Controller
             && $current->expires_at->isFuture()
             && (int) $current->plan_id !== (int) $plan->id;
 
-        $price = (float) ($plan->price_monthly ?: $plan->price);
+        $pricing = $plan->pricingBreakdown('monthly');
+        $price = (float) $pricing['total'];
 
         if ($price <= 0) {
             $subscription = $this->activateOrUpgradeSubscription($user->id, $plan, null);
+            $invoice = app(PlanInvoiceService::class)->ensureForSubscription($subscription->fresh(), 'system');
 
             return response()->json([
                 'message' => $isUpgrade ? 'Plan upgraded successfully.' : 'Plan subscribed successfully.',
@@ -83,6 +86,8 @@ class PlanController extends Controller
                     'subscription_id' => $subscription->subscription_id,
                     'plan_name'       => $plan->name,
                     'expires_at'      => $subscription->expires_at?->toDateTimeString(),
+                    'pricing'         => $pricing,
+                    'invoice'         => $invoice->toPublicArray(),
                 ],
             ]);
         }
@@ -95,7 +100,7 @@ class PlanController extends Controller
             return response()->json(['message' => 'Razorpay is disabled in admin settings.'], 503);
         }
 
-        $currency = strtoupper($plan->currency ?? 'INR');
+        $currency = $pricing['currency'];
         $amountInPaise = (int) round($price * 100);
 
         if ($amountInPaise < 100) {
@@ -116,6 +121,9 @@ class PlanController extends Controller
                         'plan_id'    => (string) $plan->id,
                         'is_upgrade' => $isUpgrade ? '1' : '0',
                         'source'     => 'web',
+                        'base'       => (string) $pricing['base'],
+                        'cgst'       => (string) $pricing['cgst_amount'],
+                        'sgst'       => (string) $pricing['sgst_amount'],
                     ],
                 ]);
 
@@ -142,7 +150,8 @@ class PlanController extends Controller
             $plan,
             $currency,
             $order['id'] ?? null,
-            $isUpgrade
+            $isUpgrade,
+            $price
         );
 
         return response()->json([
@@ -153,6 +162,7 @@ class PlanController extends Controller
             'order_id'           => $order['id'] ?? null,
             'amount'             => $amountInPaise,
             'amount_rupees'      => $price,
+            'pricing'            => $pricing,
             'currency'           => $currency,
             'key'                => $creds['key'],
             'name'               => 'Vedrix',
@@ -217,14 +227,14 @@ class PlanController extends Controller
             ]);
         }
 
-        $price = (float) ($plan->price_monthly ?: $plan->price);
+        $pricing = $plan->pricingBreakdown('monthly');
         $startsAt = Carbon::now();
-        $expiresAt = $startsAt->copy()->addDays(max(1, (int) ($plan->duration ?: 30)));
+        $expiresAt = $startsAt->copy()->addDays($plan->billingDays());
 
         $subscription->update([
             'plan_id'             => $plan->id,
-            'amount_paid'         => $price,
-            'currency'            => strtoupper($plan->currency ?? 'INR'),
+            'amount_paid'         => $pricing['total'],
+            'currency'            => $pricing['currency'],
             'payment_status'      => 'paid',
             'payment_reference'   => $data['razorpay_payment_id'],
             'razorpay_payment_id' => $data['razorpay_payment_id'],
@@ -234,6 +244,8 @@ class PlanController extends Controller
         ]);
 
         $this->expireOtherSubscriptions($user->id, $subscription->id);
+        $subscription->refresh();
+        $invoice = app(PlanInvoiceService::class)->ensureForSubscription($subscription, 'system');
 
         return response()->json([
             'message' => 'Payment verified. Your plan is now active!',
@@ -241,6 +253,8 @@ class PlanController extends Controller
                 'subscription_id' => $subscription->subscription_id,
                 'plan_name'       => $plan->name,
                 'expires_at'      => $expiresAt->toDateTimeString(),
+                'pricing'         => $pricing,
+                'invoice'         => $invoice->toPublicArray(),
             ],
         ]);
     }
@@ -298,10 +312,11 @@ class PlanController extends Controller
         Plan $plan,
         string $currency,
         ?string $razorpayOrderId,
-        bool $isUpgrade = false
+        bool $isUpgrade = false,
+        ?float $amountTotal = null
     ): UserSubscription {
         $subscription = $this->currentSubscription($userId);
-        $price = (float) ($plan->price_monthly ?: $plan->price);
+        $price = $amountTotal ?? (float) $plan->pricingBreakdown('monthly')['total'];
 
         if ($subscription && $isUpgrade) {
             $subscription->update([
@@ -342,14 +357,14 @@ class PlanController extends Controller
         Plan $plan,
         ?string $paymentReference
     ): UserSubscription {
+        $pricing = $plan->pricingBreakdown('monthly');
         $startsAt = Carbon::now();
-        $expiresAt = $startsAt->copy()->addDays(max(1, (int) ($plan->duration ?: 30)));
-        $price = (float) ($plan->price_monthly ?: $plan->price);
+        $expiresAt = $startsAt->copy()->addDays($plan->billingDays());
 
         $payload = [
             'plan_id'           => $plan->id,
-            'amount_paid'       => $price,
-            'currency'          => strtoupper($plan->currency ?? 'INR'),
+            'amount_paid'       => $pricing['total'],
+            'currency'          => $pricing['currency'],
             'payment_status'    => 'paid',
             'payment_reference' => $paymentReference,
             'status'            => 'active',

@@ -33,6 +33,7 @@
                 ['admin.wellness.index',     '🧘', 'Wellness Surveys'],
                 ['admin.community.index',    '💬', 'Community Channels'],
                 ['admin.plans.index', '⭐', 'Premium Plans'],
+                ['admin.subscriptions.index', '📋', 'Subscriptions'],
             ],
             'Configuration' => [
                 ['admin.settings.index',  '⚙️', 'App Settings'],

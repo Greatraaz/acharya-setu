@@ -18,6 +18,8 @@ class JourneyController extends Controller
 {
     public function index()
     {
+        $canViewProgress = auth()->user()->canAccessProgressReport();
+
         $enrollment = MenteeEnrollment::where('mentee_id', auth()->id())
             ->where('status', 'active')
             ->with('stream')
@@ -34,11 +36,21 @@ class JourneyController extends Controller
 
         if ($enrollment?->stream) {
             $months = $enrollment->stream->months()->with('weeks')->orderBy('month_number')->get();
-            $progress = StudentCurriculumProgress::getOverallProgress(auth()->id(), $enrollment->stream_id);
-            $monthProgress = $months->map(fn ($m) => array_merge(
-                ['month' => $m],
-                $m->getProgressForUser(auth()->id())
-            ));
+
+            if ($canViewProgress) {
+                $progress = StudentCurriculumProgress::getOverallProgress(auth()->id(), $enrollment->stream_id);
+                $monthProgress = $months->map(fn ($m) => array_merge(
+                    ['month' => $m],
+                    $m->getProgressForUser(auth()->id())
+                ));
+            } else {
+                $monthProgress = $months->map(fn ($m) => [
+                    'month' => $m,
+                    'percent' => null,
+                    'completed' => null,
+                    'total' => null,
+                ]);
+            }
         }
 
         return view('frontend.mentee.journey', compact(
@@ -46,51 +58,74 @@ class JourneyController extends Controller
             'streams',
             'months',
             'progress',
-            'monthProgress'
+            'monthProgress',
+            'canViewProgress'
         ));
     }
 
     public function month($month)
     {
+        $canViewProgress = auth()->user()->canAccessProgressReport();
         $monthRecord = CurriculumMonth::with(['weeks.tasks', 'weeks.mcqs', 'stream'])->findOrFail($month);
         $this->assertEnrolledInStream($monthRecord->stream_id);
 
-        $progress = $monthRecord->getProgressForUser(auth()->id());
-        $weekProgress = $monthRecord->weeks->map(fn ($w) => array_merge(
-            ['week' => $w],
-            $w->getProgressForUser(auth()->id())
-        ));
+        if ($canViewProgress) {
+            $progress = $monthRecord->getProgressForUser(auth()->id());
+            $weekProgress = $monthRecord->weeks->map(fn ($w) => array_merge(
+                ['week' => $w],
+                $w->getProgressForUser(auth()->id())
+            ));
+        } else {
+            $progress = ['percent' => null, 'completed' => null, 'total' => null];
+            $weekProgress = $monthRecord->weeks->map(fn ($w) => [
+                'week' => $w,
+                'percent' => null,
+                'completed' => null,
+                'total' => null,
+            ]);
+        }
 
         return view('frontend.mentee.journey-month', [
             'month' => $monthRecord,
             'progress' => $progress,
             'weekProgress' => $weekProgress,
+            'canViewProgress' => $canViewProgress,
         ]);
     }
 
     public function week($week)
     {
+        $canViewProgress = auth()->user()->canAccessProgressReport();
         $weekRecord = CurriculumWeek::with(['tasks', 'mcqs', 'month.stream'])->findOrFail($week);
         $this->assertEnrolledInStream($weekRecord->month?->stream_id);
 
-        $progress = $weekRecord->getProgressForUser(auth()->id());
-        $completedTaskIds = StudentCurriculumProgress::where('user_id', auth()->id())
-            ->where('item_type', 'task')
-            ->where('is_completed', true)
-            ->whereIn('item_id', $weekRecord->tasks->pluck('id'))
-            ->pluck('item_id')
-            ->all();
+        $progress = $canViewProgress
+            ? $weekRecord->getProgressForUser(auth()->id())
+            : ['percent' => null, 'completed' => null, 'total' => null];
 
-        $mcqAttempts = McqAttempt::where('user_id', auth()->id())
-            ->whereIn('mcq_id', $weekRecord->mcqs->pluck('id'))
-            ->latest()
-            ->get()
-            ->unique('mcq_id')
-            ->keyBy('mcq_id');
+        $completedTaskIds = $canViewProgress
+            ? StudentCurriculumProgress::where('user_id', auth()->id())
+                ->where('item_type', 'task')
+                ->where('is_completed', true)
+                ->whereIn('item_id', $weekRecord->tasks->pluck('id'))
+                ->pluck('item_id')
+                ->all()
+            : [];
 
-        $checkin = WeeklyCheckin::where('mentee_id', auth()->id())
-            ->where('week_id', $weekRecord->id)
-            ->first();
+        $mcqAttempts = $canViewProgress
+            ? McqAttempt::where('user_id', auth()->id())
+                ->whereIn('mcq_id', $weekRecord->mcqs->pluck('id'))
+                ->latest()
+                ->get()
+                ->unique('mcq_id')
+                ->keyBy('mcq_id')
+            : collect();
+
+        $checkin = $canViewProgress
+            ? WeeklyCheckin::where('mentee_id', auth()->id())
+                ->where('week_id', $weekRecord->id)
+                ->first()
+            : null;
 
         return view('frontend.mentee.journey-week', [
             'week' => $weekRecord,
@@ -98,6 +133,7 @@ class JourneyController extends Controller
             'completedTaskIds' => $completedTaskIds,
             'mcqAttempts' => $mcqAttempts,
             'checkin' => $checkin,
+            'canViewProgress' => $canViewProgress,
         ]);
     }
 
@@ -129,17 +165,26 @@ class JourneyController extends Controller
             array_merge($extra, ['is_completed' => true])
         );
 
-        return response()->json(['message' => 'Task completed!', 'completed' => true]);
+        $canViewProgress = auth()->user()->canAccessProgressReport();
+
+        return response()->json([
+            'message' => $canViewProgress
+                ? 'Task completed!'
+                : 'Task submitted. Upgrade your plan to view scores and progress.',
+            'completed' => $canViewProgress,
+            'progress_report_enabled' => $canViewProgress,
+        ]);
     }
 
     public function answerMcq($mcqId, Request $request)
     {
         $mcq = CurriculumMcq::with('week.month')->findOrFail($mcqId);
         $this->assertEnrolledInStream($mcq->week?->month?->stream_id);
+        $canViewProgress = auth()->user()->canAccessProgressReport();
 
         $request->validate(['selected_index' => 'required|integer|min:0']);
 
-        if ($mcq->isAnsweredCorrectlyByUser(auth()->id())) {
+        if ($canViewProgress && $mcq->isAnsweredCorrectlyByUser(auth()->id())) {
             return response()->json(['message' => 'Already answered correctly.'], 422);
         }
 
@@ -159,11 +204,19 @@ class JourneyController extends Controller
             StudentCurriculumProgress::markComplete(auth()->id(), 'mcq', $mcq->id);
         }
 
+        if (! $canViewProgress) {
+            return response()->json([
+                'message' => 'Answer submitted. Upgrade your plan to view scores and progress.',
+                'progress_report_enabled' => false,
+            ]);
+        }
+
         return response()->json([
             'correct' => $isCorrect,
             'correct_index' => (int) $mcq->correct_index,
             'explanation' => $mcq->explanation,
             'points_earned' => $points,
+            'progress_report_enabled' => true,
         ]);
     }
 
@@ -184,7 +237,14 @@ class JourneyController extends Controller
             array_merge($data, ['submitted_at' => now()])
         );
 
-        return response()->json(['message' => 'Check-in submitted! Your mentor will respond soon.']);
+        $canViewProgress = auth()->user()->canAccessProgressReport();
+
+        return response()->json([
+            'message' => $canViewProgress
+                ? 'Check-in submitted! Your mentor will respond soon.'
+                : 'Check-in submitted. Upgrade your plan to view progress history.',
+            'progress_report_enabled' => $canViewProgress,
+        ]);
     }
 
     private function assertEnrolledInStream(?int $streamId): void

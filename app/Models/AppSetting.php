@@ -210,5 +210,19 @@ class AppSetting extends Model
         ];
     }
 
-    
+    /** Seller / invoice billing details */
+    public static function billing(): array
+    {
+        $s = static::allCached();
+        $app = static::app();
+
+        return [
+            'company_name' => $s['invoice_company_name'] ?? ($app['name'] ?? 'Vedrix'),
+            'gstin'        => $s['invoice_gstin'] ?? '',
+            'address'      => $s['invoice_address'] ?? '',
+            'email'        => $s['invoice_email'] ?? ($s['contact_email'] ?? ''),
+            'phone'        => $s['invoice_phone'] ?? ($s['support_phone'] ?? ''),
+            'prefix'       => $s['invoice_prefix'] ?? 'INV',
+        ];
+    }
 }

@@ -41,10 +41,15 @@
             <div class="stat-card">
                 <div class="stat-card-icon">📈</div>
                 <div class="stat-card-label">Journey Progress</div>
+                @if($canViewProgress ?? false)
                 <div class="stat-card-value">{{ $stats['progress'] ?? 0 }}%</div>
                 <div class="progress-bar" style="margin-top:8px;">
                     <div class="progress-fill" style="width:{{ $stats['progress'] ?? 0 }}%"></div>
                 </div>
+                @else
+                <div class="stat-card-value" style="font-size:16px;">Locked</div>
+                <a href="{{ route('mentee.plans') }}" style="font-size:11px;color:var(--brand);">Upgrade plan →</a>
+                @endif
             </div>
         </div>
 
@@ -92,16 +97,27 @@
                 <div style="margin-bottom:16px;">
                     <div style="font-size:13px;font-weight:600;margin-bottom:4px;">{{ $enrollment->stream->name ?? 'Engineering' }}</div>
                     <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;">Month {{ $enrollment->current_month }} · Week {{ $enrollment->current_week }}</div>
+                    @if($canViewProgress ?? false)
                     <div class="progress-bar">
                         <div class="progress-fill" style="width:{{ ($enrollment->current_month/6)*100 }}%"></div>
                     </div>
+                    @else
+                    <div style="font-size:11px;color:var(--text-3);">Task list shown without scores. <a href="{{ route('mentee.plans') }}" style="color:var(--brand);">Upgrade for progress report →</a></div>
+                    @endif
                 </div>
-                @foreach($weekTasks ?? [] as $task)
+                @forelse($weekTasks ?? [] as $task)
                 <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+                    @if($canViewProgress ?? false)
                     <span style="font-size:16px;">{{ $task->is_completed ? '✅' : '⬜' }}</span>
                     <span style="font-size:13px;{{ $task->is_completed ? 'text-decoration:line-through;color:var(--text-3)' : '' }}">{{ $task->title }}</span>
+                    @else
+                    <span style="font-size:16px;">⬜</span>
+                    <span style="font-size:13px;">{{ $task->title }}</span>
+                    @endif
                 </div>
-                @endforeach
+                @empty
+                <div style="font-size:12px;color:var(--text-3);padding:8px 0;">No tasks for this week yet.</div>
+                @endforelse
                 @else
                 <div class="empty-state" style="padding:32px 0;">
                     <div style="font-size:36px;">🗺️</div>

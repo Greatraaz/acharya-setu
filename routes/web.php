@@ -35,6 +35,8 @@ use App\Http\Controllers\Mentee\DashboardController    as MenteeDashboardControl
 use App\Http\Controllers\Mentee\SessionController      as MenteeSessionController;
 use App\Http\Controllers\Mentee\WalletController       as MenteeWalletController;
 use App\Http\Controllers\Mentee\PlanController         as MenteePlanController;
+use App\Http\Controllers\Mentee\InvoiceController     as MenteeInvoiceController;
+use App\Http\Controllers\Mentee\SessionInvoiceController as MenteeSessionInvoiceController;
 use App\Http\Controllers\Mentee\BookingController;
 use App\Http\Controllers\Mentee\JourneyController;
 use App\Http\Controllers\Mentee\AssessmentController as MenteeAssessmentController;
@@ -51,6 +53,9 @@ use App\Http\Controllers\Admin\WithdrawalRequestController;
 use App\Http\Controllers\Admin\VideoCallLogController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\PlanController;
+use App\Http\Controllers\Admin\SubscriptionController;
+use App\Http\Controllers\Admin\InvoiceController as AdminInvoiceController;
+use App\Http\Controllers\Admin\SessionInvoiceController as AdminSessionInvoiceController;
 use App\Http\Controllers\Admin\JobListingController;
 use App\Http\Controllers\Admin\ConsultationSessionController;
 use App\Http\Controllers\Admin\SessionReviewController;
@@ -319,6 +324,11 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::post('/plans/{plan}/subscribe',   [MenteePlanController::class, 'subscribe'])->name('plans.subscribe');
     Route::post('/plans/{plan}/verify',      [MenteePlanController::class, 'verify'])   ->name('plans.verify');
     Route::post('/plans/cancel',             [MenteePlanController::class, 'cancel'])   ->name('plans.cancel');
+    Route::post('/subscriptions/{subscription}/invoice', [MenteeInvoiceController::class, 'generate'])->name('subscriptions.invoice');
+    Route::get( '/invoices/{invoice}',          [MenteeInvoiceController::class, 'show'])     ->name('invoices.show');
+    Route::get( '/invoices/{invoice}/print',    [MenteeInvoiceController::class, 'print'])    ->name('invoices.print');
+    Route::get( '/invoices/{invoice}/download', [MenteeInvoiceController::class, 'download'])->name('invoices.download');
+    Route::get( '/session-invoices/{invoice}/download', [MenteeSessionInvoiceController::class, 'download'])->name('session-invoices.download');
 
     // Quizzes
     Route::get( '/quizzes',                               [MenteeQuizController::class, 'index'])  ->name('quizzes.index');
@@ -462,6 +472,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('sessions/{session}/no-show',  [ConsultationSessionController::class, 'markNoShow'])->name('sessions.no-show');
     Route::post('sessions/{session}/notes',    [ConsultationSessionController::class, 'addNote'])   ->name('sessions.add-note');
     Route::get( 'sessions/export',             [ConsultationSessionController::class, 'export'])    ->name('sessions.export');
+    Route::post('sessions/{session}/invoice',  [AdminSessionInvoiceController::class, 'generate'])->name('sessions.invoice');
+    Route::get( 'session-invoices/{invoice}/download', [AdminSessionInvoiceController::class, 'download'])->name('session-invoices.download');
     Route::resource('sessions', ConsultationSessionController::class);
     Route::get( 'sessions/{session}/review',   [SessionReviewController::class, 'create'])->name('sessions.review.create');
     Route::post('sessions/{session}/review',   [SessionReviewController::class, 'store']) ->name('sessions.review.store');
@@ -580,6 +592,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('plans/{plan}/toggle-status', [PlanController::class, 'toggleStatus'])->name('plans.toggle-status');
     Route::post('plans/reorder',              [PlanController::class, 'reorder'])    ->name('plans.reorder');
     Route::resource('plans', PlanController::class);
+
+    // ── Plan subscriptions & invoices ─────────────────────────
+    Route::get('subscriptions',                        [SubscriptionController::class, 'index'])->name('subscriptions.index');
+    Route::get('subscriptions/{subscription}',         [SubscriptionController::class, 'show'])->name('subscriptions.show');
+    Route::post('subscriptions/{subscription}/invoice',[SubscriptionController::class, 'generateInvoice'])->name('subscriptions.invoice');
+    Route::get('invoices',                             [AdminInvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('invoices/{invoice}',                   [AdminInvoiceController::class, 'show'])->name('invoices.show');
+    Route::get('invoices/{invoice}/print',             [AdminInvoiceController::class, 'print'])->name('invoices.print');
+    Route::get('invoices/{invoice}/download',          [AdminInvoiceController::class, 'download'])->name('invoices.download');
 
     // ── Jobs ──────────────────────────────────────────────────
     Route::post('jobs/{job}/toggle-status', [JobListingController::class, 'toggleStatus'])->name('jobs.toggle-status');

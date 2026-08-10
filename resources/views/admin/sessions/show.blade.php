@@ -93,6 +93,7 @@
                         ['Scheduled', ($st?->format('D, d M Y · H:i') ?? '—').' – '.($se?->format('H:i') ?? '—').' ('.$tz.')'],
                         ['Duration', $session->duration_minutes.' minutes'],
                         ['Amount', $session->amount > 0 ? '₹'.number_format($session->amount,0).' ('.$session->payment_status.')' : 'Free'],
+                        ['Payment method', $session->paymentMethodLabel()],
                         ['Provider', ucfirst($session->meeting_provider ?? 'Not set')],
                     ] as [$label, $value])
                     <div class="bg-gray-50 rounded-xl px-4 py-3">
@@ -100,6 +101,20 @@
                         <div class="text-sm font-semibold text-gray-800">{{ $value }}</div>
                     </div>
                     @endforeach
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-3">
+                    @if($session->sessionInvoice)
+                        <a href="{{ route('admin.session-invoices.download', $session->sessionInvoice) }}"
+                           class="inline-flex items-center bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-xl">
+                            Download invoice ({{ $session->sessionInvoice->invoice_number }})
+                        </a>
+                    @elseif(in_array($session->payment_status, ['paid', 'waived'], true))
+                        <form method="POST" action="{{ route('admin.sessions.invoice', $session) }}">
+                            @csrf
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl">Generate invoice</button>
+                        </form>
+                    @endif
                 </div>
 
                 @if($session->agenda)

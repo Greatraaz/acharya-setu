@@ -21,7 +21,21 @@ class ProgressController extends Controller
     // GET /mentee/progress
     public function index(Request $request): JsonResponse
     {
-        $menteeId = $request->user()->id;
+        $user = $request->user();
+
+        if (! $user->canAccessProgressReport()) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 403,
+                'message'    => 'Progress reports, scores, and submission history are not included in your current plan. You can still access curriculum tasks.',
+                'entitlement'=> [
+                    'progress_report_enabled' => false,
+                    'plan_name' => $user->activeSubscription()?->plan?->name,
+                ],
+            ], 403);
+        }
+
+        $menteeId = $user->id;
         $summary  = StudentCurriculumProgress::getMenteeProgressSummary($menteeId);
 
         $tracks = EducationStream::where('mentee_id', $menteeId)
@@ -41,12 +55,18 @@ class ProgressController extends Controller
             'mentee_id'  => $menteeId,
             'summary'    => $summary,
             'tracks'     => $tracks,
+            'entitlement'=> [
+                'progress_report_enabled' => true,
+                'plan_name' => $user->activeSubscription()?->plan?->name,
+                'sessions'  => $user->planSessionAllowance(),
+            ],
         ]);
     }
 
     // POST /mentee/curriculum/tasks/{task}/complete
     public function completeTask(Request $request, int $task): JsonResponse
     {
+        $canViewProgress = $request->user()->canAccessProgressReport();
         $menteeId  = $request->user()->id;
         $taskModel = CurriculumTask::where('id', $task)
             ->where('mentee_id', $menteeId)
@@ -87,6 +107,18 @@ class ProgressController extends Controller
             array_merge($extra, ['is_completed' => $complete])
         );
 
+        if (! $canViewProgress) {
+            return response()->json([
+                'status'     => true,
+                'statuscode' => 200,
+                'message'    => 'Task submitted. Upgrade your plan to view scores and progress.',
+                'completed'  => false,
+                'entitlement'=> [
+                    'progress_report_enabled' => false,
+                ],
+            ]);
+        }
+
         $summary = StudentCurriculumProgress::getMenteeProgressSummary($menteeId);
 
         return response()->json([
@@ -96,6 +128,9 @@ class ProgressController extends Controller
             'completed'  => $complete,
             'progress'   => $progress,
             'summary'    => $summary,
+            'entitlement'=> [
+                'progress_report_enabled' => true,
+            ],
         ]);
     }
 
@@ -132,6 +167,7 @@ class ProgressController extends Controller
             ->keyBy('id');
 
         $results = [];
+        $canViewProgress = $request->user()->canAccessProgressReport();
 
         foreach ($data['answers'] as $row) {
             $mcqId = (int) $row['mcq_id'];
@@ -191,16 +227,36 @@ class ProgressController extends Controller
                     ->delete();
             }
 
-            $results[] = [
-                'mcq_id'         => $mcqModel->id,
-                'status'         => true,
-                'correct'        => $correct,
-                'selected_index' => $selectedIndex,
-                'correct_index'  => (int) $mcqModel->correct_index,
-                'correct_answer' => $options[(int) $mcqModel->correct_index] ?? null,
-                'points_earned'  => $points,
-                'explanation'    => $mcqModel->explanation,
-            ];
+            if ($canViewProgress) {
+                $results[] = [
+                    'mcq_id'         => $mcqModel->id,
+                    'status'         => true,
+                    'correct'        => $correct,
+                    'selected_index' => $selectedIndex,
+                    'correct_index'  => (int) $mcqModel->correct_index,
+                    'correct_answer' => $options[(int) $mcqModel->correct_index] ?? null,
+                    'points_earned'  => $points,
+                    'explanation'    => $mcqModel->explanation,
+                ];
+            } else {
+                $results[] = [
+                    'mcq_id'  => $mcqModel->id,
+                    'status'  => true,
+                    'message' => 'Answer submitted.',
+                ];
+            }
+        }
+
+        if (! $canViewProgress) {
+            return response()->json([
+                'status'     => true,
+                'statuscode' => 200,
+                'message'    => 'MCQ answers submitted. Upgrade your plan to view scores and progress.',
+                'results'    => $results,
+                'entitlement'=> [
+                    'progress_report_enabled' => false,
+                ],
+            ]);
         }
 
         $summary = StudentCurriculumProgress::getMenteeProgressSummary($menteeId);
@@ -219,6 +275,9 @@ class ProgressController extends Controller
             ],
             'results'    => $results,
             'progress'   => $summary,
+            'entitlement'=> [
+                'progress_report_enabled' => true,
+            ],
         ]);
     }
 
@@ -239,14 +298,17 @@ class ProgressController extends Controller
             ['watched_at' => now()]
         );
 
-        $summary = StudentCurriculumProgress::getMenteeProgressSummary($menteeId);
+        $canViewProgress = $request->user()->canAccessProgressReport();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'message'    => 'Video marked as watched.',
             'file_id'    => $videoFile->id,
-            'summary'    => $summary,
+            'summary'    => $canViewProgress ? StudentCurriculumProgress::getMenteeProgressSummary($menteeId) : null,
+            'entitlement'=> [
+                'progress_report_enabled' => $canViewProgress,
+            ],
         ]);
     }
 
@@ -266,15 +328,18 @@ class ProgressController extends Controller
             $materialModel->id
         );
 
-        $summary = StudentCurriculumProgress::getMenteeProgressSummary($menteeId);
+        $canViewProgress = $request->user()->canAccessProgressReport();
 
         return response()->json([
             'status'      => true,
             'statuscode'  => 200,
             'message'     => 'Supporting material marked complete.',
             'material_id' => $materialModel->id,
-            'progress'    => $progress,
-            'summary'     => $summary,
+            'progress'    => $canViewProgress ? $progress : null,
+            'summary'     => $canViewProgress ? StudentCurriculumProgress::getMenteeProgressSummary($menteeId) : null,
+            'entitlement' => [
+                'progress_report_enabled' => $canViewProgress,
+            ],
         ]);
     }
 }

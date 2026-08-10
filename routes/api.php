@@ -23,10 +23,13 @@ use App\Http\Controllers\Api\ReferralsController;
 use App\Http\Controllers\Api\AssignmentsController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\Admin\AdminController;
+use App\Http\Controllers\Api\Admin\SubscriptionInvoiceController as AdminSubscriptionInvoice;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
 use App\Http\Controllers\Api\Mentee\CurriculumController as MenteeCurriculum;
 use App\Http\Controllers\Api\Mentee\MentorRequestController as MenteeMentorRequest;
 use App\Http\Controllers\Api\Mentee\ProgressController as MenteeProgress;
+use App\Http\Controllers\Api\Mentee\InvoiceController as MenteeInvoice;
+use App\Http\Controllers\Api\Mentee\SessionInvoiceController as MenteeSessionInvoice;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
 use App\Http\Controllers\Api\Mentor\CurriculumController as MentorCurriculum;
 use App\Http\Controllers\Api\Mentor\MenteeController as MentorMentee;
@@ -120,6 +123,14 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::post('/quizzes/{id}/questions',     [AdminController::class, 'addQuestion']);
         Route::get('/plans',                       [AdminController::class, 'plans']);
         Route::post('/plans',                      [AdminController::class, 'createPlan']);
+        Route::get('/subscriptions',               [AdminSubscriptionInvoice::class, 'subscriptions']);
+        Route::get('/subscriptions/{id}',          [AdminSubscriptionInvoice::class, 'showSubscription'])->whereNumber('id');
+        Route::post('/subscriptions/{id}/invoice', [AdminSubscriptionInvoice::class, 'generateInvoice'])->whereNumber('id');
+        Route::get('/invoices',                    [AdminSubscriptionInvoice::class, 'invoices']);
+        Route::get('/invoices/{id}',               [AdminSubscriptionInvoice::class, 'showInvoice'])->whereNumber('id');
+        Route::get('/invoices/{id}/download',      [AdminSubscriptionInvoice::class, 'downloadInvoice'])->whereNumber('id');
+        Route::get('/session-invoices',            [AdminSubscriptionInvoice::class, 'sessionInvoices']);
+        Route::get('/session-invoices/{id}/download', [AdminSubscriptionInvoice::class, 'downloadSessionInvoice'])->whereNumber('id');
         Route::get('/assessments',                 [AdminController::class, 'assessments']);
         Route::post('/assessments',                [AdminController::class, 'createAssessment']);
         Route::get('/channels',                    [AdminController::class, 'communityChannels']);
@@ -271,6 +282,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/subscription/history', [PlanController::class, 'subscriptionHistory']);
             Route::post('/subscription/cancel', [PlanController::class, 'cancelSubscription']); 
         });
+
+        // Plan invoices
+        Route::get('invoices', [MenteeInvoice::class, 'index']);
+        Route::get('invoices/{invoice}', [MenteeInvoice::class, 'show'])->whereNumber('invoice');
+        Route::get('invoices/{invoice}/download', [MenteeInvoice::class, 'download'])->whereNumber('invoice');
+        Route::post('subscriptions/{subscription}/invoice', [MenteeInvoice::class, 'generate']);
+
+        Route::get('session-invoices', [MenteeSessionInvoice::class, 'index']);
+        Route::get('session-invoices/{invoice}', [MenteeSessionInvoice::class, 'show'])->whereNumber('invoice');
+        Route::get('session-invoices/{invoice}/download', [MenteeSessionInvoice::class, 'download'])->whereNumber('invoice');
 
     });
 

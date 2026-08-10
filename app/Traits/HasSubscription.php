@@ -119,6 +119,19 @@ trait HasSubscription
     }
 
     /**
+     * Whether the mentee can view progress / journey reports under their active plan.
+     */
+    public function canAccessProgressReport(): bool
+    {
+        $subscription = $this->activeSubscription();
+        if (! $subscription?->plan) {
+            return false;
+        }
+
+        return (bool) ($subscription->plan->progress_report_enabled ?? false);
+    }
+
+    /**
      * Confirmed/upcoming sessions in the current month (counts against plan allowance).
      */
     public function sessionsUsedThisMonth(): int

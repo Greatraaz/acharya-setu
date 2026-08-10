@@ -21,10 +21,13 @@ class Plan extends Model
         'price_monthly',
         'price_yearly',
         'currency',
+        'cgst_percent',
+        'sgst_percent',
         'description',
         'duration',
         'features',
         'limits',
+        'progress_report_enabled',
         'status',
         'badge_label',
         'badge_color',
@@ -41,27 +44,30 @@ class Plan extends Model
     ];
 
     protected $casts = [
-        'features'      => 'array',
-        'limits'        => 'array',
-        'price'         => 'float',
-        'price_monthly' => 'float',
-        'price_yearly'  => 'float',
-        'is_active'     => 'boolean',
-        'is_featured'   => 'boolean',
-        'trial_days'    => 'integer',
-        'sort_order'    => 'integer',
+        'features'                 => 'array',
+        'limits'                   => 'array',
+        'price'                    => 'float',
+        'price_monthly'            => 'float',
+        'price_yearly'             => 'float',
+        'cgst_percent'             => 'float',
+        'sgst_percent'             => 'float',
+        'progress_report_enabled'  => 'boolean',
+        'is_active'                => 'boolean',
+        'is_featured'              => 'boolean',
+        'trial_days'               => 'integer',
+        'sort_order'               => 'integer',
     ];
 
     protected $appends = [
         'formatted_price_monthly',
         'formatted_price_yearly',
         'yearly_savings_percent',
+        'sessions_per_month',
     ];
 
     protected static function booted(): void
     {
         static::saving(function (Plan $plan) {
-            // Keep legacy API columns in sync with admin fields.
             if ($plan->isDirty('name') && Schema::hasColumn($plan->getTable(), 'plan_name')) {
                 $plan->plan_name = $plan->name;
             }
@@ -116,6 +122,65 @@ class Plan extends Model
         return ($this->attributes['status'] ?? null) === 'active';
     }
 
+    public function getSessionsPerMonthAttribute(): ?int
+    {
+        $limits = $this->limits;
+        if (is_string($limits)) {
+            $limits = json_decode($limits, true) ?: [];
+        }
+        if (! is_array($limits) || ! array_key_exists('sessions', $limits) || $limits['sessions'] === '' || $limits['sessions'] === null) {
+            return null;
+        }
+
+        return (int) $limits['sessions'];
+    }
+
+    /**
+     * Base price + CGST/SGST added on top (tax exclusive).
+     *
+     * @return array{
+     *   base: float,
+     *   cgst_percent: float,
+     *   sgst_percent: float,
+     *   cgst_amount: float,
+     *   sgst_amount: float,
+     *   tax_total: float,
+     *   total: float,
+     *   currency: string,
+     *   billing: string
+     * }
+     */
+    public function pricingBreakdown(string $billing = 'monthly'): array
+    {
+        $base = $billing === 'yearly'
+            ? (float) ($this->price_yearly ?? 0)
+            : (float) ($this->price_monthly ?: $this->price ?: 0);
+
+        $cgstPercent = (float) ($this->cgst_percent ?? 0);
+        $sgstPercent = (float) ($this->sgst_percent ?? 0);
+        $cgstAmount = round($base * $cgstPercent / 100, 2);
+        $sgstAmount = round($base * $sgstPercent / 100, 2);
+        $taxTotal = round($cgstAmount + $sgstAmount, 2);
+        $total = round($base + $taxTotal, 2);
+
+        return [
+            'base'         => round($base, 2),
+            'cgst_percent' => $cgstPercent,
+            'sgst_percent' => $sgstPercent,
+            'cgst_amount'  => $cgstAmount,
+            'sgst_amount'  => $sgstAmount,
+            'tax_total'    => $taxTotal,
+            'total'        => $total,
+            'currency'     => strtoupper($this->currency ?? 'INR'),
+            'billing'      => $billing,
+        ];
+    }
+
+    public function billingDays(): int
+    {
+        return max(1, (int) ($this->duration ?: 30));
+    }
+
     public function getFormattedPriceMonthlyAttribute(): string
     {
         $price = (float) $this->price_monthly;
@@ -153,7 +218,6 @@ class Plan extends Model
         return (int) round((($full - $yearly) / $full) * 100);
     }
 
-    /** Always return an array for admin views that call count($plan->features_list). */
     public function getFeaturesListAttribute(): array
     {
         $features = $this->features;
@@ -164,6 +228,41 @@ class Plan extends Model
         }
 
         return is_array($features) ? array_values($features) : [];
+    }
+
+    /** Public payload for web/API plan cards. */
+    public function toPublicArray(): array
+    {
+        $sessions = $this->sessions_per_month;
+
+        return [
+            'id'                      => $this->id,
+            'name'                    => $this->name,
+            'plan_name'               => $this->plan_name,
+            'slug'                    => $this->slug,
+            'description'             => $this->description,
+            'price'                   => (float) ($this->price_monthly ?: $this->price ?: 0),
+            'price_monthly'           => (float) $this->price_monthly,
+            'price_yearly'            => (float) ($this->price_yearly ?? 0),
+            'currency'                => $this->currency ?? 'INR',
+            'duration'                => $this->billingDays(),
+            'pricing'                 => $this->pricingBreakdown('monthly'),
+            'features'                => $this->features_list,
+            'sessions_per_month'      => $sessions,
+            'progress_report_enabled' => (bool) $this->progress_report_enabled,
+            'limits'                  => [
+                'sessions' => $sessions,
+            ],
+            'tax'                     => [
+                'cgst_percent' => $this->cgst_percent !== null ? (float) $this->cgst_percent : null,
+                'sgst_percent' => $this->sgst_percent !== null ? (float) $this->sgst_percent : null,
+            ],
+            'badge_label'             => $this->badge_label,
+            'badge_color'             => $this->badge_color,
+            'is_featured'             => (bool) $this->is_featured,
+            'color'                   => $this->color,
+            'trial_days'              => (int) ($this->trial_days ?? 0),
+        ];
     }
 
     public function scopeBrief(Builder $query): Builder

@@ -8,8 +8,18 @@
     <div class="dash-content">
         <div class="dash-header">
             <div class="dash-title">My Journey</div>
-            <div class="dash-subtitle">Your structured mentorship curriculum and progress.</div>
+            <div class="dash-subtitle">Your structured mentorship curriculum{{ ($canViewProgress ?? false) ? ' and progress' : '' }}.</div>
         </div>
+
+        @unless($canViewProgress ?? false)
+        <div class="alert alert-warning" style="margin-bottom:16px;">
+            <span class="alert-icon">🔒</span>
+            <div style="font-size:13px;">
+                You can open months, weeks, and tasks. Scores, submissions, and progress reports are locked on your plan.
+                <a href="{{ route('mentee.plans') }}" style="color:var(--brand);font-weight:600;">Upgrade →</a>
+            </div>
+        </div>
+        @endunless
 
         @if(!$enrollment)
             <div class="empty-state" style="padding:56px 20px;">
@@ -43,7 +53,7 @@
                 $streamName = $enrollment->stream->name ?? 'Your track';
             @endphp
 
-            <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px;">
+            <div style="display:grid;grid-template-columns:{{ ($canViewProgress ?? false) ? '2fr 1fr' : '1fr' }};gap:16px;margin-bottom:24px;">
                 <div class="wallet-card">
                     <div style="position:relative;z-index:1;">
                         <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Current Track</div>
@@ -52,6 +62,7 @@
                             Month {{ $enrollment->current_month }} · Week {{ $enrollment->current_week }}
                             · {{ ucfirst($enrollment->status) }}
                         </div>
+                        @if($canViewProgress ?? false)
                         <div style="margin-top:16px;">
                             <div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.8);margin-bottom:6px;">
                                 <span>Overall progress</span>
@@ -61,14 +72,17 @@
                                 <div class="progress-fill" style="width:{{ $percent }}%"></div>
                             </div>
                         </div>
+                        @endif
                     </div>
                 </div>
+                @if($canViewProgress ?? false)
                 <div class="card">
                     <div class="stat-card-icon">✅</div>
                     <div class="stat-card-label">Completed</div>
                     <div class="stat-card-value">{{ (int) ($progress['completed'] ?? 0) }}</div>
                     <div class="stat-card-delta">of {{ (int) ($progress['total'] ?? 0) }} items</div>
                 </div>
+                @endif
             </div>
 
             <div class="card">
@@ -87,9 +101,12 @@
                             <div style="font-size:12px;color:var(--text-2);margin-top:4px;">{{ $m->theme }}</div>
                             @endif
                         </div>
+                        @if($canViewProgress ?? false)
                         <span style="font-size:13px;font-weight:700;color:var(--brand);">{{ $mPercent }}%</span>
+                        @endif
                     </div>
                     <div style="margin-top:12px;">
+                        @if($canViewProgress ?? false)
                         <div class="progress-bar">
                             <div class="progress-fill" style="width:{{ $mPercent }}%"></div>
                         </div>
@@ -97,6 +114,9 @@
                             {{ (int) ($row['completed'] ?? 0) }} / {{ (int) ($row['total'] ?? 0) }} completed
                             · {{ $m->weeks->count() }} weeks
                         </div>
+                        @else
+                        <div style="font-size:11px;color:var(--text-3);">{{ $m->weeks->count() }} weeks · Open to view tasks</div>
+                        @endif
                     </div>
                 </a>
                 @empty

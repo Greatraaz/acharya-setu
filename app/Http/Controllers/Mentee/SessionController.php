@@ -10,7 +10,7 @@ class SessionController extends Controller
     public function index(Request $request)
     {
         $query = ConsultationSession::where('mentee_id', auth()->id())
-            ->with('mentor')->latest('scheduled_at');
+            ->with(['mentor', 'sessionInvoice'])->latest('scheduled_at');
 
         if ($status = $request->status) {
             if ($status === 'upcoming') {
@@ -27,7 +27,7 @@ class SessionController extends Controller
     public function show(int $id)
     {
         $session = ConsultationSession::where('mentee_id', auth()->id())
-            ->with(['mentor','notes' => fn($q) => $q->where('is_shared',true)])
+            ->with(['mentor','sessionInvoice','notes' => fn($q) => $q->where('is_shared',true)])
             ->findOrFail($id);
         return view('frontend.mentee.session-detail', compact('session'));
     }

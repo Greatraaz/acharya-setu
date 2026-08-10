@@ -58,7 +58,9 @@
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:28px;">
             @foreach($plans as $plan)
             @php
-                $price = (float) ($plan->price_monthly ?: $plan->price ?: 0);
+                $pricing = $plan->pricingBreakdown('monthly');
+                $price = (float) $pricing['total'];
+                $basePrice = (float) $pricing['base'];
                 $isCurrent = $currentPlanId && (int) $currentPlanId === (int) $plan->id;
                 $features = $plan->features_list;
                 $accent = $plan->color ?: '#f59e0b';
@@ -88,15 +90,31 @@
                         ₹{{ number_format($price, 0) }}
                         <span style="font-size:13px;font-weight:500;color:var(--text-3);">/mo</span>
                     </div>
+                    @if($pricing['tax_total'] > 0)
+                    <div style="font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.45;">
+                        Base ₹{{ number_format($basePrice, 0) }}
+                        @if($pricing['cgst_percent'] > 0)+ CGST {{ rtrim(rtrim(number_format($pricing['cgst_percent'], 2, '.', ''), '0'), '.') }}% (₹{{ number_format($pricing['cgst_amount'], 2) }})@endif
+                        @if($pricing['sgst_percent'] > 0)+ SGST {{ rtrim(rtrim(number_format($pricing['sgst_percent'], 2, '.', ''), '0'), '.') }}% (₹{{ number_format($pricing['sgst_amount'], 2) }})@endif
+                    </div>
                     @endif
-                    @if((float) ($plan->price_yearly ?? 0) > 0)
-                    <div style="font-size:12px;color:var(--text-3);margin-top:2px;">or ₹{{ number_format($plan->price_yearly, 0) }}/yr</div>
                     @endif
-                    <div style="font-size:11px;color:var(--text-3);margin-top:4px;">{{ (int) ($plan->duration ?: 30) }}-day billing cycle</div>
+                    <div style="font-size:11px;color:var(--text-3);margin-top:4px;">{{ $plan->billingDays() }}-day billing cycle</div>
                 </div>
 
-                @if(count($features))
+                @if(count($features) || $plan->progress_report_enabled || $plan->sessions_per_month !== null)
                 <ul style="list-style:none;padding:0;margin:0;display:grid;gap:8px;flex:1;">
+                    @if($plan->sessions_per_month !== null)
+                    <li style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-2);line-height:1.4;">
+                        <span style="color:{{ $accent }};font-weight:700;">✓</span>
+                        <span>{{ (int) $plan->sessions_per_month < 0 ? 'Unlimited sessions / month' : ((int) $plan->sessions_per_month).' sessions / month' }}</span>
+                    </li>
+                    @endif
+                    @if($plan->progress_report_enabled)
+                    <li style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-2);line-height:1.4;">
+                        <span style="color:{{ $accent }};font-weight:700;">✓</span>
+                        <span>Progress report &amp; scores</span>
+                    </li>
+                    @endif
                     @foreach(array_slice($features, 0, 6) as $feature)
                     <li style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-2);line-height:1.4;">
                         <span style="color:{{ $accent }};font-weight:700;">✓</span>
@@ -134,6 +152,7 @@
                         <th>Status</th>
                         <th>Payment</th>
                         <th>Period</th>
+                        <th>Invoice</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -146,6 +165,19 @@
                         <td style="font-size:12px;white-space:nowrap;">
                             @if($sub->starts_at && $sub->expires_at)
                                 {{ $sub->starts_at->format('d M Y') }} → {{ $sub->expires_at->format('d M Y') }}
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td style="font-size:12px;">
+                            @if($sub->invoice)
+                                <a href="{{ route('mentee.invoices.show', $sub->invoice) }}" style="color:var(--brand);font-weight:600;">{{ $sub->invoice->invoice_number }}</a>
+                                <a href="{{ route('mentee.invoices.download', $sub->invoice) }}" style="margin-left:8px;color:var(--text-2);">Download</a>
+                            @elseif(($sub->payment_status ?? '') === 'paid')
+                                <form method="POST" action="{{ route('mentee.subscriptions.invoice', $sub->id) }}" style="display:inline;">
+                                    @csrf
+                                    <button type="submit" class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px;">Generate</button>
+                                </form>
                             @else
                                 —
                             @endif

@@ -187,48 +187,12 @@
                 <p class="text-xs text-gray-400 mt-1">Enter one feature per line. These appear as bullet points on the pricing card.</p>
             </div>
 
-            {{-- Usage Limits --}}
+            {{-- Usage Limits & Entitlements --}}
             <div class="bg-white border border-gray-200 rounded-2xl p-6">
-                <h3 class="text-sm font-semibold text-gray-800 mb-4 pb-3 border-b border-gray-100">Usage Limits</h3>
+                <h3 class="text-sm font-semibold text-gray-800 mb-4 pb-3 border-b border-gray-100">Usage & Entitlements</h3>
 
                 @php $limits = $plan->limits ?? []; @endphp
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Max Users</label>
-                        <input
-                            type="number"
-                            name="limit_users"
-                            min="-1"
-                            value="{{ old('limit_users', $limits['users'] ?? '') }}"
-                            placeholder="-1 for unlimited"
-                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        >
-                        <p class="text-xs text-gray-400 mt-1">-1 = unlimited</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Storage</label>
-                        <input
-                            type="text"
-                            name="limit_storage"
-                            value="{{ old('limit_storage', $limits['storage'] ?? '') }}"
-                            placeholder="e.g. 5GB, Unlimited"
-                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        >
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Video Calls / Month</label>
-                        <input
-                            type="number"
-                            name="limit_calls"
-                            min="-1"
-                            value="{{ old('limit_calls', $limits['calls'] ?? '') }}"
-                            placeholder="-1 for unlimited"
-                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        >
-                    </div>
-
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Sessions / Month</label>
                         <input
@@ -239,6 +203,55 @@
                             placeholder="-1 for unlimited"
                             class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                         >
+                        <p class="text-xs text-gray-400 mt-1">Included mentor sessions per month. -1 = unlimited. Blank = no included sessions.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Billing cycle (days)</label>
+                        <input
+                            type="number"
+                            name="duration"
+                            min="1"
+                            value="{{ old('duration', $plan->duration ?? 30) }}"
+                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                        >
+                        <p class="text-xs text-gray-400 mt-1">Subscription length after purchase (e.g. 30).</p>
+                    </div>
+
+                    <div class="col-span-2 flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                        <div>
+                            <p class="text-sm font-medium text-gray-800">Progress report</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Allow mentees to see scores, submission history, and progress % (journey content stays available either way).</p>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="hidden" name="progress_report_enabled" value="0">
+                            <input type="checkbox" name="progress_report_enabled" value="1"
+                                {{ old('progress_report_enabled', $plan->progress_report_enabled ?? false) ? 'checked' : '' }}>
+                            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Tax / Invoice --}}
+            <div class="bg-white border border-gray-200 rounded-2xl p-6">
+                <h3 class="text-sm font-semibold text-gray-800 mb-1 pb-3 border-b border-gray-100">Tax &amp; Invoicing</h3>
+                <p class="text-xs text-gray-400 mt-3 mb-4">Used for subscription invoices (India GST). Leave blank if not applicable.</p>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">CGST %</label>
+                        <input type="number" step="0.01" min="0" max="100" name="cgst_percent"
+                               value="{{ old('cgst_percent', $plan->cgst_percent) }}"
+                               placeholder="e.g. 9"
+                               class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">SGST %</label>
+                        <input type="number" step="0.01" min="0" max="100" name="sgst_percent"
+                               value="{{ old('sgst_percent', $plan->sgst_percent) }}"
+                               placeholder="e.g. 9"
+                               class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
                     </div>
                 </div>
             </div>

@@ -265,7 +265,7 @@ function openBookingModal(mentorId, mentorName, ratePerMin) {
     setTimeout(() => BookingWidget.init(ratePerMin, mentorId), 0);
 }
 
-function confirmBooking() {
+function confirmBooking(paymentMethod) {
     @guest
     showToast('info','Please sign in to book a session.');
     setTimeout(() => window.location.href = '/login?redirect=/mentors', 1500);
@@ -277,14 +277,21 @@ function confirmBooking() {
 
     data.mentor_id = document.getElementById('booking-mentor-id').value;
     data.agenda    = document.getElementById('booking-agenda')?.value || '';
+    if (paymentMethod) data.payment_method = paymentMethod;
 
     AjaxPost('{{ route('mentee.sessions.book') }}', data, {
         btn: document.getElementById('confirm-booking-btn'), loader: true,
         onSuccess: res => {
+            if (res.requires_payment_choice) {
+                openPaymentChoice(res);
+                return;
+            }
             if (res.requires_payment) {
+                closePaymentChoice();
                 openSessionPayment(res);
                 return;
             }
+            closePaymentChoice();
             closeModal('booking-modal');
             showToast('success', res.message || '🎉 Session booked!');
             setTimeout(() => window.location.href = res.redirect || '{{ route('mentee.sessions') }}', 1500);
@@ -292,6 +299,8 @@ function confirmBooking() {
         onError: err => {
             if (err.status === 401) {
                 window.location.href = '/login?redirect=/mentors';
+            } else if (err.insufficient_wallet || err.needs_topup) {
+                openPaymentChoice(err, true);
             } else if (err.topup_url) {
                 showToast('error', err.message || 'Insufficient wallet balance.');
                 setTimeout(() => window.location.href = err.topup_url, 1800);
@@ -300,6 +309,44 @@ function confirmBooking() {
             }
         }
     });
+}
+
+function openPaymentChoice(info, fromError) {
+    let box = document.getElementById('payment-choice-modal');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'payment-choice-modal';
+        box.className = 'modal-overlay open';
+        box.innerHTML = `
+          <div class="modal" style="max-width:420px;">
+            <div class="modal-header"><h3>Choose payment method</h3><button type="button" class="modal-close" onclick="closePaymentChoice()">×</button></div>
+            <div class="modal-body" id="payment-choice-body"></div>
+          </div>`;
+        document.body.appendChild(box);
+    }
+    box.classList.add('open');
+    const amount = info.amount ?? info.required_amount ?? 0;
+    const bal = info.wallet_balance ?? 0;
+    const shortfall = info.shortfall ?? Math.max(0, amount - bal);
+    const opts = info.payment_options || ['wallet','razorpay'];
+    const body = document.getElementById('payment-choice-body');
+    body.innerHTML = `
+      <p style="font-size:13px;color:var(--text-2);margin-bottom:12px;">
+        Session fee: <strong>₹${Number(amount).toLocaleString()}</strong><br>
+        Wallet balance: <strong>₹${Number(bal).toLocaleString()}</strong>
+        ${shortfall > 0 ? `<br>Shortfall: <strong>₹${Number(shortfall).toLocaleString()}</strong>` : ''}
+      </p>
+      <div style="display:grid;gap:8px;">
+        ${opts.includes('wallet') ? `<button type="button" class="btn btn-primary" onclick="confirmBooking('wallet')">Pay with Wallet</button>` : ''}
+        ${opts.includes('razorpay') ? `<button type="button" class="btn btn-ghost" onclick="confirmBooking('razorpay')">Pay with Razorpay</button>` : ''}
+        ${opts.includes('hybrid') ? `<button type="button" class="btn btn-ghost" onclick="confirmBooking('hybrid')">Use Wallet + Razorpay (₹${Number(shortfall).toLocaleString()} online)</button>` : ''}
+        ${(opts.includes('topup') || (fromError && shortfall > 0)) ? `<a class="btn btn-ghost" href="{{ route('mentee.wallet') }}">Top up wallet</a>` : ''}
+      </div>`;
+}
+
+function closePaymentChoice() {
+    const box = document.getElementById('payment-choice-modal');
+    if (box) box.classList.remove('open');
 }
 
 function openSessionPayment(order) {

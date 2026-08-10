@@ -60,6 +60,28 @@ class DashboardController extends Controller
             'progress' => $enrollment ? (int)(($enrollment->current_month / 6) * 100) : 0,
         ];
 
-        return view('frontend.mentee.dashboard', compact('upcomingSessions','upcomingCount','enrollment','weekTasks','recommendedMentors','stats'));
+        $canViewProgress = $mentee->canAccessProgressReport();
+        $planAllowance = $mentee->planSessionAllowance();
+
+        if (! $canViewProgress) {
+            // Keep journey visible; hide completion status only.
+            $weekTasks = collect($weekTasks)->map(function ($task) {
+                $task->is_completed = false;
+
+                return $task;
+            })->all();
+            $stats['progress'] = null;
+        }
+
+        return view('frontend.mentee.dashboard', compact(
+            'upcomingSessions',
+            'upcomingCount',
+            'enrollment',
+            'weekTasks',
+            'recommendedMentors',
+            'stats',
+            'canViewProgress',
+            'planAllowance'
+        ));
     }
 }

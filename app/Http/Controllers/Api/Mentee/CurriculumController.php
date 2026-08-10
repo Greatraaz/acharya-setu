@@ -25,16 +25,21 @@ class CurriculumController extends Controller
 public function index(Request $request): JsonResponse
 {
 $menteeId = $request->user()->id;
+$canViewProgress = $request->user()->canAccessProgressReport();
 
-$taskProgressMap = StudentCurriculumProgress::where('user_id', $menteeId)
-    ->where('item_type', 'task')
-    ->get()
-    ->keyBy('item_id');
+$taskProgressMap = $canViewProgress
+    ? StudentCurriculumProgress::where('user_id', $menteeId)
+        ->where('item_type', 'task')
+        ->get()
+        ->keyBy('item_id')
+    : collect();
 
-$materialProgressMap = StudentCurriculumProgress::where('user_id', $menteeId)
-    ->where('item_type', 'material')
-    ->get()
-    ->keyBy('item_id');
+$materialProgressMap = $canViewProgress
+    ? StudentCurriculumProgress::where('user_id', $menteeId)
+        ->where('item_type', 'material')
+        ->get()
+        ->keyBy('item_id')
+    : collect();
 
 $tracks = EducationStream::where('mentee_id', $menteeId)
     ->where('is_active', true)
@@ -65,27 +70,34 @@ $tracks = EducationStream::where('mentee_id', $menteeId)
     ])
     ->orderBy('sort_order')
     ->get()
-    ->map(fn (EducationStream $track) => $this->formatTrack($track, $menteeId, $taskProgressMap, $materialProgressMap));
+    ->map(fn (EducationStream $track) => $this->formatTrack(
+        $track,
+        $menteeId,
+        $taskProgressMap,
+        $materialProgressMap,
+        $canViewProgress
+    ));
 
-$summary = StudentCurriculumProgress::getMenteeProgressSummary($menteeId);
-
-$tracks = $tracks->map(function (array $track) {
-    $track['summary'] = $this->buildTrackSummary($track);
+$tracks = $tracks->map(function (array $track) use ($canViewProgress) {
+    $track['summary'] = $canViewProgress ? $this->buildTrackSummary($track) : null;
     return $track;
 })->values();
 
-$trackSummaries = $tracks
-    ->map(fn (array $track) => $track['summary'])
-    ->values();
+$trackSummaries = $canViewProgress
+    ? $tracks->map(fn (array $track) => $track['summary'])->values()
+    : collect();
 
 return response()->json([
     'status'          => true,
     'statuscode'      => 200,
     'mentee_id'       => $menteeId,
-    'summary'         => $summary,
+    'summary'         => $canViewProgress ? StudentCurriculumProgress::getMenteeProgressSummary($menteeId) : null,
     'track_summaries' => $trackSummaries,
     'tracks'          => $tracks,
     'total'           => $tracks->count(),
+    'entitlement'     => [
+        'progress_report_enabled' => $canViewProgress,
+    ],
 ]);
 }
 
@@ -96,6 +108,7 @@ return response()->json([
 public function tasks(Request $request): JsonResponse
 {
 $menteeId = $request->user()->id;
+$canViewProgress = $request->user()->canAccessProgressReport();
 
 $tasks = CurriculumTask::where('mentee_id', $menteeId)
     ->where('is_active', true)
@@ -109,38 +122,47 @@ $tasks = CurriculumTask::where('mentee_id', $menteeId)
     ->orderBy('order_index')
     ->get();
 
-$progressMap = StudentCurriculumProgress::where('user_id', $menteeId)
-    ->where('item_type', 'task')
-    ->whereIn('item_id', $tasks->pluck('id'))
-    ->get()
-    ->keyBy('item_id');
+$progressMap = $canViewProgress
+    ? StudentCurriculumProgress::where('user_id', $menteeId)
+        ->where('item_type', 'task')
+        ->whereIn('item_id', $tasks->pluck('id'))
+        ->get()
+        ->keyBy('item_id')
+    : collect();
 
 $formatted = $tasks
-    ->map(fn (CurriculumTask $task) => $this->formatTaskWithStatus($task, $progressMap->get($task->id)))
+    ->map(fn (CurriculumTask $task) => $this->formatTaskWithStatus(
+        $task,
+        $canViewProgress ? $progressMap->get($task->id) : null,
+        $canViewProgress
+    ))
     ->values();
 
-$completed  = $formatted->where('status', 'completed')->count();
-$inProgress = $formatted->where('status', 'in_progress')->count();
-$pending    = $formatted->where('status', 'pending')->count();
-$total      = $formatted->count();
-
 $taskList = $formatted;
-if ($request->filled('status')) {
+if ($canViewProgress && $request->filled('status')) {
     $taskList = $formatted->filter(fn ($task) => $task['status'] === $request->status)->values();
 }
+
+$total = $formatted->count();
+$completed  = $canViewProgress ? $formatted->where('status', 'completed')->count() : null;
+$inProgress = $canViewProgress ? $formatted->where('status', 'in_progress')->count() : null;
+$pending    = $canViewProgress ? $formatted->where('status', 'pending')->count() : null;
 
 return response()->json([
     'status'     => true,
     'statuscode' => 200,
     'mentee_id'  => $menteeId,
-    'summary'    => [
+    'summary'    => $canViewProgress ? [
         'total'       => $total,
         'completed'   => $completed,
         'in_progress' => $inProgress,
         'pending'     => $pending,
         'percent'     => $total ? (int) round($completed / $total * 100) : 0,
-    ],
+    ] : null,
     'tasks'      => $taskList,
+    'entitlement'=> [
+        'progress_report_enabled' => $canViewProgress,
+    ],
 ]);
 }
 
@@ -151,6 +173,7 @@ return response()->json([
 public function mcqs(Request $request): JsonResponse
 {
 $menteeId = $request->user()->id;
+$canViewProgress = $request->user()->canAccessProgressReport();
 
 $topics = CurriculumMcqTopic::where('mentee_id', $menteeId)
     ->where('is_active', true)
@@ -165,17 +188,17 @@ $topics = CurriculumMcqTopic::where('mentee_id', $menteeId)
     ->get();
 
 $formattedTopics = $topics
-    ->map(fn (CurriculumMcqTopic $topic) => $this->formatMcqTopicWithContext($topic, $menteeId))
+    ->map(fn (CurriculumMcqTopic $topic) => $this->formatMcqTopicWithContext($topic, $menteeId, $canViewProgress))
     ->values();
 
 $allMcqs = $formattedTopics->flatMap(fn (array $topic) => $topic['mcqs'] ?? []);
 
-$completed  = $allMcqs->where('status', 'completed')->count();
-$inProgress = $allMcqs->where('status', 'in_progress')->count();
-$pending    = $allMcqs->where('status', 'pending')->count();
-$total      = $allMcqs->count();
+$total = $allMcqs->count();
+$completed  = $canViewProgress ? $allMcqs->where('status', 'completed')->count() : null;
+$inProgress = $canViewProgress ? $allMcqs->where('status', 'in_progress')->count() : null;
+$pending    = $canViewProgress ? $allMcqs->where('status', 'pending')->count() : null;
 
-if ($request->filled('status')) {
+if ($canViewProgress && $request->filled('status')) {
     $statusFilter = $request->status;
     $formattedTopics = $formattedTopics
         ->map(function (array $topic) use ($statusFilter) {
@@ -193,14 +216,17 @@ return response()->json([
     'status'     => true,
     'statuscode' => 200,
     'mentee_id'  => $menteeId,
-    'summary'    => [
+    'summary'    => $canViewProgress ? [
         'total'       => $total,
         'completed'   => $completed,
         'in_progress' => $inProgress,
         'pending'     => $pending,
         'percent'     => $total ? (int) round($completed / $total * 100) : 0,
-    ],
+    ] : null,
     'mcq_topics' => $formattedTopics,
+    'entitlement'=> [
+        'progress_report_enabled' => $canViewProgress,
+    ],
 ]);
 }
 
@@ -233,7 +259,7 @@ return response()->json([
 ]);
 }
 
-private function formatTrack(EducationStream $track, int $menteeId, $taskProgressMap = null, $materialProgressMap = null): array
+private function formatTrack(EducationStream $track, int $menteeId, $taskProgressMap = null, $materialProgressMap = null, bool $includeProgress = true): array
 {
 return [
     'id'          => $track->id,
@@ -263,20 +289,27 @@ return [
             'sort_order'   => $week->sort_order,
             'tasks'        => $week->tasks->map(fn (CurriculumTask $task) => $this->formatTaskWithStatus(
                 $task,
-                $taskProgressMap?->get($task->id) ?? $this->getTaskProgress($menteeId, $task->id)
+                $includeProgress
+                    ? ($taskProgressMap?->get($task->id) ?? $this->getTaskProgress($menteeId, $task->id))
+                    : null,
+                $includeProgress
             ))->values(),
-            'mcq_topics'   => $week->mcqTopics->map(fn (CurriculumMcqTopic $topic) => $this->formatMcqTopic($topic, $menteeId))->values(),
+            'mcq_topics'   => $week->mcqTopics->map(fn (CurriculumMcqTopic $topic) => $this->formatMcqTopic($topic, $menteeId, $includeProgress))->values(),
             'materials'    => $week->supportingMaterials
-                ->map(fn ($material) => $this->formatMaterialWithStatus($material, $materialProgressMap?->get($material->id)))
+                ->map(fn ($material) => $this->formatMaterialWithStatus(
+                    $material,
+                    $includeProgress ? $materialProgressMap?->get($material->id) : null,
+                    $includeProgress
+                ))
                 ->values(),
         ])->values(),
     ])->values(),
 ];
 }
 
-private function formatMaterialWithStatus(TaskSupportingMaterial $material, ?StudentCurriculumProgress $progress): array
+private function formatMaterialWithStatus(TaskSupportingMaterial $material, ?StudentCurriculumProgress $progress, bool $includeProgress = true): array
 {
-return [
+$payload = [
     'id'           => $material->id,
     'task_id'      => $material->task_id,
     'week_id'      => $material->week_id,
@@ -295,10 +328,15 @@ return [
     'sort_order'   => $material->sort_order,
     'created_at'   => $material->created_at,
     'updated_at'   => $material->updated_at,
-    'status'       => $progress?->is_completed ? 'completed' : 'pending',
-    'is_completed' => (bool) ($progress?->is_completed ?? false),
-    'completed_at' => $progress?->completed_at,
 ];
+
+if ($includeProgress) {
+    $payload['status'] = $progress?->is_completed ? 'completed' : 'pending';
+    $payload['is_completed'] = (bool) ($progress?->is_completed ?? false);
+    $payload['completed_at'] = $progress?->completed_at;
+}
+
+return $payload;
 }
 
 private function formatQuiz(Quiz $quiz): array
@@ -340,11 +378,11 @@ private function formatTask(CurriculumTask $task, int $menteeId): array
 return $this->formatTaskWithStatus($task, $this->getTaskProgress($menteeId, $task->id));
 }
 
-private function formatTaskWithStatus(CurriculumTask $task, ?StudentCurriculumProgress $progress): array
+private function formatTaskWithStatus(CurriculumTask $task, ?StudentCurriculumProgress $progress, bool $includeProgress = true): array
 {
-$status = $this->resolveTaskStatus($progress);
+$status = $includeProgress ? $this->resolveTaskStatus($progress) : 'pending';
 
-return [
+$payload = [
     'id'                => $task->id,
     'week_id'           => $task->week_id,
     'title'             => $task->title,
@@ -356,11 +394,6 @@ return [
     'submission_type'   => $task->submission_type,
     'attachments'       => $task->attachments,
     'plan'              => $task->plan,
-    'status'            => $status,
-    'is_completed'      => $status === 'completed',
-    'submission_status' => $progress?->submission_status ?? 'none',
-    'completed_at'      => $progress?->completed_at,
-    'mentor_feedback'   => $progress?->mentor_feedback,
     'track'             => $task->week?->month?->stream ? [
         'id'   => $task->week->month->stream->id,
         'name' => $task->week->month->stream->name,
@@ -378,6 +411,16 @@ return [
         'focus'       => $task->week->focus,
     ] : null,
 ];
+
+if ($includeProgress) {
+    $payload['status'] = $status;
+    $payload['is_completed'] = $status === 'completed';
+    $payload['submission_status'] = $progress?->submission_status ?? 'none';
+    $payload['completed_at'] = $progress?->completed_at;
+    $payload['mentor_feedback'] = $progress?->mentor_feedback;
+}
+
+return $payload;
 }
 
 private function resolveTaskStatus(?StudentCurriculumProgress $progress): string
@@ -409,7 +452,7 @@ return StudentCurriculumProgress::where('user_id', $menteeId)
     ->first();
 }
 
-private function formatMcqTopic(CurriculumMcqTopic $topic, int $menteeId): array
+private function formatMcqTopic(CurriculumMcqTopic $topic, int $menteeId, bool $includeProgress = true): array
 {
 return [
     'id'          => $topic->id,
@@ -417,13 +460,13 @@ return [
     'description' => $topic->description,
     'order_index' => $topic->order_index,
     'is_active'   => $topic->is_active,
-    'mcqs'        => $topic->mcqs->map(fn (CurriculumMcq $mcq) => $this->formatMcqForMentee($mcq, $menteeId))->values(),
+    'mcqs'        => $topic->mcqs->map(fn (CurriculumMcq $mcq) => $this->formatMcqForMentee($mcq, $menteeId, $includeProgress))->values(),
 ];
 }
 
-private function formatMcqTopicWithContext(CurriculumMcqTopic $topic, int $menteeId): array
+private function formatMcqTopicWithContext(CurriculumMcqTopic $topic, int $menteeId, bool $includeProgress = true): array
 {
-return array_merge($this->formatMcqTopic($topic, $menteeId), [
+return array_merge($this->formatMcqTopic($topic, $menteeId, $includeProgress), [
     'week_id' => $topic->week_id,
     'track'   => $topic->week?->month?->stream ? [
         'id'   => $topic->week->month->stream->id,
@@ -444,25 +487,33 @@ return array_merge($this->formatMcqTopic($topic, $menteeId), [
 ]);
 }
 
-private function formatMcqForMentee(CurriculumMcq $mcq, int $menteeId): array
+private function formatMcqForMentee(CurriculumMcq $mcq, int $menteeId, bool $includeProgress = true): array
 {
+$options = $mcq->options ?? [];
+
+$payload = [
+    'id'          => $mcq->id,
+    'question'    => $mcq->question,
+    'options'     => $options,
+    'difficulty'  => $mcq->difficulty,
+    'order_index' => $mcq->order_index,
+];
+
+if (! $includeProgress) {
+    return $payload;
+}
+
 $completed = $mcq->isAnsweredCorrectlyByUser($menteeId);
 $attempt   = $mcq->getAttemptForUser($menteeId);
-$options   = $mcq->options ?? [];
 $correctIndex = $mcq->correct_index;
 
-return [
-    'id'             => $mcq->id,
-    'question'       => $mcq->question,
-    'options'        => $options,
+return array_merge($payload, [
     'correct_index'  => $correctIndex,
     'correct_answer' => is_numeric($correctIndex) && array_key_exists((int) $correctIndex, $options)
         ? $options[(int) $correctIndex]
         : null,
     'explanation'    => $mcq->explanation,
-    'difficulty'     => $mcq->difficulty,
     'points'         => $mcq->points,
-    'order_index'    => $mcq->order_index,
     'is_completed'   => $completed,
     'status'         => $completed ? 'completed' : ($attempt ? 'in_progress' : 'pending'),
     'last_attempt'   => $attempt ? [
@@ -470,7 +521,7 @@ return [
         'points_earned' => $attempt->points_earned,
         'attempted_at'  => $attempt->attempted_at,
     ] : null,
-];
+]);
 }
 
 private function buildTrackSummary(array $track): array

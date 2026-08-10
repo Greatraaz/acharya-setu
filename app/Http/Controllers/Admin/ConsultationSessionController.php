@@ -68,7 +68,7 @@ class ConsultationSessionController extends Controller
     // ── Show ─────────────────────────────────────────────────
     public function show(ConsultationSession $session)
     {
-        $session->load(['mentor', 'mentee', 'reviews.reviewer', 'notes.author', 'cancelledBy']);
+        $session->load(['mentor', 'mentee', 'reviews.reviewer', 'notes.author', 'cancelledBy', 'sessionInvoice']);
         return view('admin.sessions.show', compact('session'));
     }
  

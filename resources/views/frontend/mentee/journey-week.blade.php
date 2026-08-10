@@ -18,6 +18,7 @@
             <div class="dash-subtitle">{{ $week->focus ?: 'Tasks, quizzes, and weekly check-in' }}</div>
         </div>
 
+        @if($canViewProgress ?? false)
         <div class="card" style="margin-bottom:20px;">
             <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-2);margin-bottom:8px;">
                 <span>Week progress</span>
@@ -27,12 +28,21 @@
                 <div class="progress-fill" style="width:{{ (int) ($progress['percent'] ?? 0) }}%"></div>
             </div>
         </div>
+        @else
+        <div class="alert alert-warning" style="margin-bottom:16px;">
+            <span class="alert-icon">🔒</span>
+            <div style="font-size:13px;">
+                You can work on tasks and MCQs. Scores, past submissions, and completion status stay hidden until you upgrade.
+                <a href="{{ route('mentee.plans') }}" style="color:var(--brand);font-weight:600;">View plans →</a>
+            </div>
+        </div>
+        @endif
 
         {{-- Tasks --}}
         <div class="card" style="margin-bottom:20px;">
             <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">Tasks</h3>
             @forelse($week->tasks as $task)
-            @php $done = in_array($task->id, $completedTaskIds ?? [], true); @endphp
+            @php $done = ($canViewProgress ?? false) && in_array($task->id, $completedTaskIds ?? [], true); @endphp
             <div class="card" style="margin-bottom:12px;padding:14px 16px;" id="task-{{ $task->id }}">
                 <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
                     <div style="flex:1;">
@@ -51,7 +61,9 @@
                         </div>
                     </div>
                     @unless($done)
-                    <button type="button" class="btn btn-primary btn-sm" onclick="completeTask({{ $task->id }}, this)">Mark done</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="completeTask({{ $task->id }}, this)">
+                        {{ ($canViewProgress ?? false) ? 'Mark done' : 'Submit' }}
+                    </button>
                     @endunless
                 </div>
             </div>
@@ -65,7 +77,7 @@
             <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">Practice MCQs</h3>
             @forelse($week->mcqs as $mcq)
             @php
-                $attempt = $mcqAttempts[$mcq->id] ?? null;
+                $attempt = ($canViewProgress ?? false) ? ($mcqAttempts[$mcq->id] ?? null) : null;
                 $options = is_array($mcq->options) ? $mcq->options : [];
             @endphp
             <div class="card" style="margin-bottom:12px;padding:14px 16px;" id="mcq-{{ $mcq->id }}">
@@ -102,7 +114,7 @@
         {{-- Check-in --}}
         <div class="card">
             <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Weekly Check-in</h3>
-            @if($checkin)
+            @if(($canViewProgress ?? false) && $checkin)
             <div class="alert alert-success" style="margin-bottom:14px;">
                 <span class="alert-icon">✅</span>
                 <div style="font-size:13px;">Submitted {{ $checkin->submitted_at?->format('d M Y') ?? '' }}. Mood: {{ $checkin->mood_score ?? '—' }}/5</div>
@@ -117,22 +129,22 @@
 
             <div class="form-group">
                 <label class="form-label">Mood (1–5)</label>
-                <input type="number" id="checkin-mood" class="form-input" min="1" max="5" value="{{ $checkin->mood_score ?? 3 }}">
+                <input type="number" id="checkin-mood" class="form-input" min="1" max="5" value="{{ ($canViewProgress ?? false) ? ($checkin->mood_score ?? 3) : 3 }}">
             </div>
             <div class="form-group">
                 <label class="form-label">Wins this week</label>
-                <textarea id="checkin-wins" class="form-input" rows="2" placeholder="What went well?">{{ $checkin->wins ?? '' }}</textarea>
+                <textarea id="checkin-wins" class="form-input" rows="2" placeholder="What went well?">{{ ($canViewProgress ?? false) ? ($checkin->wins ?? '') : '' }}</textarea>
             </div>
             <div class="form-group">
                 <label class="form-label">Challenges</label>
-                <textarea id="checkin-challenges" class="form-input" rows="2" placeholder="What was hard?">{{ $checkin->challenges ?? '' }}</textarea>
+                <textarea id="checkin-challenges" class="form-input" rows="2" placeholder="What was hard?">{{ ($canViewProgress ?? false) ? ($checkin->challenges ?? '') : '' }}</textarea>
             </div>
             <div class="form-group">
                 <label class="form-label">Questions for mentor</label>
-                <textarea id="checkin-questions" class="form-input" rows="2" placeholder="Anything you want help with?">{{ $checkin->questions ?? '' }}</textarea>
+                <textarea id="checkin-questions" class="form-input" rows="2" placeholder="Anything you want help with?">{{ ($canViewProgress ?? false) ? ($checkin->questions ?? '') : '' }}</textarea>
             </div>
             <button type="button" class="btn btn-primary" id="checkin-btn" onclick="submitCheckin()">
-                {{ $checkin ? 'Update Check-in' : 'Submit Check-in' }}
+                {{ (($canViewProgress ?? false) && $checkin) ? 'Update Check-in' : 'Submit Check-in' }}
             </button>
         </div>
     </div>
@@ -141,12 +153,19 @@
 
 @push('scripts')
 <script>
+const canViewProgress = @json((bool) ($canViewProgress ?? false));
+
 function completeTask(taskId, btn) {
     AjaxPost(`{{ url('/mentee/journey/tasks') }}/${taskId}/complete`, {}, {
         btn, loader: true,
         onSuccess: (data) => {
-            showToast('success', data.message || 'Task completed!');
-            setTimeout(() => location.reload(), 700);
+            showToast('success', data.message || 'Task submitted!');
+            if (canViewProgress) {
+                setTimeout(() => location.reload(), 700);
+            } else if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Submitted';
+            }
         },
         onError: (err) => showToast('error', err.message || 'Could not complete task.'),
     });
@@ -157,6 +176,13 @@ function answerMcq(mcqId, selectedIndex, btn) {
         btn, loader: true,
         onSuccess: (data) => {
             const box = document.querySelector(`[data-mcq-result="${mcqId}"]`);
+            if (!canViewProgress || data.progress_report_enabled === false) {
+                if (box) {
+                    box.innerHTML = `<span style="color:var(--text-2);font-weight:600;">Answer submitted. Scores unlock with Progress report.</span>`;
+                }
+                showToast('success', data.message || 'Answer submitted.');
+                return;
+            }
             if (box) {
                 box.innerHTML = data.correct
                     ? `<span style="color:var(--success);font-weight:600;">Correct · +${data.points_earned || 0} pts</span>`
@@ -183,7 +209,9 @@ function submitCheckin() {
         loader: true,
         onSuccess: (data) => {
             showToast('success', data.message || 'Check-in submitted!');
-            setTimeout(() => location.reload(), 800);
+            if (canViewProgress) {
+                setTimeout(() => location.reload(), 800);
+            }
         },
         onError: (err) => showToast('error', err.message || 'Could not submit check-in.'),
     });

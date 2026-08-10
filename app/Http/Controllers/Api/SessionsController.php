@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\{AppSetting, ConsultationSession, SessionNote, User};
 use App\Helpers\Agora\RtcTokenBuilder;
+use App\Services\SessionBookingService;
 use Carbon\Carbon;
 use Illuminate\Http\{JsonResponse, Request};
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,7 @@ class SessionsController extends Controller
             ->with([
                 'mentor:id,name,avatar_url,gender',
                 'mentee:id,name,avatar_url',
+                'sessionInvoice',
                 'notes' => fn ($q) => $q->with('author:id,name,role,avatar_url')->latest(),
             ])
             ->orderByDesc('scheduled_at')
@@ -45,6 +47,14 @@ class SessionsController extends Controller
                 'channel'        => $s->meeting_channel,
                 'amountPaid'     => (float) $s->amount,
                 'paymentStatus'  => $s->payment_status,
+                'paymentMethod'  => $s->payment_method,
+                'paymentMethodLabel' => $s->paymentMethodLabel(),
+                'walletAmount'   => (float) ($s->wallet_amount ?? 0),
+                'razorpayAmount' => (float) ($s->razorpay_amount ?? 0),
+                'invoice'        => $s->sessionInvoice ? [
+                    'id'             => $s->sessionInvoice->id,
+                    'invoice_number' => $s->sessionInvoice->invoice_number,
+                ] : null,
                 'bookingRef'     => $s->booking_ref,
             ]);
 
@@ -62,250 +72,61 @@ class SessionsController extends Controller
      * - Otherwise, create Razorpay order and wait for verifyPayment().
      * POST /api/v1/mentee/sessions
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, SessionBookingService $booking): JsonResponse
     {
         $data = $request->validate([
-            'mentor_id' => 'required|exists:users,id',
-            'date'      => 'required|date|after_or_equal:today',
-            'time'      => 'required|string',
-            'duration'  => 'required|integer|in:30,60,90',
-            'title'     => 'nullable|string|max:255',
+            'mentor_id'      => 'required|exists:users,id',
+            'date'           => 'required|date|after_or_equal:today',
+            'time'           => 'required|string',
+            'duration'       => 'required|integer|in:30,60,90',
+            'title'          => 'nullable|string|max:255',
+            'agenda'         => 'nullable|string|max:1000',
+            'payment_method' => 'nullable|in:wallet,razorpay,hybrid',
         ]);
 
-        $mentee = $request->user();
-        $mentor = User::where('id', $data['mentor_id'])
-            ->where('role', 'mentor')
-            ->where('mentor_status', 'approved')
-            ->first();
+        $result = $booking->book($request->user(), $data, 'api');
+        $payload = $result['payload'];
 
-        if (! $mentor) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Mentor not found.',
-            ], 404);
+        if (! $result['ok']) {
+            return response()->json(array_merge([
+                'status'     => false,
+                'statuscode' => $result['http'],
+            ], $payload), $result['http']);
         }
 
-        $amount = round((float) ($mentor->rate_per_minute ?? 0) * (int) $data['duration'], 2);
-        $scheduledAt = Carbon::parse($data['date'] . ' ' . $data['time'], 'Asia/Kolkata');
-        $planAllowance = $mentee->planSessionAllowance();
-        $coveredByPlan = $amount > 0 && ($planAllowance['covered'] ?? false);
-
-        // Soft-expire abandoned unpaid checkouts (no cancel API needed)
-        ConsultationSession::expireAbandonedUnpaidPayments();
-
-        // Same mentee retrying after closing Razorpay — free their previous unpaid hold now
-        ConsultationSession::releaseOwnUnpaidHold($mentee->id, $mentor->id, $scheduledAt);
-
-        $alreadyBooked = ConsultationSession::where('mentor_id', $mentor->id)
-            ->where('scheduled_at', $scheduledAt)
-            ->occupyingSlot()
-            ->exists();
-
-        if ($alreadyBooked) {
+        // Payment choice: no razorpay keys in response
+        if (! empty($payload['requires_payment_choice'])) {
             return response()->json([
-                'status'  => false,
-                'message' => 'This mentor already has an appointment at the selected date and time.',
-            ], 422);
+                'status'     => true,
+                'statuscode' => 200,
+                'message'    => $payload['message'],
+                'data'       => $payload,
+            ], 200);
         }
 
-        $channel = Str::random(10);
-        $bookingRef = 'AS-' . mt_rand(10000000, 99999999);
-        $currency = 'INR';
-
-        // Free mentor rate OR included in active subscription plan
-        if ($amount <= 0 || $coveredByPlan) {
-            $session = ConsultationSession::create([
-                'mentor_id'         => $mentor->id,
-                'mentee_id'         => $mentee->id,
-                'scheduled_at'      => $scheduledAt,
-                'duration_minutes'  => $data['duration'],
-                'timezone'          => 'Asia/Kolkata',
-                'title'             => $data['title'] ?? 'Mentorship Session',
-                'status'            => ConsultationSession::STATUS_UPCOMING,
-                'amount'            => $coveredByPlan ? 0 : $amount,
-                'currency'          => $currency,
-                'payment_status'    => 'waived',
-                'payment_reference' => $coveredByPlan
-                    ? 'PLAN-' . ($planAllowance['subscription_id'] ?? 'FREE')
-                    : null,
-                'booking_ref'       => $bookingRef,
-                'meeting_channel'   => $channel,
-                'meeting_link'      => url('as/' . $channel),
-            ]);
-
-            $message = $coveredByPlan
-                ? 'Session booked using your ' . ($planAllowance['plan_name'] ?? 'subscription') . ' plan.'
-                : 'Session booked successfully.';
-
+        // Razorpay checkout needed
+        if (! empty($payload['requires_payment'])) {
             return response()->json([
-                'status'  => true,
-                'message' => $message,
-                'data'    => $this->sessionPaymentPayload($session, null, null),
+                'status'     => true,
+                'statuscode' => 201,
+                'message'    => $payload['message'],
+                'data'       => $payload,
             ], 201);
         }
-
-        // Wallet-first: if mentee has enough balance, book directly using wallet.
-        if ($mentee->hasSufficientBalance($amount)) {
-            try {
-                $session = DB::transaction(function () use ($mentor, $mentee, $scheduledAt, $data, $amount, $currency, $bookingRef, $channel) {
-                    $session = ConsultationSession::create([
-                        'mentor_id'           => $mentor->id,
-                        'mentee_id'           => $mentee->id,
-                        'scheduled_at'        => $scheduledAt,
-                        'duration_minutes'    => $data['duration'],
-                        'timezone'            => 'Asia/Kolkata',
-                        'title'               => $data['title'] ?? 'Mentorship Session',
-                        'status'              => ConsultationSession::STATUS_UPCOMING,
-                        'amount'              => $amount,
-                        'currency'            => $currency,
-                        'payment_status'      => 'paid',
-                        'payment_reference'   => 'WAL-' . $bookingRef,
-                        'booking_ref'         => $bookingRef,
-                        'meeting_channel'     => $channel,
-                        'meeting_link'        => url('as/' . $channel),
-                    ]);
-
-                    $mentee->debitWallet(
-                        $amount,
-                        "Session booking {$bookingRef}",
-                        [
-                            'reference'            => 'WAL-' . $bookingRef,
-                            'transactionable_type' => ConsultationSession::class,
-                            'transactionable_id'   => $session->id,
-                            'meta'                 => [
-                                'booking_ref' => $bookingRef,
-                                'mentor_id'   => $mentor->id,
-                                'source'      => 'session_booking_wallet',
-                            ],
-                        ]
-                    );
-
-                    return $session;
-                });
-            } catch (\Throwable $e) {
-                Log::error('Wallet booking failed for session.', [
-                    'mentee_id' => $mentee->id,
-                    'mentor_id' => $mentor->id,
-                    'amount'    => $amount,
-                    'error'     => $e->getMessage(),
-                ]);
-
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Unable to complete wallet payment right now.',
-                ], 500);
-            }
-
-            return response()->json([
-                'status'  => true,
-                'message' => 'Session booked successfully using wallet.',
-                'data'    => $this->sessionPaymentPayload($session->fresh(), null, null),
-            ], 201);
-        }
-
-        // Paid sessions fallback to Razorpay when wallet is insufficient.
-        $creds = $this->razorpayCredentials();
-        if (empty($creds['key']) || empty($creds['secret'])) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Payment gateway is not configured.',
-            ], 503);
-        }
-
-        if (! ($creds['enabled'] ?? true)) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Razorpay is disabled in admin settings.',
-            ], 503);
-        }
-
-        $amountInPaise = (int) round($amount * 100);
-        if ($amountInPaise < 100) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Session amount must be at least 1 INR for online payment.',
-            ], 422);
-        }
-
-        $receipt = 'ses_' . $mentee->id . '_' . $mentor->id . '_' . time();
-
-        try {
-            $response = Http::withBasicAuth($creds['key'], $creds['secret'])
-                ->acceptJson()
-                ->post('https://api.razorpay.com/v1/orders', [
-                    'amount'   => $amountInPaise,
-                    'currency' => $currency,
-                    'receipt'  => Str::limit($receipt, 40, ''),
-                    'notes'    => [
-                        'mentee_id'   => (string) $mentee->id,
-                        'mentor_id'   => (string) $mentor->id,
-                        'booking_ref' => $bookingRef,
-                        'duration'    => (string) $data['duration'],
-                    ],
-                ]);
-
-            if (! $response->successful()) {
-                $razorpayError = $response->json('error.description')
-                    ?? $response->json('error.reason')
-                    ?? $response->body();
-
-                Log::error('Razorpay order create failed for session booking.', [
-                    'mentee_id' => $mentee->id,
-                    'mentor_id' => $mentor->id,
-                    'status'    => $response->status(),
-                    'body'      => $response->body(),
-                ]);
-
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Unable to initiate payment right now.',
-                    'error'   => config('app.debug') ? $razorpayError : null,
-                ], 502);
-            }
-
-            $order = $response->json();
-        } catch (\Throwable $e) {
-            Log::error('Razorpay order create exception for session booking.', [
-                'mentee_id' => $mentee->id,
-                'mentor_id' => $mentor->id,
-                'error'     => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'status'  => false,
-                'message' => 'Unable to initiate payment right now.',
-            ], 502);
-        }
-
-        $session = ConsultationSession::create([
-            'mentor_id'           => $mentor->id,
-            'mentee_id'           => $mentee->id,
-            'scheduled_at'        => $scheduledAt,
-            'duration_minutes'    => $data['duration'],
-            'timezone'            => 'Asia/Kolkata',
-            'title'               => $data['title'] ?? 'Mentorship Session',
-            'status'              => ConsultationSession::STATUS_PENDING,
-            'amount'              => $amount,
-            'currency'            => $currency,
-            'payment_status'      => 'pending',
-            'razorpay_order_id'   => $order['id'] ?? null,
-            'booking_ref'         => $bookingRef,
-            'meeting_channel'     => $channel,
-            'meeting_link'        => url('as/' . $channel),
-        ]);
 
         return response()->json([
-            'status'  => true,
-            'message' => 'Payment order created.',
-            'data'    => $this->sessionPaymentPayload($session, $creds['key'], $amountInPaise),
-        ], 201);
+            'status'     => true,
+            'statuscode' => $result['http'],
+            'message'    => $payload['message'],
+            'data'       => $payload,
+        ], $result['http']);
     }
 
     /**
      * Verify Razorpay payment and confirm the session.
      * POST /api/v1/mentee/sessions/verify
      */
-    public function verifyPayment(Request $request): JsonResponse
+    public function verifyPayment(Request $request, SessionBookingService $booking): JsonResponse
     {
         $data = $request->validate([
             'razorpay_order_id'   => 'required|string',
@@ -313,76 +134,21 @@ class SessionsController extends Controller
             'razorpay_signature'  => 'required|string',
         ]);
 
-        $creds = $this->razorpayCredentials();
-        if (empty($creds['secret'])) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Payment gateway is not configured.',
-            ], 503);
-        }
+        $result = $booking->verify($request->user(), $data);
+        $payload = $result['payload'];
 
-        $expectedSig = hash_hmac(
-            'sha256',
-            $data['razorpay_order_id'] . '|' . $data['razorpay_payment_id'],
-            $creds['secret']
-        );
-
-        if (! hash_equals($expectedSig, $data['razorpay_signature'])) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Payment signature verification failed.',
-            ], 422);
-        }
-
-        $session = ConsultationSession::where('mentee_id', $request->user()->id)
-            ->where('razorpay_order_id', $data['razorpay_order_id'])
-            ->latest('id')
-            ->first();
-
-        if (! $session) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Pending session not found for this payment order.',
-            ], 404);
-        }
-
-        if ($session->status === ConsultationSession::STATUS_CANCELLED) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'This booking hold expired or was replaced. Please book the slot again.',
-            ], 422);
-        }
-
-        if (
-            $session->payment_status === 'paid'
-            && $session->razorpay_payment_id === $data['razorpay_payment_id']
-        ) {
-            return response()->json([
-                'status'  => true,
-                'message' => 'Session already confirmed.',
-                'data'    => $this->sessionPaymentPayload($session, null, null),
-            ]);
-        }
-
-        $wasCompleted = $session->status === ConsultationSession::STATUS_COMPLETED;
-
-        $session->update([
-            'payment_status'      => 'paid',
-            'payment_reference'   => $data['razorpay_payment_id'],
-            'razorpay_payment_id' => $data['razorpay_payment_id'],
-            'status'              => $wasCompleted
-                ? ConsultationSession::STATUS_COMPLETED
-                : ConsultationSession::STATUS_UPCOMING,
-        ]);
-
-        if ($wasCompleted) {
-            $session->settleMentorPayout();
+        if (! $result['ok']) {
+            return response()->json(array_merge([
+                'status'     => false,
+                'statuscode' => $result['http'],
+            ], $payload), $result['http']);
         }
 
         return response()->json([
-            'status'  => true,
-            'message' => 'Payment verified and session booked successfully.',
-            'data'    => $this->sessionPaymentPayload($session->fresh(), null, null),
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => $payload['message'],
+            'data'       => $payload,
         ]);
     }
 

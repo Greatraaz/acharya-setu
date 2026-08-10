@@ -74,6 +74,7 @@
                             <span style="font-size:12px;color:var(--text-2);">🕐 {{ $session->scheduled_at?->format('g:i A') ?? '—' }}</span>
                             <span style="font-size:12px;color:var(--text-2);">⏱ {{ $session->duration_minutes ?? 30 }} min</span>
                             <span style="font-size:12px;color:var(--brand);">💰 ₹{{ number_format((float) ($session->amount ?? 0), 0) }}</span>
+                            <span style="font-size:12px;color:var(--text-2);">{{ $session->paymentMethodLabel() }}</span>
                         </div>
                         @if($session->agenda ?? $session->topic_notes ?? false)
                         <div style="margin-top:10px;padding:10px;background:var(--bg);border-radius:var(--radius-sm);font-size:12px;color:var(--text-2);">
@@ -84,7 +85,10 @@
 
                     <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:flex-end;">
                         <a href="{{ route('mentee.sessions.show', $session->id) }}" class="btn btn-outline btn-sm">View</a>
-                        @if(in_array($statusKey, ['confirmed', 'pending'], true) && $session->meeting_link && $session->scheduled_at?->isFuture())
+                        @if($session->sessionInvoice)
+                            <a href="{{ route('mentee.session-invoices.download', $session->sessionInvoice) }}" class="btn btn-ghost btn-sm">Download invoice</a>
+                        @endif
+                        @if(in_array($statusKey, ['confirmed', 'pending', 'upcoming'], true) && $session->meeting_link && $session->scheduled_at?->isFuture())
                             <a href="{{ $session->meeting_link }}" target="_blank" class="btn btn-primary btn-sm">🎥 Join</a>
                         @endif
                         @if($canCancel)

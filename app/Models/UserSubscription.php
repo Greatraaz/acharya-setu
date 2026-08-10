@@ -41,6 +41,11 @@ class UserSubscription extends Model
         return $this->belongsTo(Plan::class);
     }
 
+    public function invoice(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(PlanInvoice::class, 'user_subscription_id');
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────────
 
     public function isActive(): bool

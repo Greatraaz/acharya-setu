@@ -16,6 +16,7 @@
             <div class="dash-subtitle">{{ $month->theme ?: ($month->description ? Str::limit($month->description, 120) : 'Weekly plan for this month') }}</div>
         </div>
 
+        @if($canViewProgress ?? false)
         <div class="card" style="margin-bottom:20px;">
             <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-2);margin-bottom:8px;">
                 <span>Month progress</span>
@@ -28,6 +29,12 @@
                 {{ (int) ($progress['completed'] ?? 0) }} of {{ (int) ($progress['total'] ?? 0) }} items completed
             </div>
         </div>
+        @else
+        <div class="alert alert-warning" style="margin-bottom:16px;">
+            <span class="alert-icon">🔒</span>
+            <div style="font-size:13px;">Progress % and completion counts are hidden on your plan. You can still open weeks and work on tasks.</div>
+        </div>
+        @endif
 
         <div class="card">
             <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">Weeks</h3>
@@ -45,9 +52,12 @@
                         <div style="font-size:12px;color:var(--text-2);margin-top:4px;">{{ $w->focus }}</div>
                         @endif
                     </div>
+                    @if($canViewProgress ?? false)
                     <span style="font-size:13px;font-weight:700;color:var(--brand);">{{ $wPercent }}%</span>
+                    @endif
                 </div>
                 <div style="margin-top:12px;">
+                    @if($canViewProgress ?? false)
                     <div class="progress-bar">
                         <div class="progress-fill" style="width:{{ $wPercent }}%"></div>
                     </div>
@@ -55,6 +65,11 @@
                         {{ (int) ($row['completed'] ?? 0) }} / {{ (int) ($row['total'] ?? 0) }} completed
                         · {{ $w->tasks->count() }} tasks · {{ $w->mcqs->count() }} MCQs
                     </div>
+                    @else
+                    <div style="font-size:11px;color:var(--text-3);">
+                        {{ $w->tasks->count() }} tasks · {{ $w->mcqs->count() }} MCQs
+                    </div>
+                    @endif
                 </div>
             </a>
             @empty

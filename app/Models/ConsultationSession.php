@@ -21,15 +21,18 @@ class ConsultationSession extends Model
         'booking_ref', 'mentor_id', 'mentee_id', 'scheduled_at', 'duration_minutes', 'timezone',
         'title', 'agenda', 'mentor_notes', 'meeting_link', 'meeting_provider', 'meeting_channel',
         'status', 'cancellation_reason', 'cancelled_by', 'cancelled_at', 'started_at', 'ended_at',
-        'actual_duration_seconds', 'amount', 'currency', 'payment_status', 'payment_reference',
+        'actual_duration_seconds',         'amount', 'currency', 'payment_status', 'payment_method', 'wallet_amount', 'razorpay_amount',
+        'payment_reference',
         'razorpay_order_id', 'razorpay_payment_id',
     ];
 
     protected $casts = [
-        'cancelled_at'  => 'datetime',
-        'started_at'    => 'datetime',
-        'ended_at'      => 'datetime',
-        'amount'        => 'decimal:2',
+        'cancelled_at'    => 'datetime',
+        'started_at'      => 'datetime',
+        'ended_at'        => 'datetime',
+        'amount'          => 'decimal:2',
+        'wallet_amount'   => 'decimal:2',
+        'razorpay_amount' => 'decimal:2',
     ];
 
     protected static function booted(): void
@@ -84,7 +87,24 @@ class ConsultationSession extends Model
     {
         return $this->belongsTo(User::class, 'mentee_id');
     }
- 
+
+    public function sessionInvoice(): HasOne
+    {
+        return $this->hasOne(SessionInvoice::class, 'consultation_session_id');
+    }
+
+    public function paymentMethodLabel(): string
+    {
+        return match ($this->payment_method) {
+            'plan' => 'Plan (included)',
+            'free' => 'Free',
+            'wallet' => 'Wallet',
+            'razorpay' => 'Razorpay',
+            'hybrid' => 'Wallet + Razorpay',
+            default => $this->payment_status === 'waived' ? 'Waived' : (ucfirst((string) $this->payment_method) ?: '—'),
+        };
+    }
+
     public function cancelledBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cancelled_by');
