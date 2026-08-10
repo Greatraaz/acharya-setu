@@ -4,119 +4,231 @@
     <meta charset="UTF-8">
     <title>Invoice {{ $invoice->invoice_number }}</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; color: #111827; font-size: 12px; margin: 0; padding: 24px; }
-        .brand { font-size: 22px; font-weight: bold; margin-bottom: 4px; }
-        .muted { color: #6b7280; font-size: 11px; line-height: 1.45; }
-        .top { width: 100%; margin-bottom: 22px; }
+        @page { margin: 28px 28px 36px; }
+        body {
+            font-family: DejaVu Sans, sans-serif;
+            color: #1e293b;
+            font-size: 11px;
+            margin: 0;
+            padding: 0;
+            line-height: 1.45;
+        }
+        .accent { height: 6px; background: #f59e0b; margin: 0 0 18px; }
+        .top { width: 100%; margin-bottom: 18px; border-collapse: collapse; }
         .top td { vertical-align: top; }
+        .logo { height: 52px; width: auto; max-width: 210px; }
+        .brand-fallback {
+            font-size: 22px;
+            font-weight: bold;
+            color: #0b1b3a;
+            letter-spacing: 0.02em;
+        }
+        .tagline { color: #d97706; font-size: 9px; margin-top: 4px; }
+        .seller { color: #64748b; font-size: 9px; line-height: 1.5; margin-top: 8px; }
         .right { text-align: right; }
-        h1 { font-size: 20px; margin: 0 0 8px; }
-        .section { width: 100%; margin-bottom: 20px; }
-        .section td { width: 50%; vertical-align: top; padding-right: 12px; }
-        .label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; margin-bottom: 6px; }
-        table.items { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-        table.items th { text-align: left; font-size: 10px; text-transform: uppercase; color: #6b7280; border-bottom: 1px solid #e5e7eb; padding: 8px 6px; }
-        table.items td { border-bottom: 1px solid #e5e7eb; padding: 10px 6px; vertical-align: top; }
-        .totals { width: 260px; margin-left: auto; }
-        .totals td { padding: 6px 0; }
-        .totals .grand td { font-size: 14px; font-weight: bold; padding-top: 10px; }
-        .foot { margin-top: 24px; font-size: 10px; color: #6b7280; }
+        .doc-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0b1b3a;
+            margin: 0 0 6px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .badge {
+            display: inline-block;
+            background: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fcd34d;
+            padding: 2px 8px;
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .meta { color: #475569; font-size: 10px; line-height: 1.65; }
+        .meta strong { color: #0b1b3a; }
+        .divider { height: 1px; background: #e2e8f0; margin: 4px 0 16px; }
+        .section { width: 100%; margin-bottom: 16px; border-collapse: collapse; }
+        .section td { width: 50%; vertical-align: top; }
+        .card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 12px 14px;
+            margin-right: 8px;
+        }
+        .card-right { margin-right: 0; margin-left: 8px; }
+        .label {
+            font-size: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+        .card strong { color: #0b1b3a; font-size: 12px; }
+        .muted { color: #64748b; font-size: 10px; line-height: 1.5; }
+        table.items { width: 100%; border-collapse: collapse; margin: 8px 0 14px; }
+        table.items th {
+            background: #0b1b3a;
+            color: #ffffff;
+            text-align: left;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 9px 10px;
+        }
+        table.items th.right { text-align: right; }
+        table.items td {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 10px;
+            vertical-align: top;
+            background: #ffffff;
+        }
+        table.items tr:nth-child(even) td { background: #f8fafc; }
+        .totals-wrap { width: 100%; }
+        .totals {
+            width: 250px;
+            margin-left: auto;
+            border-collapse: collapse;
+        }
+        .totals td { padding: 7px 0; color: #475569; font-size: 10px; }
+        .totals td.right { text-align: right; color: #1e293b; }
+        .totals .grand td {
+            border-top: 2px solid #f59e0b;
+            padding-top: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #0b1b3a;
+        }
+        .foot {
+            margin-top: 28px;
+            padding-top: 12px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 9px;
+            color: #94a3b8;
+            text-align: center;
+            line-height: 1.55;
+        }
+        .foot .slogan { color: #d97706; font-weight: bold; margin-bottom: 4px; }
     </style>
 </head>
 <body>
-    <table class="top">
-        <tr>
-            <td>
-                <div class="brand">{{ $invoice->seller_name ?: 'Vedrix' }}</div>
-                <div class="muted">
-                    @if($invoice->seller_gstin) GSTIN: {{ $invoice->seller_gstin }}<br>@endif
-                    @if($invoice->seller_address) {{ $invoice->seller_address }}<br>@endif
-                    @if($invoice->seller_email) {{ $invoice->seller_email }}@endif
-                    @if($invoice->seller_phone) · {{ $invoice->seller_phone }}@endif
-                </div>
-            </td>
-            <td class="right">
-                <h1>Tax Invoice</h1>
-                <div><strong>Invoice #</strong> {{ $invoice->invoice_number }}</div>
-                <div><strong>Date</strong> {{ $invoice->invoice_date?->format('d M Y') }}</div>
-                <div><strong>Status</strong> {{ ucfirst($invoice->status) }}</div>
-            </td>
-        </tr>
-    </table>
+<div class="accent"></div>
 
-    <table class="section">
-        <tr>
-            <td>
+<table class="top">
+    <tr>
+        <td width="58%">
+            @include('invoices.partials.brand-logo', ['forPdf' => true, 'invoice' => $invoice])
+            <div class="seller">
+                @if($invoice->seller_name && $invoice->seller_name !== 'Vedrix')
+                    {{ $invoice->seller_name }}<br>
+                @endif
+                @if($invoice->seller_gstin) GSTIN: {{ $invoice->seller_gstin }}<br>@endif
+                @if($invoice->seller_address) {{ $invoice->seller_address }}<br>@endif
+                @if($invoice->seller_email) {{ $invoice->seller_email }}@endif
+                @if($invoice->seller_phone) · {{ $invoice->seller_phone }}@endif
+            </div>
+        </td>
+        <td class="right" width="42%">
+            <div class="badge">Paid</div>
+            <div class="doc-title">Tax Invoice</div>
+            <div class="meta">
+                <strong>Invoice #</strong> {{ $invoice->invoice_number }}<br>
+                <strong>Date</strong> {{ $invoice->invoice_date?->format('d M Y') }}<br>
+                <strong>Status</strong> {{ ucfirst($invoice->status) }}
+            </div>
+        </td>
+    </tr>
+</table>
+
+<div class="divider"></div>
+
+<table class="section">
+    <tr>
+        <td>
+            <div class="card">
                 <div class="label">Bill To</div>
-                <div><strong>{{ $invoice->billing_name ?: 'Mentee' }}</strong></div>
+                <strong>{{ $invoice->billing_name ?: 'Mentee' }}</strong>
                 <div class="muted">
                     @if($invoice->billing_email) {{ $invoice->billing_email }}<br>@endif
                     @if($invoice->billing_phone) {{ $invoice->billing_phone }}@endif
                 </div>
-            </td>
-            <td>
-                <div class="label">Subscription</div>
-                <div class="muted">
+            </div>
+        </td>
+        <td>
+            <div class="card card-right">
+                <div class="label">Subscription Period</div>
+                <strong>
                     @if($invoice->subscription_starts_at && $invoice->subscription_expires_at)
                         {{ $invoice->subscription_starts_at->format('d M Y') }}
-                        → {{ $invoice->subscription_expires_at->format('d M Y') }}
+                        – {{ $invoice->subscription_expires_at->format('d M Y') }}
                     @else
                         —
                     @endif
+                </strong>
+                <div class="muted">
                     @if($invoice->payment_reference)
-                        <br>Payment ref: {{ $invoice->payment_reference }}
+                        Payment ref: {{ $invoice->payment_reference }}
                     @endif
                 </div>
-            </td>
-        </tr>
-    </table>
+            </div>
+        </td>
+    </tr>
+</table>
 
-    <table class="items">
-        <thead>
-            <tr>
-                <th>Description</th>
-                <th class="right">Amount (INR)</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>
-                    <strong>{{ $invoice->plan_name }}</strong><br>
-                    <span class="muted">Mentorship subscription plan</span>
-                </td>
-                <td class="right">{{ number_format((float) $invoice->base_amount, 2) }}</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <table class="totals">
+<table class="items">
+    <thead>
         <tr>
-            <td>Taxable value</td>
+            <th>Description</th>
+            <th class="right" width="28%">Amount (INR)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                <strong>{{ $invoice->plan_name }}</strong><br>
+                <span class="muted">Mentorship subscription plan</span>
+            </td>
             <td class="right">{{ number_format((float) $invoice->base_amount, 2) }}</td>
         </tr>
-        @if((float) $invoice->cgst_percent > 0)
-        <tr>
-            <td>CGST ({{ rtrim(rtrim(number_format($invoice->cgst_percent, 2, '.', ''), '0'), '.') }}%)</td>
-            <td class="right">{{ number_format((float) $invoice->cgst_amount, 2) }}</td>
-        </tr>
-        @endif
-        @if((float) $invoice->sgst_percent > 0)
-        <tr>
-            <td>SGST ({{ rtrim(rtrim(number_format($invoice->sgst_percent, 2, '.', ''), '0'), '.') }}%)</td>
-            <td class="right">{{ number_format((float) $invoice->sgst_amount, 2) }}</td>
-        </tr>
-        @endif
-        <tr class="grand">
-            <td>Total</td>
-            <td class="right">{{ number_format((float) $invoice->total_amount, 2) }}</td>
-        </tr>
-    </table>
+    </tbody>
+</table>
 
-    <div class="foot">
-        This is a computer-generated invoice for your plan purchase.
-        @if($invoice->razorpay_payment_id)
-            Razorpay payment ID: {{ $invoice->razorpay_payment_id }}.
-        @endif
-    </div>
+<table class="totals-wrap">
+    <tr>
+        <td>
+            <table class="totals">
+                <tr>
+                    <td>Taxable value</td>
+                    <td class="right">{{ number_format((float) $invoice->base_amount, 2) }}</td>
+                </tr>
+                @if((float) $invoice->cgst_percent > 0)
+                <tr>
+                    <td>CGST ({{ rtrim(rtrim(number_format($invoice->cgst_percent, 2, '.', ''), '0'), '.') }}%)</td>
+                    <td class="right">{{ number_format((float) $invoice->cgst_amount, 2) }}</td>
+                </tr>
+                @endif
+                @if((float) $invoice->sgst_percent > 0)
+                <tr>
+                    <td>SGST ({{ rtrim(rtrim(number_format($invoice->sgst_percent, 2, '.', ''), '0'), '.') }}%)</td>
+                    <td class="right">{{ number_format((float) $invoice->sgst_amount, 2) }}</td>
+                </tr>
+                @endif
+                <tr class="grand">
+                    <td>Total payable</td>
+                    <td class="right">₹ {{ number_format((float) $invoice->total_amount, 2) }}</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<div class="foot">
+    <div class="slogan">Mentors shape possibilities</div>
+    This is a computer-generated invoice for your plan purchase.
+    @if($invoice->razorpay_payment_id)
+        Razorpay payment ID: {{ $invoice->razorpay_payment_id }}.
+    @endif
+</div>
 </body>
 </html>

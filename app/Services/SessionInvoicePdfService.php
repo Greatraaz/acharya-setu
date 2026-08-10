@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\SessionInvoice;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Response as IlluminateResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 class SessionInvoicePdfService
@@ -19,8 +19,19 @@ class SessionInvoicePdfService
     {
         $invoice->loadMissing(['user', 'mentor', 'session']);
 
-        return Pdf::loadView('invoices.session-pdf', [
-            'invoice' => $invoice,
-        ])->setPaper('a4')->download($this->filename($invoice));
+        if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            return \Barryvdh\DomPDF\Facade\Pdf::loadView('invoices.session-pdf', [
+                'invoice' => $invoice,
+            ])->setPaper('a4')->download($this->filename($invoice));
+        }
+
+        return $this->htmlFallback($invoice);
+    }
+
+    private function htmlFallback(SessionInvoice $invoice): IlluminateResponse
+    {
+        return response()
+            ->view('invoices.session-pdf', ['invoice' => $invoice])
+            ->header('Content-Type', 'text/html; charset=UTF-8');
     }
 }
