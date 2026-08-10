@@ -31,6 +31,7 @@ class SessionBookingService
             return $this->fail('Mentor not found.', 404);
         }
 
+        // Session fees are GST-free: charge rate × duration only (no CGST/SGST/IGST).
         $amount = round((float) ($mentor->rate_per_minute ?? 0) * (int) $data['duration'], 2);
         $scheduledAt = Carbon::parse($data['date'].' '.$data['time'], 'Asia/Kolkata');
         $planAllowance = $mentee->planSessionAllowance();
@@ -121,6 +122,8 @@ class SessionBookingService
                 'can_pay_full_wallet'     => $walletBalance >= $amount,
                 'payment_options'         => $options,
                 'plan_allowance'          => $planAllowance,
+                'tax_applicable'          => false,
+                'tax_total'               => 0,
                 'booking_draft'           => [
                     'mentor_id' => $mentor->id,
                     'date'      => $data['date'],
@@ -469,6 +472,8 @@ class SessionBookingService
                     'contact' => $mentee->phone ?? '',
                 ],
                 'wallet_balance'          => (float) $mentee->wallet_balance,
+                'tax_applicable'          => false,
+                'tax_total'               => 0,
                 'session'                 => $this->sessionArray($session),
             ]
         );
@@ -486,6 +491,8 @@ class SessionBookingService
             'wallet_amount'    => (float) ($session->wallet_amount ?? 0),
             'razorpay_amount'  => (float) ($session->razorpay_amount ?? 0),
             'currency'         => $session->currency,
+            'tax_applicable'   => false,
+            'tax_total'        => 0,
             'scheduled_at'     => $session->scheduled_at?->toDateTimeString(),
             'duration_minutes' => $session->duration_minutes,
             'meeting_link'     => $session->meeting_link,

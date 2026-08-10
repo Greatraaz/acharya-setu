@@ -29,7 +29,6 @@
             <td>
                 <div class="brand">{{ $invoice->seller_name ?: 'Vedrix' }}</div>
                 <div class="muted">
-                    @if($invoice->seller_gstin) GSTIN: {{ $invoice->seller_gstin }}<br>@endif
                     @if($invoice->seller_address) {{ $invoice->seller_address }}<br>@endif
                     @if($invoice->seller_email) {{ $invoice->seller_email }}@endif
                     @if($invoice->seller_phone) · {{ $invoice->seller_phone }}@endif
@@ -104,7 +103,7 @@
     </table>
 
     <div class="foot">
-        Computer-generated session invoice.
+        Computer-generated session invoice. GST is not applicable on session bookings.
         @if($invoice->payment_reference) Ref: {{ $invoice->payment_reference }}. @endif
     </div>
 </body>

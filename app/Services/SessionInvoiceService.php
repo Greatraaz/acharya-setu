@@ -72,7 +72,8 @@ class SessionInvoiceService
                 'session_at'              => $locked->scheduled_at,
                 'duration_minutes'        => $locked->duration_minutes,
                 'seller_name'             => $seller['company_name'],
-                'seller_gstin'            => $seller['gstin'],
+                // Session bookings are not GST-taxed; do not stamp seller GSTIN on these invoices.
+                'seller_gstin'            => null,
                 'seller_address'          => $seller['address'],
                 'seller_email'            => $seller['email'],
                 'seller_phone'            => $seller['phone'],
@@ -80,6 +81,10 @@ class SessionInvoiceService
                 'generated_by'            => $generatedBy,
                 'meta'                    => [
                     'title' => $locked->title,
+                    'tax_applicable' => false,
+                    'cgst_amount' => 0,
+                    'sgst_amount' => 0,
+                    'tax_total' => 0,
                 ],
             ]);
         });

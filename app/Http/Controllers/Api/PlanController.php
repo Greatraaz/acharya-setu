@@ -388,6 +388,97 @@ class PlanController extends Controller
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
+    // 4b. Plan consumption (included free sessions used this month)
+    // GET /api/v1/mentee/plans/subscription/consumption
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    public function subscriptionConsumption(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $subscription = $user->activeSubscription();
+        $allowance = $user->planSessionAllowance();
+        $periodStart = Carbon::now('Asia/Kolkata')->startOfMonth();
+        $periodEnd = Carbon::now('Asia/Kolkata')->endOfMonth();
+
+        if (! $subscription) {
+            return response()->json([
+                'status'  => true,
+                'message' => 'No active subscription. Session fees apply for bookings.',
+                'data'    => [
+                    'has_active_subscription' => false,
+                    'subscription'            => null,
+                    'period'                  => [
+                        'label'     => 'current_month',
+                        'timezone'  => 'Asia/Kolkata',
+                        'starts_at' => $periodStart->toDateTimeString(),
+                        'ends_at'   => $periodEnd->toDateTimeString(),
+                    ],
+                    'sessions'                => [
+                        'included_limit'      => null,
+                        'used'                => (int) $allowance['used'],
+                        'remaining'           => null,
+                        'unlimited'           => false,
+                        'percent_used'        => null,
+                        'next_booking_free'   => false,
+                        'resets_at'           => $periodEnd->copy()->addSecond()->toDateTimeString(),
+                    ],
+                    'progress_report_enabled' => false,
+                ],
+            ], 200);
+        }
+
+        $limit = $allowance['limit'];
+        $used = (int) $allowance['used'];
+        $unlimited = (bool) $allowance['unlimited'];
+        $remaining = $allowance['remaining'];
+        $percentUsed = null;
+
+        if (! $unlimited && is_int($limit) && $limit > 0) {
+            $percentUsed = min(100, round(($used / $limit) * 100, 1));
+        } elseif (! $unlimited && $limit === 0) {
+            $percentUsed = 100.0;
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Plan consumption fetched successfully.',
+            'data'    => [
+                'has_active_subscription' => true,
+                'subscription'            => [
+                    'id'              => (int) $subscription->id,
+                    'subscription_id' => $subscription->subscription_id,
+                    'status'          => $subscription->status,
+                    'starts_at'       => $subscription->starts_at?->toDateTimeString(),
+                    'expires_at'      => $subscription->expires_at?->toDateTimeString(),
+                    'days_remaining'  => $subscription->daysRemaining(),
+                    'plan'            => [
+                        'id'                      => $subscription->plan?->id,
+                        'name'                    => $subscription->plan?->name ?? $subscription->plan?->plan_name,
+                        'sessions_per_month'      => $subscription->plan?->sessions_per_month,
+                        'progress_report_enabled' => (bool) ($subscription->plan?->progress_report_enabled),
+                    ],
+                ],
+                'period'                  => [
+                    'label'     => 'current_month',
+                    'timezone'  => 'Asia/Kolkata',
+                    'starts_at' => $periodStart->toDateTimeString(),
+                    'ends_at'   => $periodEnd->toDateTimeString(),
+                ],
+                'sessions'                => [
+                    'included_limit'    => $limit,
+                    'used'              => $used,
+                    'remaining'         => $remaining,
+                    'unlimited'         => $unlimited,
+                    'percent_used'      => $percentUsed,
+                    'next_booking_free' => (bool) $allowance['covered'],
+                    'resets_at'         => $periodEnd->copy()->addSecond()->toDateTimeString(),
+                ],
+                'progress_report_enabled' => (bool) ($subscription->plan?->progress_report_enabled),
+            ],
+        ], 200);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
     // 5. Subscription history (authenticated user)
     // GET /api/plans/subscription/history
     // ─────────────────────────────────────────────────────────────────────────────

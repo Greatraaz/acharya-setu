@@ -280,6 +280,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('/subscribe/{id}/verify', [PlanController::class, 'verifySubscriptionPayment']);
             Route::get('/subscription/active', [PlanController::class, 'activeSubscription']);  
             Route::get('/subscription/history', [PlanController::class, 'subscriptionHistory']);
+            Route::get('/subscription/consumption', [PlanController::class, 'subscriptionConsumption']);
             Route::post('/subscription/cancel', [PlanController::class, 'cancelSubscription']); 
         });
 

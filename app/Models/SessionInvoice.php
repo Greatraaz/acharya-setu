@@ -93,7 +93,6 @@ class SessionInvoice extends Model
             ],
             'seller'         => [
                 'name'    => $this->seller_name,
-                'gstin'   => $this->seller_gstin,
                 'address' => $this->seller_address,
                 'email'   => $this->seller_email,
                 'phone'   => $this->seller_phone,
@@ -112,6 +111,13 @@ class SessionInvoice extends Model
                 'razorpay_amount' => $this->razorpay_amount,
                 'total'           => $this->total_amount,
                 'currency'        => $this->currency,
+                // Sessions are never GST-taxed (unlike subscription plans).
+                'tax_applicable'  => false,
+                'cgst_percent'    => 0,
+                'sgst_percent'    => 0,
+                'cgst_amount'     => 0,
+                'sgst_amount'     => 0,
+                'tax_total'       => 0,
             ],
             'payment'        => [
                 'reference'           => $this->payment_reference,
