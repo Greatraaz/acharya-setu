@@ -87,6 +87,8 @@ class SessionsController extends Controller
 
         $amount = round((float) ($mentor->rate_per_minute ?? 0) * (int) $data['duration'], 2);
         $scheduledAt = Carbon::parse($data['date'] . ' ' . $data['time'], 'Asia/Kolkata');
+        $planAllowance = $mentee->planSessionAllowance();
+        $coveredByPlan = $amount > 0 && ($planAllowance['covered'] ?? false);
 
         // Soft-expire abandoned unpaid checkouts (no cancel API needed)
         ConsultationSession::expireAbandonedUnpaidPayments();
@@ -110,27 +112,34 @@ class SessionsController extends Controller
         $bookingRef = 'AS-' . mt_rand(10000000, 99999999);
         $currency = 'INR';
 
-        // Free / zero-amount sessions — confirm immediately
-        if ($amount <= 0) {
+        // Free mentor rate OR included in active subscription plan
+        if ($amount <= 0 || $coveredByPlan) {
             $session = ConsultationSession::create([
-                'mentor_id'        => $mentor->id,
-                'mentee_id'        => $mentee->id,
-                'scheduled_at'     => $scheduledAt,
-                'duration_minutes' => $data['duration'],
-                'timezone'         => 'Asia/Kolkata',
-                'title'            => $data['title'] ?? 'Mentorship Session',
-                'status'           => ConsultationSession::STATUS_UPCOMING,
-                'amount'           => 0,
-                'currency'         => $currency,
-                'payment_status'   => 'waived',
-                'booking_ref'      => $bookingRef,
-                'meeting_channel'  => $channel,
-                'meeting_link'     => url('as/' . $channel),
+                'mentor_id'         => $mentor->id,
+                'mentee_id'         => $mentee->id,
+                'scheduled_at'      => $scheduledAt,
+                'duration_minutes'  => $data['duration'],
+                'timezone'          => 'Asia/Kolkata',
+                'title'             => $data['title'] ?? 'Mentorship Session',
+                'status'            => ConsultationSession::STATUS_UPCOMING,
+                'amount'            => $coveredByPlan ? 0 : $amount,
+                'currency'          => $currency,
+                'payment_status'    => 'waived',
+                'payment_reference' => $coveredByPlan
+                    ? 'PLAN-' . ($planAllowance['subscription_id'] ?? 'FREE')
+                    : null,
+                'booking_ref'       => $bookingRef,
+                'meeting_channel'   => $channel,
+                'meeting_link'      => url('as/' . $channel),
             ]);
+
+            $message = $coveredByPlan
+                ? 'Session booked using your ' . ($planAllowance['plan_name'] ?? 'subscription') . ' plan.'
+                : 'Session booked successfully.';
 
             return response()->json([
                 'status'  => true,
-                'message' => 'Session booked successfully.',
+                'message' => $message,
                 'data'    => $this->sessionPaymentPayload($session, null, null),
             ], 201);
         }

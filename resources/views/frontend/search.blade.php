@@ -217,7 +217,7 @@
                     </div>
 
                     <div style="background:var(--success-muted);border:1px solid rgba(34,197,94,.25);border-radius:var(--radius);padding:12px;margin-top:16px;font-size:12px;color:var(--text-2);">
-                        ✅ Deducted from your wallet balance. Free cancellation up to 2 hours before the session.
+                        ✅ Paid from wallet, or free if your active plan still has included sessions this month. Free cancellation up to 2 hours before.
                     </div>
 
                     <input type="hidden" name="booking_mentor_id" id="booking-mentor-id">

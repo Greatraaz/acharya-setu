@@ -38,6 +38,8 @@ class BookingController extends Controller
         $amount = round((float) ($mentor->rate_per_minute ?? 0) * (int) $data['duration'], 2);
         $scheduledAt = Carbon::parse($data['date'].' '.$data['time'], 'Asia/Kolkata');
         $wantsJson = $request->ajax() || $request->wantsJson();
+        $planAllowance = $mentee->planSessionAllowance();
+        $coveredByPlan = $amount > 0 && ($planAllowance['covered'] ?? false);
 
         ConsultationSession::expireAbandonedUnpaidPayments();
         ConsultationSession::releaseOwnUnpaidHold($mentee->id, $mentor->id, $scheduledAt);
@@ -61,26 +63,36 @@ class BookingController extends Controller
         $currency = 'INR';
         $title = $data['title'] ?? ($data['agenda'] ? Str::limit($data['agenda'], 80) : 'Mentorship Session');
 
-        // Free session
-        if ($amount <= 0) {
+        // Free mentor rate OR included in active subscription plan
+        if ($amount <= 0 || $coveredByPlan) {
             $session = ConsultationSession::create([
-                'mentor_id'        => $mentor->id,
-                'mentee_id'        => $mentee->id,
-                'scheduled_at'     => $scheduledAt,
-                'duration_minutes' => $data['duration'],
-                'timezone'         => 'Asia/Kolkata',
-                'title'            => $title,
-                'agenda'           => $data['agenda'] ?? null,
-                'status'           => ConsultationSession::STATUS_UPCOMING,
-                'amount'           => 0,
-                'currency'         => $currency,
-                'payment_status'   => 'waived',
-                'booking_ref'      => $bookingRef,
-                'meeting_channel'  => $channel,
-                'meeting_link'     => url('as/'.$channel),
+                'mentor_id'         => $mentor->id,
+                'mentee_id'         => $mentee->id,
+                'scheduled_at'      => $scheduledAt,
+                'duration_minutes'  => $data['duration'],
+                'timezone'          => 'Asia/Kolkata',
+                'title'             => $title,
+                'agenda'            => $data['agenda'] ?? null,
+                'status'            => ConsultationSession::STATUS_UPCOMING,
+                'amount'            => $coveredByPlan ? 0 : $amount,
+                'currency'          => $currency,
+                'payment_status'    => 'waived',
+                'payment_reference' => $coveredByPlan
+                    ? 'PLAN-'.($planAllowance['subscription_id'] ?? 'FREE')
+                    : null,
+                'booking_ref'       => $bookingRef,
+                'meeting_channel'   => $channel,
+                'meeting_link'      => url('as/'.$channel),
             ]);
 
-            return $this->bookingSuccess($request, $session, 'Session booked successfully!');
+            $msg = $coveredByPlan
+                ? 'Session booked using your '.$planAllowance['plan_name'].' plan'
+                    .(isset($planAllowance['remaining'])
+                        ? ' ('.max(0, (int) $planAllowance['remaining'] - 1).' included sessions left this month).'
+                        : ' (unlimited included sessions).')
+                : 'Session booked successfully!';
+
+            return $this->bookingSuccess($request, $session, $msg);
         }
 
         // Wallet-first
