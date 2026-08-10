@@ -424,7 +424,8 @@
            selectedTime = null,
            selectedDuration = 30,
            ratePerMin = 0,
-           mentorId = null;
+           mentorId = null,
+           dayAvailability = {};
 
        const DEFAULT_SLOTS = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
 
@@ -451,7 +452,7 @@
            grid.innerHTML = "";
            if (!slots || !slots.length) {
                grid.innerHTML =
-                   '<div class="text-sm text-muted" style="grid-column:1/-1;">No slots available for this date</div>';
+                   '<div class="text-sm text-muted" style="grid-column:1/-1;text-align:center;padding:12px;">Mentor is not available on this day</div>';
                return;
            }
            slots.forEach((slot) => {
@@ -495,15 +496,72 @@
            });
        }
 
+       function renderWeeklySummary(summary) {
+           const wrap = document.getElementById("availabilitySummary");
+           if (!wrap) return;
+           if (!Array.isArray(summary) || !summary.length) {
+               wrap.innerHTML = "";
+               return;
+           }
+           const chips = summary
+               .map((d) => {
+                   const hours =
+                       d.enabled && d.from && d.to
+                           ? `${d.from}–${d.to}`
+                           : d.enabled
+                             ? "Open"
+                             : "Off";
+                   return `<span class="avail-chip ${d.enabled ? "is-on" : "is-off"}" title="${d.label}: ${hours}">
+                        <strong>${d.label}</strong>
+                        <small>${hours}</small>
+                    </span>`;
+               })
+               .join("");
+           wrap.innerHTML = `
+                <p class="label-caps" style="margin-bottom:8px;">Mentor weekly availability</p>
+                <div class="avail-chip-row">${chips}</div>
+            `;
+       }
+
+       function markDateButtons() {
+           document.querySelectorAll("#dateGrid .cal-day").forEach((btn) => {
+               const info = dayAvailability[btn.dataset.date];
+               btn.classList.remove("disabled", "unavailable", "has-slots");
+               btn.removeAttribute("disabled");
+               btn.title = "";
+               if (!info) return;
+               if (!info.available) {
+                   btn.classList.add("disabled", "unavailable");
+                   btn.disabled = true;
+                   btn.title = "Mentor not available";
+               } else {
+                   btn.classList.add("has-slots");
+                   btn.title = info.label
+                       ? `${info.slot_count} slots · ${info.label}`
+                       : `${info.slot_count} slots available`;
+               }
+           });
+       }
+
        function selectDate(btn) {
-           if (!btn) return;
+           if (!btn || btn.classList.contains("disabled") || btn.disabled) return;
            document.querySelectorAll("#dateGrid .cal-day").forEach((c) => c.classList.remove("selected"));
            btn.classList.add("selected");
            selectedDate = btn.dataset.date;
            selectedTime = null;
            updateSummary();
-           // Show slots immediately so UI never stays stuck on "Pick a date first"
-           renderSlots(DEFAULT_SLOTS);
+
+           const info = dayAvailability[selectedDate];
+           if (info && !info.available) {
+               renderSlots([]);
+               return;
+           }
+
+           const grid = document.getElementById("timeGrid");
+           if (grid) {
+               grid.innerHTML =
+                   '<div class="text-sm text-muted" style="grid-column:1/-1;text-align:center;padding:12px;">Loading times…</div>';
+           }
            loadSlots(selectedDate);
        }
 
@@ -519,13 +577,49 @@
            })
                .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
                .then(({ ok, data }) => {
-                   if (ok && Array.isArray(data.slots)) {
-                       renderSlots(data.slots.length ? data.slots : DEFAULT_SLOTS);
+                   if (!ok) {
+                       renderSlots([]);
+                       return;
                    }
-                   // keep default slots already shown if API fails / empty
+                   if (dayAvailability[date]) {
+                       dayAvailability[date].available = !!data.available && (data.slots || []).length > 0;
+                       dayAvailability[date].slot_count = (data.slots || []).length;
+                       if (data.label) dayAvailability[date].label = data.label;
+                       markDateButtons();
+                   }
+                   renderSlots(Array.isArray(data.slots) ? data.slots : []);
+               })
+               .catch(() => renderSlots([]));
+       }
+
+       function loadWeekOverview() {
+           const id = resolveMentorId();
+           if (!id) return Promise.resolve();
+
+           return fetch(`/api/mentors/${id}/availability?week=1&days=14`, {
+               headers: {
+                   "X-Requested-With": "XMLHttpRequest",
+                   Accept: "application/json",
+               },
+           })
+               .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+               .then(({ ok, data }) => {
+                   if (!ok || !data) return;
+                   dayAvailability = {};
+                   (data.days || []).forEach((d) => {
+                       dayAvailability[d.date] = d;
+                   });
+                   renderWeeklySummary(data.weekly_summary || []);
+                   markDateButtons();
+
+                   // Auto-select first available day
+                   const firstOpen = document.querySelector("#dateGrid .cal-day.has-slots:not(.disabled)");
+                   if (firstOpen && !selectedDate) {
+                       selectDate(firstOpen);
+                   }
                })
                .catch(() => {
-                   /* defaults already visible */
+                   /* keep calendar clickable; slots load per date */
                });
        }
 
@@ -539,6 +633,7 @@
                selectedDate = null;
                selectedTime = null;
                selectedDuration = 30;
+               dayAvailability = {};
 
                document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
                document.querySelector('.duration-btn[data-min="30"]')?.classList.add("selected");
@@ -546,14 +641,20 @@
                const timeGrid = document.getElementById("timeGrid");
                if (timeGrid) {
                    timeGrid.innerHTML =
-                       '<div class="text-sm text-muted" style="grid-column:1/-1;">Pick a date first</div>';
+                       '<div class="text-sm text-muted" style="grid-column:1/-1;">Pick an available date</div>';
+               }
+
+               const summary = document.getElementById("availabilitySummary");
+               if (summary) {
+                   summary.innerHTML =
+                       '<p class="avail-hint">Loading mentor availability…</p>';
                }
 
                const grid = document.getElementById("dateGrid");
                if (grid) {
                    grid.innerHTML = "";
                    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                   for (let i = 0; i < 7; i++) {
+                   for (let i = 0; i < 14; i++) {
                        const d = new Date();
                        d.setHours(12, 0, 0, 0);
                        d.setDate(d.getDate() + i + 1);
@@ -571,6 +672,7 @@
                    }
                }
                updateSummary();
+               loadWeekOverview();
            },
 
            selectDate,
@@ -584,7 +686,11 @@
 
            getBookingData() {
                if (!selectedDate) {
-                   showToast("error", "Please select a date.");
+                   showToast("error", "Please select an available date.");
+                   return null;
+               }
+               if (dayAvailability[selectedDate] && !dayAvailability[selectedDate].available) {
+                   showToast("error", "Mentor is not available on this date.");
                    return null;
                }
                if (!selectedTime) {

@@ -40,7 +40,6 @@
             </div>
             <div class="profile-hero-tabs">
                 <div class="profile-tab active" onclick="showSection('about')">About</div>
-                <div class="profile-tab" onclick="showSection('sessions')">Sessions</div>
                 <div class="profile-tab" onclick="showSection('reviews')">Reviews</div>
             </div>
         </div>
@@ -120,7 +119,9 @@
             <div id="book-section" style="position:sticky;top:calc(var(--nav-h) + 20px);">
                 <div class="card">
                     <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Book a Session</h3>
-                    <p style="font-size:12px;color:var(--text-2);margin-bottom:20px;">₹{{ $mentor->rate_per_minute ?? 10 }}/min · Free cancellation</p>
+                    <p style="font-size:12px;color:var(--text-2);margin-bottom:16px;">₹{{ $mentor->rate_per_minute ?? 10 }}/min · Free cancellation</p>
+
+                    <div id="availabilitySummary"></div>
 
                     {{-- Date Grid --}}
                     <p class="label-caps" style="margin-bottom:10px;">Choose Date</p>
@@ -129,7 +130,7 @@
                     {{-- Time Slots --}}
                     <p class="label-caps" style="margin:16px 0 10px;">Available Times</p>
                     <div id="timeGrid" class="time-grid">
-                        <div style="grid-column:1/-1;text-align:center;padding:12px;font-size:12px;color:var(--text-3);">Select a date first</div>
+                        <div style="grid-column:1/-1;text-align:center;padding:12px;font-size:12px;color:var(--text-3);">Select an available date</div>
                     </div>
 
                     {{-- Duration --}}

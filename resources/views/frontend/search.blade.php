@@ -182,12 +182,14 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
                 {{-- Left: Picker --}}
                 <div>
+                    <div id="availabilitySummary" style="margin-bottom:8px;"></div>
+
                     <p class="label-caps" style="margin-bottom:12px;">Select Date</p>
                     <div id="dateGrid" class="calendar-grid"></div>
 
                     <p class="label-caps" style="margin:20px 0 12px;">Select Time</p>
                     <div id="timeGrid" class="time-grid">
-                        <div class="text-sm text-muted" style="grid-column:1/-1;">Pick a date first</div>
+                        <div class="text-sm text-muted" style="grid-column:1/-1;">Pick an available date</div>
                     </div>
 
                     <p class="label-caps" style="margin:20px 0 12px;">Duration</p>

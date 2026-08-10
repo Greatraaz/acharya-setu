@@ -5,11 +5,16 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\SessionReview;
-use App\Models\ConsultationSession;
+use App\Services\MentorAvailabilityService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class MentorListingController extends Controller
 {
+    public function __construct(
+        private readonly MentorAvailabilityService $availabilityService
+    ) {}
+
     // ── Public mentor listing with filters ────────────────────
     public function index(Request $request)
     {
@@ -116,52 +121,44 @@ class MentorListingController extends Controller
             ->firstOrFail();
 
         $reviews = [];
+        $availabilityOverview = $this->availabilityService->weekOverview(
+            $mentor,
+            Carbon::now('Asia/Kolkata')->startOfDay()->addDay(),
+            14
+        );
 
-        return view('frontend.mentors.profile', compact('mentor', 'reviews'));
+        return view('frontend.mentors.profile', compact('mentor', 'reviews', 'availabilityOverview'));
     }
 
-    // ── Availability slots for booking widget ─────────────────
+    /**
+     * Availability for booking widget.
+     * - ?date=YYYY-MM-DD → slots for that day
+     * - ?week=1&days=14  → week overview (which days are free)
+     */
     public function availability(int $id, Request $request)
     {
-        $request->validate(['date' => 'required|date|after_or_equal:today']);
-
         $mentor = User::where('role', 'mentor')
             ->where('mentor_status', 'approved')
             ->findOrFail($id);
 
-        $date    = $request->date;
-        $dayName = strtolower(date('l', strtotime($date)));
+        if ($request->boolean('week') || (! $request->filled('date') && $request->filled('days'))) {
+            $days = min(28, max(7, (int) $request->input('days', 14)));
+            $start = $request->filled('start')
+                ? Carbon::parse($request->input('start'), 'Asia/Kolkata')->startOfDay()
+                : Carbon::now('Asia/Kolkata')->startOfDay()->addDay();
 
-        // Load mentor's weekly availability preference (stored in JSON)
-        $weeklySlots = $mentor->preferences['weekly_slots']
-            ?? $mentor->preferences['weekly_schedule']
-            ?? null;
+            $overview = $this->availabilityService->weekOverview($mentor, $start, $days);
 
-        $defaults = ['09:00','10:00','11:00','12:00','14:00','15:00','16:00','17:00','18:00','19:00'];
-
-        if (is_array($weeklySlots) && isset($weeklySlots[$dayName]) && is_array($weeklySlots[$dayName]) && count($weeklySlots[$dayName])) {
-            $allSlots = array_values($weeklySlots[$dayName]);
-        } else {
-            $allSlots = $defaults;
+            return response()->json([
+                'mentor_id' => $mentor->id,
+                ...$overview,
+            ]);
         }
 
-        // Soft-expire abandoned unpaid checkouts so slots free without a cancel API
-        ConsultationSession::expireAbandonedUnpaidPayments();
+        $request->validate(['date' => 'required|date|after_or_equal:today']);
 
-        // Remove already-booked slots for this date
-        $bookedTimes = ConsultationSession::where('mentor_id', $id)
-            ->whereDate('scheduled_at', $date)
-            ->occupyingSlot()
-            ->pluck('scheduled_at')
-            ->map(fn ($dt) => \Carbon\Carbon::parse($dt)->format('H:i'))
-            ->toArray();
-
-        $available = array_values(array_diff($allSlots, $bookedTimes));
-
-        return response()->json([
-            'date'   => $date,
-            'slots'  => $available,
-            'booked' => $bookedTimes,
-        ]);
+        return response()->json(
+            $this->availabilityService->slotsForDate($mentor, $request->date)
+        );
     }
 }
