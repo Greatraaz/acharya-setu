@@ -32,10 +32,34 @@
                         <span>💰 <strong>₹{{ $mentor->rate_per_minute ?? 10 }}/min</strong></span>
                     </div>
                 </div>
-                <div style="padding-bottom:20px;">
+                <div style="padding-bottom:20px;display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
                     <button class="btn btn-primary btn-lg" onclick="scrollToBook()">
                         📅 Book a Session
                     </button>
+                    @auth
+                        @if(auth()->user()->role === 'mentee')
+                            @php
+                                $isAssigned = (int) auth()->user()->assigned_mentor_id === (int) $mentor->id;
+                                $hasPending = \App\Models\MentorRequest::where('mentee_id', auth()->id())
+                                    ->where('mentor_id', $mentor->id)
+                                    ->where('status', 'pending')
+                                    ->exists();
+                            @endphp
+                            @if($isAssigned)
+                                <span class="badge badge-success">Your mentor</span>
+                            @elseif($hasPending)
+                                <span class="badge badge-muted">Request pending</span>
+                            @else
+                                <form method="POST" action="{{ route('mentee.mentor-requests.store') }}">
+                                    @csrf
+                                    <input type="hidden" name="mentor_id" value="{{ $mentor->id }}">
+                                    <button type="submit" class="btn btn-outline">
+                                        {{ auth()->user()->assigned_mentor_id ? 'Request as my mentor' : 'Choose as my mentor' }}
+                                    </button>
+                                </form>
+                            @endif
+                        @endif
+                    @endauth
                 </div>
             </div>
             <div class="profile-hero-tabs">

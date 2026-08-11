@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mentor;
 
 use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
+use App\Models\MentorRequest;
 use App\Models\WalletTransaction;
 
 class DashboardController extends Controller
@@ -17,6 +18,13 @@ class DashboardController extends Controller
             ->whereIn('status', ['pending','confirmed'])
             ->where('scheduled_at', '>', now())
             ->orderBy('scheduled_at')
+            ->limit(5)
+            ->get();
+
+        $pendingMentorRequests = MentorRequest::where('mentor_id', $mentor->id)
+            ->where('status', MentorRequest::STATUS_PENDING)
+            ->with('mentee')
+            ->latest()
             ->limit(5)
             ->get();
 
@@ -47,8 +55,14 @@ class DashboardController extends Controller
             'pending_sessions'     => ConsultationSession::where('mentor_id', $mentor->id)
                                         ->where('status','pending')
                                         ->count(),
+            'pending_requests'     => $pendingMentorRequests->count(),
         ];
 
-        return view('frontend.mentors.dashboard', compact('upcomingSessions','recentReviews','stats'));
+        return view('frontend.mentors.dashboard', compact(
+            'upcomingSessions',
+            'recentReviews',
+            'stats',
+            'pendingMentorRequests'
+        ));
     }
 }

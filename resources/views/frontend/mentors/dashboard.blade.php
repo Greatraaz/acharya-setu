@@ -55,6 +55,25 @@
         </div>
         @endif
 
+        @if(($pendingMentorRequests ?? collect())->isNotEmpty())
+        <div class="card" style="margin-bottom:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <h3 style="font-size:15px;font-weight:700;margin:0;">Mentee requests</h3>
+                <a href="{{ route('mentor.requests') }}" style="font-size:12px;color:var(--brand);">View all →</a>
+            </div>
+            @foreach($pendingMentorRequests as $req)
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+                <div style="flex:1;min-width:160px;">
+                    <div style="font-weight:600;">{{ $req->mentee?->name }}</div>
+                    <div style="font-size:12px;color:var(--text-3);">{{ $req->created_at?->diffForHumans() }}</div>
+                </div>
+                <form method="POST" action="{{ route('mentor.requests.accept', $req->id) }}">@csrf<button class="btn btn-success btn-sm">Accept</button></form>
+                <form method="POST" action="{{ route('mentor.requests.reject', $req->id) }}">@csrf<button class="btn btn-ghost btn-sm">Decline</button></form>
+            </div>
+            @endforeach
+        </div>
+        @endif
+
         {{-- Stats --}}
         <div class="stats-grid">
             <div class="stat-card">

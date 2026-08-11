@@ -22,6 +22,13 @@
     </a>
 
     <div class="sidebar-section-label">Mentees</div>
+    <a href="{{ route('mentor.requests') }}" class="sidebar-item @if(request()->routeIs('mentor.requests*')) active @endif">
+        <span class="si-icon">📨</span> Requests
+        @php
+            $requestCount = \App\Models\MentorRequest::where('mentor_id', auth()->id())->where('status', 'pending')->count();
+        @endphp
+        @if($requestCount > 0)<span class="si-badge">{{ $requestCount }}</span>@endif
+    </a>
     <a href="{{ route('mentor.mentees') }}" class="sidebar-item @if(request()->routeIs('mentor.mentees*')) active @endif">
         <span class="si-icon">🎓</span> My Mentees
     </a>

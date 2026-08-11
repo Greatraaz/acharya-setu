@@ -43,6 +43,8 @@ use App\Http\Controllers\Mentee\AssessmentController as MenteeAssessmentControll
 use App\Http\Controllers\Mentee\QuizController as MenteeQuizController;
 use App\Http\Controllers\Mentee\CommunityController as MenteeCommunityController;
 use App\Http\Controllers\Mentee\JobController as MenteeJobController;
+use App\Http\Controllers\Mentee\MentorRequestController as MenteeMentorRequestController;
+use App\Http\Controllers\Mentor\MentorRequestController as MentorMentorRequestController;
 
 // ── Admin controllers (already exist in your backend) ───────
 use App\Http\Controllers\Admin\AdminController;
@@ -209,6 +211,11 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     // Dashboard
     Route::get('/dashboard', [MentorDashboardController::class, 'index'])->name('dashboard');
 
+    // Mentee assignment requests
+    Route::get( '/requests',              [MentorMentorRequestController::class, 'index'])->name('requests');
+    Route::post('/requests/{id}/accept',  [MentorMentorRequestController::class, 'accept'])->name('requests.accept')->whereNumber('id');
+    Route::post('/requests/{id}/reject',  [MentorMentorRequestController::class, 'reject'])->name('requests.reject')->whereNumber('id');
+
     // Sessions
     Route::get( '/sessions',              [MentorSessionController::class, 'index'])   ->name('sessions');
     Route::get( '/sessions/{id}',         [MentorSessionController::class, 'show'])    ->name('sessions.show');
@@ -294,6 +301,11 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
 
     // Dashboard
     Route::get('/dashboard', [MenteeDashboardController::class, 'index'])->name('dashboard');
+
+    // Current / change mentor
+    Route::get( '/mentor/change',              [MenteeMentorRequestController::class, 'change'])->name('mentor.change');
+    Route::post('/mentor-requests',            [MenteeMentorRequestController::class, 'store'])->name('mentor-requests.store');
+    Route::delete('/mentor-requests/{id}',     [MenteeMentorRequestController::class, 'destroy'])->name('mentor-requests.destroy')->whereNumber('id');
 
     // Sessions
     Route::get('/sessions',           [MenteeSessionController::class, 'index']) ->name('sessions');

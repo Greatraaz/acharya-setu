@@ -19,6 +19,9 @@
     <a href="{{ route('mentors.search') }}" class="sidebar-item @if(request()->routeIs('mentors.search', 'mentors.show')) active @endif">
         <span class="si-icon">🔍</span> Find Mentors
     </a>
+    <a href="{{ route('mentee.mentor.change') }}" class="sidebar-item @if(request()->routeIs('mentee.mentor.change')) active @endif">
+        <span class="si-icon">🎓</span> My Mentor
+    </a>
     <a href="{{ route('mentee.sessions') }}" class="sidebar-item @if(request()->routeIs('mentee.sessions*')) active @endif">
         <span class="si-icon">📅</span> My Sessions
         @if($upcomingCount > 0)<span class="si-badge">{{ $upcomingCount }}</span>@endif

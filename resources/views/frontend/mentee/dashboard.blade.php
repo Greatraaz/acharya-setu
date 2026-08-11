@@ -53,6 +53,70 @@
             </div>
         </div>
 
+        {{-- My Mentor --}}
+        <div class="card" style="margin-bottom:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
+                <h3 style="font-size:15px;font-weight:700;margin:0;">My Mentor</h3>
+                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-outline btn-sm">
+                    {{ ($assignedMentor ?? null) ? 'Change mentor' : 'Choose mentor' }}
+                </a>
+            </div>
+
+            @if($assignedMentor ?? null)
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                <a href="{{ $assignedMentor->profile_url }}" style="display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit;flex:1;min-width:220px;">
+                    <div class="mentor-avatar-lg" style="width:56px;height:56px;border-radius:16px;overflow:hidden;flex-shrink:0;">
+                        @if($assignedMentor->avatar_url)
+                            <img src="{{ $assignedMentor->avatar_url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                        @else
+                            {{ strtoupper(substr($assignedMentor->name, 0, 1)) }}
+                        @endif
+                    </div>
+                    <div>
+                        <div style="font-size:16px;font-weight:700;">{{ $assignedMentor->name }}</div>
+                        <div style="font-size:13px;color:var(--text-2);margin-top:2px;">
+                            {{ $assignedMentor->designation }}{{ $assignedMentor->company ? ' · '.$assignedMentor->company : '' }}
+                        </div>
+                        <div style="font-size:12px;color:var(--text-3);margin-top:6px;">
+                            ⭐ {{ number_format((float) ($assignedMentor->rating ?? 0), 1) }}
+                            · ₹{{ $assignedMentor->rate_per_minute }}/min
+                        </div>
+                    </div>
+                </a>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <a href="{{ $assignedMentor->profile_url }}" class="btn btn-primary btn-sm">Book session</a>
+                    <a href="{{ route('mentee.mentor.change') }}" class="btn btn-ghost btn-sm">Change</a>
+                </div>
+            </div>
+            @else
+            <div class="empty-state" style="padding:28px 0;">
+                <div style="font-size:36px;">🎓</div>
+                <p style="font-size:13px;color:var(--text-2);margin-top:8px;">You don’t have an assigned mentor yet</p>
+                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-primary btn-sm" style="margin-top:12px;">Find & request a mentor</a>
+            </div>
+            @endif
+
+            @if(($pendingMentorRequests ?? collect())->isNotEmpty())
+            <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
+                <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Pending requests</div>
+                @foreach($pendingMentorRequests as $req)
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 0;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:160px;font-size:13px;">
+                        <strong>{{ $req->mentor?->name }}</strong>
+                        <span style="color:var(--text-3);"> · {{ $req->created_at?->diffForHumans() }}</span>
+                    </div>
+                    <span class="badge badge-muted">Pending</span>
+                    <form method="POST" action="{{ route('mentee.mentor-requests.destroy', $req->id) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-ghost btn-sm">Cancel</button>
+                    </form>
+                </div>
+                @endforeach
+            </div>
+            @endif
+        </div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
 
             {{-- Upcoming Sessions --}}

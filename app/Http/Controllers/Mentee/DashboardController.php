@@ -62,6 +62,12 @@ class DashboardController extends Controller
 
         $canViewProgress = $mentee->canAccessProgressReport();
         $planAllowance = $mentee->planSessionAllowance();
+        $assignedMentor = $mentee->assignedMentor;
+        $pendingMentorRequests = \App\Models\MentorRequest::where('mentee_id', $mentee->id)
+            ->where('status', \App\Models\MentorRequest::STATUS_PENDING)
+            ->with('mentor')
+            ->latest()
+            ->get();
 
         if (! $canViewProgress) {
             // Keep journey visible; hide completion status only.
@@ -81,7 +87,9 @@ class DashboardController extends Controller
             'recommendedMentors',
             'stats',
             'canViewProgress',
-            'planAllowance'
+            'planAllowance',
+            'assignedMentor',
+            'pendingMentorRequests'
         ));
     }
 }
