@@ -16,33 +16,33 @@ class MessageController extends Controller
 
         abort_if(! $channel->canPost($user), 403);
 
-        $request->validate([
-            'body'      => 'nullable|string|max:5000',
-            'parent_id' => 'nullable|exists:messages,id',
-            'image'     => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
-        ]);
+        $request->validate(Message::mediaValidationRules());
 
         $body = trim((string) $request->input('body', ''));
         $hasImage = $request->hasFile('image');
+        $hasVideo = $request->hasFile('video');
 
-        if ($body === '' && ! $hasImage) {
-            return back()->withErrors(['body' => 'Message text or image is required.']);
+        if ($body === '' && ! $hasImage && ! $hasVideo) {
+            return back()->withErrors(['body' => 'Message text, image, or video is required.']);
         }
 
         if (! $channel->isMember($user) && $channel->canSelfJoin($user)) {
             $channel->addMember($user);
         }
 
-        $imagePath = null;
-        if ($hasImage) {
-            $imagePath = Message::storeUploadedImage($request->file('image'), $channel->id);
-        }
+        $imagePath = $hasImage
+            ? Message::storeUploadedImage($request->file('image'), $channel->id)
+            : null;
+        $videoPath = $hasVideo
+            ? Message::storeUploadedVideo($request->file('video'), $channel->id)
+            : null;
 
         Message::create([
             'channel_id' => $channel->id,
             'user_id'    => $user->id,
             'body'       => $body,
             'image_path' => $imagePath,
+            'video_path' => $videoPath,
             'parent_id'  => $request->parent_id,
             'liked_by'   => [],
         ]);

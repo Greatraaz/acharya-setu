@@ -2678,6 +2678,153 @@
        height: 140px;
        border-radius: 8px;
    }
+   .channel-msg-video {
+       width: 100%;
+       max-width: 420px;
+       max-height: 280px;
+       border-radius: 10px;
+       display: block;
+       background: #000;
+       border: 1px solid var(--border, rgba(0,0,0,.08));
+   }
+   .channel-msg-video--reply {
+       max-width: 280px;
+       max-height: 180px;
+       border-radius: 8px;
+   }
+
+   /* Community message composer — icon bar (image / video / send) */
+   .channel-composer {
+       display: flex;
+       align-items: center;
+       gap: 10px;
+       background: var(--bg-3, #f3f4f6);
+       border: 1px solid var(--border, rgba(0,0,0,.08));
+       border-radius: 18px;
+       padding: 10px 12px 10px 16px;
+       transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+   }
+   .channel-composer:focus-within {
+       background: var(--bg-2, #fff);
+       border-color: #60a5fa;
+       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+   }
+   .channel-composer__input {
+       flex: 1;
+       min-width: 0;
+       background: transparent !important;
+       border: none !important;
+       box-shadow: none !important;
+       outline: none !important;
+       padding: 0 !important;
+       font-size: 14px;
+       color: var(--text);
+       line-height: 1.4;
+   }
+   .channel-composer__input::placeholder {
+       color: var(--text-3, #9ca3af);
+   }
+   .channel-composer__actions {
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       flex-shrink: 0;
+   }
+   .channel-composer__attach {
+       display: inline-flex;
+       align-items: center;
+       justify-content: center;
+       width: 32px;
+       height: 32px;
+       border-radius: 8px;
+       color: var(--text-3, #9ca3af);
+       cursor: pointer;
+       transition: color .15s ease, background .15s ease;
+   }
+   .channel-composer__attach:hover,
+   .channel-composer__attach.is-active {
+       color: #2563eb;
+       background: rgba(37, 99, 235, 0.08);
+   }
+   .channel-composer__attach svg {
+       width: 20px;
+       height: 20px;
+       display: block;
+   }
+   .channel-composer__attach input {
+       display: none !important;
+   }
+   .channel-composer__send {
+       width: 36px;
+       height: 36px;
+       border: none;
+       border-radius: 50%;
+       background: #2563eb;
+       color: #fff;
+       display: inline-flex;
+       align-items: center;
+       justify-content: center;
+       cursor: pointer;
+       flex-shrink: 0;
+       transition: background .15s ease, transform .1s ease;
+   }
+   .channel-composer__send:hover {
+       background: #1d4ed8;
+   }
+   .channel-composer__send:active {
+       transform: scale(0.95);
+   }
+   .channel-composer__send svg {
+       width: 15px;
+       height: 15px;
+       fill: currentColor;
+       display: block;
+   }
+   .channel-composer__meta {
+       display: flex;
+       flex-wrap: wrap;
+       gap: 8px;
+       margin-top: 8px;
+       font-size: 11px;
+       color: var(--text-3);
+   }
+   .channel-composer__chip {
+       display: none;
+       align-items: center;
+       gap: 6px;
+       max-width: 100%;
+       padding: 4px 10px;
+       border-radius: 999px;
+       background: var(--bg-4, #e5e7eb);
+       color: var(--text-2);
+       overflow: hidden;
+       text-overflow: ellipsis;
+       white-space: nowrap;
+   }
+   .channel-composer__chip.is-visible {
+       display: inline-flex;
+   }
+   .channel-composer--reply {
+       border-radius: 14px;
+       padding: 8px 10px 8px 14px;
+       gap: 8px;
+   }
+   .channel-composer--reply .channel-composer__attach {
+       width: 28px;
+       height: 28px;
+   }
+   .channel-composer--reply .channel-composer__attach svg {
+       width: 16px;
+       height: 16px;
+   }
+   .channel-composer--reply .channel-composer__send {
+       width: 32px;
+       height: 32px;
+   }
+   .channel-composer--reply .channel-composer__send svg {
+       width: 13px;
+       height: 13px;
+   }
 
    @media (max-width: 480px) {
        .stats-grid {

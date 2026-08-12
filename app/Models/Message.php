@@ -6,14 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 class Message extends Model
 {
     use SoftDeletes;
 
+    public const IMAGE_MAX_KB = 5120;
+
+    public const VIDEO_MAX_KB = 10240;
+
+    public const IMAGE_MIMES = 'jpeg,jpg,png,webp,gif';
+
+    public const VIDEO_MIMES = 'mp4,mov,avi,webm,mpeg,mpg';
+
     protected $fillable = [
-        'channel_id', 'user_id', 'body', 'image_path', 'parent_id',
+        'channel_id', 'user_id', 'body', 'image_path', 'video_path', 'parent_id',
         'likes_count', 'liked_by',
     ];
 
@@ -22,12 +31,12 @@ class Message extends Model
         'likes_count' => 'integer',
     ];
 
-    protected $appends = ['image_url'];
+    protected $appends = ['image_url', 'video_url'];
 
     protected static function booted(): void
     {
         static::deleting(function (self $message) {
-            $message->deleteStoredImage();
+            $message->deleteStoredMedia();
         });
     }
 
@@ -52,81 +61,76 @@ class Message extends Model
     }
 
     /**
-     * Absolute public URL for the message image (same style as avatar uploads).
+     * Shared validation rules for web + API message posts.
+     */
+    public static function mediaValidationRules(): array
+    {
+        return [
+            'body'      => 'nullable|string|max:5000',
+            'message'   => 'nullable|string|max:5000',
+            'parent_id' => 'nullable|exists:messages,id',
+            'image'     => 'nullable|image|mimes:'.self::IMAGE_MIMES.'|max:'.self::IMAGE_MAX_KB,
+            'video'     => 'nullable|file|mimes:'.self::VIDEO_MIMES.'|max:'.self::VIDEO_MAX_KB,
+        ];
+    }
+
+    /**
+     * Absolute public URL for the message image.
      */
     public function getImageUrlAttribute(): ?string
     {
-        if (! $this->image_path) {
-            return null;
-        }
-
-        $path = $this->image_path;
-
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
-        }
-
-        // New uploads: public/upload/community/...
-        if (str_starts_with($path, 'upload/')) {
-            return url($path);
-        }
-
-        // Legacy Storage::disk('public') paths: community/{id}/file.jpg
-        if (str_starts_with($path, '/storage/')) {
-            return url(ltrim($path, '/'));
-        }
-
-        return url('storage/' . ltrim($path, '/'));
+        return $this->publicMediaUrl($this->image_path);
     }
 
+    /**
+     * Absolute public URL for the message video.
+     */
+    public function getVideoUrlAttribute(): ?string
+    {
+        return $this->publicMediaUrl($this->video_path);
+    }
+
+    public function deleteStoredMedia(): void
+    {
+        $this->deleteStoredPath($this->image_path);
+        $this->deleteStoredPath($this->video_path);
+    }
+
+    /** @deprecated use deleteStoredMedia */
     public function deleteStoredImage(): void
     {
-        if (! $this->image_path) {
-            return;
-        }
-
-        $path = $this->image_path;
-
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            $path = parse_url($path, PHP_URL_PATH) ?: '';
-            $path = ltrim((string) $path, '/');
-        }
-
-        if (str_starts_with($path, 'upload/')) {
-            $absolute = public_path($path);
-            if (is_file($absolute)) {
-                @unlink($absolute);
-            }
-
-            return;
-        }
-
-        $storagePath = str_starts_with($path, 'storage/')
-            ? substr($path, strlen('storage/'))
-            : ltrim($path, '/');
-
-        if ($storagePath && Storage::disk('public')->exists($storagePath)) {
-            Storage::disk('public')->delete($storagePath);
-        }
+        $this->deleteStoredPath($this->image_path);
     }
 
     /**
      * Store an uploaded community image under public/upload/community/{channelId}.
-     * Returns relative path like upload/community/5/xxx.jpg (converted to full URL via image_url).
      */
-    public static function storeUploadedImage($file, int $channelId): string
+    public static function storeUploadedImage(UploadedFile $file, int $channelId): string
     {
-        $directory = public_path('upload/community/' . $channelId);
+        return self::storeUploadedMedia($file, $channelId, 'img');
+    }
+
+    /**
+     * Store an uploaded community video under public/upload/community/{channelId}.
+     */
+    public static function storeUploadedVideo(UploadedFile $file, int $channelId): string
+    {
+        return self::storeUploadedMedia($file, $channelId, 'vid');
+    }
+
+    public static function storeUploadedMedia(UploadedFile $file, int $channelId, string $prefix = 'msg'): string
+    {
+        $directory = public_path('upload/community/'.$channelId);
 
         if (! is_dir($directory)) {
             mkdir($directory, 0755, true);
         }
 
-        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
-        $fileName = 'msg_' . time() . '_' . uniqid() . '.' . $extension;
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'bin');
+        $fileName = $prefix.'_'.time().'_'.uniqid().'.'.$extension;
         $file->move($directory, $fileName);
 
-        return 'upload/community/' . $channelId . '/' . $fileName;
+        return 'upload/community/'.$channelId.'/'.$fileName;
     }
 
     public function isLikedBy(int $userId): bool
@@ -155,6 +159,7 @@ class Message extends Model
     public function toApiArray(?int $viewerId = null): array
     {
         $imageUrl = $this->image_url;
+        $videoUrl = $this->video_url;
 
         return [
             'id'           => $this->id,
@@ -162,8 +167,10 @@ class Message extends Model
             'user_id'      => $this->user_id,
             'body'         => $this->body,
             'message'      => $this->body,
-            'image_path'   => $imageUrl, // full absolute URL for clients
+            'image_path'   => $imageUrl,
             'image_url'    => $imageUrl,
+            'video_path'   => $videoUrl,
+            'video_url'    => $videoUrl,
             'parent_id'    => $this->parent_id,
             'likes'        => (int) $this->likes_count,
             'likes_count'  => (int) $this->likes_count,
@@ -177,5 +184,55 @@ class Message extends Model
             'created_at'   => $this->created_at,
             'updated_at'   => $this->updated_at,
         ];
+    }
+
+    private function publicMediaUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, 'upload/')) {
+            return url($path);
+        }
+
+        if (str_starts_with($path, '/storage/')) {
+            return url(ltrim($path, '/'));
+        }
+
+        return url('storage/'.ltrim($path, '/'));
+    }
+
+    private function deleteStoredPath(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $path = parse_url($path, PHP_URL_PATH) ?: '';
+            $path = ltrim((string) $path, '/');
+        }
+
+        if (str_starts_with($path, 'upload/')) {
+            $absolute = public_path($path);
+            if (is_file($absolute)) {
+                @unlink($absolute);
+            }
+
+            return;
+        }
+
+        $storagePath = str_starts_with($path, 'storage/')
+            ? substr($path, strlen('storage/'))
+            : ltrim($path, '/');
+
+        if ($storagePath && Storage::disk('public')->exists($storagePath)) {
+            Storage::disk('public')->delete($storagePath);
+        }
     }
 }

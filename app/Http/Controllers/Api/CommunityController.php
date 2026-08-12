@@ -622,9 +622,10 @@ class CommunityController extends Controller
 
     /**
      * Post a message or thread reply.
-     * Accepts JSON or multipart form-data with optional `image` file.
-     * Fields: body|message (text), parent_id (reply), image (jpeg/png/webp/gif, max 5MB).
-     * At least body or image is required.
+     * Accepts JSON or multipart form-data with optional `image` and/or `video`.
+     * Fields: body|message (text), parent_id (reply),
+     * image (jpeg/png/webp/gif, max 5MB), video (mp4/mov/avi/webm/mpeg, max 10MB).
+     * At least body, image, or video is required.
      */
     public function postMessage(Request $request, int $channelId): JsonResponse
     {
@@ -635,20 +636,16 @@ class CommunityController extends Controller
             ? 'You were removed from this channel. A mentor must invite you again before you can post.'
             : 'You cannot post in this channel.');
 
-        $data = $request->validate([
-            'body'      => 'nullable|string|max:5000',
-            'message'   => 'nullable|string|max:5000',
-            'parent_id' => 'nullable|exists:messages,id',
-            'image'     => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
-        ]);
+        $data = $request->validate(Message::mediaValidationRules());
 
         $body = trim((string) ($data['body'] ?? $data['message'] ?? ''));
         $hasImage = $request->hasFile('image');
+        $hasVideo = $request->hasFile('video');
 
-        if ($body === '' && ! $hasImage) {
+        if ($body === '' && ! $hasImage && ! $hasVideo) {
             return response()->json([
-                'message' => 'Provide a message body and/or an image.',
-                'errors'  => ['body' => ['Message text or image is required.']],
+                'message' => 'Provide a message body, image, and/or video.',
+                'errors'  => ['body' => ['Message text, image, or video is required.']],
             ], 422);
         }
 
@@ -663,16 +660,19 @@ class CommunityController extends Controller
             $channel->addMember($user);
         }
 
-        $imagePath = null;
-        if ($hasImage) {
-            $imagePath = Message::storeUploadedImage($request->file('image'), $channel->id);
-        }
+        $imagePath = $hasImage
+            ? Message::storeUploadedImage($request->file('image'), $channel->id)
+            : null;
+        $videoPath = $hasVideo
+            ? Message::storeUploadedVideo($request->file('video'), $channel->id)
+            : null;
 
         $message = Message::create([
             'channel_id' => $channel->id,
             'user_id'    => $user->id,
             'body'       => $body !== '' ? $body : '',
             'image_path' => $imagePath,
+            'video_path' => $videoPath,
             'parent_id'  => $data['parent_id'] ?? null,
             'liked_by'   => [],
         ]);
