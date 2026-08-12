@@ -119,6 +119,10 @@ class Channel extends Model
 
     public function scopeVisibleTo($query, User $user)
     {
+        if ($user->isAdmin()) {
+            return $query->active();
+        }
+
         return $query->active()->where(function ($q) use ($user) {
             $q->where('type', self::TYPE_PUBLIC)
               ->orWhereHas('members', fn ($m) => $m->where('user_id', $user->id));
@@ -197,6 +201,10 @@ class Channel extends Model
 
     public function canAccess(User $user): bool
     {
+        if ($user->isAdmin() && $this->is_active) {
+            return true;
+        }
+
         if ($this->type === self::TYPE_PUBLIC && $this->is_active) {
             return true;
         }
@@ -208,6 +216,10 @@ class Channel extends Model
     {
         if (! $this->is_active) {
             return false;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
         }
 
         if ($this->isMember($user)) {

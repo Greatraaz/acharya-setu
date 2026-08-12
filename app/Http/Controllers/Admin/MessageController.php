@@ -20,10 +20,11 @@ class MessageController extends Controller
 
         $body = trim((string) $request->input('body', ''));
         $hasImage = $request->hasFile('image');
-        $hasVideo = $request->hasFile('video');
+        $youtubeInput = Message::youtubeUrlFromInput($request->all());
+        $videoPath = Message::resolveStoredYoutubeUrl($youtubeInput);
 
-        if ($body === '' && ! $hasImage && ! $hasVideo) {
-            return back()->withErrors(['body' => 'Message text, image, or video is required.']);
+        if ($body === '' && ! $hasImage && ! $videoPath) {
+            return back()->withErrors(['body' => 'Message text, image, or YouTube link is required.']);
         }
 
         if (! $channel->isMember($user) && $channel->canSelfJoin($user)) {
@@ -32,9 +33,6 @@ class MessageController extends Controller
 
         $imagePath = $hasImage
             ? Message::storeUploadedImage($request->file('image'), $channel->id)
-            : null;
-        $videoPath = $hasVideo
-            ? Message::storeUploadedVideo($request->file('video'), $channel->id)
             : null;
 
         Message::create([

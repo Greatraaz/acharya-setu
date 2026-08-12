@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class Message extends Model
 {
@@ -15,11 +16,7 @@ class Message extends Model
 
     public const IMAGE_MAX_KB = 5120;
 
-    public const VIDEO_MAX_KB = 10240;
-
     public const IMAGE_MIMES = 'jpeg,jpg,png,webp,gif';
-
-    public const VIDEO_MIMES = 'mp4,mov,avi,webm,mpeg,mpg';
 
     protected $fillable = [
         'channel_id', 'user_id', 'body', 'image_path', 'video_path', 'parent_id',
@@ -31,7 +28,7 @@ class Message extends Model
         'likes_count' => 'integer',
     ];
 
-    protected $appends = ['image_url', 'video_url'];
+    protected $appends = ['image_url', 'video_url', 'youtube_embed_url'];
 
     protected static function booted(): void
     {
@@ -66,12 +63,83 @@ class Message extends Model
     public static function mediaValidationRules(): array
     {
         return [
-            'body'      => 'nullable|string|max:5000',
-            'message'   => 'nullable|string|max:5000',
-            'parent_id' => 'nullable|exists:messages,id',
-            'image'     => 'nullable|image|mimes:'.self::IMAGE_MIMES.'|max:'.self::IMAGE_MAX_KB,
-            'video'     => 'nullable|file|mimes:'.self::VIDEO_MIMES.'|max:'.self::VIDEO_MAX_KB,
+            'body'         => 'nullable|string|max:5000',
+            'message'      => 'nullable|string|max:5000',
+            'parent_id'    => 'nullable|exists:messages,id',
+            'image'        => 'nullable|image|mimes:'.self::IMAGE_MIMES.'|max:'.self::IMAGE_MAX_KB,
+            'youtube_url'  => 'nullable|string|max:500',
+            'video_url'    => 'nullable|string|max:500',
         ];
+    }
+
+    /**
+     * Resolve YouTube URL from request input (supports youtube_url and video_url aliases).
+     */
+    public static function youtubeUrlFromInput(array $input): ?string
+    {
+        foreach (['youtube_url', 'video_url'] as $key) {
+            $value = trim((string) ($input[$key] ?? ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize a YouTube link to a canonical watch URL, or null if invalid.
+     */
+    public static function normalizeYoutubeUrl(?string $url): ?string
+    {
+        $id = self::extractYoutubeVideoId($url);
+
+        return $id ? 'https://www.youtube.com/watch?v='.$id : null;
+    }
+
+    /**
+     * Extract a YouTube video id from common watch, share, embed, and shorts URLs.
+     */
+    public static function extractYoutubeVideoId(?string $url): ?string
+    {
+        if (! $url || trim($url) === '') {
+            return null;
+        }
+
+        $url = trim($url);
+
+        if (preg_match('~(?:youtube\.com/watch\?(?:[^&]*&)*v=|youtube\.com/embed/|youtube\.com/shorts/|youtube\.com/live/|youtu\.be/)([A-Za-z0-9_-]{11})~', $url, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    /**
+     * Validate and normalize a YouTube URL for storage in video_path.
+     *
+     * @throws ValidationException
+     */
+    public static function resolveStoredYoutubeUrl(?string $url, string $field = 'youtube_url'): ?string
+    {
+        if ($url === null || trim($url) === '') {
+            return null;
+        }
+
+        $normalized = self::normalizeYoutubeUrl($url);
+
+        if (! $normalized) {
+            throw ValidationException::withMessages([
+                $field => ['Enter a valid YouTube URL (youtube.com or youtu.be).'],
+            ]);
+        }
+
+        return $normalized;
+    }
+
+    public function hasYoutubeVideo(): bool
+    {
+        return self::extractYoutubeVideoId($this->video_path) !== null;
     }
 
     /**
@@ -83,17 +151,38 @@ class Message extends Model
     }
 
     /**
-     * Absolute public URL for the message video.
+     * Stored YouTube watch URL or legacy uploaded video file URL.
      */
     public function getVideoUrlAttribute(): ?string
     {
+        if (! $this->video_path) {
+            return null;
+        }
+
+        if ($this->hasYoutubeVideo()) {
+            return self::normalizeYoutubeUrl($this->video_path);
+        }
+
         return $this->publicMediaUrl($this->video_path);
+    }
+
+    /**
+     * YouTube embed iframe src for stored links.
+     */
+    public function getYoutubeEmbedUrlAttribute(): ?string
+    {
+        $id = self::extractYoutubeVideoId($this->video_path);
+
+        return $id ? 'https://www.youtube.com/embed/'.$id : null;
     }
 
     public function deleteStoredMedia(): void
     {
         $this->deleteStoredPath($this->image_path);
-        $this->deleteStoredPath($this->video_path);
+
+        if ($this->video_path && ! $this->hasYoutubeVideo()) {
+            $this->deleteStoredPath($this->video_path);
+        }
     }
 
     /** @deprecated use deleteStoredMedia */
@@ -108,14 +197,6 @@ class Message extends Model
     public static function storeUploadedImage(UploadedFile $file, int $channelId): string
     {
         return self::storeUploadedMedia($file, $channelId, 'img');
-    }
-
-    /**
-     * Store an uploaded community video under public/upload/community/{channelId}.
-     */
-    public static function storeUploadedVideo(UploadedFile $file, int $channelId): string
-    {
-        return self::storeUploadedMedia($file, $channelId, 'vid');
     }
 
     public static function storeUploadedMedia(UploadedFile $file, int $channelId, string $prefix = 'msg'): string
@@ -160,29 +241,32 @@ class Message extends Model
     {
         $imageUrl = $this->image_url;
         $videoUrl = $this->video_url;
+        $youtubeEmbedUrl = $this->youtube_embed_url;
 
         return [
-            'id'           => $this->id,
-            'channel_id'   => $this->channel_id,
-            'user_id'      => $this->user_id,
-            'body'         => $this->body,
-            'message'      => $this->body,
-            'image_path'   => $imageUrl,
-            'image_url'    => $imageUrl,
-            'video_path'   => $videoUrl,
-            'video_url'    => $videoUrl,
-            'parent_id'    => $this->parent_id,
-            'likes'        => (int) $this->likes_count,
-            'likes_count'  => (int) $this->likes_count,
-            'liked_by'     => $this->liked_by ?? [],
-            'is_liked'     => $viewerId ? $this->isLikedBy($viewerId) : false,
-            'replies_count'=> $this->replies_count ?? $this->replies()->count(),
-            'user'         => $this->relationLoaded('user') ? $this->user?->only(['id', 'name', 'avatar_url', 'role']) : null,
-            'replies'      => $this->relationLoaded('replies')
+            'id'                => $this->id,
+            'channel_id'        => $this->channel_id,
+            'user_id'           => $this->user_id,
+            'body'              => $this->body,
+            'message'           => $this->body,
+            'image_path'        => $imageUrl,
+            'image_url'         => $imageUrl,
+            'video_path'        => $videoUrl,
+            'video_url'         => $videoUrl,
+            'youtube_url'       => $this->hasYoutubeVideo() ? $videoUrl : null,
+            'youtube_embed_url' => $youtubeEmbedUrl,
+            'parent_id'         => $this->parent_id,
+            'likes'             => (int) $this->likes_count,
+            'likes_count'       => (int) $this->likes_count,
+            'liked_by'          => $this->liked_by ?? [],
+            'is_liked'          => $viewerId ? $this->isLikedBy($viewerId) : false,
+            'replies_count'     => $this->replies_count ?? $this->replies()->count(),
+            'user'              => $this->relationLoaded('user') ? $this->user?->only(['id', 'name', 'avatar_url', 'role']) : null,
+            'replies'           => $this->relationLoaded('replies')
                 ? $this->replies->map(fn (self $r) => $r->toApiArray($viewerId))->values()
                 : [],
-            'created_at'   => $this->created_at,
-            'updated_at'   => $this->updated_at,
+            'created_at'        => $this->created_at,
+            'updated_at'        => $this->updated_at,
         ];
     }
 
@@ -214,8 +298,7 @@ class Message extends Model
         }
 
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            $path = parse_url($path, PHP_URL_PATH) ?: '';
-            $path = ltrim((string) $path, '/');
+            return;
         }
 
         if (str_starts_with($path, 'upload/')) {

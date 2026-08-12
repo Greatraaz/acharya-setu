@@ -196,12 +196,18 @@ $isAdminUi = request()->routeIs('admin.*');
                              class="w-full max-w-[320px] h-[200px] rounded-xl border border-gray-200 object-cover object-center bg-gray-50">
                     </a>
                     @endif
-                    @if($message->video_url)
+                    @if($message->video_path)
+                    @if($message->youtube_embed_url)
+                    <div class="mt-2 max-w-[420px] aspect-video rounded-xl overflow-hidden border border-gray-200 bg-black">
+                        <iframe class="w-full h-full" src="{{ $message->youtube_embed_url }}" title="YouTube video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+                    </div>
+                    @elseif($message->video_url)
                     <div class="mt-2 max-w-[420px]">
                         <video controls playsinline preload="metadata"
                                class="w-full rounded-xl border border-gray-200 bg-black"
                                src="{{ $message->video_url }}"></video>
                     </div>
+                    @endif
                     @endif
 
                     {{-- Like + reply actions --}}
@@ -246,12 +252,18 @@ $isAdminUi = request()->routeIs('admin.*');
                                          class="w-full max-w-[220px] h-[140px] rounded-lg border border-gray-200 object-cover object-center bg-gray-50">
                                 </a>
                                 @endif
-                                @if($reply->video_url)
+                                @if($reply->video_path)
+                                @if($reply->youtube_embed_url)
+                                <div class="mt-1 max-w-[280px] aspect-video rounded-lg overflow-hidden border border-gray-200 bg-black">
+                                    <iframe class="w-full h-full" src="{{ $reply->youtube_embed_url }}" title="YouTube video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+                                </div>
+                                @elseif($reply->video_url)
                                 <div class="mt-1 max-w-[280px]">
                                     <video controls playsinline preload="metadata"
                                            class="w-full rounded-lg border border-gray-200 bg-black"
                                            src="{{ $reply->video_url }}"></video>
                                 </div>
+                                @endif
                                 @endif
                             </div>
                         </div>
@@ -272,7 +284,7 @@ $isAdminUi = request()->routeIs('admin.*');
                     </button>
 
                     <div id="reply-{{ $message->id }}" class="hidden mt-2">
-                        <form method="POST" action="{{ route($r.'.messages.store', $channel->slug) }}" enctype="multipart/form-data">
+                        <form method="POST" action="{{ route($r.'.messages.store', $channel->slug) }}" enctype="multipart/form-data" class="channel-composer-form">
                             @csrf
                             <input type="hidden" name="parent_id" value="{{ $message->id }}">
                             <div class="space-y-2">
@@ -288,17 +300,17 @@ $isAdminUi = request()->routeIs('admin.*');
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                         </svg>
                                     </label>
-                                    <label class="cursor-pointer text-gray-400 hover:text-blue-600 flex-shrink-0" title="Add video">
-                                        <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/mpeg,.mp4,.mov,.avi,.webm,.mpeg,.mpg" class="hidden">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                        </svg>
-                                    </label>
                                     <button type="submit"
                                             class="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg flex-shrink-0 transition-colors">
                                         Send
                                     </button>
                                 </div>
+                                @include('partials.community-youtube-input', [
+                                    'inputId' => 'reply-youtube-url-'.$message->id,
+                                    'wrapperClass' => 'space-y-1',
+                                    'labelClass' => 'text-[11px] font-medium text-gray-500',
+                                    'inputClass' => 'w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100',
+                                ])
                                 <img id="reply-preview-{{ $message->id }}" class="hidden max-h-24 rounded-lg border border-gray-200" alt="">
                             </div>
                         </form>
@@ -333,7 +345,7 @@ $isAdminUi = request()->routeIs('admin.*');
                   action="{{ route($r.'.messages.store', $channel->slug) }}"
                   id="main-form"
                   enctype="multipart/form-data"
-                  class="space-y-2">
+                  class="space-y-2 channel-composer-form">
                 @csrf
                 <div class="flex items-center gap-3 bg-gray-100 border border-gray-200 rounded-2xl px-4 py-2.5
                             focus-within:bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
@@ -349,12 +361,6 @@ $isAdminUi = request()->routeIs('admin.*');
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
                     </label>
-                    <label class="cursor-pointer text-gray-400 hover:text-blue-600 flex-shrink-0" title="Add video">
-                        <input type="file" name="video" id="main-video" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/mpeg,.mp4,.mov,.avi,.webm,.mpeg,.mpg" class="hidden">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                        </svg>
-                    </label>
                     <button type="submit"
                             class="w-8 h-8 bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl
                                    flex items-center justify-center flex-shrink-0 transition-all">
@@ -363,6 +369,12 @@ $isAdminUi = request()->routeIs('admin.*');
                         </svg>
                     </button>
                 </div>
+                @include('partials.community-youtube-input', [
+                    'inputId' => 'main-youtube-url',
+                    'wrapperClass' => 'space-y-1',
+                    'labelClass' => 'text-[11px] font-medium text-gray-500',
+                    'inputClass' => 'w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100',
+                ])
                 <img id="main-image-preview" class="hidden max-h-28 rounded-xl border border-gray-200" alt="">
             </form>
         </div>
@@ -495,6 +507,7 @@ document.getElementById('main-input')?.addEventListener('keydown', function (e) 
     }
 });
 </script>
+@include('partials.community-composer-scripts')
 @endpush
 
 @endsection

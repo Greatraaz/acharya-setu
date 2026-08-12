@@ -622,10 +622,10 @@ class CommunityController extends Controller
 
     /**
      * Post a message or thread reply.
-     * Accepts JSON or multipart form-data with optional `image` and/or `video`.
+     * Accepts JSON or multipart form-data with optional `image` and/or `youtube_url`.
      * Fields: body|message (text), parent_id (reply),
-     * image (jpeg/png/webp/gif, max 5MB), video (mp4/mov/avi/webm/mpeg, max 10MB).
-     * At least body, image, or video is required.
+     * image (jpeg/png/webp/gif, max 5MB), youtube_url|video_url (YouTube watch/share/embed link).
+     * At least body, image, or YouTube link is required.
      */
     public function postMessage(Request $request, int $channelId): JsonResponse
     {
@@ -640,12 +640,13 @@ class CommunityController extends Controller
 
         $body = trim((string) ($data['body'] ?? $data['message'] ?? ''));
         $hasImage = $request->hasFile('image');
-        $hasVideo = $request->hasFile('video');
+        $youtubeInput = Message::youtubeUrlFromInput($data);
+        $videoPath = Message::resolveStoredYoutubeUrl($youtubeInput);
 
-        if ($body === '' && ! $hasImage && ! $hasVideo) {
+        if ($body === '' && ! $hasImage && ! $videoPath) {
             return response()->json([
-                'message' => 'Provide a message body, image, and/or video.',
-                'errors'  => ['body' => ['Message text, image, or video is required.']],
+                'message' => 'Provide a message body, image, and/or YouTube link.',
+                'errors'  => ['body' => ['Message text, image, or YouTube link is required.']],
             ], 422);
         }
 
@@ -662,9 +663,6 @@ class CommunityController extends Controller
 
         $imagePath = $hasImage
             ? Message::storeUploadedImage($request->file('image'), $channel->id)
-            : null;
-        $videoPath = $hasVideo
-            ? Message::storeUploadedVideo($request->file('video'), $channel->id)
             : null;
 
         $message = Message::create([

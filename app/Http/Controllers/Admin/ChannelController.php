@@ -17,11 +17,7 @@ class ChannelController extends Controller
     {
         $user = Auth::user();
 
-        $channels = Channel::query()
-            ->where(function ($q) use ($user) {
-                $q->where('type', Channel::TYPE_PUBLIC)
-                  ->orWhereHas('members', fn ($m) => $m->where('user_id', $user->id));
-            })
+        $channels = Channel::visibleTo($user)
             ->withCount(['allMessages', 'members'])
             ->with('creator:id,name')
             ->latest()
@@ -83,20 +79,18 @@ class ChannelController extends Controller
     public function show(Channel $channel)
     {
         $user = Auth::user();
-        abort_if($channel->type === Channel::TYPE_PRIVATE && ! $channel->isMember($user), 403);
+        abort_unless($channel->canAccess($user), 403);
 
-        $channel->markRead($user);
+        if ($channel->isMember($user)) {
+            $channel->markRead($user);
+        }
 
         $messages = $channel->messages()
             ->with(['user', 'replies.user'])
             ->withCount('replies')
             ->paginate(30);
 
-        $channels = Channel::query()
-            ->where(function ($q) use ($user) {
-                $q->where('type', Channel::TYPE_PUBLIC)
-                  ->orWhereHas('members', fn ($m) => $m->where('user_id', $user->id));
-            })
+        $channels = Channel::visibleTo($user)
             ->get()
             ->map(function (Channel $ch) use ($user) {
                 $ch->unread_count = $ch->isMember($user) ? $ch->unreadCountFor($user) : 0;
