@@ -16,7 +16,7 @@
 <div class="space-y-6">
 
     {{-- ═══ KPI STAT CARDS ═══ --}}
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 
         {{-- Mentees --}}
         <div class="fu bg-white border border-gray-200 rounded-2xl p-5 relative overflow-hidden">
@@ -100,7 +100,7 @@
     </div>
 
     {{-- ═══ SECONDARY METRICS ═══ --}}
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
 
         {{-- Pending Approvals --}}
         <a href="{{ route('admin.mentor-approvals.index') }}"
@@ -159,7 +159,7 @@
     </div>
 
     {{-- ═══ CHARTS ROW ═══ --}}
-    <div class="grid grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {{-- Monthly Sessions Bar Chart --}}
         <div class="col-span-2 bg-white border border-gray-200 rounded-2xl p-6">
@@ -241,7 +241,7 @@
     </div>
 
     {{-- ═══ TABLE + QUICK ACTIONS ═══ --}}
-    <div class="grid grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {{-- Recent Sessions from DB --}}
         <div class="col-span-2 bg-white border border-gray-200 rounded-2xl overflow-hidden">
@@ -359,7 +359,7 @@
     </div>
 
     {{-- ═══ ONBOARDING + ENROLLMENT OVERVIEW ═══ --}}
-    <div class="grid grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {{-- Mentor approval funnel --}}
         <div class="bg-white border border-gray-200 rounded-2xl p-6">

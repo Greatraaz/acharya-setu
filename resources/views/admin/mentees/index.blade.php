@@ -42,7 +42,7 @@ $stats = [
     @endif
 
     {{-- Stats --}}
-    <div class="grid grid-cols-5 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
         @foreach([
             ['Total',        $stats['total'],       'bg-slate-50',   'text-slate-700',   'border-slate-200'],
             ['Active',       $stats['active'],      'bg-green-50',   'text-green-700',   'border-green-200'],

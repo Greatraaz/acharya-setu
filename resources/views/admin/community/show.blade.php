@@ -20,10 +20,23 @@ $r = request()->routeIs('admin.*') ? 'admin.community' : 'mentee.community';
 $isAdminUi = request()->routeIs('admin.*');
 @endphp
 
-<div class="flex h-[calc(100vh-7rem)] bg-white border border-gray-200 rounded-2xl overflow-hidden">
+<div class="flex flex-col lg:flex-row min-h-[70vh] lg:h-[calc(100vh-7rem)] bg-white border border-gray-200 rounded-2xl overflow-hidden">
+
+    {{-- Mobile channel picker --}}
+    <div class="lg:hidden px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+        <label class="text-[10px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Channel</label>
+        <select class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                onchange="if (this.value) window.location.href = this.value">
+            @foreach($channels as $ch)
+            <option value="{{ route($r.'.show', $ch->slug) }}" @selected($ch->id === $channel->id)>
+                {{ $ch->icon }} #{{ $ch->name }}
+            </option>
+            @endforeach
+        </select>
+    </div>
 
     {{-- ══════════ SIDEBAR ══════════ --}}
-    <aside class="w-56 flex-shrink-0 flex flex-col border-r border-gray-100 bg-gray-50/60">
+    <aside class="hidden lg:flex w-56 flex-shrink-0 flex-col border-r border-gray-100 bg-gray-50/60">
 
         <div class="px-4 py-3.5 border-b border-gray-100">
             <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Channels</p>
@@ -66,8 +79,8 @@ $isAdminUi = request()->routeIs('admin.*');
     <div class="flex-1 flex flex-col min-w-0 bg-white">
 
         {{-- Channel Header --}}
-        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
-            <div class="flex items-center gap-3">
+        <div class="flex items-center justify-between px-3 sm:px-5 py-3 border-b border-gray-100 flex-shrink-0 gap-2">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
                 <div class="w-9 h-9 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-xl leading-none flex-shrink-0">
                     {{ $channel->icon }}
                 </div>
@@ -123,7 +136,7 @@ $isAdminUi = request()->routeIs('admin.*');
         </div>
 
         {{-- Messages --}}
-        <div class="flex-1 overflow-y-auto py-4 px-5" id="messages-container">
+        <div class="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 sm:px-5" id="messages-container">
             @forelse($messages as $message)
             @php
                 $msgDate = $message->created_at->toDateString();
@@ -400,7 +413,7 @@ $isAdminUi = request()->routeIs('admin.*');
     </div>{{-- /main --}}
 
     {{-- ══════════ MEMBERS ══════════ --}}
-    <aside class="w-56 flex-shrink-0 flex flex-col border-l border-gray-100 bg-gray-50/60">
+    <aside class="hidden xl:flex w-56 flex-shrink-0 flex-col border-l border-gray-100 bg-gray-50/60">
         <div class="px-4 py-3.5 border-b border-gray-100">
             <p class="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Members</p>
             <p class="text-xs text-gray-500 mt-0.5">{{ ($members ?? collect())->count() }} people</p>

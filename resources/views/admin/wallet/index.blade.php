@@ -351,7 +351,7 @@
                 {{-- From --}}
                 <div>
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">From (Sender)</p>
-                    <div class="grid grid-cols-5 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
                         <div class="col-span-2">
                             <label class="text-xs font-medium text-gray-600 mb-1 block">Type</label>
                             <select name="sender_type" id="senderType"
@@ -382,7 +382,7 @@
                 {{-- To --}}
                 <div>
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">To (Receiver)</p>
-                    <div class="grid grid-cols-5 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
                         <div class="col-span-2">
                             <label class="text-xs font-medium text-gray-600 mb-1 block">Type</label>
                             <select name="receiver_type" id="receiverType"

@@ -42,7 +42,9 @@
 
     {{-- Main Content --}}
     <div class="container" style="padding-top:32px;padding-bottom:60px;">
-        <div style="display:grid;grid-template-columns:260px 1fr;gap:28px;align-items:start;">
+        <div class="search-layout">
+
+            <button type="button" class="search-filter-toggle" id="searchFilterToggle">Show filters</button>
 
             {{-- FILTERS SIDEBAR --}}
             <div class="filter-sidebar">

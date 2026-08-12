@@ -40,7 +40,7 @@
     @else
 
     {{-- Summary Bar --}}
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         @php
         $activePlans = $plans->where('is_active', true)->where('deleted_at', null);
         @endphp

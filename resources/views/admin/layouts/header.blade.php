@@ -1,10 +1,17 @@
-<header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200 px-8 py-5">
-    <div class="flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-800">@yield('heading','Dashboard')</h1>
-            <p class="text-sm text-slate-500 mt-1">Welcome back, manage your platform efficiently.</p>
+<header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-4 lg:py-5">
+    <div class="flex justify-between items-center gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+            <button type="button" id="admin-sidebar-toggle"
+                    class="lg:hidden flex-shrink-0 w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    aria-label="Open menu">
+                <span class="text-lg leading-none">☰</span>
+            </button>
+            <div class="min-w-0">
+                <h1 class="text-xl sm:text-2xl font-bold text-slate-800 truncate">@yield('heading','Dashboard')</h1>
+                <p class="text-xs sm:text-sm text-slate-500 mt-0.5 hidden sm:block">Welcome back, manage your platform efficiently.</p>
+            </div>
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             @php
                 $adminUser = auth()->user();
                 try {
@@ -28,7 +35,7 @@
                 </button>
 
                 <div id="admin-notif-dropdown"
-                     class="hidden absolute right-0 mt-3 w-96 bg-white rounded-2xl border shadow-xl z-50 overflow-hidden">
+                     class="hidden absolute right-0 mt-3 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white rounded-2xl border shadow-xl z-50 overflow-hidden">
                     <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                         <div>
                             <p class="text-sm font-semibold text-slate-800">Notifications</p>

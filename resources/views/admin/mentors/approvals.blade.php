@@ -26,7 +26,7 @@ FILE: resources/views/admin/mentors/approvals.blade.php
     @endif
 
     {{-- Stats --}}
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         @foreach([
             ['Pending',   $stats['pending'],   'bg-amber-50',   'text-amber-700',   'border-amber-200',   '?status=pending'],
             ['Approved',  $stats['approved'],  'bg-green-50',   'text-green-700',   'border-green-200',   '?status=approved'],

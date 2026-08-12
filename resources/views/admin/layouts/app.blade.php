@@ -12,30 +12,32 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 <script src="{{ asset('admin/js/jquery4.0.js') }}"></script>
 <style>
-/* Chrome, Edge, Safari */
-::-webkit-scrollbar{
-  width:6px;
-  height:6px;
+::-webkit-scrollbar{ width:6px; height:6px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:9999px; }
+::-webkit-scrollbar-thumb:hover{ background:#94a3b8; }
+*{ scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+#admin-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 40;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
 }
-
-::-webkit-scrollbar-track{
-  background:transparent;
+#admin-sidebar-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
 }
-
-::-webkit-scrollbar-thumb{
-  background:#cbd5e1;
-  border-radius:9999px;
-}
-
-::-webkit-scrollbar-thumb:hover{
-  background:#94a3b8;
-}
-
-
-/* Firefox */
-*{
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+@media (max-width: 1023px) {
+    #admin-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+    }
+    #admin-sidebar.is-open {
+        transform: translateX(0);
+    }
 }
 </style>
 <script>
@@ -58,15 +60,17 @@
 
 <body class="bg-slate-50 text-slate-800 antialiased overflow-x-hidden">
 
+<div id="admin-sidebar-backdrop" aria-hidden="true"></div>
+
 <div class="min-h-screen flex">
 
     @include('admin.layouts.sidebar')
 
-    <div class="flex-1 ml-72 flex flex-col min-h-screen min-w-0">
+    <div class="flex-1 lg:ml-72 flex flex-col min-h-screen min-w-0 w-full">
 
         @include('admin.layouts.header')
 
-        <main class="p-8 flex-1 min-w-0 max-w-full">
+        <main class="p-4 sm:p-6 lg:p-8 flex-1 min-w-0 max-w-full">
             @yield('content')
         </main>
 

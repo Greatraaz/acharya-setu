@@ -49,7 +49,7 @@
 <div class="space-y-5">
 
     {{-- ── Stats Row ── --}}
-    <div class="grid grid-cols-6 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         @php
         $statCards = [
             ['Total Calls',    $stats['total'],           '#dbeafe','#2563eb', 'M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2V5z'],

@@ -4,6 +4,54 @@
 
 let base_url = window.baseUrl;
 
+(function () {
+    const sidebar = document.getElementById('admin-sidebar');
+    const backdrop = document.getElementById('admin-sidebar-backdrop');
+    const toggle = document.getElementById('admin-sidebar-toggle');
+
+    function closeAdminSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.remove('is-open');
+        if (backdrop) backdrop.classList.remove('is-open');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    function openAdminSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.add('is-open');
+        if (backdrop) backdrop.classList.add('is-open');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    if (toggle) {
+        toggle.addEventListener('click', function () {
+            if (sidebar?.classList.contains('is-open')) {
+                closeAdminSidebar();
+            } else {
+                openAdminSidebar();
+            }
+        });
+    }
+
+    if (backdrop) {
+        backdrop.addEventListener('click', closeAdminSidebar);
+    }
+
+    if (sidebar) {
+        sidebar.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', () => {
+                if (window.matchMedia('(max-width: 1023px)').matches) {
+                    closeAdminSidebar();
+                }
+            });
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAdminSidebar();
+    });
+})();
+
 $.ajaxSetup({
     headers: {
         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')

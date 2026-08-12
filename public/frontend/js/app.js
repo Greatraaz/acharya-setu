@@ -236,14 +236,73 @@
    });
    
    /* ── Hamburger + Mobile Menu ─────────────────────────────── */
+   function closeDashSidebar() {
+       const dashSidebar = document.getElementById("dashSidebar");
+       const backdrop = document.getElementById("sidebarBackdrop");
+       const ham = document.querySelector(".hamburger");
+       if (!dashSidebar) return;
+       dashSidebar.classList.remove("is-open");
+       if (backdrop) backdrop.classList.remove("is-open");
+       if (ham) ham.classList.remove("open");
+       document.body.style.overflow = "";
+   }
+
+   function toggleDashSidebar() {
+       const dashSidebar = document.getElementById("dashSidebar");
+       const backdrop = document.getElementById("sidebarBackdrop");
+       const ham = document.querySelector(".hamburger");
+       const mob = document.querySelector(".mobile-menu");
+       if (!dashSidebar) return false;
+       const open = !dashSidebar.classList.contains("is-open");
+       dashSidebar.classList.toggle("is-open", open);
+       if (backdrop) backdrop.classList.toggle("is-open", open);
+       if (ham) ham.classList.toggle("open", open);
+       if (mob) mob.classList.remove("open");
+       document.body.style.overflow = open ? "hidden" : "";
+       return true;
+   }
+
    document.addEventListener("DOMContentLoaded", () => {
        const ham = document.querySelector(".hamburger");
        const mob = document.querySelector(".mobile-menu");
+       const backdrop = document.getElementById("sidebarBackdrop");
+
        if (ham && mob) {
            ham.addEventListener("click", () => {
+               if (document.getElementById("dashSidebar") && window.matchMedia("(max-width: 1024px)").matches) {
+                   toggleDashSidebar();
+                   return;
+               }
                const open = mob.classList.toggle("open");
                ham.classList.toggle("open", open);
+               closeDashSidebar();
            });
+       }
+
+       if (backdrop) {
+           backdrop.addEventListener("click", closeDashSidebar);
+       }
+
+       document.querySelectorAll("#dashSidebar .sidebar-item").forEach((link) => {
+           link.addEventListener("click", () => {
+               if (window.matchMedia("(max-width: 1024px)").matches) {
+                   closeDashSidebar();
+               }
+           });
+       });
+
+       const filterToggle = document.getElementById("searchFilterToggle");
+       const filterSidebar = document.querySelector(".filter-sidebar");
+       if (filterToggle && filterSidebar) {
+           filterToggle.addEventListener("click", () => {
+               filterSidebar.classList.toggle("is-collapsed");
+               const collapsed = filterSidebar.classList.contains("is-collapsed");
+               filterToggle.textContent = collapsed ? "Show filters" : "Hide filters";
+           });
+           if (window.matchMedia("(max-width: 1024px)").matches) {
+               filterSidebar.classList.add("is-collapsed");
+               filterToggle.textContent = "Show filters";
+           }
        }
    
        // User dropdown

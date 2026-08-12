@@ -6,7 +6,7 @@
             ->where('scheduled_at', '>', now())
             ->count();
 @endphp
-<aside class="sidebar">
+<aside class="sidebar" id="dashSidebar">
     <div class="sidebar-section-label">Overview</div>
     <a href="{{ route('mentee.dashboard') }}" class="sidebar-item @if(request()->routeIs('mentee.dashboard')) active @endif">
         <span class="si-icon">📊</span> Dashboard
@@ -62,3 +62,4 @@
         </button>
     </form>
 </aside>
+<div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>

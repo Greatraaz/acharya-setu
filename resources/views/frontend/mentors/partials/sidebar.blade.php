@@ -3,7 +3,7 @@
     $pendingCount = $pendingCount
         ?? \App\Models\ConsultationSession::where('mentor_id', auth()->id())->where('status', 'pending')->count();
 @endphp
-<aside class="sidebar">
+<aside class="sidebar" id="dashSidebar">
     <div class="sidebar-section-label">Overview</div>
     <a href="{{ route('mentor.dashboard') }}" class="sidebar-item @if(request()->routeIs('mentor.dashboard')) active @endif">
         <span class="si-icon">📊</span> Dashboard
@@ -62,3 +62,4 @@
         </button>
     </form>
 </aside>
+<div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>

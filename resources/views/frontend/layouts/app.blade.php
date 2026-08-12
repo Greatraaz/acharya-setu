@@ -119,8 +119,17 @@
         @auth
             @if(auth()->user()->role === 'mentor')
                 <a href="{{ route('mentor.dashboard') }}" class="mobile-nav-item">📊 Dashboard</a>
+                <a href="{{ route('mentor.sessions') }}" class="mobile-nav-item">📅 Sessions</a>
+                <a href="{{ route('mentor.community') }}" class="mobile-nav-item">💬 Community</a>
+                <a href="{{ route('mentor.wallet') }}" class="mobile-nav-item">💰 Wallet</a>
             @elseif(auth()->user()->role === 'mentee')
                 <a href="{{ route('mentee.dashboard') }}" class="mobile-nav-item">📊 Dashboard</a>
+                <a href="{{ route('mentee.sessions') }}" class="mobile-nav-item">📅 Sessions</a>
+                <a href="{{ route('mentee.journey.index') }}" class="mobile-nav-item">🗺️ My Journey</a>
+                <a href="{{ route('mentee.community.index') }}" class="mobile-nav-item">💬 Community</a>
+                <a href="{{ route('mentee.wallet') }}" class="mobile-nav-item">💰 Wallet</a>
+            @elseif(auth()->user()->role === 'admin')
+                <a href="{{ route('admin.dashboard') }}" class="mobile-nav-item">⚙️ Admin Panel</a>
             @endif
             <form action="{{ route('logout') }}" method="POST">
                 @csrf

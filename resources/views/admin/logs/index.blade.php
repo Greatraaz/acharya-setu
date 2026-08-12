@@ -43,7 +43,7 @@
     @endif
 
     {{-- Stats row --}}
-    <div class="grid grid-cols-6 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         @foreach([
             ['Today',         $stats['total_today'],  'bg-slate-50',   'text-slate-700',   'border-slate-200'],
             ['Logins Today',  $stats['logins_today'], 'bg-blue-50',    'text-blue-700',    'border-blue-200'],

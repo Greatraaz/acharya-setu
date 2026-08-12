@@ -1,4 +1,4 @@
-<aside class="fixed left-0 top-0 h-screen w-72 bg-white border-r border-slate-200 shadow-soft z-50 flex flex-col">
+<aside id="admin-sidebar" class="fixed left-0 top-0 h-screen w-72 max-w-[85vw] bg-white border-r border-slate-200 shadow-soft z-50 flex flex-col lg:translate-x-0">
     <div class="px-5 pt-5 pb-4 border-b border-slate-100">
         <img src="{{ asset('admin/images/logo.png') }}" alt="Vedrix" class="w-[200px] max-w-full h-auto object-contain">
         <p class="mt-2 text-xl font-bold text-black">Admin Platform</p>
