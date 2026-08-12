@@ -38,6 +38,8 @@ class CommunityController extends Controller
             'icon'        => 'nullable|string|max:10',
             'type'        => 'required|in:public,private',
             'category'    => 'nullable|string|max:50',
+            'youtube_url' => 'nullable|string|max:500',
+            'video_url'   => 'nullable|string|max:500',
         ]);
 
         $channel = Channel::create([
@@ -56,6 +58,20 @@ class CommunityController extends Controller
             'role'         => Channel::ROLE_ADMIN,
             'last_read_at' => now(),
         ]);
+
+        $youtubeInput = Message::youtubeUrlFromInput($data);
+        $initialVideoUrl = Message::resolveStoredYoutubeUrl($youtubeInput);
+
+        if ($initialVideoUrl) {
+            Message::create([
+                'channel_id' => $channel->id,
+                'user_id'    => $user->id,
+                'body'       => '',
+                'video_path' => $initialVideoUrl,
+                'parent_id'  => null,
+                'liked_by'   => [],
+            ]);
+        }
 
         return response()->json([
             'message' => 'Channel created.',

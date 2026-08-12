@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{User,Session,Task,Video,JobListing,Quiz,QuizQuestion,PremiumPlan,Channel,Assessment,Notification};
+use App\Models\{User,Session,Task,Video,JobListing,Quiz,QuizQuestion,PremiumPlan,Channel,Assessment,Notification,Message};
 use Illuminate\Http\{Request,JsonResponse};
 
 class AdminController extends Controller
@@ -93,6 +93,8 @@ class AdminController extends Controller
             'icon'        => 'sometimes|string|max:10',
             'type'        => 'sometimes|in:public,private',
             'category'    => 'nullable|string|max:50',
+            'youtube_url' => 'nullable|string|max:500',
+            'video_url'   => 'nullable|string|max:500',
         ]);
 
         $channel = Channel::create([
@@ -110,6 +112,20 @@ class AdminController extends Controller
             'role'         => Channel::ROLE_ADMIN,
             'last_read_at' => now(),
         ]);
+
+        $youtubeInput = Message::youtubeUrlFromInput($data);
+        $initialVideoUrl = Message::resolveStoredYoutubeUrl($youtubeInput);
+
+        if ($initialVideoUrl) {
+            Message::create([
+                'channel_id' => $channel->id,
+                'user_id'    => $request->user()->id,
+                'body'       => '',
+                'video_path' => $initialVideoUrl,
+                'parent_id'  => null,
+                'liked_by'   => [],
+            ]);
+        }
 
         return response()->json([
             'channel' => $channel->load(['creator:id,name,avatar_url,role'])

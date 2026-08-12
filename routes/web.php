@@ -251,6 +251,8 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::get('/journey',                        [MentorPortalController::class, 'journey'])->name('journey');
     Route::get('/journey/{mentee}',               [MentorPortalController::class, 'journeyShow'])->name('journey.show');
     Route::get('/community',                      [MentorPortalController::class, 'community'])->name('community');
+    Route::get('/community/create',               [ChannelController::class, 'create'])->name('community.create');
+    Route::post('/community',                     [ChannelController::class, 'store'])->name('community.store');
     Route::get('/community/{channel:slug}',       [MentorPortalController::class, 'communityShow'])->name('community.show');
     Route::post('/community/{channel:slug}/join', [MentorPortalController::class, 'communityJoin'])->name('community.join');
     Route::post('/community/{channel:slug}/messages', [MessageController::class, 'store'])->name('community.messages.store');

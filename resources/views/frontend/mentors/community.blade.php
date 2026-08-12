@@ -10,6 +10,9 @@
             <div class="dash-title">Community</div>
             <div class="dash-subtitle">Channels you can join and discuss with mentees and other mentors.</div>
         </div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+            <a href="{{ route('mentor.community.create') }}" class="btn btn-primary btn-sm">+ Create Channel</a>
+        </div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
             @forelse($channels as $channel)

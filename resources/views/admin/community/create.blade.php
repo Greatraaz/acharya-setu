@@ -2,10 +2,23 @@
 @section('title', 'Create Channel')
 
 @section('content')
-@php $r = request()->routeIs('admin.*') ? 'admin.community' : 'mentee.community'; @endphp
+@php
+    $r = request()->routeIs('admin.*')
+        ? 'admin.community'
+        : (request()->routeIs('mentor.*') ? 'mentor.community' : 'mentee.community');
+@endphp
 <div class="max-w-xl mx-auto">
     <div class="mb-6">
-        <a href="{{ route($r.'.index') }}" class="text-sm text-gray-400 hover:text-gray-600">← Back</a>
+        @php
+            $backRoute = null;
+            try {
+                $backRoute = route($r . '.index');
+            } catch (\Throwable $e) {
+                // Mentor route names use `mentor.community` (no `.index`)
+                $backRoute = route($r);
+            }
+        @endphp
+        <a href="{{ $backRoute }}" class="text-sm text-gray-400 hover:text-gray-600">← Back</a>
         <h1 class="font-display text-2xl font-bold text-gray-900 mt-2">Create Channel</h1>
     </div>
 
@@ -62,6 +75,14 @@
                         <span class="text-sm text-gray-700">Private - invite only</span>
                     </label>
                 </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">YouTube Link (optional)</label>
+                <input type="url" name="youtube_url" value="{{ old('youtube_url', old('video_url')) }}" placeholder="https://youtube.com/watch?v=... or https://youtu.be/..."
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <p class="text-xs text-gray-400 mt-1">If provided, this link is posted as the first channel message.</p>
+                @error('youtube_url')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                @error('video_url')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
             </div>
             <button type="submit"
                     class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors">

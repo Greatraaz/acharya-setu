@@ -33,6 +33,13 @@ class ChannelController extends Controller
     public function create()
     {
         abort_if(Auth::user()->isMentee(), 403, 'Mentees cannot create channels.');
+        $role = Auth::user()->role;
+
+        if ($role === 'mentor') {
+            return view('frontend.mentors.community-create', [
+                'categories' => Channel::CATEGORIES,
+            ]);
+        }
 
         return view('admin.community.create', [
             'categories' => Channel::CATEGORIES,
@@ -54,6 +61,8 @@ class ChannelController extends Controller
             'icon'        => 'nullable|string|max:10',
             'type'        => 'required|in:public,private',
             'category'    => 'nullable|string|max:50',
+            'youtube_url' => 'nullable|string|max:500',
+            'video_url'   => 'nullable|string|max:500',
         ]);
 
         $channel = Channel::create([
@@ -72,7 +81,21 @@ class ChannelController extends Controller
             'last_read_at' => now(),
         ]);
 
-        return redirect()->route(request()->routeIs('admin.*') ? 'admin.community.show' : 'mentee.community.show', $channel->slug)
+        $youtubeInput = Message::youtubeUrlFromInput($request->all());
+        $initialVideoUrl = Message::resolveStoredYoutubeUrl($youtubeInput);
+
+        if ($initialVideoUrl) {
+            Message::create([
+                'channel_id' => $channel->id,
+                'user_id'    => (int) Auth::id(),
+                'body'       => '',
+                'video_path' => $initialVideoUrl,
+                'parent_id'  => null,
+                'liked_by'   => [],
+            ]);
+        }
+
+        return redirect()->route($this->communityRouteBase() . '.show', $channel->slug)
             ->with('success', 'Channel created!');
     }
 
@@ -141,7 +164,7 @@ class ChannelController extends Controller
         // Voluntary leave — do not block rejoining
         $channel->members()->detach($user->id);
 
-        return redirect()->route(request()->routeIs('admin.*') ? 'admin.community.index' : 'mentee.community.index')->with('success', 'Left channel.');
+        return redirect()->route($this->communityRouteBase() . '.index')->with('success', 'Left channel.');
     }
 
     public function invite(Request $request, Channel $channel)
@@ -218,7 +241,22 @@ class ChannelController extends Controller
         }
 
         return redirect()
-            ->route(request()->routeIs('admin.*') ? 'admin.community.index' : 'mentee.community.index')
+            ->route($this->communityRouteBase() . '.index')
             ->with('success', 'Channel #' . $channelName . ' deleted.');
+    }
+
+    private function communityRouteBase(): string
+    {
+        $role = Auth::user()?->role;
+
+        if ($role === 'admin') {
+            return 'admin.community';
+        }
+
+        if ($role === 'mentor') {
+            return 'mentor.community';
+        }
+
+        return 'mentee.community';
     }
 }
