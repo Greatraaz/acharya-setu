@@ -7,13 +7,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ForgotPasswordController extends Controller
 {
     public function showForm()
     {
-        return view('auth.forgot-password');
+        return view('frontend.auth.forget-password');
     }
 
     public function sendLink(Request $request)
@@ -35,7 +36,7 @@ class ForgotPasswordController extends Controller
 
     public function showReset(string $token, Request $request)
     {
-        return view('auth.reset-password', ['token' => $token, 'email' => $request->email]);
+        return view('frontend.auth.reset-password', ['token' => $token, 'email' => $request->email]);
     }
 
     public function resetPassword(Request $request)
@@ -49,10 +50,13 @@ class ForgotPasswordController extends Controller
         $status = Password::reset(
             $request->only('email','password','password_confirmation','token'),
             function ($user, $password) {
-                $user->forceFill([
-                    'password'       => Hash::make($password),
-                    'remember_token' => Str::random(60),
-                ])->save();
+                $data = ['password' => Hash::make($password)];
+
+                if (Schema::hasColumn('users', 'remember_token')) {
+                    $data['remember_token'] = Str::random(60);
+                }
+
+                $user->forceFill($data)->save();
                 event(new PasswordReset($user));
             }
         );

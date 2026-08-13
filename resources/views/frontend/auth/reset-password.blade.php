@@ -1,5 +1,4 @@
-{{-- resources/views/auth/reset-password.blade.php --}}
-@extends('layouts.app')
+@extends('frontend.layouts.app')
 @section('title','Reset Password — Vedrix')
 @section('content')
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(var(--nav-h)+20px) 16px 40px;">
