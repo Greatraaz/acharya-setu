@@ -24,6 +24,7 @@ class OnboardingController extends Controller
         try {
             $dbStreams = DB::table('education_streams')
                 ->where('is_active', true)
+                ->whereNull('mentee_id')
                 ->orderBy('sort_order')
                 ->get(['id', 'name', 'icon', 'sort_order']);
         } catch (\Throwable) {}
@@ -183,6 +184,10 @@ class OnboardingController extends Controller
             'year'             => $request->input('year'),
             'onboarding_step'  => 2,
         ]);
+
+        if ($request->filled('education_stream')) {
+            app(MenteeOnboardingService::class)->assignCatalogStream($user->fresh(), $request->input('education_stream'));
+        }
 
         return response()->json([
             'status'     => true,

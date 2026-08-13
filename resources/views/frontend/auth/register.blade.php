@@ -102,7 +102,7 @@
         {{-- STEP 3: OTP --}}
         <div data-step="3" class="hidden">
             <h2 style="font-size:18px;margin-bottom:6px;">Verify your account</h2>
-            <p style="font-size:13px;color:var(--text-2);margin-bottom:20px;">We sent OTPs to your email and phone. Enter both to complete registration.</p>
+            <p style="font-size:13px;color:var(--text-2);margin-bottom:20px;">We sent an OTP to your email. Enter it to complete registration.</p>
 
             {{-- Email OTP --}}
             <div class="form-group">
@@ -114,7 +114,7 @@
                 </div>
             </div>
 
-            {{-- Mobile OTP --}}
+            {{-- Mobile OTP hidden from UI
             <div class="form-group">
                 <label class="form-label">📱 Mobile OTP</label>
                 <div class="otp-grid" id="phone-otp-grid">
@@ -123,13 +123,14 @@
                     @endfor
                 </div>
             </div>
+            --}}
 
             {{-- Resend --}}
             <div data-resend-wrap style="font-size:12px;color:var(--text-2);margin-bottom:16px;">
                 Resend in <span id="resend-count">30</span>s &nbsp;|&nbsp;
             </div>
             <div style="font-size:12px;margin-bottom:20px;">
-                <a href="#" id="resend-link" onclick="resendOtp()" style="color:var(--brand);font-weight:600;">Resend OTPs</a>
+                <a href="#" id="resend-link" onclick="resendOtp()" style="color:var(--brand);font-weight:600;">Resend OTP</a>
             </div>
 
             <div style="display:flex;gap:10px;">
@@ -161,7 +162,6 @@ FormStepper.show = function(n) {
     });
     if (n === 3) {
         initOtpInputs('#email-otp-grid');
-        initOtpInputs('#phone-otp-grid');
         startResendTimer('#resend-link', '#resend-count', 30);
     }
 };
@@ -201,10 +201,8 @@ function sendOtpStep() {
 
 function verifyAndRegister() {
     const emailOtp = collectOtp('#email-otp-grid');
-    const phoneOtp = collectOtp('#phone-otp-grid');
 
     if (emailOtp.length < 6) { showToast('error','Please enter the complete email OTP.'); return; }
-    if (phoneOtp.length < 6) { showToast('error','Please enter the complete mobile OTP.'); return; }
 
     const btn = document.getElementById('verify-btn');
     AjaxPost('/register', {
@@ -215,7 +213,6 @@ function verifyAndRegister() {
         password_confirmation: document.getElementById('reg-password').value,
         role:            document.getElementById('role-input').value,
         email_otp:       emailOtp,
-        phone_otp:       phoneOtp,
     }, {
         btn, loader: true,
         onSuccess: data => {
@@ -223,7 +220,7 @@ function verifyAndRegister() {
             setTimeout(() => window.location.href = data.redirect || '/dashboard', 1500);
         },
         onError: err => {
-            showToast('error', err.message || 'Verification failed. Please check the OTPs.');
+            showToast('error', err.message || 'Verification failed. Please check the OTP.');
         }
     });
 }
@@ -234,7 +231,7 @@ function resendOtp() {
         phone: '+91' + document.getElementById('reg-phone').value,
     }, {
         onSuccess: () => {
-            showToast('success', 'OTPs resent!');
+            showToast('success', 'OTP resent!');
             startResendTimer('#resend-link', '#resend-count', 30);
         }
     });

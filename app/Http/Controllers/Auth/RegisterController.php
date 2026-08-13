@@ -30,16 +30,15 @@ class RegisterController extends Controller
             'password'  => ['required', Password::min(8)],
             'role'      => 'required|in:mentor,mentee',
             'email_otp' => 'required|string|size:6',
-            'phone_otp' => 'required|string|size:6',
+            // 'phone_otp' => 'required|string|size:6',
         ]);
 
-        // Verify email OTP
-        /* $emailOk = OtpCode::verify($request->email, 'email', $request->email_otp);
+        $emailOk = OtpCode::verify($request->email, 'email', $request->email_otp);
         if (! $emailOk) {
             return $this->otpError($request, 'email_otp', 'Invalid or expired email OTP.');
-        } */
+        }
 
-        // Verify phone OTP
+        // Phone OTP verification disabled
         /* $phoneOk = OtpCode::verify($request->phone, 'phone', $request->phone_otp);
         if (! $phoneOk) {
             return $this->otpError($request, 'phone_otp', 'Invalid or expired mobile OTP.');

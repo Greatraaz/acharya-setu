@@ -71,7 +71,12 @@ class OnboardingController extends Controller
             'year'             => 'nullable|string|max:50',
         ]);
 
-        auth()->user()->update(array_merge($data, ['onboarding_step' => 2]));
+        $user = auth()->user();
+        $user->update(array_merge($data, ['onboarding_step' => 2]));
+
+        if (! empty($data['education_stream'])) {
+            $this->onboarding->assignCatalogStream($user->fresh(), $data['education_stream']);
+        }
 
         return $this->next($request, 3);
     }

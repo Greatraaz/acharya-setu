@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\EducationStream;
+use App\Models\MenteeEnrollment;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -35,6 +36,82 @@ class MenteeOnboardingService
             ->orderBy('sort_order')
             ->pluck('name')
             ->all();
+    }
+
+    /**
+     * Copy a global catalog stream onto this mentee (name/icon only) and enroll them.
+     * Does not copy months/weeks/tasks — the plan is built later on the mentee row.
+     */
+    public function assignCatalogStream(User $user, ?string $streamName): ?EducationStream
+    {
+        $streamName = trim((string) $streamName);
+        if ($streamName === '') {
+            return null;
+        }
+
+        $catalog = EducationStream::query()
+            ->where('is_active', true)
+            ->whereNull('mentee_id')
+            ->whereRaw('LOWER(name) = ?', [Str::lower($streamName)])
+            ->first();
+
+        if (! $catalog) {
+            return null;
+        }
+
+        $slug = $this->menteeTrackSlug($catalog->name, $user->id);
+
+        $copy = EducationStream::query()
+            ->where('mentee_id', $user->id)
+            ->where(function ($q) use ($catalog, $slug) {
+                $q->where('slug', $slug)
+                    ->orWhereRaw('LOWER(name) = ?', [Str::lower($catalog->name)]);
+            })
+            ->first();
+
+        if (! $copy) {
+            $copy = EducationStream::create([
+                'mentee_id'   => $user->id,
+                'mentor_id'   => $user->assigned_mentor_id,
+                'name'        => $catalog->name,
+                'slug'        => $slug,
+                'icon'        => $catalog->icon,
+                'color'       => $catalog->color,
+                'description' => $catalog->description,
+                'is_active'   => true,
+                'sort_order'  => $catalog->sort_order ?? 0,
+            ]);
+        } else {
+            $copy->update([
+                'icon'        => $catalog->icon,
+                'color'       => $catalog->color,
+                'description' => $catalog->description,
+                'is_active'   => true,
+                'mentor_id'   => $copy->mentor_id ?: $user->assigned_mentor_id,
+            ]);
+        }
+
+        MenteeEnrollment::where('mentee_id', $user->id)
+            ->where('status', 'active')
+            ->where('stream_id', '!=', $copy->id)
+            ->update(['status' => 'paused']);
+
+        MenteeEnrollment::updateOrCreate(
+            [
+                'mentee_id' => $user->id,
+                'stream_id' => $copy->id,
+            ],
+            [
+                'mentor_id'         => $user->assigned_mentor_id ?? $copy->mentor_id,
+                'start_date'        => now()->toDateString(),
+                'expected_end_date' => now()->addMonths(6)->toDateString(),
+                'status'            => 'active',
+                'current_month'     => 1,
+                'current_week'      => 1,
+            ]
+        );
+
+        return $copy;
     }
 
     public function syncMenteeTracks(int $menteeId, array $trackNames): void

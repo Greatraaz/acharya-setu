@@ -22,7 +22,11 @@ class CurriculumController extends Controller
 
         $streams = EducationStream::with('mentee:id,name,email')
             ->withCount(['months', 'enrollments'])
-            ->when($filterMentee, fn ($q) => $q->where('mentee_id', $filterMentee->id))
+            ->when(
+                $filterMentee,
+                fn ($q) => $q->where('mentee_id', $filterMentee->id),
+                fn ($q) => $q->whereNotNull('mentee_id')
+            )
             ->orderBy('sort_order')
             ->get();
 
@@ -32,6 +36,82 @@ class CurriculumController extends Controller
             ->get(['id', 'name', 'email']);
  
         return view('admin.curriculum.streams.index', compact('streams', 'mentees', 'filterMentee'));
+    }
+
+    // ── Global catalog streams (onboarding picker) ────────────
+    public function catalog()
+    {
+        $streams = EducationStream::query()
+            ->whereNull('mentee_id')
+            ->withCount(['enrollments'])
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.curriculum.catalog.index', compact('streams'));
+    }
+
+    public function storeCatalog(Request $request)
+    {
+        $data = $request->validate([
+            'name'        => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('education_streams', 'name')->whereNull('mentee_id'),
+            ],
+            'icon'        => 'nullable|string|max:10',
+            'color'       => 'nullable|string|max:20',
+            'description' => 'nullable|string',
+            'is_active'   => 'nullable|boolean',
+            'sort_order'  => 'nullable|integer',
+        ]);
+
+        $data['mentee_id']  = null;
+        $data['mentor_id']  = null;
+        $data['is_active']  = $request->boolean('is_active', true);
+        $data['sort_order'] = $data['sort_order'] ?? 0;
+        $data['slug']       = $this->resolveCatalogSlug($data['name']);
+
+        EducationStream::create($data);
+
+        return redirect()->route('admin.curriculum.catalog')->with('success', 'Global stream created.');
+    }
+
+    public function updateCatalog(Request $request, EducationStream $stream)
+    {
+        abort_unless($stream->mentee_id === null, 404);
+
+        $data = $request->validate([
+            'name'        => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('education_streams', 'name')->whereNull('mentee_id')->ignore($stream->id),
+            ],
+            'icon'        => 'nullable|string|max:10',
+            'color'       => 'nullable|string|max:20',
+            'description' => 'nullable|string',
+            'is_active'   => 'nullable|boolean',
+            'sort_order'  => 'nullable|integer',
+        ]);
+
+        $data['is_active']  = $request->boolean('is_active', true);
+        $data['sort_order'] = $data['sort_order'] ?? $stream->sort_order;
+        $data['slug']       = $this->resolveCatalogSlug($data['name'], $stream->id);
+
+        $stream->update($data);
+
+        return redirect()->route('admin.curriculum.catalog')->with('success', 'Global stream updated.');
+    }
+
+    public function destroyCatalog(EducationStream $stream)
+    {
+        abort_unless($stream->mentee_id === null, 404);
+
+        $stream->delete();
+
+        return redirect()->route('admin.curriculum.catalog')->with('success', 'Global stream deleted.');
     }
  
     public function storeStream(Request $request)
@@ -58,6 +138,8 @@ class CurriculumController extends Controller
  
     public function updateStream(Request $request, EducationStream $stream)
     {
+        abort_unless($stream->mentee_id !== null, 404);
+
         $data = $request->validate([
             'mentee_id'   => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'name'        => 'required|string|max:100',
@@ -80,6 +162,8 @@ class CurriculumController extends Controller
  
     public function destroyStream(EducationStream $stream)
     {
+        abort_unless($stream->mentee_id !== null, 404);
+
         $stream->delete();
         return redirect()->back()->with('success', 'Stream deleted.');
     }
@@ -87,6 +171,8 @@ class CurriculumController extends Controller
     // ── Months ────────────────────────────────────────────────
     public function months(EducationStream $stream)
     {
+        abort_unless($stream->mentee_id !== null, 404);
+
         $stream->load('mentee:id,name,email');
         $months = $stream->months()->with('weeks.tasks', 'weeks.mcqs')->orderBy('month_number')->get();
         return view('admin.curriculum.months.index', compact('stream', 'months'));
@@ -402,6 +488,25 @@ class CurriculumController extends Controller
         return $slug;
     }
 
+    private function resolveCatalogSlug(string $name, ?int $excludeId = null): string
+    {
+        $base = Str::slug($name) ?: 'stream';
+        $slug = $base;
+        $i = 2;
+
+        while (
+            EducationStream::query()
+                ->where('slug', $slug)
+                ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
+                ->exists()
+        ) {
+            $slug = $base . '-' . $i;
+            $i++;
+        }
+
+        return $slug;
+    }
+
     private function assertMenteeMatchesStream(EducationStream $stream, int $menteeId): void
     {
         if ($stream->mentee_id && (int) $stream->mentee_id !== $menteeId) {
@@ -411,7 +516,9 @@ class CurriculumController extends Controller
         }
 
         if (! $stream->mentee_id) {
-            $stream->update(['mentee_id' => $menteeId]);
+            throw ValidationException::withMessages([
+                'mentee_id' => 'This is a global catalog stream. Build the 6-month plan on the mentee copy, not the catalog row.',
+            ]);
         }
     }
 

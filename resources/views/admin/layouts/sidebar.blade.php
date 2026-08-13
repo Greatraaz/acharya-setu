@@ -25,7 +25,8 @@
             ],
             'Curriculum' => [
                 ['admin.mentor-approvals.index', '✅', 'Mentor Approvals'],
-                ['admin.curriculum.streams',   '🗺️', '6-Month Journey Manager'],
+                ['admin.curriculum.catalog',    '📚', 'Curriculum Streams'],
+                ['admin.curriculum.streams',    '🗺️', '6-Month Journey Manager'],
             ],
             'Content' => [
                 ['admin.quizzes.index',      '🎯', 'Quizzes & MCQs'],

@@ -25,16 +25,21 @@ class OtpController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'phone' => 'required|string|min:10',
+            'phone' => 'nullable|string|min:10',
         ]);
 
         // ── Generate 6-digit codes ────────────────────────────
         $emailOtp = $this->generateOtp();
-        $phoneOtp = $this->generateOtp();
 
         // ── Persist to DB ─────────────────────────────────────
         OtpCode::storeOtp($request->email, 'email', $emailOtp);
-        OtpCode::storeOtp($request->phone, 'phone', $phoneOtp);
+
+        // Phone OTP disabled for web registration
+        // $phoneOtp = $this->generateOtp();
+        // if ($request->filled('phone')) {
+        //     OtpCode::storeOtp($request->phone, 'phone', $phoneOtp);
+        //     SmsService::sendOtp($request->phone, $phoneOtp);
+        // }
 
         // ── Send Email OTP ────────────────────────────────────
         try {
@@ -43,11 +48,8 @@ class OtpController extends Controller
             Log::error('OTP email failed: ' . $e->getMessage());
         }
 
-        // ── Send SMS OTP ──────────────────────────────────────
-        SmsService::sendOtp($request->phone, $phoneOtp);
-
         return response()->json([
-            'message'    => 'OTPs sent to your email and phone.',
+            'message'    => 'OTP sent to your email.',
             'expires_in' => 600,
         ]);
     }

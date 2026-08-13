@@ -523,6 +523,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     // ── Curriculum / Career Streams ───────────────────────────
     Route::resource('mentor-approvals', MentorApprovalController::class);
     Route::prefix('curriculum')->name('curriculum.')->group(function () {
+        Route::get('/catalog',                    [CurriculumController::class, 'catalog'])          ->name('catalog');
+        Route::post('/catalog',                   [CurriculumController::class, 'storeCatalog'])     ->name('catalog.store');
+        Route::put('/catalog/{stream}',           [CurriculumController::class, 'updateCatalog'])    ->name('catalog.update');
+        Route::delete('/catalog/{stream}',        [CurriculumController::class, 'destroyCatalog'])   ->name('catalog.destroy');
+
         Route::get('/',                           [CurriculumController::class, 'streams'])          ->name('streams');
         Route::post('/streams',                   [CurriculumController::class, 'storeStream'])      ->name('streams.store');
         Route::put('/streams/{stream}',           [CurriculumController::class, 'updateStream'])     ->name('streams.update');
