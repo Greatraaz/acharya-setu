@@ -63,3 +63,4 @@
     </form>
 </aside>
 <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+@include('frontend.mentee.partials.bottom-nav')

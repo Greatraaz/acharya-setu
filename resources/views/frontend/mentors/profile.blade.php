@@ -2,6 +2,11 @@
 @section('title', ($mentor->name ?? 'Mentor') . ' — Vedrix')
 
 @section('content')
+@auth
+    @if(auth()->user()->role === 'mentee')
+        @include('frontend.mentee.partials.bottom-nav')
+    @endif
+@endauth
 <div style="padding-top:var(--nav-h);" data-mentor-id="{{ $mentor->id ?? 1 }}">
 
     {{-- Profile Hero --}}
