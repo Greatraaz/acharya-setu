@@ -8,16 +8,12 @@
     {{-- ── HEADER ────────────────────────────────────────── --}}
     <div class="text-center" style="margin-bottom:32px;">
         <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin:0 auto 14px;">
-        @if($step < 4)
         <h1 style="font-size:22px; font-weight:800; margin-bottom:4px;">Set Up Your Profile</h1>
         <p style="font-size:13px; color:var(--text-2);">Step {{ $step }} of 4 — Takes less than 3 minutes</p>
-        @else
-        <h1 style="font-size:24px; font-weight:800; margin-bottom:4px;">You're all set! 🎉</h1>
-        @endif
     </div>
 
     {{-- ── STEP PROGRESS BAR ──────────────────────────────── --}}
-    @php $stepLabels = ['About You', 'Education', 'Your Goals', 'Ready!']; @endphp
+    @php $stepLabels = ['About You', 'Education', 'Tracks', 'Preferences']; @endphp
     <div style="display:flex; align-items:center; margin-bottom:36px;">
         @foreach($stepLabels as $i => $label)
         @php $num = $i + 1; $isDone = $num < $step; $isCurrent = $num === $step; @endphp
@@ -51,68 +47,71 @@
         <form
             action="{{ route('mentee.onboarding.save1') }}"
             method="POST"
+            enctype="multipart/form-data"
             data-ajax-form="{{ route('mentee.onboarding.save1') }}"
             data-redirect="{{ route('mentee.onboarding', ['step' => 2]) }}"
             data-success="Saved!"
         >
             @csrf
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                <div class="form-group" style="grid-column:1/-1;">
-                    <label class="form-label">Your Full Name *</label>
-                    <input type="text" name="name" class="form-input" required
-                           value="{{ old('name', auth()->user()->name) }}"
-                           placeholder="Rahul Sharma">
+            <div style="display:flex; gap:24px; align-items:flex-start; margin-bottom:8px;">
+                <div style="flex-shrink:0; text-align:center;">
+                    <div
+                        id="avatar-preview"
+                        onclick="document.getElementById('avatar-input').click()"
+                        style="width:88px; height:88px; border-radius:18px;
+                               background:var(--brand-muted); border:2px dashed var(--brand);
+                               display:flex; align-items:center; justify-content:center;
+                               font-size:32px; font-weight:800; color:var(--brand);
+                               cursor:pointer; overflow:hidden; font-family:var(--font-head);"
+                    >
+                        @if(auth()->user()->avatar_url)
+                            <img src="{{ auth()->user()->avatar_url }}" style="width:100%; height:100%; object-fit:cover;">
+                        @else
+                            {{ strtoupper(substr(auth()->user()->name ?? 'M', 0, 1)) }}
+                        @endif
+                    </div>
+                    <input type="file" id="avatar-input" name="avatar" accept="image/jpeg,image/png,image/webp,image/jpg" style="display:none;"
+                           onchange="previewImage(this, '#avatar-preview')">
+                    <div style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.4;">Click to<br>upload photo</div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Gender</label>
-                    <select name="gender" class="form-select">
-                        <option value="">Prefer not to say</option>
-                        <option value="male"   @selected(old('gender', auth()->user()->gender) === 'male')>Male</option>
-                        <option value="female" @selected(old('gender', auth()->user()->gender) === 'female')>Female</option>
-                        <option value="other"  @selected(old('gender', auth()->user()->gender) === 'other')>Other</option>
-                    </select>
+                <div style="flex:1;">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label">Your Full Name *</label>
+                        <input type="text" name="name" class="form-input" required
+                               value="{{ old('name', auth()->user()->name) }}"
+                               placeholder="Rahul Sharma">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Gender</label>
+                        <select name="gender" class="form-select">
+                            <option value="">Prefer not to say</option>
+                            <option value="male"   @selected(old('gender', auth()->user()->gender) === 'male')>Male</option>
+                            <option value="female" @selected(old('gender', auth()->user()->gender) === 'female')>Female</option>
+                            <option value="other"  @selected(old('gender', auth()->user()->gender) === 'other')>Other</option>
+                        </select>
+                    </div>
                 </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
                 <div class="form-group">
                     <label class="form-label">Phone Number</label>
                     <div class="input-prefix">
                         <span class="input-prefix-label">🇮🇳 +91</span>
                         <input type="tel" name="phone" class="form-input" placeholder="98765 43210" maxlength="10"
-                               value="{{ old('phone', ltrim(auth()->user()->phone ?? '', '+91')) }}">
+                               value="{{ old('phone', preg_replace('/\D/', '', substr(auth()->user()->phone ?? '', -10))) }}">
                     </div>
                 </div>
-            </div>
-
-            {{-- User type --}}
-            <div class="form-group">
-                <label class="form-label">I best describe myself as *</label>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
-                    @foreach([
-                        ['🎒','10th–12th Student'],
-                        ['🎓','Undergraduate (College)'],
-                        ['📚','Postgraduate / MBA Student'],
-                        ['💼','Working Professional (1–5 yrs)'],
-                        ['🏢','Working Professional (5+ yrs)'],
-                        ['🔄','Career Changer'],
-                        ['💡','Startup Founder'],
-                        ['📋','Job Seeker / Fresher'],
-                    ] as [$icon, $type])
-                    <label id="type-{{ Str::slug($type) }}"
-                           style="display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--border); border-radius:var(--radius); cursor:pointer; font-size:13px; transition:all .2s;"
-                           onclick="styleTypeCard(this)">
-                        <input type="radio" name="user_type" value="{{ $type }}" style="accent-color:var(--brand);"
-                               @if(old('user_type') === $type) checked @endif>
-                        <span>{{ $icon }}&nbsp; {{ $type }}</span>
-                    </label>
-                    @endforeach
+                <div class="form-group">
+                    <label class="form-label">Address / Location *</label>
+                    <input type="text" name="address" class="form-input" required maxlength="200"
+                           placeholder="City, state or full address"
+                           value="{{ old('address', auth()->user()->location) }}">
                 </div>
             </div>
 
             <button type="submit" class="btn btn-primary btn-full btn-lg">Continue →</button>
-
-            <p style="text-align:center; margin-top:14px; font-size:13px; color:var(--text-2);">
-                Already have an account? <a href="{{ route('login') }}" style="color:var(--brand); font-weight:600;">Sign in</a>
-            </p>
         </form>
 
         {{-- ════════════════════════════════════════════════
@@ -179,6 +178,13 @@
                 <div id="stream-error" class="form-error" style="display:none; margin-top:8px;">Please select a career stream.</div>
             </div>
 
+            <div class="form-group">
+                <label class="form-label">Field of Study</label>
+                <input type="text" name="field" class="form-input"
+                       placeholder="Computer Science, Finance, Psychology…"
+                       value="{{ old('field', auth()->user()->field) }}">
+            </div>
+
             {{-- College & Year --}}
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                 <div class="form-group">
@@ -202,102 +208,127 @@
         </form>
 
         {{-- ════════════════════════════════════════════════
-             STEP 3 — Career Goals
+             STEP 3 — Career Tracks
              ════════════════════════════════════════════════ --}}
         @elseif($step == 3)
-        <h2 style="font-size:19px; font-weight:800; margin-bottom:4px;">Your Career Goals</h2>
-        <p style="font-size:13px; color:var(--text-2); margin-bottom:28px;">What do you want to achieve? We'll match you with the best-fit mentors.</p>
+        @php $selectedTracks = collect($tracks ?? [])->filter()->values(); @endphp
+        <h2 style="font-size:19px; font-weight:800; margin-bottom:4px;">Your Career Tracks</h2>
+        <p style="font-size:13px; color:var(--text-2); margin-bottom:28px;">Pick the tracks you want help with — same as the app. We'll match you with the best-fit mentors.</p>
 
         <form
             action="{{ route('mentee.onboarding.save3') }}"
             method="POST"
+            id="mentee-tracks-form"
             data-ajax-form="{{ route('mentee.onboarding.save3') }}"
             data-redirect="{{ route('mentee.onboarding', ['step' => 4]) }}"
-            data-success="Goals saved!"
+            data-success="Tracks saved!"
         >
             @csrf
 
+            <div id="tracks-hidden-inputs">
+                @foreach($selectedTracks as $track)
+                <input type="hidden" name="tracks[]" value="{{ $track }}" data-onboard-hidden="tracks">
+                @endforeach
+            </div>
+
             <div class="form-group">
-                <label class="form-label">I want help with… <span style="font-weight:400; color:var(--text-3);">(select all that apply)</span></label>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
-                    @foreach([
-                        ['💻','Cracking FAANG / Tech Interviews'],
-                        ['🎓','MBA Admissions (CAT / GMAT / GRE)'],
-                        ['🔄','Career Switch to a New Field'],
-                        ['💼','Getting My First Job'],
-                        ['💡','Startup Advice & Entrepreneurship'],
-                        ['🏆','Improving Leadership Skills'],
-                        ['📋','UPSC / Government Exam Preparation'],
-                        ['✈️','Study Abroad / Masters Abroad'],
-                        ['💰','Salary Negotiation & Job Offers'],
-                        ['🎨','Freelancing & Consulting'],
-                        ['📈','Building Specific Technical Skills'],
-                        ['🗂️','General Career Planning & Direction'],
-                    ] as [$icon, $goal])
-                    <label style="display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--border); border-radius:var(--radius); cursor:pointer; font-size:13px; transition:all .2s;"
-                           onclick="this.style.borderColor = this.querySelector('input').checked ? 'var(--brand)' : 'var(--border)'; this.style.background = this.querySelector('input').checked ? 'var(--brand-muted)' : 'var(--card-bg)'">
-                        <input type="checkbox" name="career_goals[]" value="{{ $goal }}" style="accent-color:var(--brand);"
-                               @if(in_array($goal, auth()->user()->career_goals ?? [])) checked @endif>
-                        <span>{{ $icon }}&nbsp; {{ $goal }}</span>
-                    </label>
+                <label class="form-label">Selected tracks *</label>
+                <div id="tracks-chips" style="min-height:48px; padding:12px; background:var(--bg-3); border:1px solid var(--border); border-radius:var(--radius); display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                    @forelse($selectedTracks as $track)
+                    <span class="skill-tag" data-chip-field="tracks" data-chip-value="{{ $track }}"
+                          style="display:inline-flex; align-items:center; gap:6px; padding:5px 12px; background:var(--brand-muted); border:1px solid rgba(245,158,11,.3); border-radius:999px; font-size:12px; font-weight:600; color:var(--brand);">
+                        {{ $track }}
+                        <button type="button" onclick="removeTrackChip(this)" style="background:none; color:var(--brand); font-size:14px; cursor:pointer; line-height:1; padding:0;">×</button>
+                    </span>
+                    @empty
+                    <div id="tracks-placeholder" style="font-size:12px; color:var(--text-3);">No tracks yet. Tap a suggestion or add your own.</div>
+                    @endforelse
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="tracks-input" class="form-input" placeholder="e.g. Frontend Development, UI UX Design">
+                    <button type="button" class="btn btn-ghost" onclick="addTrackFromInput()" style="flex-shrink:0;">+ Add</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Quick add</label>
+                <div class="chip-wrap">
+                    @foreach(($trackSuggestions ?? collect(['Frontend Development','UI UX Design','Data Science','Product Management','MBA Prep','DSA & Algorithms','Career Switch','Startup Advice'])) as $opt)
+                    @php $optName = is_object($opt) ? $opt->name : $opt; @endphp
+                    <div class="chip {{ $selectedTracks->contains($optName) ? 'selected' : '' }}" onclick="addTrackDirect('{{ addslashes($optName) }}')">{{ $optName }}</div>
+                    @endforeach
+                    @foreach(['Cracking FAANG / Tech Interviews','Getting My First Job','Study Abroad / Masters Abroad'] as $extra)
+                    <div class="chip {{ $selectedTracks->contains($extra) ? 'selected' : '' }}" onclick="addTrackDirect('{{ addslashes($extra) }}')">{{ $extra }}</div>
                     @endforeach
                 </div>
             </div>
 
-            {{-- Short message to mentor --}}
-            <div class="form-group">
-                <label class="form-label">Anything else you'd like your mentor to know? <span style="font-weight:400; color:var(--text-3);">(Optional)</span></label>
-                <textarea name="intro_message" class="form-textarea" rows="3"
-                          placeholder="e.g. I'm preparing for FAANG interviews in 3 months and need structured DSA practice…"
-                          maxlength="500">{{ old('intro_message') }}</textarea>
-                <div class="form-hint">This will be visible to mentors when you book a session.</div>
-            </div>
-
             <div style="display:flex; gap:12px;">
                 <a href="{{ route('mentee.onboarding', ['step' => 2]) }}" class="btn btn-ghost" style="flex-shrink:0;">← Back</a>
-                <button type="submit" class="btn btn-primary" style="flex:1;" onclick="return validateGoals()">Continue →</button>
+                <button type="submit" class="btn btn-primary" style="flex:1;" onclick="return validateTracks()">Continue →</button>
             </div>
         </form>
 
         {{-- ════════════════════════════════════════════════
-             STEP 4 — Complete / Welcome Screen
+             STEP 4 — Preferences
              ════════════════════════════════════════════════ --}}
         @elseif($step == 4)
-        <div class="text-center">
-            <div style="font-size:72px; margin-bottom:16px;">🚀</div>
-            <h2 style="font-size:24px; font-weight:800; margin-bottom:10px;">You're ready to learn!</h2>
-            <p style="font-size:14px; color:var(--text-2); line-height:1.75; max-width:440px; margin:0 auto 32px;">
-                Your profile is set up. Start exploring mentors, book your first session, and kick off your learning journey.
-            </p>
+        <h2 style="font-size:19px; font-weight:800; margin-bottom:4px;">Set Your Preferences</h2>
+        <p style="font-size:13px; color:var(--text-2); margin-bottom:28px;">Tell us how you prefer to learn so we can match the right mentoring style.</p>
 
-            {{-- What's next --}}
-            <div style="background:var(--bg-3); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; text-align:left; margin-bottom:28px;">
-                <div style="font-size:13px; font-weight:700; margin-bottom:16px; text-align:center;">What to do next</div>
-                @foreach([
-                    ['🔍','Find a Mentor','Browse and filter 2,400+ verified mentors in your domain.',                route('mentors.search'),'Find Mentors'],
-                    ['💰','Add Wallet Balance','Top up your wallet to pay for sessions. Rates from ₹5/min.',        route('mentee.wallet'),'Add Money'],
-                    ['📅','Book Your First Session','Choose a date, time, and duration that works for you.',         route('mentors.search'),'Book a Session'],
-                    ['🗺️','Start Your Journey','Enrol in a 6-month structured learning path with milestones.',       route('mentee.journey.index'),'My Journey'],
-                ] as [$icon, $title, $desc, $link, $cta])
-                <div style="display:flex; gap:14px; align-items:flex-start; padding:14px 0; border-bottom:1px solid var(--border);">
-                    <div style="width:40px; height:40px; border-radius:var(--radius-sm); background:var(--brand-muted); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;">{{ $icon }}</div>
-                    <div style="flex:1;">
-                        <div style="font-size:13px; font-weight:700; margin-bottom:2px;">{{ $title }}</div>
-                        <div style="font-size:12px; color:var(--text-2);">{{ $desc }}</div>
-                    </div>
-                    <a href="{{ $link }}" class="btn btn-outline btn-sm" style="flex-shrink:0; white-space:nowrap;">{{ $cta }}</a>
+        <form
+            action="{{ route('mentee.onboarding.save4') }}"
+            method="POST"
+            data-ajax-form="{{ route('mentee.onboarding.save4') }}"
+            data-redirect="{{ route('mentee.dashboard') }}"
+            data-success="Onboarding complete!"
+        >
+            @csrf
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Weekly Time Commitment *</label>
+                    <select name="weekly_time_commitment" class="form-select" required>
+                        <option value="">Select…</option>
+                        @foreach(['1-3 hours'=>'1–3 hours/week','3-5 hours'=>'3–5 hours/week','5-10 hours'=>'5–10 hours/week','10+ hours'=>'10+ hours/week'] as $val=>$label)
+                        <option value="{{ $val }}" @selected(old('weekly_time_commitment', $preferences['weekly_time_commitment'] ?? '') === $val)>{{ $label }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                @endforeach
+                <div class="form-group">
+                    <label class="form-label">Monthly Budget</label>
+                    <select name="monthly_budget" class="form-select">
+                        <option value="">Select…</option>
+                        @foreach(['Under ₹500','₹500 – ₹1,000','₹1,000 – ₹3,000','₹2,500+'] as $val)
+                        <option value="{{ $val }}" @selected(old('monthly_budget', $preferences['monthly_budget'] ?? '') === $val)>{{ $val }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Preferred Language *</label>
+                    <select name="preferred_language" class="form-select" required>
+                        <option value="">Select…</option>
+                        @foreach(['English','Hindi','Tamil','Telugu','Kannada','Malayalam','Bengali','Marathi'] as $lang)
+                        <option value="{{ $lang }}" @selected(old('preferred_language', $preferences['preferred_language'] ?? '') === $lang)>{{ $lang }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mentoring Format *</label>
+                    <select name="mentoring_format" class="form-select" required>
+                        <option value="">Select…</option>
+                        @foreach(['one_on_one'=>'1:1 sessions','group'=>'Group sessions','video'=>'Video calls','audio'=>'Audio only','hybrid'=>'Hybrid / in-person'] as $val=>$label)
+                        <option value="{{ $val }}" @selected(old('mentoring_format', $preferences['mentoring_format'] ?? '') === $val)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
 
-            {{-- Submit --}}
-            <form action="{{ route('mentee.onboarding.complete') }}" method="POST">
-                @csrf
-                <button type="submit" class="btn btn-primary btn-xl btn-full" style="font-size:16px;">
-                    🚀 Go to My Dashboard
-                </button>
-            </form>
-        </div>
+            <div style="display:flex; gap:12px;">
+                <a href="{{ route('mentee.onboarding', ['step' => 3]) }}" class="btn btn-ghost" style="flex-shrink:0;">← Back</a>
+                <button type="submit" class="btn btn-primary" style="flex:1;">Finish & Go to Dashboard →</button>
+            </div>
+        </form>
         @endif
 
     </div>{{-- /card --}}
@@ -307,20 +338,18 @@
 
 @push('scripts')
 <script>
-// ── User type card styling ────────────────────────────────────
-function styleTypeCard(label) {
-    document.querySelectorAll('label[id^="type-"]').forEach(l => {
-        l.style.borderColor = 'var(--border)';
-        l.style.background  = 'var(--card-bg)';
-    });
-    const inp = label.querySelector('input');
-    if (inp && inp.checked) {
-        label.style.borderColor = 'var(--brand)';
-        label.style.background  = 'var(--brand-muted)';
-    }
+function previewImage(input, selector) {
+    const file = input.files?.[0];
+    if (!file) return;
+    const preview = document.querySelector(selector);
+    if (!preview) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        preview.innerHTML = `<img src="${reader.result}" style="width:100%;height:100%;object-fit:cover;">`;
+    };
+    reader.readAsDataURL(file);
 }
 
-// ── Stream selection ──────────────────────────────────────────
 function selectStream(card) {
     document.querySelectorAll('.stream-option').forEach(c => {
         c.style.borderColor = 'var(--border)';
@@ -345,19 +374,91 @@ function validateStream() {
     return true;
 }
 
-// ── Goals validation ──────────────────────────────────────────
-function validateGoals() {
-    const checked = document.querySelectorAll('input[name="career_goals[]"]:checked').length;
-    if (checked === 0) {
-        showToast('error', 'Please select at least one goal.');
+function selectedTrackValues() {
+    return [...document.querySelectorAll('#tracks-hidden-inputs input[name="tracks[]"]')]
+        .map(i => i.value.trim())
+        .filter(Boolean);
+}
+
+function syncTrackChips() {
+    const container = document.getElementById('tracks-hidden-inputs');
+    if (!container) return;
+    container.innerHTML = '';
+    document.querySelectorAll('#tracks-chips [data-chip-field="tracks"]').forEach(span => {
+        const value = (span.dataset.chipValue || '').trim();
+        if (!value) return;
+        const inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'tracks[]';
+        inp.value = value;
+        inp.dataset.onboardHidden = 'tracks';
+        container.appendChild(inp);
+    });
+}
+
+function addTrackDirect(track) {
+    const name = (track || '').trim();
+    if (!name) return;
+    const existing = selectedTrackValues().map(v => v.toLowerCase());
+    if (existing.includes(name.toLowerCase())) return;
+
+    const chips = document.getElementById('tracks-chips');
+    document.getElementById('tracks-placeholder')?.remove();
+    const span = document.createElement('span');
+    span.className = 'skill-tag';
+    span.dataset.chipField = 'tracks';
+    span.dataset.chipValue = name;
+    span.style.cssText = 'display:inline-flex; align-items:center; gap:6px; padding:5px 12px; background:var(--brand-muted); border:1px solid rgba(245,158,11,.3); border-radius:999px; font-size:12px; font-weight:600; color:var(--brand);';
+    span.innerHTML = `${name}<button type="button" onclick="removeTrackChip(this)" style="background:none; color:var(--brand); font-size:14px; cursor:pointer; line-height:1; padding:0;">×</button>`;
+    chips.appendChild(span);
+    syncTrackChips();
+    document.querySelectorAll('.chip').forEach(c => {
+        if (c.textContent.trim().toLowerCase() === name.toLowerCase()) c.classList.add('selected');
+    });
+}
+
+function addTrackFromInput() {
+    const input = document.getElementById('tracks-input');
+    if (!input) return;
+    const raw = input.value.trim().replace(/,+$/, '');
+    if (!raw) return;
+    raw.split(',').map(v => v.trim()).filter(Boolean).forEach(addTrackDirect);
+    input.value = '';
+}
+
+function removeTrackChip(btn) {
+    const span = btn.closest('[data-chip-field="tracks"]');
+    const name = span?.dataset.chipValue || '';
+    span?.remove();
+    syncTrackChips();
+    document.querySelectorAll('.chip').forEach(c => {
+        if (c.textContent.trim().toLowerCase() === name.toLowerCase()) c.classList.remove('selected');
+    });
+    const chips = document.getElementById('tracks-chips');
+    if (chips && !chips.querySelector('[data-chip-field="tracks"]') && !document.getElementById('tracks-placeholder')) {
+        chips.innerHTML = '<div id="tracks-placeholder" style="font-size:12px; color:var(--text-3);">No tracks yet. Tap a suggestion or add your own.</div>';
+    }
+}
+
+function validateTracks() {
+    addTrackFromInput();
+    syncTrackChips();
+    if (selectedTrackValues().length === 0) {
+        showToast('error', 'Please select at least one track.');
         return false;
     }
     return true;
 }
 
-// ── Restore checkbox / radio border styles on load ────────────
+document.getElementById('tracks-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTrackFromInput(); }
+});
+document.getElementById('mentee-tracks-form')?.addEventListener('submit', () => {
+    addTrackFromInput();
+    syncTrackChips();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Pre-select stream on page load (if old value exists)
     const streamVal = document.getElementById('stream-hidden')?.value;
     if (streamVal) {
         document.querySelectorAll('.stream-option').forEach(c => {
@@ -367,24 +468,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    // Restore checkbox label styles
-    document.querySelectorAll('input[type="checkbox"]:checked').forEach(inp => {
-        const label = inp.closest('label');
-        if (label) {
-            label.style.borderColor = 'var(--brand)';
-            label.style.background  = 'var(--brand-muted)';
-        }
-    });
-
-    // Restore radio label styles
-    document.querySelectorAll('input[type="radio"]:checked').forEach(inp => {
-        const label = inp.closest('label');
-        if (label) {
-            label.style.borderColor = 'var(--brand)';
-            label.style.background  = 'var(--brand-muted)';
-        }
-    });
 });
 </script>
 @endpush

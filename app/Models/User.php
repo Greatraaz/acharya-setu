@@ -271,6 +271,71 @@ class User extends Authenticatable
         return $this->hasMany(ChannelInvitation::class);
     }
 
+    /**
+     * Last 10 digits of an Indian mobile number, ignoring +91 / 91 / spaces.
+     */
+    public static function localTenDigits(?string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone) ?? '';
+
+        if (strlen($digits) >= 12 && str_starts_with($digits, '91')) {
+            return substr($digits, -10);
+        }
+
+        if (strlen($digits) === 11 && str_starts_with($digits, '0')) {
+            return substr($digits, -10);
+        }
+
+        return substr($digits, -10);
+    }
+
+    /**
+     * Formats a stored phone may use, so login matches 8787878787 and +91 8787878787.
+     */
+    public static function phoneLookupVariants(?string $phone): array
+    {
+        $local = static::localTenDigits($phone);
+        if (strlen($local) !== 10) {
+            return array_values(array_filter([(string) $phone]));
+        }
+
+        return array_values(array_unique([
+            $local,
+            '0' . $local,
+            '91' . $local,
+            '+91' . $local,
+            '+91 ' . $local,
+            '91 ' . $local,
+            '+91 ' . substr($local, 0, 5) . ' ' . substr($local, 5),
+        ]));
+    }
+
+    public static function findByPhone(?string $phone): ?self
+    {
+        if (! filled($phone)) {
+            return null;
+        }
+
+        $variants = static::phoneLookupVariants($phone);
+        $user = static::query()->whereIn('phone', $variants)->first();
+        if ($user) {
+            return $user;
+        }
+
+        $local = static::localTenDigits($phone);
+        if (strlen($local) !== 10) {
+            return static::query()->where('phone', $phone)->first();
+        }
+
+        return static::query()
+            ->whereNotNull('phone')
+            ->whereRaw(
+                "RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+', ''), '(', ''), ')', ''), 10) = ?",
+                [$local]
+            )
+            ->first();
+    }
+
     // ── Scopes ────────────────────────────────────────────────
     public function scopeMentors(Builder $q): Builder  { return $q->where('role', 'mentor'); }
     public function scopeMentees(Builder $q): Builder  { return $q->where('role', 'mentee'); }

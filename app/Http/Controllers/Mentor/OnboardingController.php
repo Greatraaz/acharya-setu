@@ -12,30 +12,32 @@ class OnboardingController extends Controller
     // Show step view
     public function show(int $step)
     {
-        $streams = \App\Models\User::getEducationStreams(); // or load from DB
+        $streams = collect();
         try {
-            $streams = \DB::table('education_streams')->where('is_active', true)->orderBy('sort_order')->get();
+            $streams = \DB::table('education_streams')->where('is_active', true)->whereNull('mentee_id')->orderBy('sort_order')->get();
         } catch (\Throwable) {
             $streams = collect();
         }
-        return view('onboarding.mentor.steps', compact('step', 'streams'));
+        return view('frontend.mentors.steps', compact('step', 'streams'));
     }
 
     // Step 1: Basic info + avatar
     public function saveStep1(Request $request)
     {
         $data = $request->validate([
-            'name'    => 'required|string|max:100',
-            'gender'  => 'nullable|string',
-            'phone'   => 'nullable|string',
-            'linkedin'=> 'nullable|url',
-            'bio'     => 'required|string|min:50|max:2000',
+            'name'     => 'required|string|max:100',
+            'gender'   => 'nullable|in:male,female,other',
+            'phone'    => 'nullable|string|max:20',
+            'linkedin' => 'nullable|url',
+            'bio'      => 'required|string|min:50|max:2000',
+            'avatar'   => 'nullable|file|image|mimes:jpeg,png,webp|max:2048',
         ]);
 
         if ($request->hasFile('avatar')) {
             $path = $request->file('avatar')->store('avatars', 'public');
             $data['avatar_url'] = '/storage/' . $path;
         }
+        unset($data['avatar']);
 
         auth()->user()->update(array_merge($data, ['onboarding_step' => 1]));
 
@@ -71,10 +73,22 @@ class OnboardingController extends Controller
     public function saveStep4(Request $request)
     {
         $data = $request->validate([
-            'preferences' => 'nullable|array',
-            'strengths'   => 'nullable|array',
+            'preferences'                  => 'nullable|array',
+            'preferences.preferred_time'   => 'nullable|string',
+            'preferences.session_length'   => 'nullable|integer',
+            'strengths'                    => 'nullable|array',
+            'strengths.*'                  => 'string',
         ]);
-        auth()->user()->update(array_merge($data, ['onboarding_step' => 4]));
+
+        $update = ['onboarding_step' => 4];
+        if (array_key_exists('preferences', $data)) {
+            $update['preferences'] = $data['preferences'];
+        }
+        if (array_key_exists('strengths', $data)) {
+            $update['strengths'] = $data['strengths'];
+        }
+
+        auth()->user()->update($update);
         return $this->stepResponse($request, 5);
     }
 

@@ -1,5 +1,5 @@
 {{-- resources/views/onboarding/mentor/pending.blade.php --}}
-@extends('layouts.app')
+@extends('frontend.layouts.app')
 @section('title','Application Under Review — Vedrix')
 @section('content')
 <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(var(--nav-h)+40px) 16px 60px;">

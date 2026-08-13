@@ -563,13 +563,19 @@
        border-radius: var(--radius-sm);
        font-size: 13px;
        color: var(--text);
+       background: transparent;
+       border: none;
+       width: 100%;
        cursor: pointer;
-       transition: background var(--trans);
+       transition: background var(--trans), color var(--trans);
        text-decoration: none;
    }
    .dropdown-item:hover {
        background: var(--bg-4);
        color: var(--brand);
+   }
+   .dropdown-item.danger {
+       color: var(--error);
    }
    .dropdown-item.danger:hover {
        background: var(--error-muted);

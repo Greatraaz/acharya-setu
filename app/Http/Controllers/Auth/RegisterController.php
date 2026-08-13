@@ -58,8 +58,8 @@ class RegisterController extends Controller
             'is_active'             => true,
         ]);
 
-        Auth::guard('admin')->login($user);
-   
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
 
         $redirect = match ($user->role) {
             'mentor' => route('mentor.onboarding', ['step' => 1]),

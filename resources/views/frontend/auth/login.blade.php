@@ -45,11 +45,12 @@
             </div>
             @endif
 
-            {{-- Tabs --}}
+            {{-- Phone OTP login hidden from UI for now
             <div class="tab-bar" style="margin-bottom:24px;">
                 <button class="tab-btn active" onclick="switchTab(this,'tab-email')">📧 Email</button>
                 <button class="tab-btn" onclick="switchTab(this,'tab-phone')">📱 Phone OTP</button>
             </div>
+            --}}
 
             {{-- Email tab --}}
             <div id="tab-email" class="tab-content active">
@@ -75,7 +76,7 @@
                 </form>
             </div>
 
-            {{-- Phone OTP tab --}}
+            {{-- Phone OTP tab — hidden from UI
             <div id="tab-phone" class="tab-content">
                 <div id="phone-step-1">
                     <div class="form-group">
@@ -114,6 +115,7 @@
                     </div>
                 </div>
             </div>
+            --}}
 
             <div class="divider-text" style="margin:24px 0;">
                 <span>or</span>
@@ -130,6 +132,7 @@
 @endif
 @endsection
 
+{{-- Phone OTP login JS — hidden from UI
 @push('scripts')
 <script>
 function switchTab(btn, tabId) {
@@ -175,3 +178,4 @@ function loginVerifyOtp() {
 }
 </script>
 @endpush
+--}}

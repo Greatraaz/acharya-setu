@@ -173,7 +173,7 @@ Route::middleware(['auth', 'role:mentor'])->group(function () {
         Route::post('/step/3',  [MentorOnboardingController::class, 'saveStep3'])->name('.save3');
         Route::post('/step/4',  [MentorOnboardingController::class, 'saveStep4'])->name('.save4');
         Route::post('/submit',  [MentorOnboardingController::class, 'submit'])   ->name('.submit');
-        Route::get('/pending',  fn() => view('onboarding.mentor.pending'))        ->name('.pending');
+        Route::get('/pending',  fn() => view('frontend.mentors.pending'))        ->name('.pending');
     });
 });
 
@@ -194,6 +194,7 @@ Route::middleware(['auth', 'role:mentee'])->group(function () {
         Route::post('/step/1',  [MenteeOnboardingController::class, 'saveStep1'])->name('.save1');
         Route::post('/step/2',  [MenteeOnboardingController::class, 'saveStep2'])->name('.save2');
         Route::post('/step/3',  [MenteeOnboardingController::class, 'saveStep3'])->name('.save3');
+        Route::post('/step/4',  [MenteeOnboardingController::class, 'saveStep4'])->name('.save4');
         Route::post('/complete',[MenteeOnboardingController::class, 'complete'])  ->name('.complete');
     });
 });

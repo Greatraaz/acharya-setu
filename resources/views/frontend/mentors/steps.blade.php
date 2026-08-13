@@ -123,11 +123,11 @@
             {{-- Bio --}}
             <div class="form-group">
                 <label class="form-label">Bio / About You *</label>
-                <textarea name="bio" class="form-textarea" rows="5" required minlength="80" maxlength="2000"
+                <textarea name="bio" class="form-textarea" rows="5" required minlength="50" maxlength="2000"
                           id="bio-area"
                           placeholder="Write a compelling bio. Tell mentees who you are, what you've done, and what kind of help you can offer. Be specific — this is your first impression.">{{ old('bio', auth()->user()->bio) }}</textarea>
                 <div style="display:flex; justify-content:space-between; margin-top:4px;">
-                    <div class="form-hint">Minimum 80 characters. Be specific about your background.</div>
+                    <div class="form-hint">Minimum 50 characters. Be specific about your background.</div>
                     <div style="font-size:11px; color:var(--text-3);"><span id="bio-count">{{ strlen(auth()->user()->bio ?? '') }}</span>/2000</div>
                 </div>
             </div>
@@ -167,7 +167,7 @@
                 <div class="form-group">
                     <label class="form-label">Years of Experience *</label>
                     <input type="number" name="experience_years" class="form-input" required
-                           min="1" max="50" placeholder="8"
+                           min="0" max="50" placeholder="8"
                            value="{{ old('experience_years', auth()->user()->experience_years) }}">
                 </div>
                 <div class="form-group">
@@ -319,27 +319,29 @@
         >
             @csrf
 
-            {{-- Mentee Types --}}
-            <div class="form-group">
-                <label class="form-label">Who can you best help? <span style="font-weight:400; color:var(--text-3);">(select all that apply)</span></label>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
-                    @foreach([
-                        '10th–12th Students',
-                        'College Undergraduates',
-                        'Postgraduates / MBA Students',
-                        'Working Professionals (1–5 yrs)',
-                        'Working Professionals (5+ yrs)',
-                        'Career Changers',
-                        'Startup Founders',
-                        'UPSC / Government Exam Aspirants',
-                    ] as $type)
-                    <label style="display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--border); border-radius:var(--radius); cursor:pointer; font-size:13px; transition:all .2s;"
-                           onclick="this.style.borderColor = this.querySelector('input').checked ? 'var(--brand)' : 'var(--border)'; this.style.background = this.querySelector('input').checked ? 'var(--brand-muted)' : 'var(--card-bg)'">
-                        <input type="checkbox" name="preferences[]" value="{{ $type }}" style="accent-color:var(--brand);"
-                               @if(in_array($type, auth()->user()->preferences ?? [])) checked @endif>
-                        {{ $type }}
-                    </label>
-                    @endforeach
+            @php
+                $mentorPrefs = auth()->user()->preferences ?? [];
+                $preferredTime = old('preferences.preferred_time', $mentorPrefs['preferred_time'] ?? '');
+                $sessionLength = old('preferences.session_length', $mentorPrefs['session_length'] ?? '');
+            @endphp
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="form-group">
+                    <label class="form-label">Preferred time</label>
+                    <select name="preferences[preferred_time]" class="form-select">
+                        <option value="">Select…</option>
+                        @foreach(['morning'=>'Morning','afternoon'=>'Afternoon','evening'=>'Evening','weekend'=>'Weekends','flexible'=>'Flexible'] as $val=>$label)
+                        <option value="{{ $val }}" @selected((string) $preferredTime === (string) $val)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Preferred session length</label>
+                    <select name="preferences[session_length]" class="form-select">
+                        <option value="">Select…</option>
+                        @foreach([30=>'30 minutes',45=>'45 minutes',60=>'60 minutes',90=>'90 minutes'] as $val=>$label)
+                        <option value="{{ $val }}" @selected((string) $sessionLength === (string) $val)>{{ $label }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
 
@@ -383,7 +385,7 @@
             $u = auth()->user();
             $checks = [
                 ['Photo uploaded',          (bool) $u->avatar_url,                    route('mentor.onboarding', ['step'=>1])],
-                ['Bio written (80+ chars)',  strlen($u->bio ?? '') >= 80,              route('mentor.onboarding', ['step'=>1])],
+                ['Bio written (50+ chars)',  strlen($u->bio ?? '') >= 50,              route('mentor.onboarding', ['step'=>1])],
                 ['Designation & Company',   !empty($u->designation) && !empty($u->company), route('mentor.onboarding', ['step'=>2])],
                 ['Experience & Rate',       $u->experience_years > 0 && $u->rate_per_minute > 0, route('mentor.onboarding', ['step'=>2])],
                 ['Expertise skills added',  !empty($u->expertise) && count($u->expertise) >= 1, route('mentor.onboarding', ['step'=>3])],
@@ -488,7 +490,7 @@ const bioCount = document.getElementById('bio-count');
 if (bioArea && bioCount) {
     bioArea.addEventListener('input', () => {
         bioCount.textContent = bioArea.value.length;
-        bioCount.style.color = bioArea.value.length < 80 ? 'var(--error)' : 'var(--text-3)';
+        bioCount.style.color = bioArea.value.length < 50 ? 'var(--error)' : 'var(--text-3)';
     });
 }
 

@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\OtpCode;
 use App\Models\User;
 use App\Mail\OtpMail;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
 
 class OtpController extends Controller
 {
@@ -44,7 +44,7 @@ class OtpController extends Controller
         }
 
         // ── Send SMS OTP ──────────────────────────────────────
-        $this->sendSms($request->phone, "Your Vedrix OTP is {$phoneOtp}. Valid for 10 minutes. Do not share.");
+        SmsService::sendOtp($request->phone, $phoneOtp);
 
         return response()->json([
             'message'    => 'OTPs sent to your email and phone.',
@@ -63,8 +63,8 @@ class OtpController extends Controller
     {
         $request->validate(['phone' => 'required|string|min:10']);
 
-        // Ensure user exists
-        $user = User::where('phone', $request->phone)->first();
+        // Match 8787878787, +918787878787, +91 8787878787, etc.
+        $user = User::findByPhone($request->phone);
         if (! $user) {
             return response()->json(['message' => 'No account found with this phone number.'], 404);
         }
@@ -72,7 +72,7 @@ class OtpController extends Controller
         $otp = $this->generateOtp();
         OtpCode::storeOtp($request->phone, 'phone', $otp);
 
-        $this->sendSms($request->phone, "Your Vedrix login OTP is {$otp}. Valid for 10 minutes.");
+        SmsService::sendOtp($request->phone, $otp);
 
         return response()->json(['message' => 'OTP sent to your phone.', 'expires_in' => 600]);
     }
@@ -120,12 +120,12 @@ class OtpController extends Controller
             return response()->json(['message' => 'Invalid or expired OTP.'], 422);
         }
 
-        $user = User::where('phone', $request->phone)->first();
+        $user = User::findByPhone($request->phone);
         if (! $user) {
             return response()->json(['message' => 'Account not found.'], 404);
         }
 
-        Auth::login($user, true);
+        Auth::guard('web')->login($user, true);
         $request->session()->regenerate();
 
         $redirect = $this->redirectForUser($user);
@@ -144,58 +144,21 @@ class OtpController extends Controller
         return str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
     }
 
-    private function sendSms(string $phone, string $message): void
-    {
-        $provider = config('services.sms.provider', 'msg91'); // msg91 | fast2sms | sns
-
-        try {
-            match ($provider) {
-                'msg91'     => $this->sendViaMSG91($phone, $message),
-                'fast2sms'  => $this->sendViaFast2SMS($phone, $message),
-                default     => Log::info("SMS (no provider): To {$phone}: {$message}"),
-            };
-        } catch (\Throwable $e) {
-            Log::error("SMS send failed [{$provider}]: " . $e->getMessage());
-        }
-    }
-
-    private function sendViaMSG91(string $phone, string $message): void
-    {
-        $authKey  = config('services.msg91.auth_key');
-        $senderId = config('services.msg91.sender_id', 'VEDRIX');
-        $route    = config('services.msg91.route', '4');
-
-        // Ensure +91 format
-        $phone = preg_replace('/^\+/', '', $phone);
-
-        Http::post('https://api.msg91.com/api/v5/flow/', [
-            'authkey'       => $authKey,
-            'template_id'   => config('services.msg91.otp_template_id'),
-            'mobile'        => $phone,
-            'OTP'           => substr($message, strpos($message, ' is ') + 4, 6),
-        ]);
-    }
-
-    private function sendViaFast2SMS(string $phone, string $message): void
-    {
-        $key = config('services.fast2sms.api_key');
-        Http::withHeaders(['authorization' => $key])
-            ->post('https://www.fast2sms.com/dev/bulkV2', [
-                'route'    => 'q',
-                'message'  => $message,
-                'numbers'  => preg_replace('/^\+91/', '', $phone),
-            ]);
-    }
-
     private function redirectForUser(User $user): string
     {
         if ($user->role === 'admin') return route('admin.dashboard');
         if ($user->role === 'mentor') {
-            if (! $user->onboarding_completed) return route('mentor.onboarding', ['step' => 1]);
+            if (! $user->onboarding_completed) {
+                $step = max(1, $user->onboarding_step + 1);
+                return route('mentor.onboarding', ['step' => min($step, 5)]);
+            }
             if ($user->mentor_status === 'pending') return route('mentor.onboarding.pending');
             return route('mentor.dashboard');
         }
-        if (! $user->onboarding_completed) return route('mentee.onboarding', ['step' => 1]);
+        if (! $user->onboarding_completed) {
+            $step = max(1, $user->onboarding_step + 1);
+            return route('mentee.onboarding', ['step' => min($step, 4)]);
+        }
         return route('mentee.dashboard');
     }
 }
