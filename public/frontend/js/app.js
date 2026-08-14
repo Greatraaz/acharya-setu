@@ -770,18 +770,66 @@
    window.MentorSearch = (function () {
        let searchTimer;
    
-       function buildQuery() {
+       function filterKey(el) {
+           const key = el.dataset.filter;
+           if (key === "experience") return "exp";
+           return key;
+       }
+   
+       function buildQuery(page) {
            const params = new URLSearchParams();
            const q = document.querySelector("#mentor-search-input")?.value?.trim();
            if (q) params.set("q", q);
-           document.querySelectorAll("[data-filter]:checked").forEach((inp) => {
-               params.append(inp.dataset.filter, inp.value);
+   
+           document.querySelectorAll("[data-filter]").forEach((el) => {
+               const key = filterKey(el);
+               if (!key || key === "session_type" || key === "availability") return;
+   
+               if (el.tagName === "SELECT") {
+                   if (el.value) params.set(key, el.value);
+                   return;
+               }
+   
+               if ((el.type === "checkbox" || el.type === "radio") && el.checked && el.value) {
+                   params.append(key, el.value);
+               }
            });
-           const sort = document.querySelector("[data-sort-select]")?.value;
-           if (sort) params.set("sort", sort);
-           const page = document.querySelector("[data-page]")?.dataset?.page;
-           if (page) params.set("page", page);
+   
+           const sort = document.querySelector("[data-sort-select]")?.value || "best";
+           params.set("sort", sort);
+   
+           const pg = page || document.getElementById("pagination-wrap")?.dataset?.page;
+           if (pg && String(pg) !== "1") params.set("page", pg);
            return params;
+       }
+   
+       function hydrateFromUrl() {
+           const params = new URLSearchParams(window.location.search);
+           const input = document.getElementById("mentor-search-input");
+           if (input && params.has("q")) input.value = params.get("q") || "";
+   
+           const sortSel = document.querySelector("[data-sort-select]");
+           if (sortSel && params.get("sort")) sortSel.value = params.get("sort");
+   
+           const selected = {
+               domain: params.getAll("domain"),
+               rate_range: params.getAll("rate_range"),
+               min_rating: params.getAll("min_rating"),
+               exp: params.getAll("exp").concat(params.getAll("experience")),
+               rate_max: params.getAll("rate_max"),
+           };
+   
+           document.querySelectorAll("[data-filter]").forEach((el) => {
+               const key = filterKey(el);
+               const values = selected[key] || [];
+               if (el.tagName === "SELECT") {
+                   if (values[0]) el.value = values[0];
+                   return;
+               }
+               if (el.type === "checkbox" || el.type === "radio") {
+                   el.checked = values.includes(el.value);
+               }
+           });
        }
    
        function renderMentors(data) {
@@ -790,7 +838,8 @@
            const count = document.getElementById("mentor-count");
            if (count && data.total !== undefined) count.textContent = data.total;
    
-           if (!data.data?.length) {
+           const rows = data.data || data.mentors || [];
+           if (!rows.length) {
                grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
            <div class="empty-state-icon">🔍</div>
            <h3>No mentors found</h3>
@@ -799,36 +848,36 @@
                return;
            }
    
-           grid.innerHTML = data.data
-               .map(
-                   (m) => `
+           grid.innerHTML = rows
+               .map((m) => {
+                   const tags = Array.isArray(m.expertise) ? m.expertise : [];
+                   const name = (m.name || "").replace(/'/g, "\\'");
+                   const rate = m.rate_per_minute ?? 0;
+                   return `
          <div class="mentor-card">
            <div class="mentor-card-head">
              <div class="mentor-avatar-lg">
-               ${m.avatar_url ? `<img src="${m.avatar_url}" alt="${m.name}">` : m.name.charAt(0).toUpperCase()}
+               ${m.avatar_url ? `<img src="${m.avatar_url}" alt="${m.name}">` : (m.name || "?").charAt(0).toUpperCase()}
              </div>
              <div class="mentor-card-info">
-               <div class="mentor-card-name">${m.name}</div>
+               <div class="mentor-card-name">${m.name || ""}</div>
                <div class="mentor-card-role">${m.designation || ""}${m.company ? " · " + m.company : ""}</div>
              </div>
            </div>
            <div class="mentor-card-bio">${(m.bio || "").substring(0, 90)}${(m.bio || "").length > 90 ? "…" : ""}</div>
            <div class="mentor-tags">
-             ${(m.expertise || [])
-                 .slice(0, 4)
-                 .map((e) => `<span class="tag">${e}</span>`)
-                 .join("")}
+             ${tags.slice(0, 4).map((e) => `<span class="tag">${e}</span>`).join("")}
            </div>
            <div class="mentor-card-meta">
-             <span class="mentor-rate">₹${m.rate_per_minute}/min</span>
+             <span class="mentor-rate">₹${rate}/min</span>
              <span class="mentor-rating">⭐ ${m.rating || "—"} (${m.total_sessions || 0} sessions)</span>
            </div>
            <div class="mentor-card-actions">
              <a href="/mentors/${m.slug || m.id}" class="btn btn-outline btn-sm">View Profile</a>
-             <button class="btn btn-primary btn-sm" onclick="openBookingModal(${m.id})">Book Session</button>
+             <button class="btn btn-primary btn-sm" onclick="openBookingModal(${m.id},'${name}',${rate})">Book Session</button>
            </div>
-         </div>`
-               )
+         </div>`;
+               })
                .join("");
    
            // Pagination
@@ -850,17 +899,25 @@
            pg.innerHTML = html;
            pg.querySelectorAll("[data-pg]:not(.disabled):not(.active)").forEach((a) => {
                a.addEventListener("click", () => {
-                   pg.dataset.page = a.dataset.pg;
-                   doSearch();
+                   doSearch(a.dataset.pg);
                    window.scrollTo({ top: 0, behavior: "smooth" });
                });
            });
        }
    
-       function doSearch() {
-           const params = buildQuery();
-           history.replaceState(null, "", "?" + params.toString());
-           AjaxGet("/api/mentors?" + params.toString(), {
+       function doSearch(page) {
+           if (!page) {
+               const wrap = document.getElementById("pagination-wrap");
+               if (wrap) wrap.dataset.page = "1";
+           } else {
+               const wrap = document.getElementById("pagination-wrap");
+               if (wrap) wrap.dataset.page = String(page);
+           }
+   
+           const params = buildQuery(page);
+           const qs = params.toString();
+           history.replaceState(null, "", qs ? "?" + qs : window.location.pathname);
+           AjaxGet("/mentors?" + qs, {
                onSuccess: renderMentors,
                loader: false,
            });
@@ -868,6 +925,7 @@
    
        return {
            init() {
+               hydrateFromUrl();
                const inp = document.getElementById("mentor-search-input");
                if (inp) {
                    inp.addEventListener("input", () => {
@@ -876,24 +934,30 @@
                            doSearch();
                        }, 400);
                    });
+                   inp.addEventListener("keydown", (e) => {
+                       if (e.key === "Enter") {
+                           e.preventDefault();
+                           doSearch();
+                       }
+                   });
                }
                document.querySelectorAll("[data-filter]").forEach((el) => {
-                   el.addEventListener("change", doSearch);
+                   el.addEventListener("change", () => doSearch());
                });
                const sortSel = document.querySelector("[data-sort-select]");
-               if (sortSel) sortSel.addEventListener("change", doSearch);
+               if (sortSel) sortSel.addEventListener("change", () => doSearch());
    
                const rangeMin = document.getElementById("price-range-min");
                const rangeMax = document.getElementById("price-range-max");
                if (rangeMin)
                    rangeMin.addEventListener("input", () => {
                        clearTimeout(searchTimer);
-                       searchTimer = setTimeout(doSearch, 600);
+                       searchTimer = setTimeout(() => doSearch(), 600);
                    });
                if (rangeMax)
                    rangeMax.addEventListener("input", () => {
                        clearTimeout(searchTimer);
-                       searchTimer = setTimeout(doSearch, 600);
+                       searchTimer = setTimeout(() => doSearch(), 600);
                    });
            },
    

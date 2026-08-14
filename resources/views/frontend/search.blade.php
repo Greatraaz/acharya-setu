@@ -18,19 +18,19 @@
             {{-- Search bar --}}
             <div class="search-hero" style="margin:0;max-width:100%;">
                 <span style="font-size:18px;flex-shrink:0;">🔍</span>
-                <input type="text" id="mentor-search-input" placeholder="Search by name, skill, company (e.g. DSA, Product Manager, Google)…">
+                <input type="text" id="mentor-search-input" value="{{ request('q') }}" placeholder="Search by name, skill, company (e.g. DSA, Product Manager, Google)…">
                 <div class="search-filters">
                     <select data-filter="experience" class="search-filter-btn" style="background:var(--bg-4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-2);font-size:12px;">
                         <option value="">Any Experience</option>
-                        <option value="1-3">1–3 yrs</option>
-                        <option value="3-7">3–7 yrs</option>
-                        <option value="7+">7+ yrs</option>
+                        <option value="1-3" @selected(request('exp') === '1-3' || request('experience') === '1-3')>1–3 yrs</option>
+                        <option value="3-7" @selected(request('exp') === '3-7' || request('experience') === '3-7')>3–7 yrs</option>
+                        <option value="7+" @selected(request('exp') === '7+' || request('experience') === '7+')>7+ yrs</option>
                     </select>
                     <select data-filter="rate_max" class="search-filter-btn" style="background:var(--bg-4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-2);font-size:12px;">
                         <option value="">Any Price</option>
-                        <option value="10">Under ₹10/min</option>
-                        <option value="20">Under ₹20/min</option>
-                        <option value="50">Under ₹50/min</option>
+                        <option value="10" @selected((string) request('rate_max') === '10')>Under ₹10/min</option>
+                        <option value="20" @selected((string) request('rate_max') === '20')>Under ₹20/min</option>
+                        <option value="50" @selected((string) request('rate_max') === '50')>Under ₹50/min</option>
                     </select>
                     <button class="btn btn-primary" onclick="MentorSearch.submit()">Search</button>
                 </div>
@@ -72,7 +72,7 @@
                         ['arts','Arts & Humanities'],
                     ] as [$val, $label])
                     <label class="filter-option">
-                        <input type="checkbox" data-filter="domain" value="{{ $val }}" @checked(request('domain') === $val)>
+                        <input type="checkbox" data-filter="domain" value="{{ $val }}" @checked(in_array($val, (array) request('domain', []), true))>
                         {{ $label }}
                     </label>
                     @endforeach
@@ -81,28 +81,29 @@
                 {{-- Price --}}
                 <div class="filter-section">
                     <div class="filter-section-title">Price (₹/min)</div>
-                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value=""> Any</label>
-                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="0-10"> Under ₹10</label>
-                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="10-20"> ₹10–₹20</label>
-                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="20-50"> ₹20–₹50</label>
-                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="50+"> ₹50+</label>
+                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="" @checked(!request()->filled('rate_range'))> Any</label>
+                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="0-10" @checked(request('rate_range') === '0-10')> Under ₹10</label>
+                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="10-20" @checked(request('rate_range') === '10-20')> ₹10–₹20</label>
+                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="20-50" @checked(request('rate_range') === '20-50')> ₹20–₹50</label>
+                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="50+" @checked(request('rate_range') === '50+')> ₹50+</label>
                 </div>
 
                 {{-- Rating --}}
                 <div class="filter-section">
                     <div class="filter-section-title">Minimum Rating</div>
-                    <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value=""> Any</label>
-                    <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="4.5"> ⭐ 4.5+</label>
-                    <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="4"> ⭐ 4.0+</label>
+                    <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="" @checked(!request()->filled('min_rating'))> Any</label>
+                    <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="4.5" @checked((string) request('min_rating') === '4.5')> ⭐ 4.5+</label>
+                    <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="4" @checked((string) request('min_rating') === '4')> ⭐ 4.0+</label>
                 </div>
 
                 {{-- Experience --}}
                 <div class="filter-section">
                     <div class="filter-section-title">Experience</div>
-                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="1-3"> 1–3 years</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="3-7"> 3–7 years</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="7-15"> 7–15 years</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="15+"> 15+ years</label>
+                    @php $expSelected = (array) request('exp', []); @endphp
+                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="1-3" @checked(in_array('1-3', $expSelected, true))> 1–3 years</label>
+                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="3-7" @checked(in_array('3-7', $expSelected, true))> 3–7 years</label>
+                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="7-15" @checked(in_array('7-15', $expSelected, true))> 7–15 years</label>
+                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="15+" @checked(in_array('15+', $expSelected, true))> 15+ years</label>
                 </div>
 
                 {{-- Session type --}}
@@ -130,11 +131,11 @@
                         Showing <strong id="mentor-count" style="color:var(--text);">…</strong> mentors
                     </div>
                     <select data-sort-select style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;color:var(--text);cursor:pointer;">
-                        <option value="best">Best Match</option>
-                        <option value="rating">Highest Rated</option>
-                        <option value="rate_asc">Lowest Price</option>
-                        <option value="rate_desc">Highest Price</option>
-                        <option value="sessions">Most Sessions</option>
+                        <option value="best" @selected(request('sort', 'best') === 'best')>Best Match</option>
+                        <option value="rating" @selected(request('sort') === 'rating')>Highest Rated</option>
+                        <option value="rate_asc" @selected(request('sort') === 'rate_asc')>Lowest Price</option>
+                        <option value="rate_desc" @selected(request('sort') === 'rate_desc')>Highest Price</option>
+                        <option value="sessions" @selected(request('sort') === 'sessions')>Most Sessions</option>
                     </select>
                 </div>
 

@@ -31,7 +31,7 @@
             'Content' => [
                 ['admin.quizzes.index',      '🎯', 'Quizzes & MCQs'],
                 ['admin.jobs.index',         '💼', 'Job Listings'],
-                ['admin.wellness.index',     '🧘', 'Wellness Surveys'],
+                // ['admin.wellness.index',     '🧘', 'Wellness Surveys'],
                 ['admin.community.index',    '💬', 'Community Channels'],
                 ['admin.plans.index', '⭐', 'Premium Plans'],
                 ['admin.subscriptions.index', '📋', 'Subscriptions'],

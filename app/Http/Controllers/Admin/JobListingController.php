@@ -78,8 +78,12 @@ class JobListingController extends Controller
 
     public function show(JobListing $job)
     {
-        $job->load('postedBy', 'applications');
-        $applications = $job->applications()->latest()->paginate(10);
+        $job->load('postedBy');
+        $applications = $job->applications()
+            ->with('user:id,name,email,phone')
+            ->latest()
+            ->paginate(10);
+
         return view('admin.jobs.show', compact('job', 'applications'));
     }
 

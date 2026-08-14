@@ -4,16 +4,6 @@
 @section('content')
 @php
     $user = auth()->user();
-    $externalApplyUrl = $job->apply_url;
-    // Ignore dead / internal hosting panels stored as apply links
-    if ($externalApplyUrl && (
-        str_contains($externalApplyUrl, 'bigrssock.com')
-        || str_contains($externalApplyUrl, ':2083')
-        || str_contains($externalApplyUrl, ':2087')
-        || ! filter_var($externalApplyUrl, FILTER_VALIDATE_URL)
-    )) {
-        $externalApplyUrl = null;
-    }
 @endphp
 <div class="dash-layout">
     @include('frontend.mentee.partials.sidebar')
@@ -79,11 +69,6 @@
                     <button type="button" class="btn btn-outline" disabled>✓ Already Applied</button>
                 @else
                     <button type="button" class="btn btn-primary" onclick="openModal('apply-modal')">Apply Now →</button>
-                @endif
-                @if($externalApplyUrl)
-                    <a href="{{ $externalApplyUrl }}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm">Open external link</a>
-                @elseif($job->apply_email)
-                    <a href="mailto:{{ $job->apply_email }}?subject={{ rawurlencode('Application: '.$job->title) }}" class="btn btn-ghost btn-sm">Email recruiter</a>
                 @endif
             </div>
         </div>

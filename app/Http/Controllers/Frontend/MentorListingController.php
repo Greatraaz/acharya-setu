@@ -22,54 +22,10 @@ class MentorListingController extends Controller
             ->where('mentor_status', 'approved')
             ->where('is_active', true);
 
-        // Full-text search
-        if ($q = $request->q) {
-            $query->where(function ($q2) use ($q) {
-                $q2->where('name', 'like', "%{$q}%")
-                   ->orWhere('bio', 'like', "%{$q}%")
-                   ->orWhere('designation', 'like', "%{$q}%")
-                   ->orWhere('company', 'like', "%{$q}%")
-                   ->orWhereJsonContains('expertise', $q);
-            });
-        }
+        $this->applyListingFilters($query, $request);
 
-        // Domain / field filter
-        if ($domain = $request->domain) {
-            $query->where('field', 'like', "%{$domain}%");
-        }
-
-        // Rate range filter  (e.g. "10-20" or "50+")
-        if ($range = $request->rate_range) {
-            if (str_ends_with($range, '+')) {
-                $query->where('rate_per_minute', '>=', rtrim($range, '+'));
-            } elseif (str_contains($range, '-')) {
-                [$min, $max] = explode('-', $range);
-                $query->whereBetween('rate_per_minute', [(float)$min, (float)$max]);
-            }
-        }
-
-        // Max rate (from quick select)
-        if ($max = $request->rate_max) {
-            $query->where('rate_per_minute', '<=', $max);
-        }
-
-        // Minimum rating
-        if ($minRating = $request->min_rating) {
-            $query->where('rating', '>=', $minRating);
-        }
-
-        // Experience range (e.g. "3-7", "7+")
-        if ($exp = $request->exp) {
-            if (str_ends_with($exp, '+')) {
-                $query->where('experience_years', '>=', rtrim($exp, '+'));
-            } elseif (str_contains($exp, '-')) {
-                [$min, $max] = explode('-', $exp);
-                $query->whereBetween('experience_years', [(int)$min, (int)$max]);
-            }
-        }
-
-        // Sort
-        match ($request->sort ?? 'best') {
+        $sort = $request->input('sort', 'best') ?: 'best';
+        match ($sort) {
             'rating'    => $query->orderByDesc('rating'),
             'rate_asc'  => $query->orderBy('rate_per_minute'),
             'rate_desc' => $query->orderByDesc('rate_per_minute'),
@@ -160,5 +116,82 @@ class MentorListingController extends Controller
         return response()->json(
             $this->availabilityService->slotsForDate($mentor, $request->date)
         );
+    }
+
+    private function applyListingFilters($query, Request $request): void
+    {
+        $q = trim((string) $request->input('q', ''));
+        if ($q !== '') {
+            $query->where(function ($q2) use ($q) {
+                $q2->where('name', 'like', "%{$q}%")
+                   ->orWhere('bio', 'like', "%{$q}%")
+                   ->orWhere('field', 'like', "%{$q}%")
+                   ->orWhere('designation', 'like', "%{$q}%")
+                   ->orWhere('company', 'like', "%{$q}%")
+                   ->orWhere('expertise', 'like', "%{$q}%");
+            });
+        }
+
+        $domains = array_filter((array) $request->input('domain', []));
+        if ($domains) {
+            $query->where(function ($q2) use ($domains) {
+                foreach ($domains as $domain) {
+                    foreach ($this->domainKeywords((string) $domain) as $keyword) {
+                        $q2->orWhere('field', 'like', "%{$keyword}%")
+                           ->orWhere('designation', 'like', "%{$keyword}%")
+                           ->orWhere('expertise', 'like', "%{$keyword}%");
+                    }
+                }
+            });
+        }
+
+        $range = (string) $request->input('rate_range', '');
+        if ($range !== '') {
+            if (str_ends_with($range, '+')) {
+                $query->where('rate_per_minute', '>=', (float) rtrim($range, '+'));
+            } elseif (str_contains($range, '-')) {
+                [$min, $max] = explode('-', $range, 2);
+                $query->whereBetween('rate_per_minute', [(float) $min, (float) $max]);
+            }
+        }
+
+        if ($request->filled('rate_max')) {
+            $query->where('rate_per_minute', '<=', (float) $request->rate_max);
+        }
+
+        if ($request->filled('min_rating')) {
+            $query->where('rating', '>=', (float) $request->min_rating);
+        }
+
+        $expRanges = array_filter((array) $request->input('exp', $request->input('experience', [])));
+        if ($expRanges) {
+            $query->where(function ($q2) use ($expRanges) {
+                foreach ($expRanges as $exp) {
+                    $exp = (string) $exp;
+                    if (str_ends_with($exp, '+')) {
+                        $q2->orWhere('experience_years', '>=', (int) rtrim($exp, '+'));
+                    } elseif (str_contains($exp, '-')) {
+                        [$min, $max] = explode('-', $exp, 2);
+                        $q2->orWhereBetween('experience_years', [(int) $min, (int) $max]);
+                    }
+                }
+            });
+        }
+    }
+
+    /** @return list<string> */
+    private function domainKeywords(string $domain): array
+    {
+        return match (strtolower(trim($domain))) {
+            'engineering' => ['engineering', 'software', 'tech', 'devops', 'cyber', 'data science', 'developer'],
+            'product'     => ['product'],
+            'design'      => ['design', 'ux', 'ui'],
+            'finance'     => ['finance', 'mba', 'investment', 'trading'],
+            'marketing'   => ['marketing', 'brand', 'content', 'media'],
+            'law'         => ['law'],
+            'medicine'    => ['medicine', 'medical'],
+            'arts'        => ['arts', 'humanities', 'psychology', 'civil service', 'upsc'],
+            default       => [$domain],
+        };
     }
 }
