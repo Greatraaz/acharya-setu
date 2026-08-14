@@ -409,6 +409,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/sessions/{id}/call', [SessionCallController::class, 'show'])->name('sessions.call')->whereNumber('id');
     Route::get('/sessions/{id}/video-token', [SessionCallController::class, 'token'])->name('sessions.video-token')->whereNumber('id');
     Route::post('/sessions/{id}/call/end', [SessionCallController::class, 'end'])->name('sessions.call.end')->whereNumber('id');
+    Route::get('/sessions/{id}/my-note', [SessionCallController::class, 'myNote'])->name('sessions.my-note.show')->whereNumber('id');
+    Route::put('/sessions/{id}/my-note', [SessionCallController::class, 'saveMyNote'])->name('sessions.my-note.save')->whereNumber('id');
 });
 
 /*

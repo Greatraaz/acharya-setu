@@ -37,7 +37,10 @@
                             @if($session->status === 'pending')
                                 <button class="btn btn-success" onclick="acceptSession({{ $session->id }})">✓ Accept</button>
                                 <button class="btn btn-outline" style="color:var(--error);" onclick="declineSession({{ $session->id }})">✗ Decline</button>
-                            @elseif(in_array($session->status, ['confirmed', 'upcoming', 'ongoing'], true) && $session->canJoinCall())
+                            @elseif($session->status === 'ongoing')
+                                <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-outline">🎥 Rejoin Call</a>
+                                <button type="button" class="btn btn-primary" onclick="completeSession({{ $session->id }})">✓ Mark Complete</button>
+                            @elseif(in_array($session->status, ['confirmed', 'upcoming'], true) && $session->canJoinCall())
                                 <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
                                 <button class="btn btn-outline" onclick="openMeetingLinkModal()">🔗 Meeting link</button>
                             @elseif($session->status === 'completed')
@@ -55,15 +58,13 @@
                 </div>
                 @endif
 
-                {{-- Session Notes (mentor fills) --}}
+                {{-- Session Notes (mentor shares with mentee) --}}
                 <div class="card" style="margin-bottom:20px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                        <h3 style="font-size:14px;font-weight:700;">📝 Session Notes</h3>
-                        @if($session->status === 'completed' && !($session->mentor_notes ?? false))
-                        <span style="font-size:11px;color:var(--brand);">Add notes for your mentee</span>
-                        @endif
+                        <h3 style="font-size:14px;font-weight:700;">📝 Shared Session Notes</h3>
+                        <span style="font-size:11px;color:var(--text-3);">Visible to your mentee</span>
                     </div>
-                    @if($session->status === 'completed' || $session->status === 'confirmed')
+                    @if(in_array($session->status, ['confirmed', 'upcoming', 'ongoing', 'completed'], true))
                     <form action="{{ route('mentor.sessions.notes', $session->id) }}" method="POST"
                           data-ajax-form="{{ route('mentor.sessions.notes', $session->id) }}"
                           data-success="Notes saved!"
@@ -75,16 +76,18 @@
                             <label class="form-label">Key Discussion Points</label>
                             <textarea name="content" class="form-textarea" rows="5"
                                       placeholder="Summarize what was discussed, insights shared, resources mentioned…"
-                                      required>{{ $session->notes->first()->content ?? $session->mentor_notes ?? '' }}</textarea>
+                                      required>{{ $session->notes->where('is_shared', true)->where('author_id', auth()->id())->first()?->content ?? '' }}</textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="margin-top:14px;">💾 Save Notes</button>
+                        <button type="submit" class="btn btn-primary" style="margin-top:14px;">💾 Save Shared Notes</button>
                     </form>
                     @else
                     <div class="empty-state" style="padding:24px 0;">
-                        <p style="font-size:13px;color:var(--text-3);">Notes can be added once the session is confirmed or completed.</p>
+                        <p style="font-size:13px;color:var(--text-3);">Shared notes can be added once the session is confirmed.</p>
                     </div>
                     @endif
                 </div>
+
+                @include('frontend.sessions.partials.my-notes', ['session' => $session])
 
                 {{-- Review received --}}
                 @if($session->menteeReview)
@@ -229,6 +232,17 @@ function declineSession(id) {
 }
 function openMeetingLinkModal() {
     openModal('meeting-link-modal');
+}
+function completeSession(id) {
+    if (!confirm('Mark this session as complete? Earnings will be credited if payment is confirmed.')) return;
+    AjaxPost(`/mentor/sessions/${id}/complete`, {}, {
+        loader: true,
+        onSuccess: (data) => {
+            showToast('success', data.message || 'Session marked complete.');
+            location.reload();
+        },
+        onError: () => showToast('error', 'Could not complete session.'),
+    });
 }
 document.getElementById('meeting-link-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();

@@ -46,16 +46,19 @@
                 @endif
 
                 <div class="card" style="margin-bottom:20px;">
-                    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">📝 Shared Notes</h3>
-                    @forelse($session->notes ?? [] as $note)
+                    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">📝 Shared Notes from Mentor</h3>
+                    @php $sharedNotes = ($session->notes ?? collect())->where('is_shared', true); @endphp
+                    @forelse($sharedNotes as $note)
                     <div style="padding:12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;">
                         <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;">{{ $note->created_at?->format('d M Y') }}</div>
-                        <div style="font-size:14px;color:var(--text-2);line-height:1.7;white-space:pre-wrap;">{{ $note->content ?? $note->body ?? '' }}</div>
+                        <div style="font-size:14px;color:var(--text-2);line-height:1.7;white-space:pre-wrap;">{{ $note->content ?? '' }}</div>
                     </div>
                     @empty
-                    <p style="font-size:13px;color:var(--text-2);margin:0;">No shared notes yet. Notes appear here after your mentor shares them.</p>
+                    <p style="font-size:13px;color:var(--text-2);margin:0;">No shared notes yet. Notes from your mentor appear here after the session.</p>
                     @endforelse
                 </div>
+
+                @include('frontend.sessions.partials.my-notes', ['session' => $session])
             </div>
 
             <div>

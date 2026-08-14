@@ -119,9 +119,27 @@ class AgoraService
         $participant?->markLeft();
 
         $stillIn = $log->participants()->whereNull('left_at')->exists();
-        if (! $stillIn || (int) $session->mentor_id === (int) $user->id) {
+        $shouldEndLog = ! $stillIn || (int) $session->mentor_id === (int) $user->id;
+
+        if ($shouldEndLog) {
             $log->markEnded($reason);
+            $this->maybeCompleteSession($session->fresh(), $log->fresh());
         }
+    }
+
+    private function maybeCompleteSession(ConsultationSession $session, VideoCallLog $log): void
+    {
+        if ($session->status !== ConsultationSession::STATUS_ONGOING) {
+            return;
+        }
+
+        if ($log->duration_seconds) {
+            $session->update([
+                'actual_duration_seconds' => $log->duration_seconds,
+            ]);
+        }
+
+        $session->complete();
     }
 
     public function assertParticipant(User $user, ConsultationSession $session): void

@@ -17,6 +17,7 @@ class SessionController extends Controller
 
         // Past pending/confirmed/upcoming sessions with no join → no_show
         ConsultationSession::expireMissedSessions($mentorId);
+        ConsultationSession::completeStaleOngoingSessions($mentorId);
 
         $query = ConsultationSession::where('mentor_id', $mentorId)
             ->with('mentee')
@@ -47,6 +48,8 @@ class SessionController extends Controller
 
     public function show(int $id)
     {
+        ConsultationSession::completeStaleOngoingSessions(auth()->id());
+
         $session = ConsultationSession::where('mentor_id', auth()->id())
             ->with(['mentee', 'notes', 'menteeReview'])
             ->findOrFail($id);
@@ -130,6 +133,7 @@ class SessionController extends Controller
         $note = $session->notes()
             ->where('author_id', auth()->id())
             ->where('type', $type)
+            ->where('is_shared', true)
             ->latest()
             ->first();
 

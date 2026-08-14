@@ -26,8 +26,10 @@ class SessionController extends Controller
 
     public function show(int $id)
     {
+        ConsultationSession::completeStaleOngoingSessions(null, auth()->id());
+
         $session = ConsultationSession::where('mentee_id', auth()->id())
-            ->with(['mentor','sessionInvoice','notes' => fn($q) => $q->where('is_shared',true)])
+            ->with(['mentor','sessionInvoice','notes'])
             ->findOrFail($id);
         return view('frontend.mentee.session-detail', compact('session'));
     }

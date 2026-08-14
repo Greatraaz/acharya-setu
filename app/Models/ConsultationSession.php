@@ -420,6 +420,10 @@ class ConsultationSession extends Model
  
     public function complete(): void
     {
+        if ($this->status === self::STATUS_COMPLETED) {
+            return;
+        }
+
         $duration = $this->started_at ? (int) $this->started_at->diffInSeconds(now()) : null;
         $this->update([
             'status'                   => self::STATUS_COMPLETED,
@@ -430,6 +434,48 @@ class ConsultationSession extends Model
         optional($this->mentor)->increment('total_sessions');
 
         $this->settleMentorPayout();
+    }
+
+    /**
+     * Mark ongoing sessions complete once booked duration (+ buffer) has elapsed.
+     */
+    public static function completeStaleOngoingSessions(?int $mentorId = null, ?int $menteeId = null, int $bufferMinutes = 15): int
+    {
+        $now = now()->timezone(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s');
+
+        $query = static::query()
+            ->where('status', self::STATUS_ONGOING)
+            ->where(function ($q) use ($now, $bufferMinutes) {
+                $q->where(function ($inner) use ($now, $bufferMinutes) {
+                    $inner->whereNotNull('started_at')
+                        ->whereRaw(
+                            'DATE_ADD(started_at, INTERVAL COALESCE(duration_minutes, 30) + ? MINUTE) < ?',
+                            [$bufferMinutes, $now]
+                        );
+                })->orWhere(function ($inner) use ($now, $bufferMinutes) {
+                    $inner->whereNull('started_at')
+                        ->whereRaw(
+                            'DATE_ADD(scheduled_at, INTERVAL COALESCE(duration_minutes, 30) + ? MINUTE) < ?',
+                            [$bufferMinutes, $now]
+                        );
+                });
+            });
+
+        if ($mentorId) {
+            $query->where('mentor_id', $mentorId);
+        }
+
+        if ($menteeId) {
+            $query->where('mentee_id', $menteeId);
+        }
+
+        $count = 0;
+        foreach ($query->get() as $session) {
+            $session->complete();
+            $count++;
+        }
+
+        return $count;
     }
 
     /**
