@@ -20,6 +20,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\SessionCallController;
 
 use App\Http\Controllers\Mentor\OnboardingController   as MentorOnboardingController;
 use App\Http\Controllers\Mentor\DashboardController    as MentorDashboardController;
@@ -404,8 +405,10 @@ Route::middleware('auth')->group(function () {
     // Session notes (mentor writes, mentee can view if shared)
     Route::get('/sessions/{id}/notes', [MentorSessionController::class, 'notes'])->name('sessions.notes.show');
 
-    // Video call token (works for both roles)
-    Route::get('/sessions/{id}/video-token', [MentorSessionController::class, 'videoToken'])->name('sessions.video-token');
+    // Video call (Agora) — works for both roles
+    Route::get('/sessions/{id}/call', [SessionCallController::class, 'show'])->name('sessions.call')->whereNumber('id');
+    Route::get('/sessions/{id}/video-token', [SessionCallController::class, 'token'])->name('sessions.video-token')->whereNumber('id');
+    Route::post('/sessions/{id}/call/end', [SessionCallController::class, 'end'])->name('sessions.call.end')->whereNumber('id');
 });
 
 /*

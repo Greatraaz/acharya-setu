@@ -60,4 +60,27 @@ class VideoCallLog extends Model
     {
         return $this->hasMany(VideoCallParticipant::class, 'video_call_log_id');
     }
+
+    public function markStarted(): void
+    {
+        $this->update([
+            'status'     => self::STATUS_ONGOING,
+            'started_at' => $this->started_at ?? now(),
+        ]);
+    }
+
+    public function markEnded(string $reason = 'normal'): void
+    {
+        $ended = now();
+        $started = $this->started_at ?? $ended;
+
+        $this->update([
+            'status'           => self::STATUS_COMPLETED,
+            'ended_at'         => $ended,
+            'end_reason'       => $reason,
+            'duration_seconds' => max(0, $started->diffInSeconds($ended)),
+        ]);
+
+        $this->participants()->whereNull('left_at')->get()->each->markLeft();
+    }
 }

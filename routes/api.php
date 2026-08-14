@@ -81,12 +81,8 @@ Route::prefix('v1/auth')->group(function () {
     Route::post('/resend-otp',  [AuthController::class, 'resendOtp']);
 });
 
-Route::prefix('v1')->group(function () {
-    Route::post('/get-agora-token/{channel}',           [SessionsController::class, 'getAgoraToken']);
-});
-
-// Protected
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    Route::match(['get', 'post'], '/get-agora-token/{channel}', [SessionsController::class, 'getAgoraToken']);
     
     /**********************************************************
      * Auth & Onboarding
@@ -197,6 +193,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/',          [SessionsController::class, 'index']);
             Route::post('/',         [SessionsController::class, 'store']);
             Route::post('/verify',   [SessionsController::class, 'verifyPayment']);
+            Route::get('/{id}/agora-token', [SessionsController::class, 'agoraToken'])->whereNumber('id');
             Route::get('/{id}/notes', [SessionsController::class, 'notes'])->whereNumber('id');
             Route::post('/{id}/notes', [SessionsController::class, 'addNote'])->whereNumber('id');
             Route::patch('/{id}/notes/{noteId}', [SessionsController::class, 'updateNote'])->whereNumber('id')->whereNumber('noteId');
@@ -382,6 +379,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::prefix('sessions')->name('sessions.')->group(function () {
             Route::get('/',            [SessionsController::class, 'index'])->name('index');
             Route::post('/',           [SessionsController::class, 'store'])->name('store');
+            Route::get('/{id}/agora-token', [SessionsController::class, 'agoraToken'])->whereNumber('id');
             Route::get('/{id}/notes', [SessionsController::class, 'notes'])->name('notes')->whereNumber('id');
             Route::post('/{id}/notes', [SessionsController::class, 'addNote'])->name('notes.store')->whereNumber('id');
             Route::patch('/{id}/notes/{noteId}', [SessionsController::class, 'updateNote'])->name('notes.update')->whereNumber('id')->whereNumber('noteId');

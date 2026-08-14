@@ -32,4 +32,15 @@ class VideoCallParticipant extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function markLeft(): void
+    {
+        $left = now();
+        $joined = $this->joined_at ?? $left;
+
+        $this->update([
+            'left_at'          => $left,
+            'duration_seconds' => max(0, $joined->diffInSeconds($left)),
+        ]);
+    }
 }

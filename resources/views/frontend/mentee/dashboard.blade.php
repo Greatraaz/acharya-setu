@@ -136,8 +136,8 @@
                     </div>
                     <div>
                         <span class="session-status {{ $session->status }}">{{ ucfirst($session->status) }}</span>
-                        @if($session->meeting_link && $session->status === 'confirmed')
-                        <a href="{{ $session->meeting_link }}" target="_blank" class="btn btn-primary btn-sm" style="margin-top:6px;">Join</a>
+                        @if($session->canJoinCall())
+                        <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm" style="margin-top:6px;">Join</a>
                         @endif
                     </div>
                 </div>

@@ -28,8 +28,8 @@
                             </div>
                         </div>
                         <div style="display:flex;gap:10px;flex-shrink:0;flex-wrap:wrap;">
-                            @if($session->meeting_link && in_array($session->status, ['confirmed', 'pending'], true))
-                                <a href="{{ $session->meeting_link }}" target="_blank" class="btn btn-primary">🎥 Join Session</a>
+                            @if($session->canJoinCall())
+                                <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
                             @endif
                             @if(in_array($session->status, ['pending', 'confirmed'], true) && $session->scheduled_at?->gt(now()->addHours(2)))
                                 <button type="button" class="btn btn-outline" style="color:var(--error);" onclick="cancelSession({{ $session->id }})">Cancel</button>

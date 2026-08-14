@@ -387,6 +387,24 @@ class ConsultationSession extends Model
         return self::STATUSES[$this->status] ?? ucfirst(str_replace('_', ' ', (string) $this->status));
     }
 
+    public function canJoinCall(): bool
+    {
+        if (in_array($this->status, [
+            self::STATUS_COMPLETED,
+            self::STATUS_CANCELLED,
+            self::STATUS_NO_SHOW,
+        ], true)) {
+            return false;
+        }
+
+        return in_array($this->status, [
+            self::STATUS_PENDING,
+            self::STATUS_CONFIRMED,
+            self::STATUS_UPCOMING,
+            self::STATUS_ONGOING,
+        ], true);
+    }
+
     public function confirm(): void
     {
         $this->update(['status' => self::STATUS_CONFIRMED]);
@@ -394,7 +412,10 @@ class ConsultationSession extends Model
  
     public function start(): void
     {
-        $this->update(['status' => self::STATUS_ONGOING, 'started_at' => now()]);
+        $this->update([
+            'status'     => self::STATUS_ONGOING,
+            'started_at' => $this->started_at ?? now(),
+        ]);
     }
  
     public function complete(): void

@@ -188,10 +188,23 @@ class AppSetting extends Model
     public static function agora(): array
     {
         $s = static::allCached();
+
+        $appId = static::firstNonEmpty([
+            $s['agora_app_id'] ?? null,
+            config('services.agora.app_id'),
+            env('AGORA_APP_ID'),
+        ]);
+
+        $appCert = static::firstNonEmpty([
+            static::decryptIfNeeded($s['agora_app_certificate'] ?? null),
+            config('services.agora.app_certificate'),
+            env('AGORA_APP_CERTIFICATE'),
+        ]);
+
         return [
-            'app_id'      => $s['agora_app_id']          ?? '',
-            'app_cert'    => $s['agora_app_certificate']  ?? '',
-            'token_expiry'=> (int)($s['agora_token_expiry'] ?? 3600),
+            'app_id'       => $appId,
+            'app_cert'     => $appCert,
+            'token_expiry' => (int) ($s['agora_token_expiry'] ?? config('services.agora.token_expiry', 3600)),
         ];
     }
  

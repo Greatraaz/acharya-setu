@@ -125,8 +125,8 @@
                         <span class="session-status {{ $session->status }}">{{ ucfirst($session->status) }}</span>
                         @if($session->status === 'pending')
                         <button type="button" class="btn btn-success btn-sm" onclick="acceptSession({{ $session->id }})">Accept</button>
-                        @elseif($session->meeting_link)
-                        <a href="{{ $session->meeting_link }}" target="_blank" class="btn btn-primary btn-sm">Join</a>
+                        @elseif($session->canJoinCall())
+                        <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">Join</a>
                         @endif
                     </div>
                 </div>

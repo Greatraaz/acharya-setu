@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\{AppSetting, ConsultationSession, SessionNote, User};
-use App\Helpers\Agora\RtcTokenBuilder;
 use App\Services\SessionBookingService;
 use Carbon\Carbon;
 use Illuminate\Http\{JsonResponse, Request};
@@ -45,6 +44,7 @@ class SessionsController extends Controller
                 'notes'          => $s->notes->map(fn (SessionNote $note) => $this->formatNote($note))->values(),
                 'meetingLink'    => $s->meeting_link,
                 'channel'        => $s->meeting_channel,
+                'canJoinCall'    => $s->canJoinCall(),
                 'amountPaid'     => (float) $s->amount,
                 'paymentStatus'  => $s->payment_status,
                 'paymentMethod'  => $s->payment_method,
@@ -320,26 +320,59 @@ class SessionsController extends Controller
 
     public function getAgoraToken(Request $request, $channel): JsonResponse
     {
-        $appId = 'fb46198605914a2ca0397347552f0d97';
-        $appCertificate = '95715ebc2a8c4a9aaf4f31a505c81776';
-        $uid = 0;
-        $expirationTimeInSeconds = 18000;
-        $currentTimestamp = time();
-        $privilegeExpiredTs = $currentTimestamp + $expirationTimeInSeconds;
+        $session = ConsultationSession::query()
+            ->where('meeting_channel', $channel)
+            ->where(function ($q) use ($request) {
+                $q->where('mentor_id', $request->user()->id)
+                  ->orWhere('mentee_id', $request->user()->id);
+            })
+            ->with(['mentor:id,name,avatar_url', 'mentee:id,name,avatar_url'])
+            ->first();
 
-        $newToken = RtcTokenBuilder::buildTokenWithUid(
-            $appId,
-            $appCertificate,
-            $channel,
-            $uid,
-            RtcTokenBuilder::RolePublisher,
-            $privilegeExpiredTs
-        );
+        if (! $session) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 404,
+                'message'    => 'Session not found for this channel.',
+            ], 404);
+        }
 
-        return response()->json([
-            'status' => true,
-            'token'  => $newToken,
-        ]);
+        return $this->agoraTokenResponse($request, $session);
+    }
+
+    public function agoraToken(Request $request, int $id): JsonResponse
+    {
+        try {
+            $session = $this->findOwnedSession($request, $id);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 404,
+                'message'    => 'Session not found',
+            ], 404);
+        }
+
+        $session->load(['mentor:id,name,avatar_url', 'mentee:id,name,avatar_url']);
+
+        return $this->agoraTokenResponse($request, $session);
+    }
+
+    private function agoraTokenResponse(Request $request, ConsultationSession $session): JsonResponse
+    {
+        try {
+            $payload = app(\App\Services\AgoraService::class)->issueToken($request->user(), $session);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => $e->getStatusCode(),
+                'message'    => $e->getMessage(),
+            ], $e->getStatusCode());
+        }
+
+        return response()->json(array_merge([
+            'status'     => true,
+            'statuscode' => 200,
+        ], $payload));
     }
 
     private function findOwnedSession(Request $request, int $id): ConsultationSession

@@ -85,9 +85,9 @@
                         @if($statusKey === 'pending')
                             <button class="btn btn-success btn-sm" onclick="acceptSession({{ $session->id }})">✓ Accept</button>
                             <button class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="declineSession({{ $session->id }})">✗ Decline</button>
-                        @elseif(in_array($statusKey, ['confirmed', 'upcoming'], true) && $session->scheduled_at->isFuture())
-                            @if($session->meeting_link)
-                                <a href="{{ $session->meeting_link }}" target="_blank" class="btn btn-primary btn-sm">🎥 Start Session</a>
+                        @elseif(in_array($statusKey, ['confirmed', 'upcoming', 'ongoing'], true))
+                            @if($session->canJoinCall())
+                                <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">🎥 Start Session</a>
                             @endif
                             <button type="button" class="btn btn-outline btn-sm"
                                     onclick="addMeetingLink({{ $session->id }}, {{ json_encode($session->meeting_link) }})">

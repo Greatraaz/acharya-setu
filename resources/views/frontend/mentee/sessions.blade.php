@@ -88,8 +88,8 @@
                         @if($session->sessionInvoice)
                             <a href="{{ route('mentee.session-invoices.download', $session->sessionInvoice) }}" class="btn btn-ghost btn-sm">Download invoice</a>
                         @endif
-                        @if(in_array($statusKey, ['confirmed', 'pending', 'upcoming'], true) && $session->meeting_link && $session->scheduled_at?->isFuture())
-                            <a href="{{ $session->meeting_link }}" target="_blank" class="btn btn-primary btn-sm">🎥 Join</a>
+                        @if($session->canJoinCall())
+                            <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">🎥 Join</a>
                         @endif
                         @if($canCancel)
                             <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="cancelSession({{ $session->id }})">Cancel</button>

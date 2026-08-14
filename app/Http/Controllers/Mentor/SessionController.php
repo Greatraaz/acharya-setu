@@ -160,13 +160,4 @@ class SessionController extends Controller
         })->get();
         return response()->json(['notes' => $notes]);
     }
-
-    public function videoToken(int $id)
-    {
-        $session = ConsultationSession::where(function($q) {
-            $q->where('mentor_id', auth()->id())->orWhere('mentee_id', auth()->id());
-        })->findOrFail($id);
-        // TODO: generate Agora token
-        return response()->json(['channel' => $session->meeting_channel ?? 'session-'.$id, 'token' => 'AGORA_TOKEN', 'uid' => auth()->id()]);
-    }
 }

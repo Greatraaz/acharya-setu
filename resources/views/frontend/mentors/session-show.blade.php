@@ -37,12 +37,9 @@
                             @if($session->status === 'pending')
                                 <button class="btn btn-success" onclick="acceptSession({{ $session->id }})">✓ Accept</button>
                                 <button class="btn btn-outline" style="color:var(--error);" onclick="declineSession({{ $session->id }})">✗ Decline</button>
-                            @elseif($session->status === 'confirmed')
-                                @if($session->meeting_link)
-                                    <a href="{{ $session->meeting_link }}" target="_blank" class="btn btn-primary">🎥 Join Session</a>
-                                @else
-                                    <button class="btn btn-primary" onclick="openMeetingLinkModal()">+ Add Meeting Link</button>
-                                @endif
+                            @elseif(in_array($session->status, ['confirmed', 'upcoming', 'ongoing'], true) && $session->canJoinCall())
+                                <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
+                                <button class="btn btn-outline" onclick="openMeetingLinkModal()">🔗 Meeting link</button>
                             @elseif($session->status === 'completed')
                                 <span style="font-size:13px;color:var(--success);font-weight:600;">✅ Completed</span>
                             @endif
