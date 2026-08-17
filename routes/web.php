@@ -29,6 +29,7 @@ use App\Http\Controllers\Mentor\WalletController       as MentorWalletController
 use App\Http\Controllers\Mentor\ProfileController      as MentorProfileController;
 use App\Http\Controllers\Mentor\AvailabilityController as MentorAvailabilityController;
 use App\Http\Controllers\Mentor\PortalController       as MentorPortalController;
+use App\Http\Controllers\Mentor\AssessmentController   as MentorAssessmentController;
 use App\Http\Controllers\Mentor\CurriculumController  as MentorCurriculumController;
 
 use App\Http\Controllers\Mentee\OnboardingController   as MenteeOnboardingController;
@@ -72,6 +73,7 @@ use App\Http\Controllers\Admin\AdminOnboardingController;
 use App\Http\Controllers\Admin\MentorApprovalController;
 use App\Http\Controllers\Admin\MentorProfileController as AdminMentorProfileController;
 use App\Http\Controllers\Admin\AssessmentController;
+use App\Http\Controllers\Admin\AssessmentQuestionController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\NotificationController;
@@ -260,7 +262,13 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::post('/community/{channel:slug}/messages', [MessageController::class, 'store'])->name('community.messages.store');
     Route::post('/community/messages/{message}/like', [MessageController::class, 'like'])->name('community.messages.like');
     Route::delete('/community/messages/{message}', [MessageController::class, 'destroy'])->name('community.messages.destroy');
-    Route::get('/assessments',                    [MentorPortalController::class, 'assessments'])->name('assessments');
+    Route::get('/assessments',                    [MentorAssessmentController::class, 'index'])->name('assessments.index');
+    Route::get('/assessments/create',             [MentorAssessmentController::class, 'create'])->name('assessments.create');
+    Route::post('/assessments',                   [MentorAssessmentController::class, 'store'])->name('assessments.store');
+    Route::get('/assessments/{assessment}',       [MentorAssessmentController::class, 'show'])->name('assessments.show');
+    Route::get('/assessments/{assessment}/edit',  [MentorAssessmentController::class, 'edit'])->name('assessments.edit');
+    Route::put('/assessments/{assessment}',       [MentorAssessmentController::class, 'update'])->name('assessments.update');
+    Route::delete('/assessments/{assessment}',     [MentorAssessmentController::class, 'destroy'])->name('assessments.destroy');
 
     // Curriculum builder (mirrors /api/v1/mentor/curriculum/*)
     Route::prefix('curriculum')->name('curriculum.')->group(function () {
@@ -499,6 +507,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('sessions/{session}/review',   [SessionReviewController::class, 'store']) ->name('sessions.review.store');
 
     Route::resource('assessments', AssessmentController::class);
+    Route::resource('assessment-questions', AssessmentQuestionController::class)->except(['show']);
 
     // ── Wallet ────────────────────────────────────────────────
     Route::prefix('wallet')->name('wallet.')->group(function () {

@@ -30,6 +30,8 @@
             ],
             'Content' => [
                 ['admin.quizzes.index',      '🎯', 'Quizzes & MCQs'],
+                ['admin.assessments.index',  '📝', 'Assessments Categories'],
+                ['admin.assessment-questions.index',  '❓', 'Assessment Questions'],
                 ['admin.jobs.index',         '💼', 'Job Listings'],
                 // ['admin.wellness.index',     '🧘', 'Wellness Surveys'],
                 ['admin.community.index',    '💬', 'Community Channels'],

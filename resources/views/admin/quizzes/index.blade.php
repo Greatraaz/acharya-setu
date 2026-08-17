@@ -8,7 +8,7 @@
         <p class="text-sm text-gray-500 mt-1">Test your knowledge, track your progress</p>
     </div>
     <a href="{{ route('admin.quizzes.create') }}"
-       class="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors">
+       class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">
         + Create Quiz
     </a>
 </div>
@@ -40,7 +40,7 @@
         <div class="flex gap-2">
             <a href="{{ route('admin.quizzes.show', $quiz) }}"
                class="flex-1 text-center text-sm font-medium py-2 rounded-xl
-                      {{ $attempted ? 'bg-gray-50 text-gray-700 border border-gray-200' : 'bg-indigo-600 text-white hover:bg-indigo-700' }} transition-colors">
+                      {{ $attempted ? 'bg-gray-50 text-gray-700 border border-gray-200' : 'bg-blue-600 text-white hover:bg-blue-700' }} transition-colors">
                 {{ $attempted ? 'Review' : 'Start Quiz' }}
             </a>
             @if($quiz->created_by === Auth::id())

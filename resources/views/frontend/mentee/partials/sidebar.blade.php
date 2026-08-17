@@ -26,9 +26,9 @@
         <span class="si-icon">📅</span> My Sessions
         @if($upcomingCount > 0)<span class="si-badge">{{ $upcomingCount }}</span>@endif
     </a>
-    {{-- <a href="{{ route('mentee.assessments.index') }}" class="sidebar-item @if(request()->routeIs('mentee.assessments*')) active @endif">
+    <a href="{{ route('mentee.assessments.index') }}" class="sidebar-item @if(request()->routeIs('mentee.assessments*')) active @endif">
         <span class="si-icon">📝</span> Assessments
-    </a> --}}
+    </a>
     <a href="{{ route('mentee.quizzes.index') }}" class="sidebar-item @if(request()->routeIs('mentee.quizzes*')) active @endif">
         <span class="si-icon">🧠</span> Quizzes
     </a>

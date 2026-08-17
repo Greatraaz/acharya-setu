@@ -65,8 +65,24 @@ class AdminController extends Controller
     public function createPlan(Request $request): JsonResponse { return response()->json(['plan'=>PremiumPlan::create($request->validate(['name'=>'required|string','slug'=>'required|string|unique:premium_plans','price_monthly'=>'required|numeric','price_yearly'=>'sometimes|numeric','sessions_per_month'=>'sometimes|integer','features'=>'nullable|array']))],201); }
 
     // Assessments
-    public function assessments(): JsonResponse { return response()->json(['assessments'=>Assessment::orderBy('month')->get()]); }
-    public function createAssessment(Request $request): JsonResponse { return response()->json(['assessment'=>Assessment::create($request->validate(['title'=>'required|string','month'=>'required|integer|min:1|max:6','description'=>'nullable|string','questions'=>'required|array']))],201); }
+    public function assessments(): JsonResponse
+    {
+        return response()->json(['assessments' => Assessment::withCount('questions')->latest()->get()]);
+    }
+
+    public function createAssessment(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'title'        => 'required|string',
+            'description'  => 'nullable|string',
+            'instructions' => 'nullable|string',
+        ]);
+
+        $maxId = (int) Assessment::max('id');
+        $data['id'] = $maxId + 1;
+
+        return response()->json(['assessment' => Assessment::create($data)], 201);
+    }
 
     // Community channels
     public function communityChannels(): JsonResponse

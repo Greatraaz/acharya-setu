@@ -80,7 +80,7 @@
         <div class="mt-6 flex gap-3">
             <button type="submit"
                     onclick="return confirm('Submit quiz? You cannot change answers after submitting.')"
-                    class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700 transition-colors">
+                    class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors">
                 Submit Quiz
             </button>
         </div>

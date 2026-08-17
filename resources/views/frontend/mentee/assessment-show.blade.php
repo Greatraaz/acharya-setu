@@ -11,9 +11,8 @@
         </div>
 
         <div class="dash-header">
-            <div style="font-size:11px;color:var(--brand);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Month {{ $assessment->month }}</div>
             <div class="dash-title">{{ $assessment->title }}</div>
-            <div class="dash-subtitle">{{ $assessment->description ?: 'Answer all questions and submit when ready.' }}</div>
+            <div class="dash-subtitle">{{ $assessment->instructions ?: ($assessment->description ?: 'Answer all questions and submit when ready.') }}</div>
         </div>
 
         @if(session('success'))
@@ -24,10 +23,21 @@
         <div class="alert alert-info" style="margin-bottom:16px;">
             <span class="alert-icon">✅</span>
             <div style="font-size:13px;">
-                Last score: <strong>{{ number_format((float) $progress->score, 0) }}%</strong>
-                on {{ $progress->completed_at->format('d M Y') }}. You can retake below.
+                Last attempt on {{ $progress->completed_at->format('d M Y') }}. You can retake below.
             </div>
         </div>
+
+        {{-- Score Band Feedback --}}
+        @if($scoreBand)
+        <div class="card" style="margin-bottom:20px;padding:24px;background:linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);border:1px solid #bae6fd;">
+            <div style="font-size:18px;font-weight:700;color:#0369a1;margin-bottom:8px;">
+                {{ $scoreBand->heading }}
+            </div>
+            <div style="font-size:14px;color:#0c4a6e;line-height:1.6;">
+                {!! $scoreBand->description !!}
+            </div>
+        </div>
+        @endif
         @endif
 
         @if($questions->isEmpty())
@@ -37,24 +47,23 @@
         @else
         <form id="assessment-form" method="POST" action="{{ route('mentee.assessments.submit', $assessment->id) }}">
             @csrf
-            @foreach($questions as $idx => $q)
+            @foreach($questions as $q)
             @php
-                $text = is_array($q) ? ($q['question'] ?? $q['text'] ?? 'Question '.($idx + 1)) : (string) $q;
-                $options = is_array($q) ? ($q['options'] ?? []) : [];
-                $prev = is_array($progress?->answers ?? null) ? ($progress->answers[$idx] ?? null) : null;
+                $options = $q->optionLabels();
+                $prev = is_array($progress?->answers ?? null) ? ($progress->answers[$q->id] ?? $progress->answers[(string) $q->id] ?? null) : null;
             @endphp
             <div class="card" style="margin-bottom:14px;padding:16px 18px;">
                 <div style="font-size:14px;font-weight:700;margin-bottom:12px;">
-                    {{ $idx + 1 }}. {{ $text }}
+                    {{ $q->question }}
                 </div>
                 <div style="display:grid;gap:8px;">
                     @foreach($options as $optIdx => $option)
                     <label style="display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;">
-                        <input type="radio" name="answers[{{ $idx }}]" value="{{ $optIdx }}"
+                        <input type="radio" name="answers[{{ $q->id }}]" value="{{ $optIdx }}"
                                @checked((string) $prev === (string) $optIdx) required
                                style="margin-top:3px;accent-color:var(--brand);">
                         <span style="font-size:13px;color:var(--text-2);">
-                            {{ chr(65 + (int) $optIdx) }}. {{ is_array($option) ? ($option['text'] ?? json_encode($option)) : $option }}
+                            {{ $optIdx }} — {{ $option }}
                         </span>
                     </label>
                     @endforeach
@@ -88,7 +97,7 @@ document.getElementById('assessment-form')?.addEventListener('submit', function 
         loader: true,
         onSuccess: (data) => {
             const score = data.result?.score ?? '';
-            showToast('success', data.message || `Submitted! Score: ${score}%`);
+            showToast('success', data.message || `Submitted! Score: ${score}`);
             setTimeout(() => location.href = data.redirect || '{{ route('mentee.assessments.show', $assessment->id) }}', 900);
         },
         onError: (err) => showToast('error', err.message || 'Could not submit assessment.'),

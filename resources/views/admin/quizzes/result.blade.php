@@ -45,7 +45,7 @@
                 Retake Quiz
             </a>
             <a href="{{ route('admin.quizzes.index') }}"
-               class="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
+               class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">
                 All Quizzes
             </a>
         </div>

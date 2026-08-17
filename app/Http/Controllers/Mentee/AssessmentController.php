@@ -17,10 +17,10 @@ class AssessmentController extends Controller
         try {
             if (Schema::hasTable('assessments')) {
                 $assessments = Assessment::query()
-                    ->orderBy('month')
+                    ->withCount('questions')
+                    ->latest()
                     ->get()
                     ->map(function (Assessment $a) {
-                        $questions = $a->questions ?? [];
                         $progress = null;
                         if (Schema::hasTable('assessment_progress')) {
                             $progress = AssessmentProgress::where('user_id', auth()->id())
@@ -28,7 +28,7 @@ class AssessmentController extends Controller
                                 ->first();
                         }
 
-                        $a->question_count = is_array($questions) ? count($questions) : 0;
+                        $a->question_count = (int) $a->questions_count;
                         $a->progress = $progress;
                         $a->completed = (bool) ($progress?->completed_at);
                         $a->score = $progress?->score;
@@ -45,52 +45,62 @@ class AssessmentController extends Controller
 
     public function show(int $id)
     {
-        $assessment = Assessment::findOrFail($id);
-        $questions = collect($assessment->questions ?? [])->values();
+        $assessment = Assessment::with(['questions.category', 'scoreBands'])->findOrFail($id);
+        $questions = $assessment->questions;
         $progress = Schema::hasTable('assessment_progress')
             ? AssessmentProgress::where('user_id', auth()->id())->where('assessment_id', $id)->first()
             : null;
 
-        return view('frontend.mentee.assessment-show', compact('assessment', 'questions', 'progress'));
+        // Get score band feedback if assessment is completed
+        $scoreBand = null;
+        if ($progress && $progress->completed_at) {
+            $scoreBand = $assessment->scoreBands->first(
+                fn ($b) => $progress->score >= $b->range_from && $progress->score <= $b->range_to
+            );
+        }
+
+        return view('frontend.mentee.assessment-show', compact('assessment', 'questions', 'progress', 'scoreBand'));
     }
 
     public function submit(Request $request, int $id)
     {
         $data = $request->validate([
-            'answers' => 'required|array',
-            'answers.*' => 'nullable|integer|min:0',
+            'answers'   => 'required|array',
+            'answers.*' => 'nullable|integer|min:0|max:3',
         ]);
 
-        $assessment = Assessment::findOrFail($id);
-        $questions = $assessment->questions ?? [];
-        $correct = 0;
-
-        foreach ($data['answers'] as $idx => $ans) {
-            if (isset($questions[$idx]) && (int) ($questions[$idx]['correct_index'] ?? -1) === (int) $ans) {
-                $correct++;
-            }
-        }
-
-        $total = count($questions);
-        $score = $total ? round($correct / $total * 100, 2) : 0;
+        $assessment = Assessment::with(['questions', 'scoreBands'])->findOrFail($id);
+        $totalScore = collect($data['answers'])->sum(fn ($v) => (int) $v);
+        $band = $assessment->scoreBands->first(
+            fn ($b) => $totalScore >= $b->range_from && $totalScore <= $b->range_to
+        );
 
         $progress = AssessmentProgress::updateOrCreate(
             ['user_id' => auth()->id(), 'assessment_id' => $id],
             [
-                'answers' => $data['answers'],
-                'score' => $score,
-                'completed_at' => now(),
+                'answers'       => $data['answers'],
+                'score'         => $totalScore,
+                'completed_at'  => now(),
                 'last_question' => max(0, count($data['answers']) - 1),
             ]
         );
 
+        $message = $band
+            ? "Assessment submitted. Score {$totalScore} — {$band->heading}."
+            : "Assessment submitted. Score: {$totalScore}";
+
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'message' => 'Assessment submitted!',
-                'result' => [
-                    'score' => $score,
-                    'correct' => $correct,
-                    'total' => $total,
+                'message'  => $message,
+                'result'   => [
+                    'score'   => $totalScore,
+                    'total'   => $assessment->questions->count(),
+                    'band'    => $band ? [
+                        'heading'     => $band->heading,
+                        'from'        => $band->range_from,
+                        'to'          => $band->range_to,
+                        'description' => $band->description,
+                    ] : null,
                 ],
                 'progress' => $progress,
                 'redirect' => route('mentee.assessments.show', $id),
@@ -99,6 +109,6 @@ class AssessmentController extends Controller
 
         return redirect()
             ->route('mentee.assessments.show', $id)
-            ->with('success', "Assessment submitted! Score: {$score}% ({$correct}/{$total})");
+            ->with('success', $message);
     }
 }

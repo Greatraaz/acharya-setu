@@ -16,8 +16,8 @@ class ProgressController extends Controller
         $ct = Task::where('user_id', $u->id)->where('status', 'completed')->count();
         $ts = Session::where('mentee_id', $u->id)->count();
         $cs = Session::where('mentee_id', $u->id)->where('status', 'completed')->count();
-        $ap = AssessmentProgress::where('user_id', $u->id)->with('assessment:id,title,month')->get();
-        $cm = $ap->filter(fn($a) => !$a->completed_at)->first()?->assessment?->month ?? 1;
+        $ap = AssessmentProgress::where('user_id', $u->id)->with('assessment:id,title')->get();
+        $cm = 1;
 
         return response()->json([
             'progress' => [

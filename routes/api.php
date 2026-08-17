@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\Mentee\InvoiceController as MenteeInvoice;
 use App\Http\Controllers\Api\Mentee\SessionInvoiceController as MenteeSessionInvoice;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
 use App\Http\Controllers\Api\Mentor\CurriculumController as MentorCurriculum;
+use App\Http\Controllers\Api\Mentor\AssessmentController as MentorAssessment;
 use App\Http\Controllers\Api\Mentor\MenteeController as MentorMentee;
 use App\Http\Controllers\Api\Mentor\MentorRequestController as MentorMentorRequest;
 use App\Http\Controllers\Api\Mentor\ProgressController as MentorProgress;
@@ -388,11 +389,14 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}',     [SessionsController::class, 'destroy'])->name('destroy');
         });
 
-        // Assessments
+        // Assessments (mentor CRUD)
         Route::prefix('assessments')->name('assessments.')->group(function () {
-            Route::get('/',                     [AssessmentsController::class, 'index'])->name('index');
-            Route::get('/{id}',                [AssessmentsController::class, 'show'])->name('show');
-            Route::post('/{id}/submit',        [AssessmentsController::class, 'submit'])->name('submit');
+            Route::get('/',              [MentorAssessment::class, 'index'])->name('index');
+            Route::post('/',             [MentorAssessment::class, 'store'])->name('store');
+            Route::get('/{id}',          [MentorAssessment::class, 'show'])->name('show')->whereNumber('id');
+            Route::put('/{id}',          [MentorAssessment::class, 'update'])->name('update')->whereNumber('id');
+            Route::patch('/{id}',        [MentorAssessment::class, 'update'])->name('patch')->whereNumber('id');
+            Route::delete('/{id}',       [MentorAssessment::class, 'destroy'])->name('destroy')->whereNumber('id');
         });
 
         // Videos

@@ -54,7 +54,7 @@
         </div>
  
         <button type="submit"
-                class="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700 transition-colors">
+                class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors">
             Save Quiz
         </button>
     </form>

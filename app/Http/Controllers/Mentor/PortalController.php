@@ -190,11 +190,11 @@ class PortalController extends Controller
         try {
             if (Schema::hasTable('assessments')) {
                 $assessments = Assessment::query()
-                    ->orderBy('month')
+                    ->withCount('questions')
+                    ->latest()
                     ->get()
                     ->map(function (Assessment $a) {
-                        $questions = $a->questions ?? [];
-                        $a->question_count = is_array($questions) ? count($questions) : 0;
+                        $a->question_count = (int) $a->questions_count;
                         return $a;
                     });
             }
