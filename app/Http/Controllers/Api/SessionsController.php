@@ -10,6 +10,7 @@ use Illuminate\Http\{JsonResponse, Request};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\{Http, Log};
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class SessionsController extends Controller
 {
@@ -445,4 +446,140 @@ class SessionsController extends Controller
 
         return $payload;
     }
+
+    public function extendSession(Request $request, int $id): JsonResponse
+{
+    $data = $request->validate([
+        'duration' => 'required|integer|min:1',
+        'amount'   => 'required|numeric|min:0.01',
+    ]);
+
+    try {
+        $user = $request->user();
+
+        $result = DB::transaction(function () use ($user, $id, $data) {
+
+            // Lock session so two extension requests cannot happen simultaneously
+            $session = ConsultationSession::where('id', $id)
+                ->where('mentee_id', $user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Lock user wallet row
+            $mentee = User::where('id', $user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $amount = round((float) $data['amount'], 2);
+            $additionalDuration = (int) $data['duration'];
+
+            $walletBalance = round((float) $mentee->wallet_balance, 2);
+
+            // Check wallet balance
+            if ($walletBalance < $amount) {
+                throw new \InvalidArgumentException(
+                    'Insufficient wallet balance.'
+                );
+            }
+
+            // Unique reference for this extension
+            $reference = 'EXT-' . $session->id . '-' . strtoupper(Str::random(8));
+
+            // Deduct amount from wallet
+            $mentee->debitWallet(
+                $amount,
+                "Session extension {$session->booking_ref}",
+                [
+                    'reference'            => $reference,
+                    'transactionable_type' => ConsultationSession::class,
+                    'transactionable_id'   => $session->id,
+                    'meta'                 => [
+                        'session_id'        => $session->id,
+                        'booking_ref'       => $session->booking_ref,
+                        'additional_duration' => $additionalDuration,
+                        'extension_amount' => $amount,
+                        'source'            => 'session_extension',
+                    ],
+                ]
+            );
+
+            // Increase session duration
+            $session->duration_minutes =
+                (int) $session->duration_minutes + $additionalDuration;
+
+            // Increase total session amount
+            $session->amount =
+                round((float) $session->amount + $amount, 2);
+
+            // Track wallet payment
+            $session->wallet_amount =
+                round((float) ($session->wallet_amount ?? 0) + $amount, 2);
+
+            $session->payment_status = 'paid';
+
+            // Keep existing payment method if applicable,
+            // otherwise mark it as wallet.
+            $session->payment_method =
+                $session->payment_method === 'razorpay'
+                    ? 'hybrid'
+                    : 'wallet';
+
+            $session->save();
+
+            return [
+                'session'        => $session->fresh(),
+                'amount_deducted'=> $amount,
+                'duration_added' => $additionalDuration,
+                'wallet_balance' => round((float) $mentee->fresh()->wallet_balance, 2),
+                'reference'      => $reference,
+            ];
+        });
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Session extended successfully.',
+            'data'       => [
+                'session_id'        => $result['session']->id,
+                'duration_added'    => $result['duration_added'],
+                'duration_minutes'  => $result['session']->duration_minutes,
+                'amount_deducted'   => $result['amount_deducted'],
+                'total_amount'      => (float) $result['session']->amount,
+                'wallet_balance'    => $result['wallet_balance'],
+                'transaction_ref'   => $result['reference'],
+            ],
+        ]);
+
+    } catch (\InvalidArgumentException $e) {
+
+        return response()->json([
+            'status'     => false,
+            'statuscode' => 422,
+            'message'    => $e->getMessage(),
+            'needs_topup' => true,
+        ], 422);
+
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+
+        return response()->json([
+            'status'     => false,
+            'statuscode' => 404,
+            'message'    => 'Session not found.',
+        ], 404);
+
+    } catch (\Throwable $e) {
+
+        Log::error('Session extension failed.', [
+            'session_id' => $id,
+            'user_id'    => $request->user()->id,
+            'error'      => $e->getMessage(),
+        ]);
+
+        return response()->json([
+            'status'     => false,
+            'statuscode' => 500,
+            'message'    => 'Unable to extend session right now.',
+        ], 500);
+    }
+}
 }
