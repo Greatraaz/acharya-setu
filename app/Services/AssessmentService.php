@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Storage;
 
 class AssessmentService
 {
@@ -45,8 +46,12 @@ class AssessmentService
             'title'        => $data['title'],
             'description'  => $data['description'] ?? null,
             'instructions' => $data['instructions'] ?? null,
-            'image'        => $data['image'] ?? null,
-            'icon'         => $data['icon'] ?? null,
+            'image'        => $request->hasFile('image')
+            ? $request->file('image')->store('assessments', 'public')
+            : null,
+            'icon'         => $request->hasFile('image')
+            ? $request->file('image')->store('assessments', 'public')
+            : null,
             'status'       => $data['status'] ?? 'active',
             'created_by'   => $createdBy,
         ]);
@@ -57,22 +62,51 @@ class AssessmentService
     }
 
     public function updateFromRequest(Request $request, Assessment $assessment): Assessment
-    {
-        $data = $this->validatedAssessment($request, $assessment->id);
+{
+    $data = $this->validatedAssessment($request, $assessment->id);
 
-        $assessment->update([
-            'title'        => $data['title'],
-            'description'  => $data['description'] ?? null,
-            'instructions' => $data['instructions'] ?? null,
-            'image'        => $data['image'] ?? $assessment->image,
-            'icon'         => $data['icon'] ?? $assessment->icon,
-            'status'       => $data['status'] ?? $assessment->status ?? 'active',
-        ]);
+    $updateData = [
+        'title'        => $data['title'],
+        'description'  => $data['description'] ?? null,
+        'instructions' => $data['instructions'] ?? null,
+        'icon'         => $data['icon'] ?? $assessment->icon,
+        'status'       => $data['status'] ?? $assessment->status ?? 'active',
+    ];
 
-        $this->syncScoreBands($assessment, $request->input('bands', []));
+    // Only replace image when a new image is uploaded
+    if ($request->hasFile('image')) {
 
-        return $assessment->fresh(['scoreBands']);
+        // Delete old image
+        if ($assessment->image) {
+            Storage::disk('public')->delete($assessment->image);
+        }
+
+        // Store new image
+        $updateData['image'] = $request->file('image')
+            ->store('assessments', 'public');
     }
+
+    if ($request->hasFile('icon')) {
+
+    // Delete old image
+    if ($assessment->icon) {
+        Storage::disk('public')->delete($assessment->icon);
+    }
+
+    // Store new image
+    $updateData['icon'] = $request->file('icon')
+        ->store('assessments', 'public');
+}
+
+    $assessment->update($updateData);
+
+    $this->syncScoreBands(
+        $assessment,
+        $request->input('bands', [])
+    );
+
+    return $assessment->fresh(['scoreBands']);
+}
 
     public function delete(Assessment $assessment): void
     {
@@ -138,8 +172,8 @@ class AssessmentService
             'description'          => 'nullable|string',
             'instructions'         => 'nullable|string',
             'status'               => 'nullable|in:active,inactive',
-            'image'                => 'nullable|string|max:500',
-            'icon'                 => 'nullable|string|max:500',
+            'image'                => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'icon'                 => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'bands'                => 'required|array|size:4',
             'bands.*.from'         => 'required|integer|min:0',
             'bands.*.to'           => 'required|integer|min:0',

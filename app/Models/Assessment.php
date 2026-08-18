@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Assessment extends Model
 {
@@ -57,11 +58,15 @@ class Assessment extends Model
 
     public function imageUrl(): ?string
     {
-        return storage_url($this->image);
+        return $this->image
+            ? url(Storage::url($this->image))
+            : null;
     }
 
     public function iconUrl(): ?string
     {
-        return storage_url($this->icon);
+        return $this->icon
+            ? url(Storage::url($this->icon))
+            : null;
     }
 }

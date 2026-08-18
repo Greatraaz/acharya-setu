@@ -30,9 +30,11 @@ use App\Http\Controllers\Api\Mentee\MentorRequestController as MenteeMentorReque
 use App\Http\Controllers\Api\Mentee\ProgressController as MenteeProgress;
 use App\Http\Controllers\Api\Mentee\InvoiceController as MenteeInvoice;
 use App\Http\Controllers\Api\Mentee\SessionInvoiceController as MenteeSessionInvoice;
+use App\Http\Controllers\Api\Mentee\AssessmentController;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
 use App\Http\Controllers\Api\Mentor\CurriculumController as MentorCurriculum;
 use App\Http\Controllers\Api\Mentor\AssessmentController as MentorAssessment;
+use App\Http\Controllers\Api\Mentor\AssessmentQuestionController as MentorAssessmentQuestion;
 use App\Http\Controllers\Api\Mentor\MenteeController as MentorMentee;
 use App\Http\Controllers\Api\Mentor\MentorRequestController as MentorMentorRequest;
 use App\Http\Controllers\Api\Mentor\ProgressController as MentorProgress;
@@ -47,23 +49,23 @@ Route::prefix('v1')->group(function () {
         return response()->json([
             'status' => 'ok',
             'app'    => 'Vedrix API',
-            'version'=> '1.0.0'
+            'version' => '1.0.0'
         ]);
     });
-     Route::post('cache-clear', function () {
-            Artisan::call('optimize:clear');
-            Cache::forget('app_configurations');
+    Route::post('cache-clear', function () {
+        Artisan::call('optimize:clear');
+        Cache::forget('app_configurations');
 
-            return response()->json([
-                'status'     => true,
-                'statuscode' => 200,
-                'message'    => 'Application cache cleared successfully.',
-                'cleared'    => [
-                    'optimize:clear',
-                    'app_configurations',
-                ],
-            ]);
-        });
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Application cache cleared successfully.',
+            'cleared'    => [
+                'optimize:clear',
+                'app_configurations',
+            ],
+        ]);
+    });
     Route::get('/media/mentor-videos/{filename}', [VideosController::class, 'serveMentorVideoFile'])
         ->where('filename', '[^/]+');
     Route::get('/media/curriculum-supporting-materials/{filename}', [VideosController::class, 'serveSupportingMaterialFile'])
@@ -84,11 +86,11 @@ Route::prefix('v1/auth')->group(function () {
 
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::match(['get', 'post'], '/get-agora-token/{channel}', [SessionsController::class, 'getAgoraToken']);
-    
+
     /**********************************************************
      * Auth & Onboarding
      **********************************************************/
-     
+
     Route::prefix('auth')->group(function () {
         Route::get('/me',               [AuthController::class, 'me']);
         Route::post('/logout',          [AuthController::class, 'logout']);
@@ -133,7 +135,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('/channels',                    [AdminController::class, 'communityChannels']);
         Route::post('/channels',                   [AdminController::class, 'createChannel']);
         Route::post('/notifications/broadcast',    [AdminController::class, 'broadcastNotification']);
-       
     });
 
     /**********************************************************
@@ -144,10 +145,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // ── Mentee Onboarding ─────────────────────────────────────────
         Route::prefix('onboarding')->name('onboarding.')->group(function () {
-    
-            Route::get ('meta',     [MenteeOnboarding::class, 'meta']);      // GET  meta & streams
-            Route::get ('status',   [MenteeOnboarding::class, 'status']);    // GET  current progress
-    
+
+            Route::get('meta',     [MenteeOnboarding::class, 'meta']);      // GET  meta & streams
+            Route::get('status',   [MenteeOnboarding::class, 'status']);    // GET  current progress
+
             Route::post('step/1',   [MenteeOnboarding::class, 'saveStep1']); // POST profile
             Route::post('step/2',   [MenteeOnboarding::class, 'saveStep2']); // POST education details
             Route::post('step/3',   [MenteeOnboarding::class, 'saveStep3']); // POST career goals
@@ -177,7 +178,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // Mentor selection requests
         Route::prefix('mentor-requests')->name('mentor-requests.')->group(function () {
-            Route::get ('/',      [MenteeMentorRequest::class, 'index'])->name('index');
+            Route::get('/',      [MenteeMentorRequest::class, 'index'])->name('index');
             Route::post('/',      [MenteeMentorRequest::class, 'store'])->name('store');
             Route::delete('/{id}', [MenteeMentorRequest::class, 'destroy'])->name('destroy')->whereNumber('id');
         });
@@ -270,16 +271,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         });
 
         // Availability
-        Route::get('mentors/{mentorId}/availability',[AvailabilityController::class, 'getByMentor']);
+        Route::get('mentors/{mentorId}/availability', [AvailabilityController::class, 'getByMentor']);
 
         //Plans
         Route::prefix('plans')->group(function () {
-            Route::post('/subscribe/{id}', [PlanController::class, 'subscribe']);                    
+            Route::post('/subscribe/{id}', [PlanController::class, 'subscribe']);
             Route::post('/subscribe/{id}/verify', [PlanController::class, 'verifySubscriptionPayment']);
-            Route::get('/subscription/active', [PlanController::class, 'activeSubscription']);  
+            Route::get('/subscription/active', [PlanController::class, 'activeSubscription']);
             Route::get('/subscription/history', [PlanController::class, 'subscriptionHistory']);
             Route::get('/subscription/consumption', [PlanController::class, 'subscriptionConsumption']);
-            Route::post('/subscription/cancel', [PlanController::class, 'cancelSubscription']); 
+            Route::post('/subscription/cancel', [PlanController::class, 'cancelSubscription']);
         });
 
         // Plan invoices
@@ -292,6 +293,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('session-invoices/{invoice}', [MenteeSessionInvoice::class, 'show'])->whereNumber('invoice');
         Route::get('session-invoices/{invoice}/download', [MenteeSessionInvoice::class, 'download'])->whereNumber('invoice');
 
+        Route::get('/assessments', [AssessmentController::class, 'index'])->name('api.mentee.assessments.index');
+        Route::get('/assessments/{id}', [AssessmentController::class, 'show'])
+            ->name('api.mentee.assessments.show');
+
+        Route::post('/assessments/{id}/submit', [AssessmentController::class, 'submit'])->name('api.mentee.assessments.submit');
     });
 
     /**********************************************************
@@ -303,10 +309,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // ── Mentor Onboarding ─────────────────────────────────────────
         Route::prefix('onboarding')->name('onboarding.')->group(function () {
-    
-            Route::get ('meta',     [MentorOnboarding::class, 'meta']);      // GET  meta & streams
-            Route::get ('status',   [MentorOnboarding::class, 'status']);    // GET  current progress
-    
+
+            Route::get('meta',     [MentorOnboarding::class, 'meta']);      // GET  meta & streams
+            Route::get('status',   [MentorOnboarding::class, 'status']);    // GET  current progress
+
             Route::post('step/1',   [MentorOnboarding::class, 'saveStep1']); // POST basic info + avatar
             Route::post('step/2',   [MentorOnboarding::class, 'saveStep2']); // POST professional details
             Route::post('step/3',   [MentorOnboarding::class, 'saveStep3']); // POST expertise chips
@@ -316,28 +322,28 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // ── Mentor Curriculum (Track → Month → Week → Task) ─────────────
         Route::prefix('curriculum')->name('curriculum.')->group(function () {
-            Route::get ('tracks',                    [MentorCurriculum::class, 'tracks']);
+            Route::get('tracks',                    [MentorCurriculum::class, 'tracks']);
             Route::post('tracks',                     [MentorCurriculum::class, 'storeTrack']);
             Route::patch('tracks/{track}',            [MentorCurriculum::class, 'updateTrack'])->whereNumber('track');
             Route::post('tracks/{track}/months',      [MentorCurriculum::class, 'storeMonth'])->whereNumber('track');
-            Route::get ('tracks/{track}/months',      [MentorCurriculum::class, 'months'])->whereNumber('track');
+            Route::get('tracks/{track}/months',      [MentorCurriculum::class, 'months'])->whereNumber('track');
             Route::patch('months/{month}',            [MentorCurriculum::class, 'updateMonth'])->whereNumber('month');
             Route::delete('months/{month}',           [MentorCurriculum::class, 'destroyMonth'])->whereNumber('month');
             Route::post('months/{month}/weeks',       [MentorCurriculum::class, 'storeWeek'])->whereNumber('month');
-            Route::get ('months/{month}/weeks',       [MentorCurriculum::class, 'weeks'])->whereNumber('month');
+            Route::get('months/{month}/weeks',       [MentorCurriculum::class, 'weeks'])->whereNumber('month');
             Route::patch('weeks/{week}',              [MentorCurriculum::class, 'updateWeek'])->whereNumber('week');
             Route::delete('weeks/{week}',            [MentorCurriculum::class, 'destroyWeek'])->whereNumber('week');
             Route::post('weeks/{week}/tasks',        [MentorCurriculum::class, 'storeTask'])->whereNumber('week');
-            Route::get ('weeks/{week}/tasks',        [MentorCurriculum::class, 'tasks'])->whereNumber('week');
-            Route::get   ('weeks/{week}/mcqs',        [MentorCurriculum::class, 'mcqs'])->whereNumber('week');
-            Route::post  ('weeks/{week}/mcqs',        [MentorCurriculum::class, 'storeMcq'])->whereNumber('week');
-            Route::patch ('weeks/{week}/mcqs/{topic}', [MentorCurriculum::class, 'updateMcq'])->whereNumber('week')->whereNumber('topic');
+            Route::get('weeks/{week}/tasks',        [MentorCurriculum::class, 'tasks'])->whereNumber('week');
+            Route::get('weeks/{week}/mcqs',        [MentorCurriculum::class, 'mcqs'])->whereNumber('week');
+            Route::post('weeks/{week}/mcqs',        [MentorCurriculum::class, 'storeMcq'])->whereNumber('week');
+            Route::patch('weeks/{week}/mcqs/{topic}', [MentorCurriculum::class, 'updateMcq'])->whereNumber('week')->whereNumber('topic');
             Route::delete('weeks/{week}/mcqs/{topic}/{mcq}', [MentorCurriculum::class, 'destroyMcqItem'])->whereNumber('week')->whereNumber('topic')->whereNumber('mcq');
             Route::delete('weeks/{week}/mcqs/{topic}', [MentorCurriculum::class, 'destroyMcq'])->whereNumber('week')->whereNumber('topic');
             Route::post('tasks/{task}',             [MentorCurriculum::class, 'updateTask'])->whereNumber('task');
             Route::patch('tasks/{task}',             [MentorCurriculum::class, 'updateTask'])->whereNumber('task');
             Route::delete('tasks/{task}',            [MentorCurriculum::class, 'destroyTask'])->whereNumber('task');
-            Route::get ('weeks/{week}/supporting-materials', [MentorCurriculum::class, 'supportingMaterials'])->whereNumber('week');
+            Route::get('weeks/{week}/supporting-materials', [MentorCurriculum::class, 'supportingMaterials'])->whereNumber('week');
             Route::post('weeks/{week}/supporting-materials', [MentorCurriculum::class, 'storeSupportingMaterial'])->whereNumber('week');
             Route::post('supporting-materials/{material}', [MentorCurriculum::class, 'updateSupportingMaterial'])->whereNumber('material');
             Route::patch('supporting-materials/{material}', [MentorCurriculum::class, 'updateSupportingMaterial'])->whereNumber('material');
@@ -353,18 +359,18 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // ── Mentor Requests (accept / reject) ─────────────────────────
         Route::prefix('mentor-requests')->name('mentor-requests.')->group(function () {
-            Route::get ('/',              [MentorMentorRequest::class, 'index'])->name('index');
+            Route::get('/',              [MentorMentorRequest::class, 'index'])->name('index');
             Route::post('/{id}/accept',   [MentorMentorRequest::class, 'accept'])->name('accept')->whereNumber('id');
             Route::post('/{id}/reject',   [MentorMentorRequest::class, 'reject'])->name('reject')->whereNumber('id');
         });
 
         Route::prefix('availability')->name('availability.')->group(function () {
-            Route::get   ('/',              [AvailabilityController::class, 'index']);       // GET    all own slots
-            Route::get   ('/available',     [AvailabilityController::class, 'available']);   // GET    only active slots
-            Route::post  ('/',              [AvailabilityController::class, 'store']);       // POST   add single slot
-            Route::put   ('/',              [AvailabilityController::class, 'update']);      // PUT    bulk replace all slots
-            Route::put   ('/{id}',          [AvailabilityController::class, 'updateSlot']); // PUT    update single slot
-            Route::patch ('/{id}/toggle',   [AvailabilityController::class, 'toggle']);     // PATCH  toggle single slot
+            Route::get('/',              [AvailabilityController::class, 'index']);       // GET    all own slots
+            Route::get('/available',     [AvailabilityController::class, 'available']);   // GET    only active slots
+            Route::post('/',              [AvailabilityController::class, 'store']);       // POST   add single slot
+            Route::put('/',              [AvailabilityController::class, 'update']);      // PUT    bulk replace all slots
+            Route::put('/{id}',          [AvailabilityController::class, 'updateSlot']); // PUT    update single slot
+            Route::patch('/{id}/toggle',   [AvailabilityController::class, 'toggle']);     // PATCH  toggle single slot
             Route::delete('/{id}',          [AvailabilityController::class, 'destroy']);    // DELETE single slot
             Route::delete('/',              [AvailabilityController::class, 'destroyAll']); // DELETE all slots
         });
@@ -399,12 +405,27 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}',       [MentorAssessment::class, 'destroy'])->name('destroy')->whereNumber('id');
         });
 
+        Route::prefix('assessments/{assessmentId}/questions')->name('assessments.questions.')->whereNumber('assessmentId')->group(function () {
+
+            Route::get('/', [MentorAssessmentQuestion::class,'index'])->name('index');
+
+            Route::post('/', [MentorAssessmentQuestion::class,'store'])->name('store');
+
+            Route::get('/{questionId}', [MentorAssessmentQuestion::class,'show'])->name('show');
+
+            Route::put('/{questionId}', [MentorAssessmentQuestion::class,'update'])->name('update');
+
+            Route::patch('/{questionId}', [MentorAssessmentQuestion::class,'update'])->name('patch');
+
+            Route::delete('/{questionId}', [MentorAssessmentQuestion::class,'destroy'])->name('destroy');
+        });
+
         // Videos
         Route::prefix('videos')->name('videos.')->group(function () {
-            Route::get   ('/',              [VideosController::class, 'mentorIndex'])->name('index');
-            Route::post  ('/',              [VideosController::class, 'mentorStore'])->name('store');
-            Route::post  ('/{id}/watched',  [VideosController::class, 'markWatched'])->name('watched')->whereNumber('id');
-            Route::post  ('/{id}',          [VideosController::class, 'mentorUpdate'])->name('update')->whereNumber('id');
+            Route::get('/',              [VideosController::class, 'mentorIndex'])->name('index');
+            Route::post('/',              [VideosController::class, 'mentorStore'])->name('store');
+            Route::post('/{id}/watched',  [VideosController::class, 'markWatched'])->name('watched')->whereNumber('id');
+            Route::post('/{id}',          [VideosController::class, 'mentorUpdate'])->name('update')->whereNumber('id');
             Route::delete('/{id}',          [VideosController::class, 'mentorDestroy'])->name('destroy')->whereNumber('id');
         });
 
@@ -465,8 +486,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/{id}',             [QuizzesController::class, 'show'])->name('show');
             Route::post('/{id}/submit',     [QuizzesController::class, 'submit'])->name('submit');
         });
-
-
     });
 
     // Reviews, Calls, Wellness, Referrals, Progress, Plans, Assignments
@@ -482,7 +501,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::post('/assignments/assign',           [AssignmentsController::class, 'assign']);
 
     Route::prefix('plans')->group(function () {
-        Route::get('/', [PlanController::class, 'index']);        
-        Route::get('/{id}', [PlanController::class, 'show']);  
+        Route::get('/', [PlanController::class, 'index']);
+        Route::get('/{id}', [PlanController::class, 'show']);
     });
 });
