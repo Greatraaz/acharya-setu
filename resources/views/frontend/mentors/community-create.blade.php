@@ -17,7 +17,7 @@
                 <a href="{{ $backUrl }}" class="btn btn-ghost btn-sm">← Back</a>
             </div>
 
-            <form method="POST" action="{{ route('mentor.community.store') }}" class="space-y-5">
+            <form method="POST" action="{{ route('mentor.community.store') }}" enctype="multipart/form-data" class="space-y-5">
                 @csrf
 
                 <div>
@@ -68,18 +68,17 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">YouTube Link (optional)</label>
-                    <input type="url" name="youtube_url" value="{{ old('youtube_url', old('video_url')) }}"
-                           placeholder="https://youtube.com/watch?v=... or https://youtu.be/..."
-                           class="form-input">
-                    <p class="text-xs text-gray-500 mt-1">If provided, this link is posted as the first channel message.</p>
-                </div>
+                @include('partials.community-channel-image-input')
+                @include('partials.community-channel-video-input')
 
                 <button type="submit" class="btn btn-primary w-full" style="margin-top:10px;">Create Channel</button>
             </form>
         </div>
     </div>
 </div>
+@push('scripts')
+@include('partials.community-composer-scripts')
+@endpush
+
 @endsection
 

@@ -196,6 +196,12 @@ $isAdminUi = request()->routeIs('admin.*');
                                 Delete
                             </button>
                         </form>
+                        @else
+                        @include('partials.community-message-report', [
+                            'message' => $message,
+                            'formClass' => 'ml-auto opacity-0 group-hover:opacity-100 transition-opacity',
+                            'buttonClass' => 'inline-flex items-center gap-1 text-[11px] text-gray-300 hover:text-amber-500',
+                        ])
                         @endif
                     </div>
 
@@ -210,17 +216,7 @@ $isAdminUi = request()->routeIs('admin.*');
                     </a>
                     @endif
                     @if($message->video_path)
-                    @if($message->youtube_embed_url)
-                    <div class="mt-2 max-w-[420px] aspect-video rounded-xl overflow-hidden border border-gray-200 bg-black">
-                        <iframe class="w-full h-full" src="{{ $message->youtube_embed_url }}" title="YouTube video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
-                    </div>
-                    @elseif($message->video_url)
-                    <div class="mt-2 max-w-[420px]">
-                        <video controls playsinline preload="metadata"
-                               class="w-full rounded-xl border border-gray-200 bg-black"
-                               src="{{ $message->video_url }}"></video>
-                    </div>
-                    @endif
+                    @include('partials.community-message-video', ['message' => $message])
                     @endif
 
                     {{-- Like + reply actions --}}
@@ -266,17 +262,7 @@ $isAdminUi = request()->routeIs('admin.*');
                                 </a>
                                 @endif
                                 @if($reply->video_path)
-                                @if($reply->youtube_embed_url)
-                                <div class="mt-1 max-w-[280px] aspect-video rounded-lg overflow-hidden border border-gray-200 bg-black">
-                                    <iframe class="w-full h-full" src="{{ $reply->youtube_embed_url }}" title="YouTube video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
-                                </div>
-                                @elseif($reply->video_url)
-                                <div class="mt-1 max-w-[280px]">
-                                    <video controls playsinline preload="metadata"
-                                           class="w-full rounded-lg border border-gray-200 bg-black"
-                                           src="{{ $reply->video_url }}"></video>
-                                </div>
-                                @endif
+                                @include('partials.community-message-video', ['message' => $reply, 'reply' => true])
                                 @endif
                             </div>
                         </div>
@@ -313,17 +299,20 @@ $isAdminUi = request()->routeIs('admin.*');
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                         </svg>
                                     </label>
+                                    @include('partials.community-video-attach', [
+                                        'chipId' => 'reply-video-chip-'.$message->id,
+                                        'wrapperClass' => 'cursor-pointer text-gray-400 hover:text-blue-600 flex-shrink-0',
+                                        'svgClass' => 'w-4 h-4',
+                                        'inputClass' => 'hidden',
+                                    ])
                                     <button type="submit"
                                             class="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg flex-shrink-0 transition-colors">
                                         Send
                                     </button>
                                 </div>
-                                @include('partials.community-youtube-input', [
-                                    'inputId' => 'reply-youtube-url-'.$message->id,
-                                    'wrapperClass' => 'space-y-1',
-                                    'labelClass' => 'text-[11px] font-medium text-gray-500',
-                                    'inputClass' => 'w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100',
-                                ])
+                                <div class="flex flex-wrap gap-2 text-[11px] text-gray-500">
+                                    <span id="reply-video-chip-{{ $message->id }}" class="channel-composer__chip"></span>
+                                </div>
                                 <img id="reply-preview-{{ $message->id }}" class="hidden max-h-24 rounded-lg border border-gray-200" alt="">
                             </div>
                         </form>
@@ -374,6 +363,13 @@ $isAdminUi = request()->routeIs('admin.*');
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
                     </label>
+                    @include('partials.community-video-attach', [
+                        'chipId' => 'main-video-chip',
+                        'wrapperClass' => 'cursor-pointer text-gray-400 hover:text-blue-600 flex-shrink-0',
+                        'svgClass' => 'w-5 h-5',
+                        'inputClass' => 'hidden',
+                        'inputId' => 'main-video',
+                    ])
                     <button type="submit"
                             class="w-8 h-8 bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl
                                    flex items-center justify-center flex-shrink-0 transition-all">
@@ -382,12 +378,9 @@ $isAdminUi = request()->routeIs('admin.*');
                         </svg>
                     </button>
                 </div>
-                @include('partials.community-youtube-input', [
-                    'inputId' => 'main-youtube-url',
-                    'wrapperClass' => 'space-y-1',
-                    'labelClass' => 'text-[11px] font-medium text-gray-500',
-                    'inputClass' => 'w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100',
-                ])
+                <div class="flex flex-wrap gap-2 text-[11px] text-gray-500">
+                    <span id="main-video-chip" class="channel-composer__chip"></span>
+                </div>
                 <img id="main-image-preview" class="hidden max-h-28 rounded-xl border border-gray-200" alt="">
             </form>
         </div>

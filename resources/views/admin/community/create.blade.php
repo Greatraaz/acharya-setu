@@ -23,7 +23,7 @@
     </div>
 
     <div class="bg-white border border-gray-100 rounded-2xl p-6">
-        <form method="POST" action="{{ route($r.'.store') }}" class="space-y-5">
+        <form method="POST" action="{{ route($r.'.store') }}" enctype="multipart/form-data" class="space-y-5">
             @csrf
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Channel Name</label>
@@ -76,14 +76,14 @@
                     </label>
                 </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">YouTube Link (optional)</label>
-                <input type="url" name="youtube_url" value="{{ old('youtube_url', old('video_url')) }}" placeholder="https://youtube.com/watch?v=... or https://youtu.be/..."
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <p class="text-xs text-gray-400 mt-1">If provided, this link is posted as the first channel message.</p>
-                @error('youtube_url')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
-                @error('video_url')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
-            </div>
+            @include('partials.community-channel-image-input', [
+                'labelClass' => 'block text-sm font-medium text-gray-700 mb-1.5',
+                'hintClass' => 'text-xs text-gray-400 mt-1',
+            ])
+            @include('partials.community-channel-video-input', [
+                'labelClass' => 'block text-sm font-medium text-gray-700 mb-1.5',
+                'hintClass' => 'text-xs text-gray-400 mt-1',
+            ])
             <button type="submit"
                     class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors">
                 Create Channel
@@ -94,6 +94,7 @@
 @endsection
 
 @push('scripts')
+@include('partials.community-composer-scripts')
 <script>
 (function () {
     const nameInput = document.getElementById('channel-name');

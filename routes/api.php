@@ -249,6 +249,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/channels/{channelId}/messages',          [CommunityController::class, 'messages'])->name('messages');
             Route::post('/channels/{channelId}/messages',         [CommunityController::class, 'postMessage'])->name('postMessage');
             Route::post('/messages/{msgId}/like',                 [CommunityController::class, 'likeMessage'])->name('likeMessage');
+            Route::post('/messages/{msgId}/report',              [CommunityController::class, 'reportMessage'])->name('messages.report');
             Route::delete('/messages/{msgId}',                    [CommunityController::class, 'deleteMessage'])->name('messages.delete');
             Route::get('/invitations',                           [CommunityController::class, 'myInvitations'])->name('invitations');
             Route::post('/invitations/{invitationId}/accept',     [CommunityController::class, 'acceptInvitation'])->name('invitations.accept');

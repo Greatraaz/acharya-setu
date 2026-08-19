@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Models\ChannelInvitation;
 use App\Models\Message;
+use App\Models\MessageReport;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,16 +32,7 @@ class CommunityController extends Controller
             $request->merge(['slug' => null]);
         }
 
-        $data = $request->validate([
-            'name'        => 'required|string|max:100|unique:channels,name',
-            'slug'        => 'nullable|string|max:120|unique:channels,slug|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-            'description' => 'nullable|string|max:500',
-            'icon'        => 'nullable|string|max:10',
-            'type'        => 'required|in:public,private',
-            'category'    => 'nullable|string|max:50',
-            'youtube_url' => 'nullable|string|max:500',
-            'video_url'   => 'nullable|string|max:500',
-        ]);
+        $data = $request->validate(Channel::storeValidationRules());
 
         $channel = Channel::create([
             'name'        => $data['name'],
@@ -59,19 +51,7 @@ class CommunityController extends Controller
             'last_read_at' => now(),
         ]);
 
-        $youtubeInput = Message::youtubeUrlFromInput($data);
-        $initialVideoUrl = Message::resolveStoredYoutubeUrl($youtubeInput);
-
-        if ($initialVideoUrl) {
-            Message::create([
-                'channel_id' => $channel->id,
-                'user_id'    => $user->id,
-                'body'       => '',
-                'video_path' => $initialVideoUrl,
-                'parent_id'  => null,
-                'liked_by'   => [],
-            ]);
-        }
+        Message::createOptionalWelcomeMessage($request, $channel, $user->id);
 
         return response()->json([
             'message' => 'Channel created.',
@@ -613,8 +593,7 @@ class CommunityController extends Controller
             $channel->addMember($user);
         }
 
-        $paginator = $channel->messages()
-            ->with(['user:id,name,avatar_url,role', 'replies.user:id,name,avatar_url,role'])
+        $paginator = $channel->messagesForUser($user)
             ->withCount('replies')
             ->paginate(30);
 
@@ -638,10 +617,10 @@ class CommunityController extends Controller
 
     /**
      * Post a message or thread reply.
-     * Accepts JSON or multipart form-data with optional `image` and/or `youtube_url`.
+     * Accepts JSON or multipart form-data with optional `image` and/or `video`.
      * Fields: body|message (text), parent_id (reply),
-     * image (jpeg/png/webp/gif, max 5MB), youtube_url|video_url (YouTube watch/share/embed link).
-     * At least body, image, or YouTube link is required.
+     * image (jpeg/png/webp/gif, max 5MB), video (mp4/mov/avi/webm/mpeg, max 10MB).
+     * At least one of body, image, or video is required.
      */
     public function postMessage(Request $request, int $channelId): JsonResponse
     {
@@ -654,20 +633,19 @@ class CommunityController extends Controller
 
         $data = $request->validate(Message::mediaValidationRules());
 
-        $body = trim((string) ($data['body'] ?? $data['message'] ?? ''));
-        $hasImage = $request->hasFile('image');
-        $youtubeInput = Message::youtubeUrlFromInput($data);
-        $videoPath = Message::resolveStoredYoutubeUrl($youtubeInput);
+        try {
+            $attrs = Message::buildPostAttributes($request, $channel, $data);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $firstError = collect($e->errors())->flatten()->first();
 
-        if ($body === '' && ! $hasImage && ! $videoPath) {
             return response()->json([
-                'message' => 'Provide a message body, image, and/or YouTube link.',
-                'errors'  => ['body' => ['Message text, image, or YouTube link is required.']],
+                'message' => $firstError ?: 'Unable to post this message.',
+                'errors'  => $e->errors(),
             ], 422);
         }
 
-        if (! empty($data['parent_id'])) {
-            $parent = Message::where('channel_id', $channel->id)->findOrFail($data['parent_id']);
+        if (! empty($attrs['parent_id'])) {
+            $parent = Message::where('channel_id', $channel->id)->findOrFail($attrs['parent_id']);
             if ($parent->parent_id) {
                 return response()->json(['message' => 'Cannot reply to a reply. Reply to the parent message.'], 422);
             }
@@ -677,17 +655,13 @@ class CommunityController extends Controller
             $channel->addMember($user);
         }
 
-        $imagePath = $hasImage
-            ? Message::storeUploadedImage($request->file('image'), $channel->id)
-            : null;
-
         $message = Message::create([
             'channel_id' => $channel->id,
             'user_id'    => $user->id,
-            'body'       => $body !== '' ? $body : '',
-            'image_path' => $imagePath,
-            'video_path' => $videoPath,
-            'parent_id'  => $data['parent_id'] ?? null,
+            'body'       => $attrs['body'] !== '' ? $attrs['body'] : '',
+            'image_path' => $attrs['image_path'],
+            'video_path' => $attrs['video_path'],
+            'parent_id'  => $attrs['parent_id'],
             'liked_by'   => [],
         ]);
 
@@ -752,5 +726,39 @@ class CommunityController extends Controller
         $channel->markRead($user);
 
         return response()->json(['message' => 'Marked as read.', 'unread_count' => 0]);
+    }
+
+    /**
+     * Report a channel post. The post is hidden from the reporting user's feed.
+     */
+    public function reportMessage(Request $request, int $msgId): JsonResponse
+    {
+        $user    = $request->user();
+        $message = Message::with('channel')->findOrFail($msgId);
+        $channel = $message->channel;
+
+        abort_unless($channel && $channel->canAccess($user), 403);
+
+        if ((int) $message->user_id === (int) $user->id) {
+            return response()->json(['message' => 'You cannot report your own message.'], 422);
+        }
+
+        $data = $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        MessageReport::firstOrCreate(
+            [
+                'message_id' => $message->id,
+                'user_id'    => $user->id,
+            ],
+            [
+                'reason' => $data['reason'] ?? null,
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Message reported. It will no longer appear in your feed.',
+        ]);
     }
 }

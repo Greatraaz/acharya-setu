@@ -29,6 +29,14 @@ class Channel extends Model
         'wellness'     => 'Wellness',
     ];
 
+    /** @var list<string> */
+    public const BANNED_WORDS = [
+        'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'bastard', 'slut', 'whore', 'dick', 'pussy', 'cunt', 'faggot', 'retard', 'penis',
+        'chutiya', 'chutiye', 'madarchod', 'behenchod', 'bhenchod', 'mc', 'bc', 'gandu', 'gaand', 'randi', 'harami', 'kamina', 'lund', 'lauda',
+        'loda', 'chod', 'chodu', 'jhant', 'suar', 'chut', 'chuda', 'gand', 'tatte', 'tatta', 'moot', 'tatti', 'peshab', 'paad', 'radua', 'bhadua',
+        'kill you', 'kill myself', 'suicide', 'rape', 'balatkar', 'maar dunga', 'faad dunga', 'click here', 'free money', 'earn from home', 'bit.ly', 'wa.me', 'saale', 'sale',
+    ];
+
     protected $fillable = [
         'name', 'slug', 'description', 'icon', 'type', 'category',
         'is_active', 'created_by',
@@ -65,6 +73,94 @@ class Channel extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class)->whereNull('parent_id')->latest();
+    }
+
+    /**
+     * Top-level messages visible to a user (excludes posts they reported).
+     */
+    public function messagesForUser(User $user)
+    {
+        return $this->messages()
+            ->visibleToUser($user)
+            ->with([
+                'user',
+                'replies' => fn ($q) => $q->visibleToUser($user)->with('user')->latest(),
+            ]);
+    }
+
+    public static function storeValidationRules(): array
+    {
+        return [
+            'name'         => 'required|string|max:100|unique:channels,name',
+            'slug'         => 'nullable|string|max:120|unique:channels,slug|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+            'description'  => 'nullable|string|max:500',
+            'icon'         => 'nullable|string|max:10',
+            'type'         => 'required|in:public,private',
+            'category'     => 'nullable|string|max:50',
+            'image'       => 'nullable|image|mimes:'.Message::IMAGE_MIMES.'|max:'.Message::IMAGE_MAX_KB,
+            'video'       => Message::channelVideoValidationRule(),
+        ];
+    }
+
+    public static function adminStoreValidationRules(): array
+    {
+        $rules = self::storeValidationRules();
+        $rules['type'] = 'sometimes|in:public,private';
+
+        return $rules;
+    }
+
+    /** @return list<string> */
+    public static function bannedWordsList(): array
+    {
+        static $words = null;
+
+        if ($words === null) {
+            $words = collect(self::BANNED_WORDS)
+                ->map(fn ($word) => mb_strtolower(trim((string) $word)))
+                ->filter(fn ($word) => $word !== '')
+                ->unique()
+                ->sortByDesc(fn ($word) => mb_strlen($word))
+                ->values()
+                ->all();
+        }
+
+        return $words;
+    }
+
+    public static function findBannedWordIn(?string $text): ?string
+    {
+        $text = mb_strtolower(trim((string) $text));
+
+        if ($text === '') {
+            return null;
+        }
+
+        foreach (self::bannedWordsList() as $word) {
+            if (str_contains($word, ' ')) {
+                if (str_contains($text, $word)) {
+                    return $word;
+                }
+
+                continue;
+            }
+
+            $pattern = '/\b'.preg_quote($word, '/').'\b/ui';
+            if (preg_match($pattern, $text)) {
+                return $word;
+            }
+        }
+
+        return null;
+    }
+
+    public static function validateMessageBody(?string $body): void
+    {
+        if (self::findBannedWordIn($body) !== null) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'body' => ['Your message contains blocked or abusive language and cannot be posted.'],
+            ]);
+        }
     }
 
     public function allMessages(): HasMany

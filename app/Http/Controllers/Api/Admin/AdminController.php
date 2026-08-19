@@ -102,16 +102,7 @@ class AdminController extends Controller
             $request->merge(['slug' => null]);
         }
 
-        $data = $request->validate([
-            'name'        => 'required|string|max:100|unique:channels,name',
-            'slug'        => 'nullable|string|max:120|unique:channels,slug|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-            'description' => 'nullable|string|max:500',
-            'icon'        => 'sometimes|string|max:10',
-            'type'        => 'sometimes|in:public,private',
-            'category'    => 'nullable|string|max:50',
-            'youtube_url' => 'nullable|string|max:500',
-            'video_url'   => 'nullable|string|max:500',
-        ]);
+        $data = $request->validate(Channel::adminStoreValidationRules());
 
         $channel = Channel::create([
             'name'        => $data['name'],
@@ -129,19 +120,7 @@ class AdminController extends Controller
             'last_read_at' => now(),
         ]);
 
-        $youtubeInput = Message::youtubeUrlFromInput($data);
-        $initialVideoUrl = Message::resolveStoredYoutubeUrl($youtubeInput);
-
-        if ($initialVideoUrl) {
-            Message::create([
-                'channel_id' => $channel->id,
-                'user_id'    => $request->user()->id,
-                'body'       => '',
-                'video_path' => $initialVideoUrl,
-                'parent_id'  => null,
-                'liked_by'   => [],
-            ]);
-        }
+        Message::createOptionalWelcomeMessage($request, $channel, $request->user()->id);
 
         return response()->json([
             'channel' => $channel->load(['creator:id,name,avatar_url,role'])

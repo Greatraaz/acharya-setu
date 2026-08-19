@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Models\Message;
+use App\Models\MessageReport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class MessageController extends Controller
 {
@@ -18,30 +20,23 @@ class MessageController extends Controller
 
         $request->validate(Message::mediaValidationRules());
 
-        $body = trim((string) $request->input('body', ''));
-        $hasImage = $request->hasFile('image');
-        $youtubeInput = Message::youtubeUrlFromInput($request->all());
-        $videoPath = Message::resolveStoredYoutubeUrl($youtubeInput);
-
-        if ($body === '' && ! $hasImage && ! $videoPath) {
-            return back()->withErrors(['body' => 'Message text, image, or YouTube link is required.']);
+        try {
+            $attrs = Message::buildPostAttributes($request, $channel);
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors());
         }
 
         if (! $channel->isMember($user) && $channel->canSelfJoin($user)) {
             $channel->addMember($user);
         }
 
-        $imagePath = $hasImage
-            ? Message::storeUploadedImage($request->file('image'), $channel->id)
-            : null;
-
         Message::create([
             'channel_id' => $channel->id,
             'user_id'    => $user->id,
-            'body'       => $body,
-            'image_path' => $imagePath,
-            'video_path' => $videoPath,
-            'parent_id'  => $request->parent_id,
+            'body'       => $attrs['body'],
+            'image_path' => $attrs['image_path'],
+            'video_path' => $attrs['video_path'],
+            'parent_id'  => $attrs['parent_id'],
             'liked_by'   => [],
         ]);
 
@@ -76,5 +71,33 @@ class MessageController extends Controller
         $message->delete();
 
         return back()->with('success', 'Message deleted.');
+    }
+
+    public function report(Request $request, Message $message)
+    {
+        $user = Auth::user();
+        $channel = $message->channel;
+
+        abort_unless($channel && $channel->canAccess($user), 403);
+
+        if ((int) $message->user_id === (int) $user->id) {
+            return back()->with('error', 'You cannot report your own message.');
+        }
+
+        $data = $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        MessageReport::firstOrCreate(
+            [
+                'message_id' => $message->id,
+                'user_id'    => $user->id,
+            ],
+            [
+                'reason' => $data['reason'] ?? null,
+            ]
+        );
+
+        return back()->with('success', 'Message reported. It will no longer appear in your feed.');
     }
 }

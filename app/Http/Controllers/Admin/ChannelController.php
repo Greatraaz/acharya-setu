@@ -54,16 +54,7 @@ class ChannelController extends Controller
             $request->merge(['slug' => null]);
         }
 
-        $request->validate([
-            'name'        => 'required|string|max:100|unique:channels,name',
-            'slug'        => 'nullable|string|max:120|unique:channels,slug|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-            'description' => 'nullable|string|max:500',
-            'icon'        => 'nullable|string|max:10',
-            'type'        => 'required|in:public,private',
-            'category'    => 'nullable|string|max:50',
-            'youtube_url' => 'nullable|string|max:500',
-            'video_url'   => 'nullable|string|max:500',
-        ]);
+        $request->validate(Channel::storeValidationRules());
 
         $channel = Channel::create([
             'name'        => $request->name,
@@ -81,19 +72,7 @@ class ChannelController extends Controller
             'last_read_at' => now(),
         ]);
 
-        $youtubeInput = Message::youtubeUrlFromInput($request->all());
-        $initialVideoUrl = Message::resolveStoredYoutubeUrl($youtubeInput);
-
-        if ($initialVideoUrl) {
-            Message::create([
-                'channel_id' => $channel->id,
-                'user_id'    => (int) Auth::id(),
-                'body'       => '',
-                'video_path' => $initialVideoUrl,
-                'parent_id'  => null,
-                'liked_by'   => [],
-            ]);
-        }
+        Message::createOptionalWelcomeMessage($request, $channel, (int) Auth::id());
 
         return redirect()->route($this->communityRouteBase() . '.show', $channel->slug)
             ->with('success', 'Channel created!');
@@ -108,8 +87,7 @@ class ChannelController extends Controller
             $channel->markRead($user);
         }
 
-        $messages = $channel->messages()
-            ->with(['user', 'replies.user'])
+        $messages = $channel->messagesForUser($user)
             ->withCount('replies')
             ->paginate(30);
 
@@ -226,7 +204,7 @@ class ChannelController extends Controller
                 ->where('channel_id', $channel->id)
                 ->get()
                 ->each(function (Message $message) {
-                    $message->deleteStoredImage();
+                    $message->deleteStoredMedia();
                     $message->forceDelete();
                 });
 

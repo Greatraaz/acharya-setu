@@ -261,6 +261,7 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::post('/community/{channel:slug}/join', [MentorPortalController::class, 'communityJoin'])->name('community.join');
     Route::post('/community/{channel:slug}/messages', [MessageController::class, 'store'])->name('community.messages.store');
     Route::post('/community/messages/{message}/like', [MessageController::class, 'like'])->name('community.messages.like');
+    Route::post('/community/messages/{message}/report', [MessageController::class, 'report'])->name('community.messages.report');
     Route::delete('/community/messages/{message}', [MessageController::class, 'destroy'])->name('community.messages.destroy');
     Route::get('/assessments',                    [MentorAssessmentController::class, 'index'])->name('assessments.index');
     Route::get('/assessments/create',             [MentorAssessmentController::class, 'create'])->name('assessments.create');
@@ -374,6 +375,7 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     // Community
     Route::get( '/community',                    [MenteeCommunityController::class, 'index'])->name('community.index');
     Route::post('/community/messages/{message}/like', [MessageController::class, 'like'])->name('community.messages.like');
+    Route::post('/community/messages/{message}/report', [MessageController::class, 'report'])->name('community.messages.report');
     Route::delete('/community/messages/{message}',    [MessageController::class, 'destroy'])->name('community.messages.destroy');
     Route::get( '/community/{channel:slug}',     [MenteeCommunityController::class, 'show'])->name('community.show');
     Route::post('/community/{channel:slug}/join',    [MenteeCommunityController::class, 'join'])->name('community.join');
@@ -588,6 +590,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         Route::get('/create',                [ChannelController::class, 'create']) ->name('create');
         Route::post('/',                     [ChannelController::class, 'store'])  ->name('store');
         Route::post('/messages/{message}/like', [MessageController::class, 'like'])   ->name('messages.like');
+        Route::post('/messages/{message}/report', [MessageController::class, 'report'])->name('messages.report');
         Route::delete('/messages/{message}',    [MessageController::class, 'destroy'])->name('messages.destroy');
         Route::get('/{channel:slug}',        [ChannelController::class, 'show'])   ->name('show');
         Route::post('/{channel:slug}/join',  [ChannelController::class, 'join'])   ->name('join');

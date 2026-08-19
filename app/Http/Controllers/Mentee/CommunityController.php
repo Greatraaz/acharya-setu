@@ -38,8 +38,7 @@ class CommunityController extends Controller
             $channel->markRead($user);
         }
 
-        $messages = $channel->messages()
-            ->with(['user:id,name,avatar_url,role', 'replies.user:id,name,avatar_url'])
+        $messages = $channel->messagesForUser($user)
             ->latest()
             ->paginate(30);
 
