@@ -23,7 +23,7 @@ class AgoraService
         return [
             'app_id'       => $appId,
             'app_cert'     => $appCert,
-            'token_expiry' => max(600, $expiry),
+            'token_expiry' => max(600, $expiry),    
         ];
     }
 
@@ -54,7 +54,8 @@ class AgoraService
         }
 
         $creds = $this->credentials();
-        $uid = (int) $user->id;
+        //$uid = (int) $user->id;
+        $uid = 0;
         $expireTs = time() + $creds['token_expiry'];
 
         $token = RtcTokenBuilder::buildTokenWithUid(

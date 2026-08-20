@@ -36,23 +36,27 @@ class ConsultationSession extends Model
     ];
 
     protected static function booted(): void
-    {
-        static::creating(function (self $session): void {
-            if (! empty($session->booking_ref)) {
-                // continue
-            } else {
-                do {
-                    $ref = 'AS-' . now()->format('ymd') . '-' . strtoupper(Str::random(4));
-                } while (self::where('booking_ref', $ref)->exists());
+{
+    static::creating(function (self $session): void {
+        if (empty($session->booking_ref)) {
+            do {
+                $ref = 'AS-' . now()->format('ymd') . '-' . strtoupper(Str::random(4));
+            } while (self::where('booking_ref', $ref)->exists());
 
-                $session->booking_ref = $ref;
-            }
+            $session->booking_ref = $ref;
+        }
 
-            if (empty($session->meeting_channel)) {
-                $session->meeting_channel = strtoupper(Str::random(10));
-            }
-        });
-    }
+        // Generate meeting channel if not provided
+        if (empty($session->meeting_channel)) {
+            $session->meeting_channel = strtoupper(Str::random(10));
+        }
+
+        // Generate meeting link if not provided
+        if (empty($session->meeting_link)) {
+            $session->meeting_link = url('as/' . $session->meeting_channel);
+        }
+    });
+}
  
     // Soft-hold for unpaid Razorpay checkouts. Abandoned payments auto-release
     // without needing a client cancel API.
@@ -439,42 +443,45 @@ class ConsultationSession extends Model
     /**
      * Mark ongoing sessions complete once booked duration (+ buffer) has elapsed.
      */
-    public static function completeStaleOngoingSessions(?int $mentorId = null, ?int $menteeId = null, int $bufferMinutes = 15): int
-    {
+    public static function completeStaleOngoingSessions(
+        ?int $mentorId = null,
+        ?int $menteeId = null
+    ): int {
         $now = now()->timezone(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s');
-
+    
         $query = static::query()
             ->where('status', self::STATUS_ONGOING)
-            ->where(function ($q) use ($now, $bufferMinutes) {
-                $q->where(function ($inner) use ($now, $bufferMinutes) {
+            ->where(function ($q) use ($now) {
+                $q->where(function ($inner) use ($now) {
                     $inner->whereNotNull('started_at')
                         ->whereRaw(
-                            'DATE_ADD(started_at, INTERVAL COALESCE(duration_minutes, 30) + ? MINUTE) < ?',
-                            [$bufferMinutes, $now]
+                            'DATE_ADD(started_at, INTERVAL COALESCE(duration_minutes, 30) MINUTE) <= ?',
+                            [$now]
                         );
-                })->orWhere(function ($inner) use ($now, $bufferMinutes) {
+                })->orWhere(function ($inner) use ($now) {
                     $inner->whereNull('started_at')
                         ->whereRaw(
-                            'DATE_ADD(scheduled_at, INTERVAL COALESCE(duration_minutes, 30) + ? MINUTE) < ?',
-                            [$bufferMinutes, $now]
+                            'DATE_ADD(scheduled_at, INTERVAL COALESCE(duration_minutes, 30) MINUTE) <= ?',
+                            [$now]
                         );
                 });
             });
-
+    
         if ($mentorId) {
             $query->where('mentor_id', $mentorId);
         }
-
+    
         if ($menteeId) {
             $query->where('mentee_id', $menteeId);
         }
-
+    
         $count = 0;
+    
         foreach ($query->get() as $session) {
             $session->complete();
             $count++;
         }
-
+    
         return $count;
     }
 

@@ -446,140 +446,127 @@ class SessionsController extends Controller
 
         return $payload;
     }
-
-    public function extendSession(Request $request, int $id): JsonResponse
-{
-    $data = $request->validate([
-        'duration' => 'required|integer|min:1',
-        'amount'   => 'required|numeric|min:0.01',
-    ]);
-
-    try {
-        $user = $request->user();
-
-        $result = DB::transaction(function () use ($user, $id, $data) {
-
-            // Lock session so two extension requests cannot happen simultaneously
-            $session = ConsultationSession::where('id', $id)
-                ->where('mentee_id', $user->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            // Lock user wallet row
-            $mentee = User::where('id', $user->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            $amount = round((float) $data['amount'], 2);
-            $additionalDuration = (int) $data['duration'];
-
-            $walletBalance = round((float) $mentee->wallet_balance, 2);
-
-            // Check wallet balance
-            if ($walletBalance < $amount) {
-                throw new \InvalidArgumentException(
-                    'Insufficient wallet balance.'
-                );
+    public function continueSession(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'continue' => 'required|boolean',
+        ]);
+    
+        try {
+            $session = $this->findOwnedSession($request, $id);
+    
+            if (! in_array($session->status, [
+                ConsultationSession::STATUS_ONGOING,
+            ], true)) {
+                return response()->json([
+                    'status'     => false,
+                    'statuscode' => 422,
+                    'message'    => 'This session is no longer ongoing.',
+                ], 422);
             }
-
-            // Unique reference for this extension
-            $reference = 'EXT-' . $session->id . '-' . strtoupper(Str::random(8));
-
-            // Deduct amount from wallet
-            $mentee->debitWallet(
-                $amount,
-                "Session extension {$session->booking_ref}",
-                [
-                    'reference'            => $reference,
-                    'transactionable_type' => ConsultationSession::class,
-                    'transactionable_id'   => $session->id,
-                    'meta'                 => [
-                        'session_id'        => $session->id,
-                        'booking_ref'       => $session->booking_ref,
-                        'additional_duration' => $additionalDuration,
-                        'extension_amount' => $amount,
-                        'source'            => 'session_extension',
+    
+            /*
+             * The session must have actually started.
+             */
+            if (! $session->started_at) {
+                return response()->json([
+                    'status'     => false,
+                    'statuscode' => 422,
+                    'message'    => 'Session has not started yet.',
+                ], 422);
+            }
+    
+            /*
+             * Original session expiry:
+             *
+             * started_at + duration_minutes
+             */
+            $originalEnd = $session->started_at
+                ->copy()
+                ->addMinutes((int) $session->duration_minutes);
+    
+            /*
+             * If user does NOT want to continue:
+             * session expires now at its original end time.
+             */
+            if (! $data['continue']) {
+    
+                $session->update([
+                    'status'  => ConsultationSession::STATUS_COMPLETED,
+                    'ended_at' => now(),
+                    'actual_duration_seconds' => $session->started_at
+                        ? $session->started_at->diffInSeconds(now())
+                        : null,
+                ]);
+    
+                $session->settleMentorPayout();
+    
+                return response()->json([
+                    'status'     => true,
+                    'statuscode' => 200,
+                    'message'    => 'Session ended.',
+                    'data'       => [
+                        'session_id' => $session->id,
+                        'continued'  => false,
+                        'expires_at' => $originalEnd->toIso8601String(),
+                        'status'     => 'completed',
                     ],
-                ]
-            );
-
-            // Increase session duration
-            $session->duration_minutes =
-                (int) $session->duration_minutes + $additionalDuration;
-
-            // Increase total session amount
-            $session->amount =
-                round((float) $session->amount + $amount, 2);
-
-            // Track wallet payment
-            $session->wallet_amount =
-                round((float) ($session->wallet_amount ?? 0) + $amount, 2);
-
-            $session->payment_status = 'paid';
-
-            // Keep existing payment method if applicable,
-            // otherwise mark it as wallet.
-            $session->payment_method =
-                $session->payment_method === 'razorpay'
-                    ? 'hybrid'
-                    : 'wallet';
-
-            $session->save();
-
-            return [
-                'session'        => $session->fresh(),
-                'amount_deducted'=> $amount,
-                'duration_added' => $additionalDuration,
-                'wallet_balance' => round((float) $mentee->fresh()->wallet_balance, 2),
-                'reference'      => $reference,
-            ];
-        });
-
-        return response()->json([
-            'status'     => true,
-            'statuscode' => 200,
-            'message'    => 'Session extended successfully.',
-            'data'       => [
-                'session_id'        => $result['session']->id,
-                'duration_added'    => $result['duration_added'],
-                'duration_minutes'  => $result['session']->duration_minutes,
-                'amount_deducted'   => $result['amount_deducted'],
-                'total_amount'      => (float) $result['session']->amount,
-                'wallet_balance'    => $result['wallet_balance'],
-                'transaction_ref'   => $result['reference'],
-            ],
-        ]);
-
-    } catch (\InvalidArgumentException $e) {
-
-        return response()->json([
-            'status'     => false,
-            'statuscode' => 422,
-            'message'    => $e->getMessage(),
-            'needs_topup' => true,
-        ], 422);
-
-    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-
-        return response()->json([
-            'status'     => false,
-            'statuscode' => 404,
-            'message'    => 'Session not found.',
-        ], 404);
-
-    } catch (\Throwable $e) {
-
-        Log::error('Session extension failed.', [
-            'session_id' => $id,
-            'user_id'    => $request->user()->id,
-            'error'      => $e->getMessage(),
-        ]);
-
-        return response()->json([
-            'status'     => false,
-            'statuscode' => 500,
-            'message'    => 'Unable to extend session right now.',
-        ], 500);
+                ]);
+            }
+    
+            /*
+             * User wants 10 additional minutes.
+             *
+             * We do NOT charge anything.
+             * We do NOT change the payment amount.
+             *
+             * We simply add 10 minutes to the session duration.
+             */
+            $newDuration = (int) $session->duration_minutes + 10;
+    
+            $newEnd = $session->started_at
+                ->copy()
+                ->addMinutes($newDuration);
+    
+            $session->update([
+                'duration_minutes' => $newDuration,
+            ]);
+    
+            return response()->json([
+                'status'     => true,
+                'statuscode' => 200,
+                'message'    => 'Session continued for 10 more minutes.',
+                'data'       => [
+                    'session_id'       => $session->id,
+                    'continued'        => true,
+                    'additional_minutes' => 10,
+                    'duration_minutes' => $newDuration,
+                    'expires_at'       => $newEnd->toIso8601String(),
+                    'status'           => $session->status,
+                ],
+            ]);
+    
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+    
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 404,
+                'message'    => 'Session not found.',
+            ], 404);
+    
+        } catch (\Throwable $e) {
+    
+            Log::error('Session end decision failed.', [
+                'session_id' => $id,
+                'user_id'    => $request->user()->id,
+                'error'      => $e->getMessage(),
+            ]);
+    
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 500,
+                'message'    => 'Unable to process session end decision.',
+            ], 500);
+        }
     }
-}
 }

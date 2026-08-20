@@ -66,6 +66,83 @@ class CommunityController extends Controller
     }
 
     /**
+ * Update a channel.
+ * Only channel admins/creator/platform admin can update it.
+ */
+public function updateChannel(Request $request, int $channelId): JsonResponse
+{
+    $user = $request->user();
+
+    $channel = Channel::findOrFail($channelId);
+
+    // Only channel admin, creator, or platform admin can update
+    abort_unless(
+        $channel->isAdmin($user)
+            || (int) $channel->created_by === (int) $user->id
+            || $user->isAdmin(),
+        403,
+        'You are not allowed to update this channel.'
+    );
+
+    if (! $request->filled('slug')) {
+        $request->merge(['slug' => null]);
+    }
+
+    $data = $request->validate([
+        'name'        => 'required|string|max:255',
+        'slug'        => 'nullable|string|max:255|unique:channels,slug,' . $channel->id,
+        'description' => 'nullable|string|max:1000',
+        'icon'        => 'nullable|string|max:50',
+        'type'        => 'required|in:' . Channel::TYPE_PUBLIC . ',' . Channel::TYPE_PRIVATE,
+        'category'    => 'nullable|string|max:100',
+    ]);
+
+    $channel->update([
+        'name'        => $data['name'],
+        'slug'        => $data['slug'] ?? null,
+        'description' => $data['description'] ?? null,
+        'icon'        => $data['icon'] ?? $channel->icon,
+        'type'        => $data['type'],
+        'category'    => $data['category'] ?? null,
+    ]);
+
+    // Update channel image/video if new media is supplied
+    $mediaAttrs = Channel::storeChannelMedia($request, $channel->id);
+
+    if ($mediaAttrs) {
+        $channel->update($mediaAttrs);
+    }
+
+    $channel->refresh();
+
+    return response()->json([
+        'message' => 'Channel updated successfully.',
+        'channel' => $channel
+            ->load(['creator:id,name,avatar_url,role'])
+            ->loadCount(['allMessages', 'members'])
+            ->toApiArray($user),
+    ]);
+}
+public function deleteChannel(Request $request, int $channelId): JsonResponse
+{
+    $user = $request->user();
+    $channel = Channel::findOrFail($channelId);
+
+    abort_unless(
+        $channel->isAdmin($user)
+            || (int) $channel->created_by === (int) $user->id
+            || $user->isAdmin(),
+        403,
+        'You are not allowed to delete this channel.'
+    );
+
+    $channel->delete();
+
+    return response()->json([
+        'message' => 'Channel deleted successfully.'
+    ]);
+}
+    /**
      * List channels visible to the authenticated mentor/mentee.
      * Public channels + private channels the user belongs to.
      */

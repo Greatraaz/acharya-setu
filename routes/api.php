@@ -202,7 +202,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}/notes/{noteId}', [SessionsController::class, 'destroyNote'])->whereNumber('id')->whereNumber('noteId');
             Route::patch('/{id}',    [SessionsController::class, 'update']);
             Route::delete('/{id}',   [SessionsController::class, 'destroy']);
-            Route::post('/{id}/extend', [SessionsController::class, 'extendSession']);
+            Route::post('/{id}/continue-session', [SessionsController::class, 'continueSession']);
         });
 
         // Assessments
@@ -457,6 +457,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::prefix('community')->name('community.')->group(function () {
             Route::get('/channels',                              [CommunityController::class, 'channels'])->name('channels');
             Route::post('/channels',                             [CommunityController::class, 'createChannel'])->name('channels.create');
+            Route::delete('/channels/{channelId}',               [CommunityController::class, 'deleteChannel'])->name('channels.delete');
+            Route::put('/channels/{channelId}',                   [CommunityController::class, 'updateChannel'])->name('channels.update');
             Route::get('/channels/{channelId}',                   [CommunityController::class, 'showChannel'])->name('channels.show');
             Route::post('/channels/{channelId}/join',             [CommunityController::class, 'join'])->name('channels.join');
             Route::post('/channels/{channelId}/leave',            [CommunityController::class, 'leave'])->name('channels.leave');
