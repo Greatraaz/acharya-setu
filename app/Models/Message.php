@@ -93,42 +93,6 @@ class Message extends Model
     }
 
     /**
-     * Optional video upload when creating a channel (posted as first message).
-     */
-    public static function channelVideoValidationRule(): string
-    {
-        return 'nullable|file|mimes:'.self::VIDEO_MIMES.'|max:'.self::VIDEO_MAX_KB;
-    }
-
-    public static function channelImageValidationRule(): string
-    {
-        return 'nullable|image|mimes:'.self::IMAGE_MIMES.'|max:'.self::IMAGE_MAX_KB;
-    }
-
-    /**
-     * Optional welcome post when creating a channel (image and/or video).
-     */
-    public static function createOptionalWelcomeMessage(Request $request, Channel $channel, int $userId): ?self
-    {
-        $hasImage = $request->hasFile('image');
-        $hasVideo = $request->hasFile('video');
-
-        if (! $hasImage && ! $hasVideo) {
-            return null;
-        }
-
-        return self::create([
-            'channel_id' => $channel->id,
-            'user_id'    => $userId,
-            'body'       => '',
-            'image_path' => $hasImage ? self::storeUploadedImage($request->file('image'), $channel->id) : null,
-            'video_path' => $hasVideo ? self::storeUploadedVideo($request->file('video'), $channel->id) : null,
-            'parent_id'  => null,
-            'liked_by'   => [],
-        ]);
-    }
-
-    /**
      * Build message attributes from a post request (text, image, and/or video).
      *
      * @throws ValidationException

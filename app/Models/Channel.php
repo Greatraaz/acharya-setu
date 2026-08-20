@@ -39,12 +39,73 @@ class Channel extends Model
 
     protected $fillable = [
         'name', 'slug', 'description', 'icon', 'type', 'category',
+        'image_path', 'video_path',
         'is_active', 'created_by',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    protected $appends = ['image_url', 'video_url'];
+
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->publicMediaUrl($this->image_path);
+    }
+
+    public function getVideoUrlAttribute(): ?string
+    {
+        return $this->publicMediaUrl($this->video_path);
+    }
+
+    private function publicMediaUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, 'upload/')) {
+            return url($path);
+        }
+
+        return url('storage/'.ltrim($path, '/'));
+    }
+
+    public static function storeChannelMedia(\Illuminate\Http\Request $request, int $channelId): array
+    {
+        $attrs = [];
+
+        if ($request->hasFile('image')) {
+            $file      = $request->file('image');
+            $directory = public_path('upload/community/'.$channelId.'/channel');
+            if (! is_dir($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            $ext            = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
+            $fileName       = 'ch_img_'.time().'_'.uniqid().'.'.$ext;
+            $file->move($directory, $fileName);
+            $attrs['image_path'] = 'upload/community/'.$channelId.'/channel/'.$fileName;
+        }
+
+        if ($request->hasFile('video')) {
+            $file      = $request->file('video');
+            $directory = public_path('upload/community/'.$channelId.'/channel');
+            if (! is_dir($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            $ext            = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'mp4');
+            $fileName       = 'ch_vid_'.time().'_'.uniqid().'.'.$ext;
+            $file->move($directory, $fileName);
+            $attrs['video_path'] = 'upload/community/'.$channelId.'/channel/'.$fileName;
+        }
+
+        return $attrs;
+    }
 
     protected static function booted(): void
     {
@@ -91,14 +152,14 @@ class Channel extends Model
     public static function storeValidationRules(): array
     {
         return [
-            'name'         => 'required|string|max:100|unique:channels,name',
-            'slug'         => 'nullable|string|max:120|unique:channels,slug|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-            'description'  => 'nullable|string|max:500',
-            'icon'         => 'nullable|string|max:10',
-            'type'         => 'required|in:public,private',
-            'category'     => 'nullable|string|max:50',
-            'image'       => 'nullable|image|mimes:'.Message::IMAGE_MIMES.'|max:'.Message::IMAGE_MAX_KB,
-            'video'       => Message::channelVideoValidationRule(),
+            'name'        => 'required|string|max:100|unique:channels,name',
+            'slug'        => 'nullable|string|max:120|unique:channels,slug|regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+            'description' => 'nullable|string|max:500',
+            'icon'        => 'nullable|string|max:10',
+            'type'        => 'required|in:public,private',
+            'category'    => 'nullable|string|max:50',
+            'image'       => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
+            'video'       => 'nullable|file|mimes:mp4,mov,avi,webm,mpeg|max:10240',
         ];
     }
 
@@ -365,21 +426,25 @@ class Channel extends Model
     public function toApiArray(?User $user = null): array
     {
         $data = [
-            'id'            => $this->id,
-            'name'          => $this->name,
-            'slug'          => $this->slug,
-            'description'   => $this->description,
-            'icon'          => $this->icon,
-            'type'          => $this->type,
-            'category'      => $this->category,
-            'is_active'     => $this->is_active,
-            'created_by'    => $this->created_by,
-            'creator'       => $this->relationLoaded('creator')
+            'id'             => $this->id,
+            'name'           => $this->name,
+            'slug'           => $this->slug,
+            'description'    => $this->description,
+            'icon'           => $this->icon,
+            'type'           => $this->type,
+            'category'       => $this->category,
+            'image_path'     => $this->image_url,
+            'image_url'      => $this->image_url,
+            'video_path'     => $this->video_url,
+            'video_url'      => $this->video_url,
+            'is_active'      => $this->is_active,
+            'created_by'     => $this->created_by,
+            'creator'        => $this->relationLoaded('creator')
                 ? $this->creator?->only(['id', 'name', 'avatar_url', 'role'])
                 : null,
-            'messages_count'=> $this->all_messages_count ?? $this->allMessages()->count(),
-            'members_count' => $this->members_count ?? $this->members()->count(),
-            'created_at'    => $this->created_at,
+            'messages_count' => $this->all_messages_count ?? $this->allMessages()->count(),
+            'members_count'  => $this->members_count ?? $this->members()->count(),
+            'created_at'     => $this->created_at,
         ];
 
         if ($user) {

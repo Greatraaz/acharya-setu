@@ -120,7 +120,11 @@ class AdminController extends Controller
             'last_read_at' => now(),
         ]);
 
-        Message::createOptionalWelcomeMessage($request, $channel, $request->user()->id);
+        // Save image/video directly on the channel (not as a message)
+        $mediaAttrs = Channel::storeChannelMedia($request, $channel->id);
+        if ($mediaAttrs) {
+            $channel->update($mediaAttrs);
+        }
 
         return response()->json([
             'channel' => $channel->load(['creator:id,name,avatar_url,role'])

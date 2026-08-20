@@ -8,9 +8,21 @@
 
     <div class="dash-content">
         <div class="dash-header flex-between">
-            <div>
-                <div class="dash-title">{{ $channel->icon }} {{ $channel->name }}</div>
-                <div class="dash-subtitle">{{ $channel->description ?: 'Channel discussion' }}</div>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+                @if($channel->image_url)
+                <img src="{{ $channel->image_url }}" alt="{{ $channel->name }}"
+                     style="width:52px;height:52px;border-radius:12px;object-fit:cover;border:1px solid var(--border);flex-shrink:0;">
+                @endif
+                <div>
+                    <div class="dash-title">{{ $channel->icon }} {{ $channel->name }}</div>
+                    <div class="dash-subtitle">{{ $channel->description ?: 'Channel discussion' }}</div>
+                    @if($channel->video_url)
+                    <div style="margin-top:8px;max-width:320px;">
+                        <video src="{{ $channel->video_url }}" controls playsinline preload="metadata"
+                               style="width:100%;border-radius:10px;border:1px solid var(--border);background:#000;max-height:130px;"></video>
+                    </div>
+                    @endif
+                </div>
             </div>
             <a href="{{ route('mentee.community.index') }}" class="btn btn-ghost">← All channels</a>
         </div>

@@ -51,7 +51,11 @@ class CommunityController extends Controller
             'last_read_at' => now(),
         ]);
 
-        Message::createOptionalWelcomeMessage($request, $channel, $user->id);
+        // Save image/video directly on the channel (not as a message)
+        $mediaAttrs = Channel::storeChannelMedia($request, $channel->id);
+        if ($mediaAttrs) {
+            $channel->update($mediaAttrs);
+        }
 
         return response()->json([
             'message' => 'Channel created.',

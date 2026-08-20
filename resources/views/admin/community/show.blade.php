@@ -81,9 +81,14 @@ $isAdminUi = request()->routeIs('admin.*');
         {{-- Channel Header --}}
         <div class="flex items-center justify-between px-3 sm:px-5 py-3 border-b border-gray-100 flex-shrink-0 gap-2">
             <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                @if($channel->image_url)
+                <img src="{{ $channel->image_url }}" alt="{{ $channel->name }}"
+                     class="w-9 h-9 rounded-xl object-cover border border-gray-200 flex-shrink-0">
+                @else
                 <div class="w-9 h-9 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-xl leading-none flex-shrink-0">
                     {{ $channel->icon }}
                 </div>
+                @endif
                 <div>
                     <div class="flex items-center gap-1">
                         <span class="text-sm font-bold text-gray-400">#</span>
@@ -91,6 +96,12 @@ $isAdminUi = request()->routeIs('admin.*');
                     </div>
                     @if($channel->description)
                     <p class="text-xs text-gray-400 mt-0.5">{{ $channel->description }}</p>
+                    @endif
+                    @if($channel->video_url)
+                    <div class="mt-2 max-w-xs">
+                        <video src="{{ $channel->video_url }}" controls playsinline preload="metadata"
+                               class="w-full rounded-lg border border-gray-200 bg-black max-h-32"></video>
+                    </div>
                     @endif
                 </div>
             </div>

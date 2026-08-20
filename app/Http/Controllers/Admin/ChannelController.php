@@ -72,7 +72,11 @@ class ChannelController extends Controller
             'last_read_at' => now(),
         ]);
 
-        Message::createOptionalWelcomeMessage($request, $channel, (int) Auth::id());
+        // Save image/video as channel media (not as a message)
+        $mediaAttrs = Channel::storeChannelMedia($request, $channel->id);
+        if ($mediaAttrs) {
+            $channel->update($mediaAttrs);
+        }
 
         return redirect()->route($this->communityRouteBase() . '.show', $channel->slug)
             ->with('success', 'Channel created!');
