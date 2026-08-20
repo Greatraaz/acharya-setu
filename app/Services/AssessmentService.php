@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Storage;
 
 class AssessmentService
 {
@@ -27,7 +26,10 @@ class AssessmentService
 
         return Assessment::query()
             ->withCount(['questions'])
-            ->withCount(['progress as completion_count' => fn ($q) => $q->whereNotNull('completed_at')])
+            ->withCount([
+                'progress as completion_count' => fn ($q) =>
+                    $q->whereNotNull('completed_at')
+            ])
             ->latest()
             ->get()
             ->map(function (Assessment $assessment) {
@@ -37,76 +39,61 @@ class AssessmentService
             });
     }
 
-    public function createFromRequest(Request $request, ?int $createdBy = null): Assessment
-    {
-        $data = $this->validatedAssessment($request);
+    public function createFromRequest(
+        Request $request,
+        ?int $createdBy = null
+    ): Assessment {
+        $data = $request->all();
 
         $assessment = Assessment::create([
             'id'           => $this->nextId(),
             'title'        => $data['title'],
             'description'  => $data['description'] ?? null,
             'instructions' => $data['instructions'] ?? null,
-            'image'        => $request->hasFile('image')
-            ? $request->file('image')->store('assessments', 'public')
-            : null,
-            'icon'         => $request->hasFile('image')
-            ? $request->file('image')->store('assessments', 'public')
-            : null,
+            'image'        => $request->input('image'),
+            'icon'         => $request->input('icon'),
             'status'       => $data['status'] ?? 'active',
             'created_by'   => $createdBy,
         ]);
 
-        $this->syncScoreBands($assessment, $request->input('bands', []));
+        $this->syncScoreBands(
+            $assessment,
+            $request->input('bands', [])
+        );
 
         return $assessment->fresh(['scoreBands']);
     }
 
-    public function updateFromRequest(Request $request, Assessment $assessment): Assessment
-{
-    $data = $this->validatedAssessment($request, $assessment->id);
+    public function updateFromRequest(
+        Request $request,
+        Assessment $assessment
+    ): Assessment {
+        $data = $request->all();
 
-    $updateData = [
-        'title'        => $data['title'],
-        'description'  => $data['description'] ?? null,
-        'instructions' => $data['instructions'] ?? null,
-        'icon'         => $data['icon'] ?? $assessment->icon,
-        'status'       => $data['status'] ?? $assessment->status ?? 'active',
-    ];
+        $updateData = [
+            'title'        => $data['title'],
+            'description'  => $data['description'] ?? null,
+            'instructions' => $data['instructions'] ?? null,
+            'status'       => $data['status'] ?? $assessment->status ?? 'active',
+        ];
 
-    // Only replace image when a new image is uploaded
-    if ($request->hasFile('image')) {
-
-        // Delete old image
-        if ($assessment->image) {
-            Storage::disk('public')->delete($assessment->image);
+        if ($request->filled('image')) {
+            $updateData['image'] = $request->input('image');
         }
 
-        // Store new image
-        $updateData['image'] = $request->file('image')
-            ->store('assessments', 'public');
+        if ($request->filled('icon')) {
+            $updateData['icon'] = $request->input('icon');
+        }
+
+        $assessment->update($updateData);
+
+        $this->syncScoreBands(
+            $assessment,
+            $request->input('bands', [])
+        );
+
+        return $assessment->fresh(['scoreBands']);
     }
-
-    if ($request->hasFile('icon')) {
-
-    // Delete old image
-    if ($assessment->icon) {
-        Storage::disk('public')->delete($assessment->icon);
-    }
-
-    // Store new image
-    $updateData['icon'] = $request->file('icon')
-        ->store('assessments', 'public');
-}
-
-    $assessment->update($updateData);
-
-    $this->syncScoreBands(
-        $assessment,
-        $request->input('bands', [])
-    );
-
-    return $assessment->fresh(['scoreBands']);
-}
 
     public function delete(Assessment $assessment): void
     {
@@ -119,8 +106,10 @@ class AssessmentService
         $assessment->delete();
     }
 
-    public function formatForApi(Assessment $assessment, bool $includeQuestions = false): array
-    {
+    public function formatForApi(
+        Assessment $assessment,
+        bool $includeQuestions = false
+    ): array {
         $assessment->loadMissing(['scoreBands']);
 
         $payload = [
@@ -134,15 +123,19 @@ class AssessmentService
             'question_count'   => $assessment->questions()->count(),
             'questionCount'    => $assessment->questions()->count(),
             'completion_count' => Schema::hasTable('assessment_progress')
-                ? AssessmentProgress::where('assessment_id', $assessment->id)->whereNotNull('completed_at')->count()
+                ? AssessmentProgress::where('assessment_id', $assessment->id)
+                    ->whereNotNull('completed_at')
+                    ->count()
                 : 0,
-            'score_bands'      => $assessment->scoreBands->map(fn (AssessmentScoreBand $b) => [
-                'index'       => $b->band_index,
-                'from'        => $b->range_from,
-                'to'          => $b->range_to,
-                'heading'     => $b->heading,
-                'description' => $b->description,
-            ])->values(),
+            'score_bands'      => $assessment->scoreBands
+                ->map(fn (AssessmentScoreBand $b) => [
+                    'index'       => $b->band_index,
+                    'from'        => $b->range_from,
+                    'to'          => $b->range_to,
+                    'heading'     => $b->heading,
+                    'description' => $b->description,
+                ])
+                ->values(),
             'created_at'       => $assessment->created_at,
             'updated_at'       => $assessment->updated_at,
         ];
@@ -153,10 +146,12 @@ class AssessmentService
                 ->map(fn (AssessmentQuestion $q) => [
                     'id'       => $q->id,
                     'question' => $q->question,
-                    'options'  => collect($q->optionLabels())->map(fn ($text, $score) => [
-                        'score' => (int) $score,
-                        'text'  => $text,
-                    ])->values(),
+                    'options'  => collect($q->optionLabels())
+                        ->map(fn ($text, $score) => [
+                            'score' => (int) $score,
+                            'text'  => $text,
+                        ])
+                        ->values(),
                 ])
                 ->values()
                 ->all();
@@ -165,33 +160,39 @@ class AssessmentService
         return $payload;
     }
 
-    public function validatedAssessment(Request $request, ?int $ignoreId = null): array
-    {
+    public function validatedAssessment(
+        Request $request,
+        ?int $ignoreId = null
+    ): array {
         return $request->validate([
-            'title'                => 'required|string|max:200',
-            'description'          => 'nullable|string',
-            'instructions'         => 'nullable|string',
-            'status'               => 'nullable|in:active,inactive',
-            'image'                => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
-            'icon'                 => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
-            'bands'                => 'required|array|size:4',
-            'bands.*.from'         => 'required|integer|min:0',
-            'bands.*.to'           => 'required|integer|min:0',
-            'bands.*.heading'      => 'required|string|max:200',
-            'bands.*.description'  => 'nullable|string',
+            'title'               => 'required|string|max:200',
+            'description'         => 'nullable|string',
+            'instructions'        => 'nullable|string',
+            'status'              => 'nullable|in:active,inactive',
+            'image'               => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'icon'                => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'bands'               => 'required|array|size:4',
+            'bands.*.from'        => 'required|integer|min:0',
+            'bands.*.to'          => 'required|integer|min:0',
+            'bands.*.heading'     => 'required|string|max:200',
+            'bands.*.description' => 'nullable|string',
         ]);
     }
 
-    public function syncScoreBands(Assessment $assessment, array $bands): void
-    {
+    public function syncScoreBands(
+        Assessment $assessment,
+        array $bands
+    ): void {
         foreach (range(0, 3) as $index) {
             $band = $bands[$index] ?? [];
+
             $from = (int) ($band['from'] ?? 0);
-            $to = (int) ($band['to'] ?? 0);
+            $to   = (int) ($band['to'] ?? 0);
 
             if ($to < $from) {
                 throw ValidationException::withMessages([
-                    "bands.$index.to" => 'The "To" value must be greater than or equal to "From".',
+                    "bands.$index.to" =>
+                        'The "To" value must be greater than or equal to "From".',
                 ]);
             }
 

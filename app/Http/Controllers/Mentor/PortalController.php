@@ -165,7 +165,21 @@ class PortalController extends Controller
             ->latest()
             ->paginate(30);
 
-        return view('frontend.mentors.community-show', compact('channel', 'messages'));
+        $channels = Channel::visibleTo($user)
+            ->withCount(['allMessages', 'members'])
+            ->latest()
+            ->get()
+            ->map(function (Channel $ch) use ($user) {
+                $ch->unread_count = $ch->isMember($user) ? $ch->unreadCountFor($user) : 0;
+                return $ch;
+            });
+
+        $members = $channel->members()
+            ->select('users.id', 'users.name', 'users.avatar_url', 'users.role')
+            ->orderByPivot('role')
+            ->get();
+
+        return view('frontend.mentors.community-show', compact('channel', 'messages', 'channels', 'members'));
     }
 
     public function communityJoin(Channel $channel)
