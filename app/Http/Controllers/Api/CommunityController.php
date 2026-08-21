@@ -84,13 +84,8 @@ public function updateChannel(Request $request, int $channelId): JsonResponse
         'You are not allowed to update this channel.'
     );
 
-    if (! $request->filled('slug')) {
-        $request->merge(['slug' => null]);
-    }
-
     $data = $request->validate([
         'name'        => 'required|string|max:255',
-        'slug'        => 'nullable|string|max:255|unique:channels,slug,' . $channel->id,
         'description' => 'nullable|string|max:1000',
         'icon'        => 'nullable|string|max:50',
         'type'        => 'required|in:' . Channel::TYPE_PUBLIC . ',' . Channel::TYPE_PRIVATE,
@@ -99,7 +94,6 @@ public function updateChannel(Request $request, int $channelId): JsonResponse
 
     $channel->update([
         'name'        => $data['name'],
-        'slug'        => $data['slug'] ?? null,
         'description' => $data['description'] ?? null,
         'icon'        => $data['icon'] ?? $channel->icon,
         'type'        => $data['type'],
