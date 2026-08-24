@@ -1,5 +1,32 @@
 @php
-    $canPost = $channel->canPost(auth()->user());
+    $user = auth()->user();
+    $canPost = $channel->canPost($user);
+
+    $routePrefix = match (true) {
+        request()->routeIs('mentor.*') => 'mentor',
+        request()->routeIs('mentee.*') => 'mentee',
+        default                         => 'admin',
+    };
+
+    $joinRoute          = $routePrefix . '.community.join';
+    $leaveRoute         = $routePrefix . '.community.leave';
+    $inviteRoute        = $routePrefix . '.community.invite';
+    $removeMemberRoute  = $routePrefix . '.community.members.remove';
+    $destroyChannelRoute= $routePrefix . '.community.destroy';
+    $deleteMessageRoute = $routePrefix . '.community.messages.destroy';
+
+    $isMember  = $isMember  ?? $channel->isMember($user);
+    $isAdmin   = $isAdmin   ?? ($channel->isAdmin($user) || (int) $channel->created_by === (int) $user->id || $user->isAdmin());
+    $isCreator = $isCreator ?? ((int) $channel->created_by === (int) $user->id);
+
+    $inviteCandidates = $inviteCandidates ?? collect();
+
+    $hasJoin     = \Illuminate\Support\Facades\Route::has($joinRoute);
+    $hasLeave    = \Illuminate\Support\Facades\Route::has($leaveRoute);
+    $hasInvite   = \Illuminate\Support\Facades\Route::has($inviteRoute);
+    $hasRemove   = \Illuminate\Support\Facades\Route::has($removeMemberRoute);
+    $hasDestroy  = \Illuminate\Support\Facades\Route::has($destroyChannelRoute);
+    $hasDeleteMsg= \Illuminate\Support\Facades\Route::has($deleteMessageRoute);
 @endphp
 
 <div class="card" style="padding:0;overflow:hidden;min-height:calc(100vh - 220px);">
@@ -48,11 +75,45 @@
                         @endif
                     </div>
                 </div>
-                <a href="{{ $allChannelsRoute }}" class="btn btn-ghost btn-sm">All channels</a>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                    @if(! $isMember && $hasJoin && $channel->canSelfJoin($user))
+                        <form method="POST" action="{{ route($joinRoute, $channel->slug) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-primary btn-sm">Join</button>
+                        </form>
+                    @endif
+
+                    @if($isMember && ! $isCreator && $hasLeave)
+                        <form method="POST" action="{{ route($leaveRoute, $channel->slug) }}"
+                              onsubmit="return confirm('Leave this channel?')">
+                            @csrf
+                            <button type="submit" class="btn btn-outline btn-sm">Leave</button>
+                        </form>
+                    @endif
+
+                    @if($isAdmin && $hasInvite)
+                        <button type="button" class="btn btn-outline btn-sm" onclick="openModal('invite-modal')">
+                            + Invite
+                        </button>
+                    @endif
+
+                    @if($isCreator && $hasDestroy)
+                        <form method="POST" action="{{ route($destroyChannelRoute, $channel->slug) }}"
+                              onsubmit="return confirm('Delete this channel and all messages?')">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="btn btn-outline btn-sm" style="color:var(--error);border-color:var(--error);">
+                                Delete
+                            </button>
+                        </form>
+                    @endif
+
+                    <a href="{{ $allChannelsRoute }}" class="btn btn-ghost btn-sm">All channels</a>
+                </div>
             </div>
 
             <div style="flex:1;overflow:auto;padding:14px 12px;">
                 @forelse($messages as $message)
+                    @php $mine = (int) $message->user_id === (int) $user->id; @endphp
                     <div style="display:flex;justify-content:{{ (int)$message->user_id === (int)auth()->id() ? 'flex-end' : 'flex-start' }};margin-bottom:12px;">
                         <div style="max-width:min(78%,640px);background:{{ (int)$message->user_id === (int)auth()->id() ? '#d9fdd3' : '#fff' }};border-radius:10px;padding:10px 12px;border:1px solid rgba(0,0,0,.06);">
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
@@ -82,6 +143,18 @@
                                     <button type="button" class="btn btn-ghost btn-sm" onclick="toggleReply({{ $message->id }})">↩ Reply</button>
                                 @endif
                                 @include('partials.community-message-report', ['message' => $message])
+                                @if($hasDeleteMsg && ($mine || $isAdmin))
+                                    <form method="POST"
+                                          action="{{ route($deleteMessageRoute, $message->id) }}"
+                                          onsubmit="return confirm('Delete this message?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-outline btn-sm"
+                                                style="color:var(--error);border-color:var(--error);">
+                                            🗑
+                                        </button>
+                                    </form>
+                                @endif
                             </div>
 
                             @if($message->replies->isNotEmpty())
@@ -105,6 +178,24 @@
                                             @if($reply->video_path)
                                                 @include('partials.community-message-video', ['message' => $reply, 'reply' => true])
                                             @endif
+
+                                            <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                                                @if((int) $reply->user_id !== (int) $user->id)
+                                                    @include('partials.community-message-report', ['message' => $reply])
+                                                @endif
+                                                @if($hasDeleteMsg && ((int) $reply->user_id === (int) $user->id || $isAdmin))
+                                                    <form method="POST"
+                                                          action="{{ route($deleteMessageRoute, $reply->id) }}"
+                                                          onsubmit="return confirm('Delete this message?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-outline btn-sm"
+                                                                style="color:var(--error);border-color:var(--error);">
+                                                            🗑
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </div>
                                         </div>
                                     @endforeach
                                 </div>
@@ -151,6 +242,11 @@
             </div>
 
             @if($canPost)
+                @if($errors->any())
+                    <div style="margin:0 12px 10px;background:var(--error-muted);color:var(--error);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:13px;">
+                        {{ $errors->first() }}
+                    </div>
+                @endif
                 <div style="background:#f0f2f5;border-top:1px solid var(--border);padding:10px 12px;">
                     <form action="{{ route($storeRouteName, $channel->slug) }}" method="POST" enctype="multipart/form-data" class="channel-composer-form">
                         @csrf
@@ -194,9 +290,50 @@
                             <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#000;">{{ $member->name }}</div>
                             <div style="font-size:10px;color:#64748b;">{{ $member->role }}</div>
                         </div>
+                        @if($hasRemove && $isAdmin && (int) $member->id !== (int) $user->id && (int) $member->id !== (int) $channel->created_by)
+                            <form method="POST"
+                                  action="{{ route($removeMemberRoute, [$channel->slug, $member->id]) }}"
+                                  onsubmit="return confirm('Remove {{ addslashes($member->name) }} from this channel?')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--error);padding:6px 10px;">
+                                    ✕
+                                </button>
+                            </form>
+                        @endif
                     </div>
                 @endforeach
             </div>
         </aside>
     </div>
 </div>
+
+@if($hasInvite && $isAdmin)
+<div id="invite-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="invite-title">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title" id="invite-title">Invite Member</div>
+            <button type="button" class="modal-close" onclick="closeModal('invite-modal')">✕</button>
+        </div>
+
+        <form method="POST" action="{{ route($inviteRoute, $channel->slug) }}" style="padding:0 20px 20px;">
+            @csrf
+
+            <div class="form-group" style="margin-top:16px;">
+                <label class="form-label" style="margin-bottom:8px;">Select user</label>
+                <select name="user_id" class="form-select" style="width:100%;" required>
+                    <option value="">Choose…</option>
+                    @foreach(($inviteCandidates ?? collect()) as $candidate)
+                        <option value="{{ $candidate->id }}">{{ $candidate->name }} ({{ ucfirst($candidate->role) }})</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button type="button" class="btn btn-ghost btn-sm" style="flex:1;" onclick="closeModal('invite-modal')">Cancel</button>
+                @php $invCount = ($inviteCandidates ?? collect())->count(); @endphp
+                <button type="submit" class="btn btn-primary btn-sm" style="flex:1;" @if($invCount === 0) disabled @endif>Send Invite</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif

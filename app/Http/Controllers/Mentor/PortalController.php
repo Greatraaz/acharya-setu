@@ -179,7 +179,24 @@ class PortalController extends Controller
             ->orderByPivot('role')
             ->get();
 
-        return view('frontend.mentors.community-show', compact('channel', 'messages', 'channels', 'members'));
+        $inviteCandidates = User::query()
+            ->whereIn('role', ['mentor', 'mentee'])
+            ->where('is_active', true)
+            ->whereNotIn('id', $members->pluck('id'))
+            ->orderBy('name')
+            ->limit(200)
+            ->get(['id', 'name', 'role']);
+
+        $isMember   = $channel->isMember($user);
+        $isAdmin    = $channel->isAdmin($user)
+            || (int) $channel->created_by === (int) $user->id
+            || $user->isAdmin();
+        $isCreator  = (int) $channel->created_by === (int) $user->id;
+
+        return view('frontend.mentors.community-show', compact(
+            'channel', 'messages', 'channels', 'members',
+            'inviteCandidates', 'isMember', 'isAdmin', 'isCreator'
+        ));
     }
 
     public function communityJoin(Channel $channel)

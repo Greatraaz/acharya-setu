@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mentee;
 
 use App\Http\Controllers\Controller;
 use App\Models\Channel;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 class CommunityController extends Controller
@@ -56,7 +57,24 @@ class CommunityController extends Controller
             ->orderByPivot('role')
             ->get();
 
-        return view('frontend.mentee.community-show', compact('channel', 'messages', 'channels', 'members'));
+        $inviteCandidates = User::query()
+            ->whereIn('role', ['mentor', 'mentee'])
+            ->where('is_active', true)
+            ->whereNotIn('id', $members->pluck('id'))
+            ->orderBy('name')
+            ->limit(200)
+            ->get(['id', 'name', 'role']);
+
+        $isMember   = $channel->isMember($user);
+        $isAdmin    = $channel->isAdmin($user)
+            || (int) $channel->created_by === (int) $user->id
+            || $user->isAdmin();
+        $isCreator  = (int) $channel->created_by === (int) $user->id;
+
+        return view('frontend.mentee.community-show', compact(
+            'channel', 'messages', 'channels', 'members',
+            'inviteCandidates', 'isMember', 'isAdmin', 'isCreator'
+        ));
     }
 
     public function join(Channel $channel)
