@@ -29,7 +29,8 @@ use App\Http\Controllers\Mentor\WalletController       as MentorWalletController
 use App\Http\Controllers\Mentor\ProfileController      as MentorProfileController;
 use App\Http\Controllers\Mentor\AvailabilityController as MentorAvailabilityController;
 use App\Http\Controllers\Mentor\PortalController       as MentorPortalController;
-use App\Http\Controllers\Mentor\AssessmentController   as MentorAssessmentController;
+use App\Http\Controllers\Mentor\AssessmentController         as MentorAssessmentController;
+use App\Http\Controllers\Mentor\AssessmentQuestionController as MentorAssessmentQuestionController;
 use App\Http\Controllers\Mentor\CurriculumController  as MentorCurriculumController;
 
 use App\Http\Controllers\Mentee\OnboardingController   as MenteeOnboardingController;
@@ -269,7 +270,14 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::get('/assessments/{assessment}',       [MentorAssessmentController::class, 'show'])->name('assessments.show');
     Route::get('/assessments/{assessment}/edit',  [MentorAssessmentController::class, 'edit'])->name('assessments.edit');
     Route::put('/assessments/{assessment}',       [MentorAssessmentController::class, 'update'])->name('assessments.update');
-    Route::delete('/assessments/{assessment}',     [MentorAssessmentController::class, 'destroy'])->name('assessments.destroy');
+    Route::delete('/assessments/{assessment}',    [MentorAssessmentController::class, 'destroy'])->name('assessments.destroy');
+
+    Route::get('/assessment-questions',                              [MentorAssessmentQuestionController::class, 'index'])->name('assessment-questions.index');
+    Route::get('/assessment-questions/create',                       [MentorAssessmentQuestionController::class, 'create'])->name('assessment-questions.create');
+    Route::post('/assessment-questions',                             [MentorAssessmentQuestionController::class, 'store'])->name('assessment-questions.store');
+    Route::get('/assessment-questions/{assessment_question}/edit',   [MentorAssessmentQuestionController::class, 'edit'])->name('assessment-questions.edit');
+    Route::put('/assessment-questions/{assessment_question}',        [MentorAssessmentQuestionController::class, 'update'])->name('assessment-questions.update');
+    Route::delete('/assessment-questions/{assessment_question}',     [MentorAssessmentQuestionController::class, 'destroy'])->name('assessment-questions.destroy');
 
     // Curriculum builder (mirrors /api/v1/mentor/curriculum/*)
     Route::prefix('curriculum')->name('curriculum.')->group(function () {

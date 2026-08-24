@@ -44,6 +44,14 @@
         <span class="si-icon">💬</span> Community
     </a>
 
+    <div class="sidebar-section-label">Assessments</div>
+    <a href="{{ route('mentor.assessments.index') }}" class="sidebar-item @if(request()->routeIs('mentor.assessments*')) active @endif">
+        <span class="si-icon">🧠</span> Categories
+    </a>
+    <a href="{{ route('mentor.assessment-questions.index') }}" class="sidebar-item @if(request()->routeIs('mentor.assessment-questions*')) active @endif">
+        <span class="si-icon">❓</span> Questions
+    </a>
+
     <div class="sidebar-section-label">Account</div>
     <a href="{{ route('mentor.wallet') }}" class="sidebar-item @if(request()->routeIs('mentor.wallet*')) active @endif">
         <span class="si-icon">💰</span> Earnings

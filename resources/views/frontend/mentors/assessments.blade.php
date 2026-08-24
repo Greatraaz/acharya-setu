@@ -2,17 +2,17 @@
 @section('title', 'Assessments — Vedrix Mentor')
 
 @section('content')
-<div class="dash-layout">
+<div class="dash-layout assess-page">
     @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
-        <div class="dash-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div class="dash-header">
             <div>
                 <div class="dash-title">Assessments</div>
-                <div class="dash-subtitle">Assessments available to your mentees ({{ $menteeCount }} mentee{{ $menteeCount === 1 ? '' : 's' }}).</div>
+                <div class="dash-subtitle">Manage assessment categories with score bands and status{{ isset($menteeCount) ? ' · '.$menteeCount.' mentee'.($menteeCount === 1 ? '' : 's') : '' }}.</div>
             </div>
             @unless($tableMissing ?? false)
-            <a href="{{ route('mentor.assessments.create') }}" class="btn btn-primary btn-sm">+ Create Assessment</a>
+            <a href="{{ route('mentor.assessments.create') }}" class="btn btn-primary btn-sm">+ Add New</a>
             @endunless
         </div>
 
@@ -23,37 +23,67 @@
         @if($tableMissing ?? false)
         <div class="alert alert-error">Assessments are not available yet. Ask admin to run database migrations.</div>
         @else
-        @forelse($assessments as $assessment)
-        <div class="card" style="margin-bottom:12px;padding:16px 18px;">
-            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:15px;font-weight:700;">{{ $assessment->title }}</div>
-                    @if($assessment->description)
-                    <p style="font-size:13px;color:var(--text-2);margin-top:6px;max-width:560px;">{{ $assessment->description }}</p>
-                    @endif
-                    <div style="font-size:12px;color:var(--text-3);margin-top:8px;">
-                        {{ $assessment->question_count }} questions · {{ $assessment->completion_count }} completions
-                    </div>
-                </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <a href="{{ route('mentor.assessments.show', $assessment) }}" class="btn btn-outline btn-sm">View</a>
-                    <a href="{{ route('mentor.assessments.edit', $assessment) }}" class="btn btn-outline btn-sm">Edit</a>
-                    <form method="POST" action="{{ route('mentor.assessments.destroy', $assessment) }}"
-                          onsubmit="return confirm('Delete this assessment and all mentee progress?')">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="btn btn-outline btn-sm" style="color:var(--error);">Delete</button>
-                    </form>
-                </div>
-            </div>
+        <div class="assess-table-wrap">
+            <table class="assess-table">
+                <thead>
+                    <tr>
+                        <th class="num">Sr. No.</th>
+                        <th>Image</th>
+                        <th>Assessment</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th class="actions">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($assessments as $index => $assessment)
+                    <tr>
+                        <td class="num" data-label="Sr. No.">{{ $index + 1 }}</td>
+                        <td data-label="Image">
+                            @if($assessment->imageUrl())
+                                <img src="{{ $assessment->imageUrl() }}" class="assess-thumb" alt="">
+                            @else
+                                <div class="assess-thumb">📝</div>
+                            @endif
+                        </td>
+                        <td class="assess-title-cell" data-label="Assessment">{{ $assessment->title }}</td>
+                        <td data-label="Description">
+                            <div class="assess-desc-cell">{{ strip_tags($assessment->description ?? '—') }}</div>
+                        </td>
+                        <td data-label="Status">
+                            @if($assessment->isActive())
+                            <span class="assess-badge is-active">Active</span>
+                            @else
+                            <span class="assess-badge is-inactive">Inactive</span>
+                            @endif
+                        </td>
+                        <td class="actions" data-label="Action">
+                            <div class="assess-actions">
+                                <a href="{{ route('mentor.assessments.show', $assessment) }}" class="assess-icon-btn assess-icon-btn--view" title="View">👁</a>
+                                <a href="{{ route('mentor.assessments.edit', $assessment) }}" class="assess-icon-btn assess-icon-btn--edit" title="Edit">✎</a>
+                                <form method="POST" action="{{ route('mentor.assessments.destroy', $assessment) }}"
+                                      onsubmit="return confirm('Delete this assessment and all its questions?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="assess-icon-btn assess-icon-btn--delete" title="Delete">🗑</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6">
+                            <div class="assess-empty">
+                                <div style="font-size:40px;">📝</div>
+                                <h3>No assessments yet</h3>
+                                <p>Add an assessment, then add questions for your mentees.</p>
+                                <a href="{{ route('mentor.assessments.create') }}" class="btn btn-primary" style="margin-top:14px;">Create Assessment</a>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
-        @empty
-        <div class="empty-state" style="padding:60px 0;">
-            <div style="font-size:48px;margin-bottom:12px;">🧠</div>
-            <div style="font-size:16px;font-weight:700;margin-bottom:8px;">No assessments yet</div>
-            <p style="font-size:13px;color:var(--text-2);max-width:360px;margin:0 auto 16px;">Create monthly assessments for mentees to complete as part of their curriculum.</p>
-            <a href="{{ route('mentor.assessments.create') }}" class="btn btn-primary">Create Assessment</a>
-        </div>
-        @endforelse
         @endif
     </div>
 </div>

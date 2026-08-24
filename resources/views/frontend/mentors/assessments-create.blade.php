@@ -2,24 +2,29 @@
 @section('title', 'Create Assessment — Vedrix Mentor')
 
 @section('content')
-<div class="dash-layout">
+<div class="dash-layout assess-page">
     @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
-        <div style="font-size:12px;margin-bottom:12px;">
-            <a href="{{ route('mentor.assessments.index') }}" style="color:var(--brand);">← Assessments</a>
-        </div>
+        <a href="{{ route('mentor.assessments.index') }}" class="assess-back">← Back to Assessments</a>
         <div class="dash-header">
-            <div class="dash-title">Create Assessment</div>
-            <div class="dash-subtitle">One assessment per curriculum month. Mentees will see it in their dashboard.</div>
+            <div>
+                <div class="dash-title">Create Assessment</div>
+                <div class="dash-subtitle">Add name, media, instructions, and four score bands.</div>
+            </div>
         </div>
 
-        <div class="card" style="padding:20px;">
-            @include('admin.assessments.partials.form', [
-                'assessment' => $assessment,
-                'formAction' => route('mentor.assessments.store'),
-            ])
+        @if($errors->any())
+        <div class="alert alert-error" style="margin-bottom:16px;">
+            Please fix the highlighted fields and try again.
         </div>
+        @endif
+
+        @include('frontend.mentors.partials.assessment-form', [
+            'assessment' => $assessment,
+            'bands' => $bands ?? [],
+            'formAction' => route('mentor.assessments.store'),
+        ])
     </div>
 </div>
 @endsection
