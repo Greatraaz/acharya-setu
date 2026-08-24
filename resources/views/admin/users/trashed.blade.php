@@ -23,6 +23,12 @@
     </div>
     @endif
 
+    @if(session('warning'))
+    <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">
+        {{ session('warning') }}
+    </div>
+    @endif
+
     {{-- Search --}}
     <div class="bg-white border border-gray-200 rounded-2xl p-4">
         <form method="GET" class="flex gap-3">
@@ -72,7 +78,7 @@
                                 </div>
                                 <div>
                                     <div class="text-sm font-semibold text-gray-600 line-through">{{ $user->name }}</div>
-                                    <div class="text-xs text-gray-400">{{ $user->email }}</div>
+                                    <div class="text-xs text-gray-400">{{ $user->deleted_email ?: $user->email }}</div>
                                 </div>
                             </div>
                         </td>

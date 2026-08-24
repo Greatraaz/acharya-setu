@@ -109,6 +109,8 @@
                 @endif
             </div>
         </div>
+
+        @include('account.partials.delete-account')
     </div>
 </div>
 @endsection

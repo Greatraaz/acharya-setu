@@ -39,13 +39,14 @@ class User extends Authenticatable
         'gender', 'rating', 'total_sessions', 'avatar_url', 'phone', 'bank_details', 'location',
         'linkedin', 'company', 'designation', 'experience_years',
         'is_active', 'rate_per_minute', 'assigned_mentor_id',
+        'deleted_email', 'deleted_phone',
         'subscription_plan', 'mentor_status', 'education_stream',
         'career_goals', 'strengths', 'preferences',
         'onboarding_step', 'onboarding_completed', 'isVerifiedEmail',
         'approved_by', 'approved_at', 'rejection_reason', 'has_pending_changes',
     ];
  
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'remember_token', 'deleted_email', 'deleted_phone'];
  
     protected $casts = [
         'expertise'            => 'array',
@@ -391,16 +392,80 @@ class User extends Authenticatable
         ]);
     }
 
+    public function hasReleasedCredentials(): bool
+    {
+        return $this->isReleasedEmail($this->email);
+    }
+
+    public function isReleasedEmail(?string $email): bool
+    {
+        return is_string($email) && str_ends_with($email, '@deleted.vedrix.local');
+    }
+
     /**
      * Clear unique credentials so the same email/phone can be reused after account deletion.
+     * Original values are kept so admin restore can put them back.
      */
     public function releaseCredentialsForDeletion(): void
     {
-        $this->update([
+        $updates = [
             'is_active' => false,
             'email'     => 'deleted_' . $this->id . '_' . now()->timestamp . '@deleted.vedrix.local',
             'phone'     => null,
-        ]);
+        ];
+
+        if (! $this->isReleasedEmail($this->email)) {
+            $updates['deleted_email'] = $this->email;
+        }
+
+        if (filled($this->phone) && blank($this->deleted_phone)) {
+            $updates['deleted_phone'] = $this->phone;
+        }
+
+        $this->update($updates);
+    }
+
+    /**
+     * Restore original email/phone after admin restore.
+     * Returns false when the original email is already taken by another account.
+     */
+    public function restoreReleasedCredentials(): bool
+    {
+        $updates = ['is_active' => true];
+        $emailRestored = true;
+
+        if (filled($this->deleted_email)) {
+            $taken = static::withTrashed()
+                ->where('email', $this->deleted_email)
+                ->where('id', '!=', $this->id)
+                ->exists();
+
+            if ($taken) {
+                $emailRestored = false;
+            } else {
+                $updates['email'] = $this->deleted_email;
+                $updates['deleted_email'] = null;
+            }
+        }
+
+        if (filled($this->deleted_phone)) {
+            $updates['phone'] = $this->deleted_phone;
+            $updates['deleted_phone'] = null;
+        }
+
+        $this->update($updates);
+
+        return $emailRestored;
+    }
+
+    /**
+     * Soft-restore the user and put original email/phone back when they were self-deleted.
+     */
+    public function restoreAccount(): bool
+    {
+        $this->restore();
+
+        return $this->restoreReleasedCredentials();
     }
 
     public function deleteAccount(): void

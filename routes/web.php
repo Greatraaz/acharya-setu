@@ -411,6 +411,7 @@ Route::middleware('auth')->group(function () {
     Route::put( '/account',         [LoginController::class, 'updateAccount'])->name('account.update');
     Route::post('/account/avatar',  [LoginController::class, 'updateAvatar']) ->name('account.avatar');
     Route::put( '/account/password',[LoginController::class, 'changePassword'])->name('account.password');
+    Route::delete('/account',       [LoginController::class, 'destroyAccount'])->name('account.destroy');
 
     // Session notes (mentor writes, mentee can view if shared)
     Route::get('/sessions/{id}/notes', [MentorSessionController::class, 'notes'])->name('sessions.notes.show');

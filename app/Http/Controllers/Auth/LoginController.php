@@ -108,6 +108,27 @@ class LoginController extends Controller
         return back()->with('success','Password changed successfully.');
     }
 
+    public function destroyAccount(Request $request)
+    {
+        $user = $request->user();
+
+        abort_unless(in_array($user->role, ['mentor', 'mentee'], true), 403);
+
+        $request->validateWithBag('deleteAccount', [
+            'password' => ['required', 'current_password'],
+        ], [
+            'password.current_password' => 'Your password is incorrect.',
+        ]);
+
+        $user->deleteAccount();
+
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login')->with('success', 'Your account has been deleted.');
+    }
+
     // Determine where to redirect after login
     private function redirectAfterLogin(User $user): string
     {

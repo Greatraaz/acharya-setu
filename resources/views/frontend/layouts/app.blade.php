@@ -79,11 +79,13 @@
                             <a class="dropdown-item" href="{{ route('mentor.dashboard') }}">📊 Dashboard</a>
                             <a class="dropdown-item" href="{{ route('mentor.sessions') }}">📅 My Sessions</a>
                             <a class="dropdown-item" href="{{ route('mentor.profile.edit') }}">✏️ Edit Profile</a>
+                            <a class="dropdown-item" href="{{ route('account') }}">👤 Account Settings</a>
                             <a class="dropdown-item" href="{{ route('mentor.wallet') }}">💰 Wallet</a>
                         @elseif($user->role === 'mentee')
                             <a class="dropdown-item" href="{{ route('mentee.dashboard') }}">📊 Dashboard</a>
                             <a class="dropdown-item" href="{{ route('mentee.sessions') }}">📅 My Sessions</a>
                             <a class="dropdown-item" href="{{ route('mentee.journey.index') }}">🗺️ My Journey</a>
+                            <a class="dropdown-item" href="{{ route('account') }}">👤 Profile Settings</a>
                             <a class="dropdown-item" href="{{ route('mentee.wallet') }}">💰 Wallet</a>
                         @elseif($user->role === 'admin')
                             <a class="dropdown-item" href="{{ route('admin.dashboard') }}">⚙️ Admin Panel</a>

@@ -95,8 +95,11 @@ class UserController extends Controller
         $users = User::where('role', 'mentee')
             ->onlyTrashed()
             ->when($request->search, fn($q) =>
-                $q->where('name', 'like', "%{$request->search}%")
-                  ->orWhere('email', 'like', "%{$request->search}%")
+                $q->where(fn($q) => $q
+                    ->where('name', 'like', "%{$request->search}%")
+                    ->orWhere('email', 'like', "%{$request->search}%")
+                    ->orWhere('deleted_email', 'like', "%{$request->search}%")
+                )
             )
             ->latest('deleted_at')
             ->paginate(20)
@@ -108,8 +111,16 @@ class UserController extends Controller
     public function restore(int $id)
     {
         $user = User::onlyTrashed()->findOrFail($id);
-        $user->restore();
+        $emailRestored = $user->restoreAccount();
         ActivityLogger::record('user_restored', auth()->user()->name . " restored user: {$user->name}", 'users', 'success');
+
+        if (! $emailRestored) {
+            return redirect()->back()->with(
+                'warning',
+                "{$user->name} has been restored, but their original email is already in use by another account."
+            );
+        }
+
         return redirect()->back()->with('success', "{$user->name} has been restored.");
     }
  
@@ -162,8 +173,11 @@ class UserController extends Controller
         $users = User::where('role', 'mentor')
             ->onlyTrashed()
             ->when($request->search, fn($q) =>
-                $q->where('name', 'like', "%{$request->search}%")
-                  ->orWhere('email', 'like', "%{$request->search}%")
+                $q->where(fn($q) => $q
+                    ->where('name', 'like', "%{$request->search}%")
+                    ->orWhere('email', 'like', "%{$request->search}%")
+                    ->orWhere('deleted_email', 'like', "%{$request->search}%")
+                )
             )
             ->latest('deleted_at')
             ->paginate(20)

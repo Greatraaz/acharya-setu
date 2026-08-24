@@ -52,6 +52,9 @@
     <a href="{{ route('mentor.profile.edit') }}" class="sidebar-item @if(request()->routeIs('mentor.profile.*')) active @endif">
         <span class="si-icon">✏️</span> Edit Profile
     </a>
+    <a href="{{ route('account') }}" class="sidebar-item @if(request()->routeIs('account*')) active @endif">
+        <span class="si-icon">👤</span> Account Settings
+    </a>
     <form action="{{ route('logout') }}" method="POST" style="margin-top:auto;">
         @csrf
         <button type="submit" class="sidebar-item w-full" style="background:none;cursor:pointer;color:var(--error);border:none;text-align:left;">

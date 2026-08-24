@@ -183,6 +183,8 @@
                 <button type="submit" class="btn btn-primary btn-lg">💾 Save Changes</button>
             </div>
         </form>
+
+        @include('account.partials.delete-account')
     </div>
 </div>
 

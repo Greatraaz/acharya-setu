@@ -37,6 +37,13 @@
             <h1 class="auth-title">Welcome back</h1>
             <p class="auth-subtitle">Sign in to continue your journey</p>
 
+            @if(session('success'))
+            <div class="alert alert-success" style="margin-bottom:20px;">
+                <span class="alert-icon">✓</span>
+                <div>{{ session('success') }}</div>
+            </div>
+            @endif
+
             {{-- Validation errors (server-side) --}}
             @if($errors->any())
             <div class="alert alert-error" style="margin-bottom:20px;">
