@@ -29,13 +29,16 @@ class SessionCallController extends Controller
         $peer = (int) $session->mentor_id === (int) $user->id ? $session->mentee : $session->mentor;
 
         return view('frontend.sessions.call', [
-            'session'    => $session,
-            'peer'       => $peer,
-            'role'       => $user->role,
-            'tokenUrl'   => route('sessions.video-token', $session->id),
-            'endUrl'     => route('sessions.call.end', $session->id),
-            'notesUrl'   => route('sessions.my-note.show', $session->id),
-            'backUrl'    => $this->sessionUrl($user->role, $session->id),
+            'session'         => $session,
+            'peer'            => $peer,
+            'role'            => $user->role,
+            'isMentee'        => (int) $session->mentee_id === (int) $user->id,
+            'scheduledEndTs'  => $session->scheduled_end?->getTimestamp(),
+            'serverNowTs'     => now()->getTimestamp(),
+            'tokenUrl'        => route('sessions.video-token', $session->id),
+            'endUrl'          => route('sessions.call.end', $session->id),
+            'notesUrl'        => route('sessions.my-note.show', $session->id),
+            'backUrl'         => $this->sessionUrl($user->role, $session->id),
         ]);
     }
 

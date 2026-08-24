@@ -89,6 +89,32 @@
     .call-room__local { width: 120px; height: 90px; right: 10px; top: 10px; }
     .app-bottom-nav { display: none !important; }
 }
+.call-extend {
+    position: absolute; inset: 0; z-index: 20;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.55); padding: 20px;
+}
+.call-extend.is-open { display: flex; }
+.call-extend__card {
+    width: 100%; max-width: 400px; background: #111827; border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.12); padding: 22px 20px 18px; text-align: center;
+}
+.call-extend__title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+.call-extend__body { font-size: 14px; color: #cbd5e1; line-height: 1.5; }
+.call-extend__actions { display: flex; gap: 10px; margin-top: 18px; }
+.call-extend__btn {
+    flex: 1; height: 44px; border: 0; border-radius: 10px; cursor: pointer;
+    font-weight: 700; font-size: 14px;
+}
+.call-extend__btn--yes { background: #16a34a; color: #fff; }
+.call-extend__btn--no { background: rgba(255,255,255,.12); color: #fff; }
+.call-extend-banner {
+    display: none; position: absolute; left: 50%; top: 16px; transform: translateX(-50%);
+    z-index: 6; max-width: calc(100% - 32px);
+    background: rgba(15,23,42,.88); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px; padding: 8px 14px; font-size: 12px; color: #e2e8f0; text-align: center;
+}
+.call-extend-banner.is-visible { display: block; }
 </style>
 @endpush
 
@@ -97,7 +123,11 @@
      data-token-url="{{ $tokenUrl }}"
      data-end-url="{{ $endUrl }}"
      data-notes-url="{{ $notesUrl }}"
-     data-back-url="{{ $backUrl }}">
+     data-back-url="{{ $backUrl }}"
+     data-is-mentee="{{ !empty($isMentee) ? '1' : '0' }}"
+     data-scheduled-end="{{ $scheduledEndTs ?? '' }}"
+     data-server-now="{{ $serverNowTs ?? '' }}"
+     data-duration="{{ (int) ($session->duration_minutes ?? 30) }}">
     <div class="call-room__stage">
         <div id="remote-player" class="call-room__remote"></div>
         <div id="waiting" class="call-room__empty">
@@ -113,6 +143,20 @@
         </div>
         <div id="local-player" class="call-room__local"></div>
         <div class="call-room__status" id="call-timer">00:00</div>
+        <div class="call-extend-banner" id="extend-banner"></div>
+
+        <div class="call-extend" id="extend-modal" role="dialog" aria-modal="true" aria-labelledby="extend-title">
+            <div class="call-extend__card">
+                <div class="call-extend__title" id="extend-title">Continue this session?</div>
+                <div class="call-extend__body" id="extend-body">
+                    This session is about to end. Would you like 10 more minutes? There is no extra charge.
+                </div>
+                <div class="call-extend__actions">
+                    <button type="button" class="call-extend__btn call-extend__btn--yes" id="extend-yes">Yes, continue</button>
+                    <button type="button" class="call-extend__btn call-extend__btn--no" id="extend-no">No, end on time</button>
+                </div>
+            </div>
+        </div>
 
         <aside class="call-room__notes" id="notes-panel" aria-hidden="true">
             <div class="call-room__notes-head">
@@ -162,10 +206,22 @@
     const endUrl = root.dataset.endUrl;
     const notesUrl = root.dataset.notesUrl;
     const backUrl = root.dataset.backUrl;
+    const isMentee = root.dataset.isMentee === '1';
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const EXTEND_MS = 10 * 60 * 1000;
+    const PROMPT_BEFORE_MS = 5 * 60 * 1000;
+    const serverNowTs = parseInt(root.dataset.serverNow || '0', 10);
+    const scheduledEndTs = parseInt(root.dataset.scheduledEnd || '0', 10);
+    const clockOffsetMs = serverNowTs ? (serverNowTs * 1000) - Date.now() : 0;
+    const originalEndMs = scheduledEndTs ? scheduledEndTs * 1000 : 0;
 
     let client, localAudio, localVideo, joined = false, timer, elapsed = 0, micOn = true, camOn = true;
     let notesOpen = false, notesLoaded = false, notesDirty = false, notesSaving = false, saveTimer;
+    let leaving = false, promptShown = false, extendDecision = null, endAtMs = originalEndMs, signalTimer;
+    const durationLabel = document.querySelector('.call-room__sub');
+    const extendModal = document.getElementById('extend-modal');
+    const extendBanner = document.getElementById('extend-banner');
+    const extendBody = document.getElementById('extend-body');
 
     const notesTextarea = document.getElementById('session-notes');
     const notesStatus = document.getElementById('notes-save-status');
@@ -182,13 +238,112 @@
         notesStatus.className = 'call-room__notes-status' + (state ? ' is-' + state : '');
     }
 
+    function nowMs() {
+        return Date.now() + clockOffsetMs;
+    }
+
+    function formatRemain(ms) {
+        const total = Math.max(0, Math.ceil(ms / 1000));
+        const m = Math.floor(total / 60);
+        const s = total % 60;
+        return m + ':' + String(s).padStart(2, '0');
+    }
+
+    function setBanner(text, visible) {
+        if (!extendBanner) return;
+        extendBanner.textContent = text || '';
+        extendBanner.classList.toggle('is-visible', !!visible && !!text);
+    }
+
+    function showExtendPrompt() {
+        if (promptShown || !originalEndMs) return;
+        promptShown = true;
+        if (isMentee) {
+            const remainMin = Math.max(1, Math.round((originalEndMs - nowMs()) / 60000));
+            if (extendBody) {
+                extendBody.textContent = 'This session ends in about ' + remainMin +
+                    ' minute' + (remainMin === 1 ? '' : 's') +
+                    '. Would you like 10 more minutes? There is no extra charge.';
+            }
+            extendModal?.classList.add('is-open');
+        } else {
+            endAtMs = originalEndMs + 20000;
+            setBanner('Waiting for the mentee to choose whether to continue for 10 more minutes.', true);
+        }
+    }
+
+    function hideExtendPrompt() {
+        extendModal?.classList.remove('is-open');
+    }
+
+    function sendCallSignal(payload) {
+        if (!client || !joined || typeof client.sendStreamMessage !== 'function') return;
+        try {
+            const encoded = new TextEncoder().encode(JSON.stringify(payload));
+            const result = client.sendStreamMessage(encoded);
+            if (result && typeof result.catch === 'function') result.catch(() => {});
+        } catch (e) {}
+    }
+
+    function applyExtend(fromPeer) {
+        if (extendDecision === 'yes') return;
+        extendDecision = 'yes';
+        endAtMs = originalEndMs + EXTEND_MS;
+        hideExtendPrompt();
+        setBanner('Session continued for 10 more minutes. No extra charge.', true);
+        if (durationLabel && durationLabel.textContent) {
+            durationLabel.textContent = durationLabel.textContent.replace(/·\s*\d+\s*min/, '· extra 10 min');
+        }
+        if (window.showToast) showToast('success', 'Session continued for 10 more minutes.');
+        if (!fromPeer && isMentee) {
+            sendCallSignal({ type: 'extend-yes' });
+            clearInterval(signalTimer);
+            signalTimer = setInterval(() => sendCallSignal({ type: 'extend-yes' }), 4000);
+        }
+    }
+
+    function declineExtend(fromPeer) {
+        if (extendDecision === 'yes') return;
+        extendDecision = 'no';
+        endAtMs = originalEndMs;
+        hideExtendPrompt();
+        setBanner('This session will end at the scheduled time.', true);
+        if (!fromPeer && isMentee) sendCallSignal({ type: 'extend-no' });
+    }
+
+    function handleSignal(raw) {
+        let text = '';
+        try {
+            if (typeof raw === 'string') text = raw;
+            else if (raw instanceof ArrayBuffer) text = new TextDecoder().decode(raw);
+            else if (raw && raw.buffer) text = new TextDecoder().decode(raw);
+            else text = String(raw);
+            const payload = JSON.parse(text);
+            if (payload.type === 'extend-yes') applyExtend(true);
+            if (payload.type === 'extend-no') declineExtend(true);
+        } catch (e) {}
+    }
+
     function startTimer() {
         clearInterval(timer);
         timer = setInterval(() => {
             elapsed += 1;
             const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
             const s = String(elapsed % 60).padStart(2, '0');
-            document.getElementById('call-timer').textContent = m + ':' + s;
+            const remain = endAtMs ? ' · ' + formatRemain(endAtMs - nowMs()) + ' left' : '';
+            document.getElementById('call-timer').textContent = m + ':' + s + remain;
+
+            if (!originalEndMs) return;
+            const current = nowMs();
+            if (!promptShown && current >= (originalEndMs - PROMPT_BEFORE_MS) && current < originalEndMs) {
+                showExtendPrompt();
+            }
+            if (extendDecision === null && promptShown && current >= originalEndMs) {
+                declineExtend(false);
+            }
+            if (endAtMs && current >= endAtMs) {
+                leave('time_up');
+            }
         }, 1000);
     }
 
@@ -276,6 +431,9 @@
                 user.videoTrack.play('remote-player');
             }
             if (mediaType === 'audio') user.audioTrack.play();
+            if (isMentee && extendDecision) {
+                sendCallSignal({ type: extendDecision === 'yes' ? 'extend-yes' : 'extend-no' });
+            }
         });
         client.on('user-unpublished', (user, mediaType) => {
             if (mediaType === 'video') document.getElementById('waiting').style.display = '';
@@ -284,6 +442,7 @@
             document.getElementById('waiting').style.display = '';
             setStatus('The other person left the call.');
         });
+        client.on('stream-message', (_uid, data) => handleSignal(data));
 
         await client.join(data.app_id, data.channel, data.token, data.uid);
         [localAudio, localVideo] = await AgoraRTC.createMicrophoneAndCameraTracks();
@@ -295,7 +454,11 @@
     }
 
     async function leave(reason) {
+        if (leaving) return;
+        leaving = true;
+        hideExtendPrompt();
         clearInterval(timer);
+        clearInterval(signalTimer);
         clearTimeout(saveTimer);
         await saveNotes(true);
         try {
@@ -342,6 +505,8 @@
         document.getElementById('btn-cam').textContent = camOn ? '📷' : '🚫';
     });
     document.getElementById('btn-end').addEventListener('click', () => leave('normal'));
+    document.getElementById('extend-yes')?.addEventListener('click', () => applyExtend(false));
+    document.getElementById('extend-no')?.addEventListener('click', () => declineExtend(false));
     window.addEventListener('beforeunload', () => {
         if (joined) {
             const fd = new FormData();

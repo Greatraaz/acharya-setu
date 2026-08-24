@@ -441,7 +441,10 @@ class ConsultationSession extends Model
     }
 
     /**
-     * Mark ongoing sessions complete once booked duration (+ buffer) has elapsed.
+     * Mark ongoing sessions complete once booked duration has elapsed.
+     *
+     * A 10-minute grace is included so an in-call, unpersisted +10 minute
+     * extension on web is not cut off by list-page cleanup.
      */
     public static function completeStaleOngoingSessions(
         ?int $mentorId = null,
@@ -455,13 +458,13 @@ class ConsultationSession extends Model
                 $q->where(function ($inner) use ($now) {
                     $inner->whereNotNull('started_at')
                         ->whereRaw(
-                            'DATE_ADD(started_at, INTERVAL COALESCE(duration_minutes, 30) MINUTE) <= ?',
+                            'DATE_ADD(started_at, INTERVAL COALESCE(duration_minutes, 30) + 10 MINUTE) <= ?',
                             [$now]
                         );
                 })->orWhere(function ($inner) use ($now) {
                     $inner->whereNull('started_at')
                         ->whereRaw(
-                            'DATE_ADD(scheduled_at, INTERVAL COALESCE(duration_minutes, 30) MINUTE) <= ?',
+                            'DATE_ADD(scheduled_at, INTERVAL COALESCE(duration_minutes, 30) + 10 MINUTE) <= ?',
                             [$now]
                         );
                 });

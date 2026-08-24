@@ -202,7 +202,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}/notes/{noteId}', [SessionsController::class, 'destroyNote'])->whereNumber('id')->whereNumber('noteId');
             Route::patch('/{id}',    [SessionsController::class, 'update']);
             Route::delete('/{id}',   [SessionsController::class, 'destroy']);
-            Route::post('/{id}/continue-session', [SessionsController::class, 'continueSession']);
         });
 
         // Assessments
