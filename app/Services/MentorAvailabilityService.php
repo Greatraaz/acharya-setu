@@ -27,7 +27,6 @@ class MentorAvailabilityService
         $daysOut = [];
         for ($i = 0; $i < $days; $i++) {
             $date = $start->copy()->addDays($i);
-            // Booking widget starts from tomorrow; still allow today in API if requested start is today.
             $dayKey = strtolower($date->format('l'));
             $slots = $this->openSlotsForDate($mentor, $date->toDateString(), $schedule);
             $meta = $schedule['days'][$dayKey] ?? null;
@@ -86,7 +85,7 @@ class MentorAvailabilityService
         $dayKey = strtolower(Carbon::parse($date, 'Asia/Kolkata')->format('l'));
         $open = $this->rawOpenSlots($mentor, $date, $schedule);
         $booked = $this->bookedTimes($mentor->id, $date);
-        $available = array_values(array_diff($open, $booked));
+        $available = $this->excludePastSlots($date, array_values(array_diff($open, $booked)));
         $meta = $schedule['days'][$dayKey] ?? null;
         $label = null;
         if (($meta['enabled'] ?? false) && ($meta['from'] ?? null) && ($meta['to'] ?? null)) {
@@ -220,7 +219,37 @@ class MentorAvailabilityService
         $open = $this->rawOpenSlots($mentor, $date, $schedule);
         $booked = $this->bookedTimes($mentor->id, $date);
 
-        return array_values(array_diff($open, $booked));
+        return $this->excludePastSlots($date, array_values(array_diff($open, $booked)));
+    }
+
+    /**
+     * Drop times that have already started (or are about to) when the date is today (IST).
+     *
+     * @param  list<string>  $slots
+     * @return list<string>
+     */
+    private function excludePastSlots(string $date, array $slots): array
+    {
+        $now = Carbon::now('Asia/Kolkata');
+        if ($date !== $now->toDateString()) {
+            return array_values($slots);
+        }
+
+        $cutoff = $now->copy()->addMinutes(5);
+
+        return array_values(array_filter($slots, function ($time) use ($date, $cutoff) {
+            try {
+                $slotAt = Carbon::createFromFormat(
+                    'Y-m-d H:i',
+                    $date.' '.substr((string) $time, 0, 5),
+                    'Asia/Kolkata'
+                );
+            } catch (\Throwable) {
+                return false;
+            }
+
+            return $slotAt->greaterThan($cutoff);
+        }));
     }
 
     /**

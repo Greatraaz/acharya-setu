@@ -165,6 +165,7 @@
                     {{-- Duration --}}
                     <p class="label-caps" style="margin:16px 0 10px;">Duration</p>
                     <div class="duration-btns">
+                        <div class="duration-btn" data-min="15" onclick="BookingWidget.setDuration(15)">15 min<br><small style="font-size:10px;color:inherit;">₹{{ ($mentor->rate_per_minute ?? 10) * 15 }}</small></div>
                         <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30 min<br><small style="font-size:10px;color:inherit;">₹{{ ($mentor->rate_per_minute ?? 10) * 30 }}</small></div>
                         <div class="duration-btn" data-min="60" onclick="BookingWidget.setDuration(60)">60 min<br><small style="font-size:10px;color:inherit;">₹{{ ($mentor->rate_per_minute ?? 10) * 60 }}</small></div>
                         <div class="duration-btn" data-min="90" onclick="BookingWidget.setDuration(90)">90 min<br><small style="font-size:10px;color:inherit;">₹{{ ($mentor->rate_per_minute ?? 10) * 90 }}</small></div>

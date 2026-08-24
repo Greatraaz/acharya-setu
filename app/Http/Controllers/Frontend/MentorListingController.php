@@ -79,7 +79,7 @@ class MentorListingController extends Controller
         $reviews = [];
         $availabilityOverview = $this->availabilityService->weekOverview(
             $mentor,
-            Carbon::now('Asia/Kolkata')->startOfDay()->addDay(),
+            Carbon::now('Asia/Kolkata')->startOfDay(),
             14
         );
 
@@ -101,7 +101,7 @@ class MentorListingController extends Controller
             $days = min(28, max(7, (int) $request->input('days', 14)));
             $start = $request->filled('start')
                 ? Carbon::parse($request->input('start'), 'Asia/Kolkata')->startOfDay()
-                : Carbon::now('Asia/Kolkata')->startOfDay()->addDay();
+                : Carbon::now('Asia/Kolkata')->startOfDay();
 
             $overview = $this->availabilityService->weekOverview($mentor, $start, $days);
 

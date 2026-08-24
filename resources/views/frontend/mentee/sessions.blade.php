@@ -20,6 +20,7 @@
                 'upcoming' => 'Upcoming',
                 'pending' => 'Pending',
                 'confirmed' => 'Confirmed',
+                'ongoing' => 'Ongoing',
                 'completed' => 'Completed',
                 'cancelled' => 'Cancelled',
             ] as $key => $label)
@@ -36,6 +37,7 @@
             $statusLabel = $session->status_label ?? ucfirst(str_replace('_', ' ', $statusKey));
             $barColor = match($statusKey) {
                 'confirmed' => 'var(--success)',
+                'ongoing' => 'var(--info)',
                 'pending' => 'var(--warning)',
                 'completed' => 'var(--brand)',
                 default => 'var(--error)',

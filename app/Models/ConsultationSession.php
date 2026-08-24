@@ -70,6 +70,9 @@ class ConsultationSession extends Model
     const STATUS_CANCELLED = 'cancelled';
     const STATUS_UPCOMING  = 'upcoming';
     const STATUS_NO_SHOW   = 'no_show';
+
+    /** Allowed mentee booking lengths (minutes). */
+    public const BOOKING_DURATIONS = [15, 30, 60, 90];
  
     const STATUSES = [
         'pending'   => 'Pending',

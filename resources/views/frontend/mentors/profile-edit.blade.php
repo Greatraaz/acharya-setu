@@ -167,8 +167,8 @@
                     <div class="form-hint">Minimum ₹5/min · Suggested ₹10–₹25/min for new mentors</div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;">
-                    @foreach([[30,'30 min'],[60,'60 min'],[90,'90 min']] as [$min,$label])
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px;">
+                    @foreach([[15,'15 min'],[30,'30 min'],[60,'60 min'],[90,'90 min']] as [$min,$label])
                     <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center;">
                         <div style="font-size:12px;color:var(--text-2);margin-bottom:4px;">{{ $label }} session</div>
                         <div style="font-size:18px;font-weight:800;color:var(--brand-dark);" id="preview-{{ $min }}">₹{{ (auth()->user()->rate_per_minute ?? 10) * $min }}</div>
@@ -203,7 +203,7 @@ const rateInput = document.getElementById('rate-input');
 if (rateInput) {
     rateInput.addEventListener('input', () => {
         const r = parseFloat(rateInput.value) || 0;
-        [30,60,90].forEach(m => {
+        [15,30,60,90].forEach(m => {
             const pe = document.getElementById(`preview-${m}`); if(pe) pe.textContent = '₹' + (r*m);
             const ne = document.getElementById(`net-${m}`);     if(ne) ne.textContent = (r*m*0.8).toFixed(0);
         });

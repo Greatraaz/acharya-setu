@@ -27,7 +27,7 @@
 
         {{-- Filter tabs --}}
         <div class="session-filter-tabs">
-            @foreach(['all'=>'All','pending'=>'Pending','confirmed'=>'Confirmed','completed'=>'Completed','missed'=>'Missed','cancelled'=>'Cancelled'] as $key=>$label)
+            @foreach(['all'=>'All','pending'=>'Pending','confirmed'=>'Confirmed','ongoing'=>'Ongoing','completed'=>'Completed','missed'=>'Missed','cancelled'=>'Cancelled'] as $key=>$label)
             <a href="{{ route('mentor.sessions', ['filter'=>$key]) }}"
                class="session-filter-tab {{ ($filter ?? request('filter','all')) === $key ? 'active' : '' }}">
                {{ $label }}
@@ -45,6 +45,7 @@
             $statusLabel = $session->status_label;
             $barColor = match($statusKey) {
                 'confirmed' => 'var(--success)',
+                'ongoing' => 'var(--info)',
                 'pending', 'upcoming' => 'var(--warning)',
                 'completed' => 'var(--brand)',
                 'no_show' => 'var(--text-3)',
@@ -109,6 +110,7 @@
                 'all'       => 'sessions',
                 'pending'   => 'pending sessions',
                 'confirmed' => 'confirmed sessions',
+                'ongoing'   => 'ongoing sessions',
                 'completed' => 'completed sessions',
                 'missed'    => 'missed sessions',
                 'cancelled' => 'cancelled sessions',

@@ -585,19 +585,21 @@
        function markDateButtons() {
            document.querySelectorAll("#dateGrid .cal-day").forEach((btn) => {
                const info = dayAvailability[btn.dataset.date];
+               const isToday = btn.classList.contains("today");
                btn.classList.remove("disabled", "unavailable", "has-slots");
                btn.removeAttribute("disabled");
-               btn.title = "";
+               btn.title = isToday ? "Today" : "";
                if (!info) return;
                if (!info.available) {
                    btn.classList.add("disabled", "unavailable");
                    btn.disabled = true;
-                   btn.title = "Mentor not available";
+                   btn.title = isToday ? "No remaining slots today" : "Mentor not available";
                } else {
                    btn.classList.add("has-slots");
-                   btn.title = info.label
+                   const detail = info.label
                        ? `${info.slot_count} slots · ${info.label}`
                        : `${info.slot_count} slots available`;
+                   btn.title = isToday ? `Today · ${detail}` : detail;
                }
            });
        }
@@ -716,12 +718,13 @@
                    for (let i = 0; i < 14; i++) {
                        const d = new Date();
                        d.setHours(12, 0, 0, 0);
-                       d.setDate(d.getDate() + i + 1);
+                       d.setDate(d.getDate() + i); // include today
                        const btn = document.createElement("button");
                        btn.type = "button";
-                       btn.className = "cal-day";
-                       btn.innerHTML = `<span class="cal-day-label">${days[d.getDay()]}</span>${d.getDate()}`;
+                       btn.className = "cal-day" + (i === 0 ? " today" : "");
+                       btn.innerHTML = `<span class="cal-day-label">${days[d.getDay()]}</span><span class="cal-day-num">${d.getDate()}</span>`;
                        btn.dataset.date = localDateString(d);
+                       if (i === 0) btn.title = "Today";
                        btn.addEventListener("click", function (e) {
                            e.preventDefault();
                            e.stopPropagation();

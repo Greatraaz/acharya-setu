@@ -9,6 +9,9 @@ class SessionController extends Controller
 {
     public function index(Request $request)
     {
+        ConsultationSession::expireMissedSessions(null, auth()->id());
+        ConsultationSession::completeStaleOngoingSessions(null, auth()->id());
+
         $query = ConsultationSession::where('mentee_id', auth()->id())
             ->with(['mentor', 'sessionInvoice'])->latest('scheduled_at');
 

@@ -202,6 +202,7 @@
 
                     <p class="label-caps" style="margin:20px 0 12px;">Duration</p>
                     <div class="duration-btns">
+                        <div class="duration-btn" data-min="15" onclick="BookingWidget.setDuration(15)">15 min</div>
                         <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30 min</div>
                         <div class="duration-btn" data-min="60" onclick="BookingWidget.setDuration(60)">60 min</div>
                         <div class="duration-btn" data-min="90" onclick="BookingWidget.setDuration(90)">90 min</div>

@@ -78,7 +78,7 @@ class SessionsController extends Controller
             'mentor_id'      => 'required|exists:users,id',
             'date'           => 'required|date|after_or_equal:today',
             'time'           => 'required|string',
-            'duration'       => 'required|integer|in:30,60,90',
+            'duration'       => 'required|integer|in:'.implode(',', ConsultationSession::BOOKING_DURATIONS),
             'title'          => 'nullable|string|max:255',
             'agenda'         => 'nullable|string|max:1000',
             'payment_method' => 'nullable|in:wallet,razorpay,hybrid',

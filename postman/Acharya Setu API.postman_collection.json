@@ -907,7 +907,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"mentor_id\": 2,\n    \"date\": \"2026-08-13\",\n    \"time\": \"10:30\",\n    \"duration\": 60, // 30,60,90\n    \"title\": \"Career Guidance Session\"\n}",
+                  "raw": "{\n    \"mentor_id\": 2,\n    \"date\": \"2026-08-13\",\n    \"time\": \"10:30\",\n    \"duration\": 60, // 15,30,60,90\n    \"title\": \"Career Guidance Session\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
