@@ -150,7 +150,7 @@ Route::middleware('guest')->group(function () {
     // ── Password reset ────────────────────────────────────────
     Route::get( '/forgot-password',         [ForgotPasswordController::class, 'showForm'])   ->name('password.request');
     Route::post('/forgot-password',         [ForgotPasswordController::class, 'sendLink'])   ->name('password.email');
-    Route::get( '/reset-password/{token}',  [ForgotPasswordController::class, 'showReset'])  ->name('password.reset');
+    Route::get( '/reset-password/{token?}', [ForgotPasswordController::class, 'showReset'])  ->name('password.reset');
     Route::post('/reset-password',          [ForgotPasswordController::class, 'resetPassword'])->name('password.update');
 });
 

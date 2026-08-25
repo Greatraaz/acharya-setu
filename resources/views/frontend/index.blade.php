@@ -724,6 +724,11 @@
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <div class="d-flex flex-wrap align-items-center">
+                    @auth
+                        <a href="{{ auth()->user()->role === 'mentor' ? route('mentor.dashboard') : route('mentee.dashboard') }}" class="nav-btn nav-btn-outline">Dashboard</a>
+                    @else
+                        <a href="{{ route('login') }}" class="nav-btn nav-btn-outline">Login</a>
+                    @endauth
                     <a href="#waitlist" class="nav-btn nav-btn-outline">Join Waitlist</a>
                     <a href="#mentor" class="nav-btn nav-btn-outline">Become a Mentor</a>
                     <a href="#partner" class="nav-btn nav-btn-primary">Partner With Us</a>

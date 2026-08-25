@@ -34,9 +34,19 @@ class ForgotPasswordController extends Controller
         return back()->withErrors(['email' => $msg]);
     }
 
-    public function showReset(string $token, Request $request)
+    public function showReset(Request $request, ?string $token = null)
     {
-        return view('frontend.auth.reset-password', ['token' => $token, 'email' => $request->email]);
+        $token = $token ?: (string) $request->query('token', '');
+
+        if ($token === '') {
+            return redirect()->route('password.request')
+                ->withErrors(['email' => 'This password reset link is invalid. Please request a new one.']);
+        }
+
+        return view('frontend.auth.reset-password', [
+            'token' => $token,
+            'email' => $request->query('email', $request->input('email')),
+        ]);
     }
 
     public function resetPassword(Request $request)

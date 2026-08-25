@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\PublicFileStorage;
 use Carbon\Carbon;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -25,5 +26,11 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Throwable $e) {
             report($e);
         }
+
+        ResetPassword::createUrlUsing(function (object $user, string $token) {
+            return url('/reset-password/'.$token).'?'.http_build_query([
+                'email' => $user->getEmailForPasswordReset(),
+            ]);
+        });
     }
 }
