@@ -1,6 +1,6 @@
 @extends('frontend.layouts.app')
 @section('title', 'White Papers — Insights')
-@section('meta_description', 'Deep technical insights and strategic technology white papers from Vedrix.')
+@section('meta_description', 'Vedrix white papers on mentorship, career readiness, and structured guidance for students and early professionals.')
 
 @section('content')
 <div class="insights-page">
@@ -14,9 +14,9 @@
                 <span>White Papers</span>
             </nav>
             <div class="insights-banner__eyebrow">📄 Research & Reports</div>
-            <h1 class="insights-banner__title">Enterprise Technology White Papers</h1>
+            <h1 class="insights-banner__title">Mentorship Insights, Backed by Research</h1>
             <p class="insights-banner__sub">
-                Deep technical insights, architectural reference models, and strategic technology white papers written by system architects.
+                In-depth Vedrix white papers on career readiness, structured mentorship, and how guided learning helps students and early professionals grow with purpose.
             </p>
         </div>
     </section>

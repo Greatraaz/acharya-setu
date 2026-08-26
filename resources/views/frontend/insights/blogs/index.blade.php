@@ -17,9 +17,9 @@
                 <span>Blogs</span>
             </nav>
             <div class="insights-banner__eyebrow">📄 Articles & Insights</div>
-            <h1 class="insights-banner__title">Mentorship & Career Insights</h1>
+            <h1 class="insights-banner__title">Guidance That Shapes Real Careers</h1>
             <p class="insights-banner__sub">
-                Practical guidance from mentors and industry voices — built to help students and early professionals make smarter career choices.
+                Stories, tips, and lessons from Vedrix mentors — helping students and early professionals find clarity, build skills, and move forward with confidence.
             </p>
         </div>
     </section>
