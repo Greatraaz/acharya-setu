@@ -21,7 +21,7 @@ class WhitePaperController extends Controller
             $query->where('status', $request->status);
         }
 
-        $whitePapers = $query->get();
+        $whitePapers = $query->paginate(20)->withQueryString();
 
         return view('admin.white-papers.index', compact('whitePapers'));
     }

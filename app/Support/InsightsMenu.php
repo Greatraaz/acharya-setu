@@ -13,7 +13,7 @@ class InsightsMenu
     {
         return [
             ['key' => 'blogs', 'label' => 'Blogs', 'icon' => '📰', 'route' => 'insights.blogs.index'],
-            ['key' => 'white-papers', 'label' => 'White Papers', 'icon' => '📄', 'route' => null],
+            ['key' => 'white-papers', 'label' => 'White Papers', 'icon' => '📄', 'route' => 'insights.white-papers.index'],
             ['key' => 'case-studies', 'label' => 'Case Studies', 'icon' => '📁', 'route' => null],
             ['key' => 'customer-stories', 'label' => 'Customer Stories', 'icon' => '💬', 'route' => null],
             ['key' => 'testimonials', 'label' => 'Testimonials', 'icon' => '⭐', 'route' => null],

@@ -55,9 +55,9 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    @foreach($whitePapers as $index => $paper)
+                    @foreach($whitePapers as $paper)
                     <tr class="hover:bg-gray-50/70">
-                        <td class="px-5 py-4 text-gray-500">{{ $index + 1 }}</td>
+                        <td class="px-5 py-4 text-gray-500">{{ $whitePapers->firstItem() + $loop->index }}</td>
                         <td class="px-5 py-4">
                             @if($paper->imageUrl())
                                 <img src="{{ $paper->imageUrl() }}" class="w-14 h-14 rounded-lg object-cover" alt="">
@@ -96,6 +96,11 @@
                 </tbody>
             </table>
         </div>
+        @if(method_exists($whitePapers, 'hasPages') && $whitePapers->hasPages())
+            <div class="px-5 py-4 border-t border-gray-100">
+                {{ $whitePapers->links() }}
+            </div>
+        @endif
         @endif
     </div>
 </div>

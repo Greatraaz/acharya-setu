@@ -16,6 +16,7 @@ use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\MentorListingController;
 use App\Http\Controllers\Frontend\ContactController;
 use App\Http\Controllers\Frontend\BlogController as FrontendBlogController;
+use App\Http\Controllers\Frontend\WhitePaperController as FrontendWhitePaperController;
 
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LoginController;
@@ -129,6 +130,10 @@ Route::get('/terms',   fn() => view('frontend.terms'))  ->name('terms');
 Route::prefix('insights')->name('insights.')->group(function () {
     Route::get('/blogs', [FrontendBlogController::class, 'index'])->name('blogs.index');
     Route::get('/blogs/{slug}', [FrontendBlogController::class, 'show'])->name('blogs.show')->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/white-papers', [FrontendWhitePaperController::class, 'index'])->name('white-papers.index');
+    Route::get('/white-papers/{slug}/download', [FrontendWhitePaperController::class, 'download'])
+        ->name('white-papers.download')
+        ->where('slug', '[A-Za-z0-9\-]+');
 });
 
 // Public job listings

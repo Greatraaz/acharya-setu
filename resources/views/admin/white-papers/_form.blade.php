@@ -33,6 +33,7 @@
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Description *</label>
             <textarea name="description" id="white-paper-description" rows="12"
                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm">{{ old('description', $whitePaper->description ?? '') }}</textarea>
+            <p class="text-xs text-gray-500 mt-1">This content is what users download as a formatted PDF.</p>
             @error('description')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
         </div>
 

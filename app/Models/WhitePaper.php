@@ -56,6 +56,13 @@ class WhitePaper extends Model
         return $path ? url($path) : null;
     }
 
+    public function downloadFilename(): string
+    {
+        $base = Str::slug($this->title) ?: 'white-paper';
+
+        return $base.'.pdf';
+    }
+
     public function excerpt(int $words = 28): string
     {
         $text = trim(preg_replace('/\s+/', ' ', strip_tags((string) $this->description)) ?? '');

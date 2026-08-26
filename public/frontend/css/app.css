@@ -3808,6 +3808,45 @@
        color: var(--text-3);
        margin-top: 4px;
    }
+
+   .white-paper-card {
+       cursor: default;
+   }
+   .white-paper-card:hover .blog-card__title {
+       color: var(--text);
+   }
+   .white-paper-card__body {
+       gap: 12px;
+   }
+   .white-paper-download-btn {
+       display: inline-flex;
+       align-items: center;
+       justify-content: center;
+       gap: 8px;
+       width: 100%;
+       margin-top: auto;
+       padding: 12px 14px;
+       border-radius: 10px;
+       background: var(--brand);
+       color: #000 !important;
+       font-size: 13px;
+       font-weight: 700;
+       text-decoration: none;
+       transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+   }
+   .white-paper-download-btn:hover {
+       background: var(--brand-light, #fbbf24);
+       transform: translateY(-1px);
+       box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35);
+   }
+   .white-paper-download-btn.is-disabled {
+       background: #94a3b8;
+       color: #fff !important;
+       pointer-events: none;
+       opacity: 0.85;
+       box-shadow: none;
+   }
+
    .blog-empty {
        text-align: center;
        padding: 64px 16px;
