@@ -4,18 +4,25 @@ namespace App\Http\Controllers\Mentor;
 
 use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
+use App\Services\MentorAvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class AvailabilityController extends Controller
 {
+    public function __construct(
+        private readonly MentorAvailabilityService $availabilityService
+    ) {}
+
     public function show()
     {
         $user = auth()->user();
         $prefs = $user->preferences ?? [];
 
-        $availability = $prefs['weekly_schedule'] ?? $this->scheduleFromSlots($prefs['weekly_slots'] ?? null);
+        $availability = $this->normalizeScheduleForUi(
+            $prefs['weekly_schedule'] ?? $this->scheduleFromSlots($prefs['weekly_slots'] ?? null)
+        );
         $settings = $prefs['session_settings'] ?? [
             'buffer_minutes'   => 0,
             'advance_days'     => 7,
@@ -45,11 +52,25 @@ class AvailabilityController extends Controller
                 if (! is_array($row)) {
                     continue;
                 }
-                if (isset($row['from'])) {
-                    $daysInput[$day]['from'] = $this->normalizeTime($row['from']);
+                if (isset($row['ranges']) && is_array($row['ranges'])) {
+                    foreach ($row['ranges'] as $i => $range) {
+                        if (! is_array($range)) {
+                            continue;
+                        }
+                        if (isset($range['from'])) {
+                            $daysInput[$day]['ranges'][$i]['from'] = $this->normalizeTime($range['from']);
+                        }
+                        if (isset($range['to'])) {
+                            $daysInput[$day]['ranges'][$i]['to'] = $this->normalizeTime($range['to']);
+                        }
+                    }
                 }
-                if (isset($row['to'])) {
-                    $daysInput[$day]['to'] = $this->normalizeTime($row['to']);
+                // Legacy single from/to → one range
+                if (empty($row['ranges']) && (isset($row['from']) || isset($row['to']))) {
+                    $daysInput[$day]['ranges'] = [[
+                        'from' => $this->normalizeTime($row['from'] ?? '09:00'),
+                        'to'   => $this->normalizeTime($row['to'] ?? '18:00'),
+                    ]];
                 }
             }
             $request->merge(['days' => $daysInput]);
@@ -58,9 +79,9 @@ class AvailabilityController extends Controller
         $data = $request->validate([
             'days'                 => 'required|array',
             'days.*.enabled'       => 'nullable',
-            'days.*.from'          => 'nullable|date_format:H:i',
-            'days.*.to'            => 'nullable|date_format:H:i',
-            'days.*.slot_duration' => 'nullable|integer|in:30,60,90',
+            'days.*.ranges'        => 'nullable|array',
+            'days.*.ranges.*.from' => 'nullable|date_format:H:i',
+            'days.*.ranges.*.to'   => 'nullable|date_format:H:i',
         ]);
 
         $schedule = [];
@@ -69,25 +90,63 @@ class AvailabilityController extends Controller
         foreach ($this->dayKeys() as $day) {
             $row = $data['days'][$day] ?? [];
             $enabled = ! empty($row['enabled']);
-            $from = $row['from'] ?? '09:00';
-            $to = $row['to'] ?? '18:00';
-            $duration = (int) ($row['slot_duration'] ?? 30);
+            $ranges = [];
 
-            if ($enabled && $from >= $to) {
+            foreach ($row['ranges'] ?? [] as $range) {
+                $from = $range['from'] ?? null;
+                $to = $range['to'] ?? null;
+                if (! $from || ! $to) {
+                    continue;
+                }
+                if ($from >= $to) {
+                    throw ValidationException::withMessages([
+                        "days.{$day}.ranges" => "Each slot end time must be after start time for {$day}.",
+                    ]);
+                }
+                $mins = Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to));
+                if ($mins < 15) {
+                    throw ValidationException::withMessages([
+                        "days.{$day}.ranges" => "Each slot on {$day} must be at least 15 minutes ({$from}–{$to}).",
+                    ]);
+                }
+                $ranges[] = [
+                    'from'     => $from,
+                    'to'       => $to,
+                    'duration' => $mins,
+                ];
+            }
+
+            $ranges = $this->uniqueSortedRanges($ranges);
+
+            if ($enabled && $ranges === []) {
                 throw ValidationException::withMessages([
-                    "days.{$day}.to" => "End time must be after start time for {$day}.",
+                    "days.{$day}.ranges" => "Add at least one time slot for {$day}, or turn the day off.",
                 ]);
             }
 
+            foreach ($ranges as $i => $a) {
+                foreach ($ranges as $j => $b) {
+                    if ($i >= $j) {
+                        continue;
+                    }
+                    // Adjacent is OK (09:00–10:00 then 10:00–10:30); only reject true overlap
+                    if ($a['from'] < $b['to'] && $b['from'] < $a['to']) {
+                        throw ValidationException::withMessages([
+                            "days.{$day}.ranges" => "Overlapping slots on {$day}: {$a['from']}–{$a['to']} and {$b['from']}–{$b['to']}.",
+                        ]);
+                    }
+                }
+            }
+
             $schedule[$day] = [
-                'enabled'       => $enabled,
-                'from'          => $from,
-                'to'            => $to,
-                'slot_duration' => $duration,
+                'enabled' => $enabled,
+                'ranges'  => $enabled ? $ranges : [],
+                'from'    => $enabled && $ranges ? $ranges[0]['from'] : null,
+                'to'      => $enabled && $ranges ? $ranges[count($ranges) - 1]['to'] : null,
             ];
 
             $weeklySlots[$day] = $enabled
-                ? $this->generateSlots($from, $to, $duration)
+                ? array_values(array_unique(array_column($ranges, 'from')))
                 : [];
         }
 
@@ -96,6 +155,9 @@ class AvailabilityController extends Controller
         $prefs['weekly_schedule'] = $schedule;
         $prefs['weekly_slots'] = $weeklySlots;
         $user->update(['preferences' => $prefs]);
+        $user->refresh();
+
+        $this->availabilityService->syncTableFromPreferences($user);
 
         return response()->json(['message' => 'Availability saved.']);
     }
@@ -184,18 +246,67 @@ class AvailabilityController extends Controller
         }
     }
 
-    private function generateSlots(string $from, string $to, int $durationMinutes): array
+    /**
+     * @param  list<array{from:string,to:string,duration?:int}>  $ranges
+     * @return list<array{from:string,to:string,duration:int}>
+     */
+    private function uniqueSortedRanges(array $ranges): array
     {
-        $slots = [];
-        $cursor = Carbon::createFromFormat('H:i', $from);
-        $end = Carbon::createFromFormat('H:i', $to);
-
-        while ($cursor->copy()->addMinutes($durationMinutes)->lte($end)) {
-            $slots[] = $cursor->format('H:i');
-            $cursor->addMinutes($durationMinutes);
+        usort($ranges, fn ($a, $b) => strcmp($a['from'], $b['from']));
+        $unique = [];
+        foreach ($ranges as $range) {
+            $from = $range['from'];
+            $to = $range['to'];
+            $mins = (int) ($range['duration'] ?? Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to)));
+            $unique[$from.'-'.$to] = [
+                'from'     => $from,
+                'to'       => $to,
+                'duration' => $mins,
+            ];
         }
 
-        return $slots;
+        return array_values($unique);
+    }
+
+    /** Ensure UI always gets ranges[], including legacy from/to schedules. */
+    private function normalizeScheduleForUi(?array $schedule): array
+    {
+        $out = [];
+        foreach ($this->dayKeys() as $day) {
+            $row = is_array($schedule[$day] ?? null) ? $schedule[$day] : [];
+            $ranges = [];
+            if (! empty($row['ranges']) && is_array($row['ranges'])) {
+                foreach ($row['ranges'] as $range) {
+                    if (! is_array($range)) {
+                        continue;
+                    }
+                    $from = isset($range['from']) ? substr((string) $range['from'], 0, 5) : null;
+                    $to = isset($range['to']) ? substr((string) $range['to'], 0, 5) : null;
+                    if ($from && $to) {
+                        $mins = Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to));
+                        $ranges[] = ['from' => $from, 'to' => $to, 'duration' => $mins];
+                    }
+                }
+            }
+            if ($ranges === [] && ! empty($row['from']) && ! empty($row['to'])) {
+                $from = substr((string) $row['from'], 0, 5);
+                $to = substr((string) $row['to'], 0, 5);
+                $mins = Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to));
+                $ranges[] = ['from' => $from, 'to' => $to, 'duration' => $mins];
+            }
+            if ($ranges === []) {
+                $ranges[] = ['from' => '09:00', 'to' => '10:00', 'duration' => 60];
+            }
+
+            $out[$day] = [
+                'enabled' => (bool) ($row['enabled'] ?? in_array($day, ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], true)),
+                'ranges'  => $ranges,
+                'from'    => $ranges[0]['from'],
+                'to'      => $ranges[count($ranges) - 1]['to'],
+            ];
+        }
+
+        return $out;
     }
 
     /** Convert old list-of-times format into UI schedule rows. */
@@ -206,18 +317,24 @@ class AvailabilityController extends Controller
             $times = $weeklySlots[$day] ?? [];
             if (is_array($times) && $times !== [] && ! isset($times['from'])) {
                 sort($times);
+                $ranges = [];
+                foreach ($times as $t) {
+                    $from = substr((string) $t, 0, 5);
+                    $to = Carbon::createFromFormat('H:i', $from)->addMinutes(30)->format('H:i');
+                    $ranges[] = ['from' => $from, 'to' => $to, 'duration' => 30];
+                }
                 $schedule[$day] = [
-                    'enabled'       => true,
-                    'from'          => $times[0],
-                    'to'            => end($times) ?: '18:00',
-                    'slot_duration' => 30,
+                    'enabled' => true,
+                    'from'    => $ranges[0]['from'],
+                    'to'      => $ranges[count($ranges) - 1]['to'],
+                    'ranges'  => $ranges,
                 ];
             } else {
                 $schedule[$day] = [
-                    'enabled'       => in_array($day, ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], true),
-                    'from'          => '09:00',
-                    'to'            => '18:00',
-                    'slot_duration' => 30,
+                    'enabled' => in_array($day, ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], true),
+                    'from'    => '09:00',
+                    'to'      => '10:00',
+                    'ranges'  => [['from' => '09:00', 'to' => '10:00', 'duration' => 60]],
                 ];
             }
         }

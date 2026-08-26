@@ -111,10 +111,17 @@ class MentorListingController extends Controller
             ]);
         }
 
-        $request->validate(['date' => 'required|date|after_or_equal:today']);
+        $request->validate([
+            'date'     => 'required|date|after_or_equal:today',
+            'duration' => 'nullable|integer|in:15,30,45,60,90,120',
+        ]);
 
         return response()->json(
-            $this->availabilityService->slotsForDate($mentor, $request->date)
+            $this->availabilityService->slotsForDate(
+                $mentor,
+                $request->date,
+                $request->filled('duration') ? (int) $request->input('duration') : null
+            )
         );
     }
 

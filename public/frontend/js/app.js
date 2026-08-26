@@ -535,26 +535,43 @@
            return `${y}-${m}-${day}`;
        }
 
-       function renderSlots(slots) {
+       function renderSlots(slots, options = []) {
            const grid = document.getElementById("timeGrid");
            if (!grid) return;
            grid.innerHTML = "";
+           const byStart = {};
+           (options || []).forEach((opt) => {
+               if (opt && opt.start_time) byStart[opt.start_time] = opt;
+           });
            if (!slots || !slots.length) {
                grid.innerHTML =
-                   '<div class="text-sm text-muted" style="grid-column:1/-1;text-align:center;padding:12px;">Mentor is not available on this day</div>';
+                   '<div class="text-sm text-muted" style="grid-column:1/-1;text-align:center;padding:12px;">No slots for this duration on this day</div>';
                return;
            }
            slots.forEach((slot) => {
+               const start = typeof slot === "string" ? slot : slot.start_time;
+               const opt = byStart[start] || (typeof slot === "object" ? slot : null);
                const div = document.createElement("button");
                div.type = "button";
                div.className = "time-slot";
-               div.textContent = slot;
+               div.dataset.time = start;
+               if (opt && opt.duration) {
+                   div.dataset.duration = String(opt.duration);
+                   div.innerHTML = `<span>${start}</span><small style="display:block;opacity:.75;font-size:11px;">${opt.duration} min</small>`;
+               } else {
+                   div.textContent = start;
+               }
                div.addEventListener("click", function (e) {
                    e.preventDefault();
                    e.stopPropagation();
                    document.querySelectorAll("#timeGrid .time-slot").forEach((s) => s.classList.remove("selected"));
                    div.classList.add("selected");
-                   selectedTime = slot;
+                   selectedTime = start;
+                   if (opt && opt.duration) {
+                       selectedDuration = Number(opt.duration) || selectedDuration;
+                       document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
+                       document.querySelector(`.duration-btn[data-min="${selectedDuration}"]`)?.classList.add("selected");
+                   }
                    updateSummary();
                });
                grid.appendChild(div);
@@ -594,12 +611,9 @@
            }
            const chips = summary
                .map((d) => {
-                   const hours =
-                       d.enabled && d.from && d.to
-                           ? `${d.from}–${d.to}`
-                           : d.enabled
-                             ? "Open"
-                             : "Off";
+                   const hours = d.enabled
+                       ? d.windows || (d.from && d.to ? `${d.from}–${d.to}` : "Open")
+                       : "Off";
                    return `<span class="avail-chip ${d.enabled ? "is-on" : "is-off"}" title="${d.label}: ${hours}">
                         <strong>${d.label}</strong>
                         <small>${hours}</small>
@@ -660,7 +674,12 @@
            const id = resolveMentorId();
            if (!id || !date) return;
 
-           fetch(`/api/mentors/${id}/availability?date=${encodeURIComponent(date)}`, {
+           const qs = new URLSearchParams({
+               date,
+               duration: String(selectedDuration || 30),
+           });
+
+           fetch(`/api/mentors/${id}/availability?${qs.toString()}`, {
                headers: {
                    "X-Requested-With": "XMLHttpRequest",
                    Accept: "application/json",
@@ -678,7 +697,12 @@
                        if (data.label) dayAvailability[date].label = data.label;
                        markDateButtons();
                    }
-                   renderSlots(Array.isArray(data.slots) ? data.slots : []);
+                   selectedTime = null;
+                   renderSlots(
+                       Array.isArray(data.slots) ? data.slots : [],
+                       Array.isArray(data.slot_options) ? data.slot_options : []
+                   );
+                   updateSummary();
                })
                .catch(() => renderSlots([]));
        }
@@ -771,9 +795,11 @@
            loadSlots,
            setDuration(min) {
                selectedDuration = Number(min) || 30;
+               selectedTime = null;
                document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
                document.querySelector(`.duration-btn[data-min="${selectedDuration}"]`)?.classList.add("selected");
                updateSummary();
+               if (selectedDate) loadSlots(selectedDate);
            },
 
            getBookingData() {
