@@ -488,9 +488,7 @@ class MentorAvailabilityService
      */
     private function bookedTimes(int $mentorId, string $date): array
     {
-        ConsultationSession::expireAbandonedUnpaidPayments();
-
-        return ConsultationSession::where('mentor_id', $mentorId)
+        $times = ConsultationSession::where('mentor_id', $mentorId)
             ->whereDate('scheduled_at', $date)
             ->occupyingSlot()
             ->pluck('scheduled_at')
@@ -498,6 +496,11 @@ class MentorAvailabilityService
             ->unique()
             ->values()
             ->all();
+
+        return array_values(array_unique(array_merge(
+            $times,
+            ConsultationSession::heldTimesForDate($mentorId, $date)
+        )));
     }
 
     /**

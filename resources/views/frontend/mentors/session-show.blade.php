@@ -34,15 +34,11 @@
                             </div>
                         </div>
                         <div style="display:flex;gap:10px;flex-shrink:0;">
-                            @if($session->status === 'pending')
-                                <button class="btn btn-success" onclick="acceptSession({{ $session->id }})">✓ Accept</button>
-                                <button class="btn btn-outline" style="color:var(--error);" onclick="declineSession({{ $session->id }})">✗ Decline</button>
-                            @elseif($session->status === 'ongoing')
-                                <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-outline">🎥 Rejoin Call</a>
-                                <button type="button" class="btn btn-primary" onclick="completeSession({{ $session->id }})">✓ Mark Complete</button>
-                            @elseif(in_array($session->status, ['confirmed', 'upcoming'], true) && $session->canJoinCall())
+                            @if($session->status === 'upcoming' && $session->canJoinCall())
                                 <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
                                 <button class="btn btn-outline" onclick="openMeetingLinkModal()">🔗 Meeting link</button>
+                                <button type="button" class="btn btn-outline" onclick="completeSession({{ $session->id }})">✓ Mark Complete</button>
+                                <button class="btn btn-ghost" style="color:var(--error);" onclick="declineSession({{ $session->id }})">Cancel</button>
                             @elseif($session->status === 'completed')
                                 <span style="font-size:13px;color:var(--success);font-weight:600;">✅ Completed</span>
                             @endif
@@ -64,7 +60,7 @@
                         <h3 style="font-size:14px;font-weight:700;">📝 Shared Session Notes</h3>
                         <span style="font-size:11px;color:var(--text-3);">Visible to your mentee</span>
                     </div>
-                    @if(in_array($session->status, ['confirmed', 'upcoming', 'ongoing', 'completed'], true))
+                    @if(in_array($session->status, ['upcoming', 'completed'], true))
                     <form action="{{ route('mentor.sessions.notes', $session->id) }}" method="POST"
                           data-ajax-form="{{ route('mentor.sessions.notes', $session->id) }}"
                           data-success="Notes saved!"
@@ -82,7 +78,7 @@
                     </form>
                     @else
                     <div class="empty-state" style="padding:24px 0;">
-                        <p style="font-size:13px;color:var(--text-3);">Shared notes can be added once the session is confirmed.</p>
+                        <p style="font-size:13px;color:var(--text-3);">Shared notes can be added for upcoming or completed sessions.</p>
                     </div>
                     @endif
                 </div>

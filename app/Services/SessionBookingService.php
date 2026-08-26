@@ -6,6 +6,7 @@ use App\Models\AppSetting;
 use App\Models\ConsultationSession;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -53,7 +54,6 @@ class SessionBookingService
         $coveredByPlan = $amount > 0 && ($planAllowance['covered'] ?? false);
         $paymentMethod = isset($data['payment_method']) ? strtolower((string) $data['payment_method']) : null;
 
-        ConsultationSession::expireAbandonedUnpaidPayments();
         ConsultationSession::releaseOwnUnpaidHold($mentee->id, $mentor->id, $scheduledAt);
 
         $alreadyBooked = ConsultationSession::where('mentor_id', $mentor->id)
@@ -61,7 +61,10 @@ class SessionBookingService
             ->occupyingSlot()
             ->exists();
 
-        if ($alreadyBooked) {
+        $hold = Cache::get(ConsultationSession::slotHoldCacheKey($mentor->id, $scheduledAt));
+        $heldByOther = $hold && (int) ($hold['mentee_id'] ?? 0) !== (int) $mentee->id;
+
+        if ($alreadyBooked || $heldByOther) {
             return $this->fail('This mentor already has an appointment at the selected date and time.', 422);
         }
 
@@ -282,9 +285,10 @@ class SessionBookingService
             return $this->fail('Payment gateway is not configured.', 503);
         }
 
+        $orderId = (string) ($data['razorpay_order_id'] ?? '');
         $expectedSig = hash_hmac(
             'sha256',
-            $data['razorpay_order_id'].'|'.$data['razorpay_payment_id'],
+            $orderId.'|'.$data['razorpay_payment_id'],
             $creds['secret']
         );
 
@@ -292,59 +296,91 @@ class SessionBookingService
             return $this->fail('Payment signature verification failed.', 422);
         }
 
-        $session = ConsultationSession::where('mentee_id', $mentee->id)
-            ->where('razorpay_order_id', $data['razorpay_order_id'])
+        // Idempotent: already created after a previous verify
+        $existing = ConsultationSession::where('mentee_id', $mentee->id)
+            ->where('razorpay_order_id', $orderId)
             ->latest('id')
             ->first();
 
-        if (! $session) {
-            return $this->fail('Pending session not found for this payment.', 404);
-        }
+        if ($existing && $existing->payment_status === 'paid') {
+            $invoice = $this->invoices->ensureForSession($existing, 'system');
 
-        if (
-            $session->payment_status === 'paid'
-            && $session->razorpay_payment_id === $data['razorpay_payment_id']
-        ) {
-            $invoice = $this->invoices->ensureForSession($session, 'system');
-
-            return $this->ok('Session already confirmed.', 200, [
+            return $this->ok('Session already booked.', 200, [
                 'booked'  => true,
-                'session' => $this->sessionArray($session),
+                'session' => $this->sessionArray($existing),
                 'invoice' => $invoice?->toPublicArray(),
             ]);
         }
 
-        try {
-            DB::transaction(function () use ($session, $mentee, $data) {
-                $locked = ConsultationSession::where('id', $session->id)->lockForUpdate()->firstOrFail();
-                $walletPart = round((float) ($locked->wallet_amount ?? 0), 2);
+        $draft = Cache::get(ConsultationSession::bookingDraftCacheKey($orderId));
+        if (! is_array($draft) || (int) ($draft['mentee_id'] ?? 0) !== (int) $mentee->id) {
+            return $this->fail('Booking draft not found or expired. Please book again.', 404);
+        }
 
-                if ($walletPart > 0 && $locked->payment_method === 'hybrid') {
+        $scheduledAt = Carbon::parse($draft['scheduled_at'], 'Asia/Kolkata');
+
+        $slotTaken = ConsultationSession::where('mentor_id', $draft['mentor_id'])
+            ->where('scheduled_at', $scheduledAt)
+            ->occupyingSlot()
+            ->exists();
+
+        if ($slotTaken) {
+            return $this->fail('This time slot was booked by someone else. Please contact support if you were charged.', 422);
+        }
+
+        try {
+            $session = DB::transaction(function () use ($mentee, $data, $draft, $scheduledAt, $orderId) {
+                $walletPart = round((float) ($draft['wallet_amount'] ?? 0), 2);
+                $method = (string) ($draft['payment_method'] ?? 'razorpay');
+
+                if ($walletPart > 0 && $method === 'hybrid') {
                     $fresh = User::where('id', $mentee->id)->lockForUpdate()->firstOrFail();
                     if ((float) $fresh->wallet_balance < $walletPart) {
                         throw new InvalidArgumentException('Insufficient wallet balance to complete hybrid payment. Please top up and retry.');
                     }
+                }
+
+                $session = ConsultationSession::create([
+                    'mentor_id'           => $draft['mentor_id'],
+                    'mentee_id'           => $mentee->id,
+                    'scheduled_at'        => $scheduledAt,
+                    'duration_minutes'    => $draft['duration'],
+                    'timezone'            => 'Asia/Kolkata',
+                    'title'               => $draft['title'],
+                    'agenda'              => $draft['agenda'] ?? null,
+                    'status'              => ConsultationSession::STATUS_UPCOMING,
+                    'amount'              => $draft['amount'],
+                    'currency'            => $draft['currency'] ?? 'INR',
+                    'payment_status'      => 'paid',
+                    'payment_method'      => $method,
+                    'wallet_amount'       => $walletPart,
+                    'razorpay_amount'     => $draft['razorpay_amount'] ?? 0,
+                    'razorpay_order_id'   => $orderId,
+                    'razorpay_payment_id' => $data['razorpay_payment_id'],
+                    'payment_reference'   => $data['razorpay_payment_id'],
+                    'booking_ref'         => $draft['booking_ref'],
+                    'meeting_channel'     => $draft['meeting_channel'],
+                    'meeting_link'        => url('as/'.$draft['meeting_channel']),
+                ]);
+
+                if ($walletPart > 0 && $method === 'hybrid') {
+                    $fresh = User::where('id', $mentee->id)->lockForUpdate()->firstOrFail();
                     $fresh->debitWallet(
                         $walletPart,
-                        "Hybrid session booking {$locked->booking_ref}",
+                        "Hybrid session booking {$session->booking_ref}",
                         [
-                            'reference'            => 'WAL-'.$locked->booking_ref,
+                            'reference'            => 'WAL-'.$session->booking_ref,
                             'transactionable_type' => ConsultationSession::class,
-                            'transactionable_id'   => $locked->id,
+                            'transactionable_id'   => $session->id,
                             'meta'                 => [
-                                'booking_ref' => $locked->booking_ref,
+                                'booking_ref' => $session->booking_ref,
                                 'source'      => 'session_booking_hybrid',
                             ],
                         ]
                     );
                 }
 
-                $locked->update([
-                    'status'              => ConsultationSession::STATUS_UPCOMING,
-                    'payment_status'      => 'paid',
-                    'payment_reference'   => $data['razorpay_payment_id'],
-                    'razorpay_payment_id' => $data['razorpay_payment_id'],
-                ]);
+                return $session;
             });
         } catch (InvalidArgumentException $e) {
             return $this->fail($e->getMessage(), 422, [
@@ -357,16 +393,18 @@ class SessionBookingService
             return $this->fail('Unable to confirm payment right now.', 500);
         }
 
-        $session->refresh();
+        ConsultationSession::clearSlotHold((int) $draft['mentor_id'], $scheduledAt);
+        Cache::forget(ConsultationSession::bookingDraftCacheKey($orderId));
+
         $invoice = $this->invoices->ensureForSession($session, 'system');
 
-        return $this->ok('Payment successful! Your session is confirmed.', 200, [
-            'booked'         => true,
+        return $this->ok('Payment successful! Your session is booked.', 200, [
+            'booked'          => true,
             'requires_payment'=> false,
-            'session'        => $this->sessionArray($session),
-            'invoice'        => $invoice?->toPublicArray(),
-            'payment_method' => $session->payment_method,
-            'booking_ref'    => $session->booking_ref,
+            'session'         => $this->sessionArray($session),
+            'invoice'         => $invoice?->toPublicArray(),
+            'payment_method'  => $session->payment_method,
+            'booking_ref'     => $session->booking_ref,
         ]);
     }
 
@@ -438,26 +476,37 @@ class SessionBookingService
             return $this->fail('Unable to initiate payment right now.', 502);
         }
 
-        $session = ConsultationSession::create([
-            'mentor_id'         => $mentor->id,
-            'mentee_id'         => $mentee->id,
-            'scheduled_at'      => $scheduledAt,
-            'duration_minutes'  => $data['duration'],
-            'timezone'          => 'Asia/Kolkata',
-            'title'             => $title,
-            'agenda'            => $data['agenda'] ?? null,
-            'status'            => ConsultationSession::STATUS_PENDING,
-            'amount'            => $amount,
-            'currency'          => $currency,
-            'payment_status'    => 'pending',
-            'payment_method'    => $method,
-            'wallet_amount'     => $walletPart,
-            'razorpay_amount'   => $razorPart,
-            'razorpay_order_id' => $order['id'] ?? null,
-            'booking_ref'       => $bookingRef,
-            'meeting_channel'   => $channel,
-            'meeting_link'      => url('as/'.$channel),
-        ]);
+        $orderId = (string) ($order['id'] ?? '');
+        if ($orderId === '') {
+            return $this->fail('Unable to initiate payment right now.', 502);
+        }
+
+        // Cache draft only — no DB row until payment succeeds.
+        $draft = [
+            'mentee_id'       => $mentee->id,
+            'mentor_id'       => $mentor->id,
+            'scheduled_at'    => $scheduledAt->format('Y-m-d H:i:s'),
+            'date'            => $data['date'],
+            'time'            => $data['time'],
+            'duration'        => (int) $data['duration'],
+            'title'           => $title,
+            'agenda'          => $data['agenda'] ?? null,
+            'amount'          => $amount,
+            'currency'        => $currency,
+            'payment_method'  => $method,
+            'wallet_amount'   => $walletPart,
+            'razorpay_amount' => $razorPart,
+            'booking_ref'     => $bookingRef,
+            'meeting_channel' => $channel,
+            'source'          => $source,
+        ];
+
+        Cache::put(
+            ConsultationSession::bookingDraftCacheKey($orderId),
+            $draft,
+            now()->addMinutes(max(30, ConsultationSession::PAYMENT_HOLD_MINUTES))
+        );
+        ConsultationSession::putSlotHold($mentor->id, $mentee->id, $scheduledAt, $orderId);
 
         return $this->ok(
             $method === 'hybrid'
@@ -469,9 +518,9 @@ class SessionBookingService
                 'requires_payment_choice' => false,
                 'booked'                  => false,
                 'payment_method'          => $method,
-                'session_id'              => $session->id,
+                'session_id'              => null,
                 'booking_ref'             => $bookingRef,
-                'order_id'                => $order['id'] ?? null,
+                'order_id'                => $orderId,
                 'amount'                  => $amountInPaise,
                 'amount_rupees'           => $razorPart,
                 'session_amount'          => $amount,
@@ -489,7 +538,14 @@ class SessionBookingService
                 'wallet_balance'          => (float) $mentee->wallet_balance,
                 'tax_applicable'          => false,
                 'tax_total'               => 0,
-                'session'                 => $this->sessionArray($session),
+                'booking_draft'           => [
+                    'mentor_id' => $mentor->id,
+                    'date'      => $data['date'],
+                    'time'      => $data['time'],
+                    'duration'  => (int) $data['duration'],
+                    'title'     => $title,
+                    'agenda'    => $data['agenda'] ?? null,
+                ],
             ]
         );
     }

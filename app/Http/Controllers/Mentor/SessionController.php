@@ -1,12 +1,8 @@
 <?php
-// ──────────────────────────────────────────────────────────────
-// app/Http/Controllers/Mentor/SessionController.php
-// ──────────────────────────────────────────────────────────────
 namespace App\Http\Controllers\Mentor;
 
 use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
-use App\Models\SessionNote;
 use Illuminate\Http\Request;
 
 class SessionController extends Controller
@@ -15,9 +11,7 @@ class SessionController extends Controller
     {
         $mentorId = auth()->id();
 
-        // Past pending/confirmed/upcoming sessions with no join → no_show
         ConsultationSession::expireMissedSessions($mentorId);
-        ConsultationSession::completeStaleOngoingSessions($mentorId);
 
         $query = ConsultationSession::where('mentor_id', $mentorId)
             ->with('mentee')
@@ -25,30 +19,31 @@ class SessionController extends Controller
 
         $filter = $request->input('filter', $request->input('status', 'all'));
 
-        if ($filter && $filter !== 'all') {
-            if ($filter === 'upcoming') {
-                $query->whereIn('status', ['pending', 'confirmed', 'upcoming'])
-                    ->where('scheduled_at', '>', now());
-            } elseif ($filter === 'pending') {
-                $query->where('status', 'pending');
-            } elseif ($filter === 'missed') {
-                $query->where('status', 'no_show');
-            } else {
-                $query->where('status', $filter);
-            }
+        if ($filter && $filter !== 'all' && array_key_exists($filter, ConsultationSession::STATUSES)) {
+            $query->where('status', $filter);
+        }
+
+        $search = trim((string) $request->input('q', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('booking_ref', 'like', '%'.$search.'%')
+                    ->orWhereHas('mentee', fn ($m) => $m->where('name', 'like', '%'.$search.'%'));
+            });
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('scheduled_at', $request->input('date'));
         }
 
         $sessions = $query->paginate(15)->withQueryString();
-        $pendingCount = ConsultationSession::where('mentor_id', $mentorId)
-            ->where('status', 'pending')
-            ->count();
 
-        return view('frontend.mentors.sessions', compact('sessions', 'pendingCount', 'filter'));
+        return view('frontend.mentors.sessions', compact('sessions', 'filter', 'search'));
     }
 
     public function show(int $id)
     {
-        ConsultationSession::completeStaleOngoingSessions(auth()->id());
+        ConsultationSession::expireMissedSessions(auth()->id());
 
         $session = ConsultationSession::where('mentor_id', auth()->id())
             ->with(['mentee', 'notes', 'menteeReview'])
@@ -56,27 +51,20 @@ class SessionController extends Controller
         return view('frontend.mentors.session-show', compact('session'));
     }
 
-    public function confirm(int $id)
-    {
-        $session = ConsultationSession::where('mentor_id', auth()->id())->where('status','pending')->findOrFail($id);
-        $session->update(['status' => 'confirmed']);
-        // TODO: notify mentee via email/SMS
-        return response()->json(['message' => 'Session confirmed!']);
-    }
-
     public function cancel(int $id, Request $request)
     {
         $session = ConsultationSession::where('mentor_id', auth()->id())
-            ->whereIn('status',['pending','confirmed'])->findOrFail($id);
-        $session->update(['status'=>'cancelled','cancellation_reason'=>$request->reason,'cancelled_by'=>auth()->id(),'cancelled_at'=>now()]);
-        // TODO: refund mentee wallet
-        return response()->json(['message' => 'Session cancelled and mentee refunded.']);
+            ->where('status', ConsultationSession::STATUS_UPCOMING)
+            ->findOrFail($id);
+        $session->cancel(auth()->id(), $request->reason ?? 'Cancelled by mentor');
+
+        return response()->json(['message' => 'Session cancelled.']);
     }
 
     public function complete(int $id)
     {
         $session = ConsultationSession::where('mentor_id', auth()->id())
-            ->whereIn('status', ['confirmed', 'upcoming', 'ongoing', 'pending'])
+            ->where('status', ConsultationSession::STATUS_UPCOMING)
             ->findOrFail($id);
 
         $session->complete();
@@ -84,15 +72,8 @@ class SessionController extends Controller
         return response()->json([
             'message' => $session->payment_status === 'paid'
                 ? 'Session marked complete. Earnings credited to your wallet.'
-                : 'Session marked complete. Earnings will appear after mentee payment is confirmed.',
+                : 'Session marked complete.',
         ]);
-    }
-
-    public function noShow(int $id)
-    {
-        $session = ConsultationSession::where('mentor_id', auth()->id())->findOrFail($id);
-        $session->update(['status'=>'no_show']);
-        return response()->json(['message' => 'Marked as no-show.']);
     }
 
     public function updateMeetingLink(int $id, Request $request)
@@ -102,7 +83,7 @@ class SessionController extends Controller
         ]);
 
         $session = ConsultationSession::where('mentor_id', auth()->id())
-            ->whereIn('status', ['pending', 'confirmed', 'upcoming'])
+            ->where('status', ConsultationSession::STATUS_UPCOMING)
             ->findOrFail($id);
 
         $session->update([
@@ -117,6 +98,23 @@ class SessionController extends Controller
         }
 
         return back()->with('success', 'Meeting link saved.');
+    }
+
+    public function confirm(int $id)
+    {
+        return response()->json([
+            'message' => 'Sessions are automatically upcoming after payment. Confirmation is no longer required.',
+        ], 200);
+    }
+
+    public function noShow(int $id)
+    {
+        $session = ConsultationSession::where('mentor_id', auth()->id())
+            ->where('status', ConsultationSession::STATUS_UPCOMING)
+            ->findOrFail($id);
+        $session->complete();
+
+        return response()->json(['message' => 'Session marked as completed.']);
     }
 
     public function addNote(int $id, Request $request)
@@ -156,12 +154,13 @@ class SessionController extends Controller
 
     public function notes(int $id)
     {
-        $session = ConsultationSession::where(function($q) {
+        $session = ConsultationSession::where(function ($q) {
             $q->where('mentor_id', auth()->id())->orWhere('mentee_id', auth()->id());
         })->findOrFail($id);
-        $notes = $session->notes()->where(function($q){
+        $notes = $session->notes()->where(function ($q) {
             $q->where('author_id', auth()->id())->orWhere('is_shared', true);
         })->get();
+
         return response()->json(['notes' => $notes]);
     }
 }

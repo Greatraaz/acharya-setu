@@ -110,11 +110,12 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Initial Status</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
                         <select name="status"
                                 class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
-                            <option value="pending"   {{ old('status', $session->status ?? 'pending') === 'pending'   ? 'selected' : '' }}>⏳ Pending (awaiting confirmation)</option>
-                            <option value="confirmed" {{ old('status', $session->status) === 'confirmed' ? 'selected' : '' }}>✅ Confirmed</option>
+                            <option value="upcoming"  {{ old('status', $session->status ?? 'upcoming') === 'upcoming'  ? 'selected' : '' }}>Upcoming</option>
+                            <option value="completed" {{ old('status', $session->status) === 'completed' ? 'selected' : '' }}>Completed</option>
+                            <option value="cancelled" {{ old('status', $session->status) === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                         </select>
                     </div>
                 </div>
@@ -220,11 +221,9 @@
                 <h4 class="text-xs font-bold text-indigo-700 uppercase tracking-wide mb-3">Session Lifecycle</h4>
                 <div class="space-y-2">
                     @foreach([
-                        ['⏳','Pending',   'Booked, awaiting confirmation'],
-                        ['✅','Confirmed', 'Both parties confirmed'],
-                        ['🟢','Ongoing',   'Session in progress'],
-                        ['🏁','Completed', 'Review window opens'],
-                        ['❌','Cancelled', 'Reason documented'],
+                        ['📅','Upcoming',  'Booked and paid (or admin-created)'],
+                        ['🏁','Completed', 'After session time ends (attended or not)'],
+                        ['❌','Cancelled', 'Cancelled by mentee, mentor, or admin'],
                     ] as [$emoji, $step, $desc])
                     <div class="flex items-start gap-2">
                         <span class="text-sm leading-none mt-0.5">{{ $emoji }}</span>

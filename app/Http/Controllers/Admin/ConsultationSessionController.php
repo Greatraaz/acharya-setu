@@ -61,6 +61,10 @@ class ConsultationSessionController extends Controller
     {
         $data = $this->validateSession($request);
         $data = $this->normalizeScheduledAt($request, $data);
+        $data['status'] = ConsultationSession::STATUS_UPCOMING;
+        if (! isset($data['payment_status'])) {
+            $data['payment_status'] = ((float) ($data['amount'] ?? 0) <= 0) ? 'waived' : 'paid';
+        }
         ConsultationSession::create($data);
         return redirect()->route('admin.sessions.index')->with('success', 'Session booked successfully.');
     }
@@ -108,8 +112,11 @@ class ConsultationSessionController extends Controller
     // ── Status transitions ────────────────────────────────────
     public function confirm(ConsultationSession $session)
     {
-        $session->confirm();
-        return redirect()->back()->with('success', 'Session confirmed.');
+        if ($session->status === ConsultationSession::STATUS_CANCELLED) {
+            return redirect()->back()->with('error', 'Cancelled sessions cannot be reopened here.');
+        }
+        $session->update(['status' => ConsultationSession::STATUS_UPCOMING]);
+        return redirect()->back()->with('success', 'Session marked as upcoming.');
     }
  
     public function cancel(Request $request, ConsultationSession $session)
@@ -127,8 +134,8 @@ class ConsultationSessionController extends Controller
  
     public function markNoShow(ConsultationSession $session)
     {
-        $session->update(['status' => 'no_show']);
-        return redirect()->back()->with('success', 'Marked as no-show.');
+        $session->complete();
+        return redirect()->back()->with('success', 'Session marked as completed.');
     }
  
     // ── Notes ─────────────────────────────────────────────────
@@ -206,7 +213,7 @@ class ConsultationSessionController extends Controller
             'meeting_link'     => 'nullable|url',
             'amount'           => 'nullable|numeric|min:0',
             'currency'         => 'nullable|string|size:3',
-            'status'           => 'nullable|in:pending,confirmed',
+            'status'           => 'nullable|in:upcoming,completed,cancelled',
         ]);
 
         $scheduled = $this->parseScheduledInput((string) $request->input('scheduled_at'), $tz);

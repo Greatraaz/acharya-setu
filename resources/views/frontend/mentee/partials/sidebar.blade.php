@@ -2,7 +2,7 @@
 @php
     $upcomingCount = $upcomingCount
         ?? \App\Models\ConsultationSession::where('mentee_id', auth()->id())
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->where('status', 'upcoming')
             ->where('scheduled_at', '>', now())
             ->count();
 @endphp

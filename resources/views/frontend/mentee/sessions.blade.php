@@ -14,35 +14,57 @@
             <a href="{{ route('mentors.search') }}" class="btn btn-primary">🔍 Book a Session</a>
         </div>
 
-        <div class="session-filter-tabs">
-            @foreach([
-                'all' => 'All',
-                'upcoming' => 'Upcoming',
-                'pending' => 'Pending',
-                'confirmed' => 'Confirmed',
-                'ongoing' => 'Ongoing',
-                'completed' => 'Completed',
-                'cancelled' => 'Cancelled',
-            ] as $key => $label)
-            <a href="{{ route('mentee.sessions', $key === 'all' ? [] : ['status' => $key]) }}"
-               class="session-filter-tab {{ (request('status', 'all') === $key || (!request('status') && $key === 'all')) ? 'active' : '' }}">
-                {{ $label }}
-            </a>
-            @endforeach
-        </div>
+        <form method="GET" action="{{ route('mentee.sessions') }}" class="session-toolbar">
+            <div class="session-filter-tabs">
+                @foreach([
+                    'all' => 'All',
+                    'upcoming' => 'Upcoming',
+                    'completed' => 'Completed',
+                    'cancelled' => 'Cancelled',
+                ] as $key => $label)
+                @php
+                    $tabParams = array_filter([
+                        'status' => $key === 'all' ? null : $key,
+                        'q' => $search ?? request('q') ?: null,
+                        'date' => request('date') ?: null,
+                    ]);
+                @endphp
+                <a href="{{ route('mentee.sessions', $tabParams) }}"
+                   class="session-filter-tab {{ (request('status', 'all') === $key || (!request('status') && $key === 'all')) ? 'active' : '' }}">
+                    {{ $label }}
+                </a>
+                @endforeach
+            </div>
+
+            <div class="session-toolbar-controls">
+                @if(request('status'))
+                    <input type="hidden" name="status" value="{{ request('status') }}">
+                @endif
+                <div class="session-search-field">
+                    <span class="session-search-icon" aria-hidden="true">🔍</span>
+                    <input type="search" name="q" class="form-input" value="{{ $search ?? request('q') }}"
+                           placeholder="Search by name, mentor, or ID…"
+                           autocomplete="off">
+                </div>
+                <input type="date" name="date" class="form-input session-date-input"
+                       value="{{ request('date') }}" title="Filter by date">
+                <button type="submit" class="btn btn-outline">Search</button>
+                @if(request()->filled('q') || request()->filled('date'))
+                    <a href="{{ route('mentee.sessions', array_filter(['status' => request('status')])) }}" class="btn btn-ghost">Clear</a>
+                @endif
+            </div>
+        </form>
 
         @forelse($sessions as $session)
         @php
             $statusKey = $session->status;
             $statusLabel = $session->status_label ?? ucfirst(str_replace('_', ' ', $statusKey));
             $barColor = match($statusKey) {
-                'confirmed' => 'var(--success)',
-                'ongoing' => 'var(--info)',
-                'pending' => 'var(--warning)',
+                'upcoming' => 'var(--info)',
                 'completed' => 'var(--brand)',
                 default => 'var(--error)',
             };
-            $canCancel = in_array($statusKey, ['pending', 'confirmed'], true)
+            $canCancel = $statusKey === 'upcoming'
                 && $session->scheduled_at
                 && $session->scheduled_at->gt(now()->addHours(2));
         @endphp
@@ -107,16 +129,26 @@
         <div class="empty-state" style="padding:64px 0;">
             <div style="font-size:56px;margin-bottom:14px;">📅</div>
             <div style="font-size:18px;font-weight:700;margin-bottom:8px;">
-                @if(request('status'))
+                @if(request()->filled('q') || request()->filled('date'))
+                    No matching sessions
+                @elseif(request('status'))
                     No {{ request('status') }} sessions
                 @else
                     No sessions yet
                 @endif
             </div>
             <p style="font-size:14px;color:var(--text-2);max-width:360px;margin:0 auto 20px;">
-                Book a mentor to get personalized guidance on career, skills, and college.
+                @if(request()->filled('q') || request()->filled('date'))
+                    Try another name or date — or clear the filters.
+                @else
+                    Book a mentor to get personalized guidance on career, skills, and college.
+                @endif
             </p>
-            <a href="{{ route('mentors.search') }}" class="btn btn-primary">Find Mentors</a>
+            @if(request()->filled('q') || request()->filled('date'))
+                <a href="{{ route('mentee.sessions', array_filter(['status' => request('status')])) }}" class="btn btn-outline">Clear filters</a>
+            @else
+                <a href="{{ route('mentors.search') }}" class="btn btn-primary">Find Mentors</a>
+            @endif
         </div>
         @endforelse
 

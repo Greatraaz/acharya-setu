@@ -67,12 +67,7 @@ class AgoraService
             $expireTs
         );
 
-        if (! $session->started_at && in_array($session->status, [
-            ConsultationSession::STATUS_PENDING,
-            ConsultationSession::STATUS_CONFIRMED,
-            ConsultationSession::STATUS_UPCOMING,
-            ConsultationSession::STATUS_ONGOING,
-        ], true)) {
+        if (! $session->started_at && $session->status === ConsultationSession::STATUS_UPCOMING) {
             $session->start();
         }
 
@@ -130,7 +125,7 @@ class AgoraService
 
     private function maybeCompleteSession(ConsultationSession $session, VideoCallLog $log): void
     {
-        if ($session->status !== ConsultationSession::STATUS_ONGOING) {
+        if ($session->status !== ConsultationSession::STATUS_UPCOMING) {
             return;
         }
 
@@ -152,20 +147,7 @@ class AgoraService
 
     public function assertJoinable(ConsultationSession $session): void
     {
-        if (in_array($session->status, [
-            ConsultationSession::STATUS_COMPLETED,
-            ConsultationSession::STATUS_CANCELLED,
-            ConsultationSession::STATUS_NO_SHOW,
-        ], true)) {
-            throw new HttpException(403, 'This session is no longer available to join.');
-        }
-
-        if (! in_array($session->status, [
-            ConsultationSession::STATUS_PENDING,
-            ConsultationSession::STATUS_CONFIRMED,
-            ConsultationSession::STATUS_UPCOMING,
-            ConsultationSession::STATUS_ONGOING,
-        ], true)) {
+        if ($session->status !== ConsultationSession::STATUS_UPCOMING) {
             throw new HttpException(403, 'This session cannot be joined right now.');
         }
     }

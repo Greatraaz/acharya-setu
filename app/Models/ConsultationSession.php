@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Models;
- 
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,20 +9,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Builder;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
- 
+
 class ConsultationSession extends Model
 {
     use SoftDeletes;
 
     public const SCHEDULE_TIMEZONE = 'Asia/Kolkata';
- 
+
     protected $fillable = [
         'booking_ref', 'mentor_id', 'mentee_id', 'scheduled_at', 'duration_minutes', 'timezone',
         'title', 'agenda', 'mentor_notes', 'meeting_link', 'meeting_provider', 'meeting_channel',
         'status', 'cancellation_reason', 'cancelled_by', 'cancelled_at', 'started_at', 'ended_at',
-        'actual_duration_seconds',         'amount', 'currency', 'payment_status', 'payment_method', 'wallet_amount', 'razorpay_amount',
-        'payment_reference',
+        'actual_duration_seconds', 'amount', 'currency', 'payment_status', 'payment_method',
+        'wallet_amount', 'razorpay_amount', 'payment_reference',
         'razorpay_order_id', 'razorpay_payment_id',
     ];
 
@@ -36,60 +37,56 @@ class ConsultationSession extends Model
     ];
 
     protected static function booted(): void
-{
-    static::creating(function (self $session): void {
-        if (empty($session->booking_ref)) {
-            do {
-                $ref = 'AS-' . now()->format('ymd') . '-' . strtoupper(Str::random(4));
-            } while (self::where('booking_ref', $ref)->exists());
+    {
+        static::creating(function (self $session): void {
+            if (empty($session->booking_ref)) {
+                do {
+                    $ref = 'AS-'.now()->format('ymd').'-'.strtoupper(Str::random(4));
+                } while (self::where('booking_ref', $ref)->exists());
 
-            $session->booking_ref = $ref;
-        }
+                $session->booking_ref = $ref;
+            }
 
-        // Generate meeting channel if not provided
-        if (empty($session->meeting_channel)) {
-            $session->meeting_channel = strtoupper(Str::random(10));
-        }
+            if (empty($session->meeting_channel)) {
+                $session->meeting_channel = strtoupper(Str::random(10));
+            }
 
-        // Generate meeting link if not provided
-        if (empty($session->meeting_link)) {
-            $session->meeting_link = url('as/' . $session->meeting_channel);
-        }
-    });
-}
- 
-    // Soft-hold for unpaid Razorpay checkouts. Abandoned payments auto-release
-    // without needing a client cancel API.
+            if (empty($session->meeting_link)) {
+                $session->meeting_link = url('as/'.$session->meeting_channel);
+            }
+
+            if (empty($session->status)) {
+                $session->status = self::STATUS_UPCOMING;
+            }
+        });
+    }
+
+    /** Soft hold for checkout drafts stored in cache (no DB row until paid). */
     public const PAYMENT_HOLD_MINUTES = 10;
 
-    // ── Status constants ──────────────────────────────────────
-    const STATUS_PENDING   = 'pending';
-    const STATUS_CONFIRMED = 'confirmed';
-    const STATUS_ONGOING   = 'ongoing';
-    const STATUS_COMPLETED = 'completed';
-    const STATUS_CANCELLED = 'cancelled';
-    const STATUS_UPCOMING  = 'upcoming';
-    const STATUS_NO_SHOW   = 'no_show';
+    public const STATUS_UPCOMING  = 'upcoming';
+    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_CANCELLED = 'cancelled';
 
-    /** Allowed mentee booking lengths (minutes). */
+    /** @deprecated Kept for legacy call sites during cleanup */
+    public const STATUS_PENDING   = 'upcoming';
+    public const STATUS_CONFIRMED = 'upcoming';
+    public const STATUS_ONGOING   = 'upcoming';
+    public const STATUS_NO_SHOW   = 'completed';
+
     public const BOOKING_DURATIONS = [15, 30, 60, 90];
- 
-    const STATUSES = [
-        'pending'   => 'Pending',
-        'confirmed' => 'Confirmed',
-        'ongoing'   => 'Ongoing',
-        'completed' => 'Completed',
+
+    public const STATUSES = [
         'upcoming'  => 'Upcoming',
+        'completed' => 'Completed',
         'cancelled' => 'Cancelled',
-        'no_show'   => 'No Show',
     ];
- 
-    // ── Relationships ─────────────────────────────────────────
+
     public function mentor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'mentor_id');
     }
- 
+
     public function mentee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'mentee_id');
@@ -116,104 +113,133 @@ class ConsultationSession extends Model
     {
         return $this->belongsTo(User::class, 'cancelled_by');
     }
- 
+
     public function reviews(): HasMany
     {
         return $this->hasMany(SessionReview::class, 'session_id');
     }
- 
+
     public function menteeReview(): HasOne
     {
         return $this->hasOne(SessionReview::class, 'session_id')
-                    ->where('reviewer_role', 'mentee');
+            ->where('reviewer_role', 'mentee');
     }
- 
+
     public function mentorReview(): HasOne
     {
         return $this->hasOne(SessionReview::class, 'session_id')
-                    ->where('reviewer_role', 'mentor');
+            ->where('reviewer_role', 'mentor');
     }
- 
+
     public function notes(): HasMany
     {
         return $this->hasMany(SessionNote::class, 'session_id');
     }
- 
-    // ── Scopes ────────────────────────────────────────────────
+
     public function scopeForMentor(Builder $q, int $id): Builder
     {
         return $q->where('mentor_id', $id);
     }
- 
+
     public function scopeForMentee(Builder $q, int $id): Builder
     {
         return $q->where('mentee_id', $id);
     }
- 
+
     public function scopeUpcoming(Builder $q): Builder
     {
-        return $q->whereIn('status', ['pending', 'confirmed'])
-                 ->where(function ($inner) {
-                     // Do not treat abandoned unpaid checkouts as real upcoming bookings
-                     $inner->where('payment_status', '!=', 'pending')
-                           ->orWhere('status', '!=', self::STATUS_PENDING)
-                           ->orWhere('created_at', '>=', now()->subMinutes(self::PAYMENT_HOLD_MINUTES));
-                 })
-                 ->where('scheduled_at', '>=', Carbon::now(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s'));
+        return $q->where('status', self::STATUS_UPCOMING)
+            ->where('scheduled_at', '>=', Carbon::now(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s'));
     }
 
     /**
      * Sessions that currently block a mentor time slot.
-     * Expired unpaid pending checkouts do not occupy the slot.
      */
     public function scopeOccupyingSlot(Builder $q): Builder
     {
-        return $q->whereNotIn('status', [
-                self::STATUS_CANCELLED,
-                self::STATUS_COMPLETED,
-                self::STATUS_NO_SHOW,
-            ])
-            ->where(function ($inner) {
-                $inner->where(function ($paidOrConfirmed) {
-                    $paidOrConfirmed->where('status', '!=', self::STATUS_PENDING)
-                        ->orWhere('payment_status', '!=', 'pending');
-                })->orWhere('created_at', '>=', now()->subMinutes(self::PAYMENT_HOLD_MINUTES));
-            });
+        return $q->where('status', self::STATUS_UPCOMING);
     }
 
-    /**
-     * Cancel unpaid pending sessions whose payment hold window expired.
-     */
+    public static function bookingDraftCacheKey(string $orderId): string
+    {
+        return 'session_booking_order:'.$orderId;
+    }
+
+    public static function slotHoldCacheKey(int $mentorId, Carbon $scheduledAt): string
+    {
+        $stamp = $scheduledAt->copy()->timezone(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s');
+
+        return 'session_slot_hold:'.$mentorId.':'.$stamp;
+    }
+
+    public static function hasActiveSlotHold(int $mentorId, Carbon $scheduledAt, ?int $exceptMenteeId = null): bool
+    {
+        $val = Cache::get(self::slotHoldCacheKey($mentorId, $scheduledAt));
+        if (! $val) {
+            return false;
+        }
+        if ($exceptMenteeId !== null && (int) ($val['mentee_id'] ?? 0) === $exceptMenteeId) {
+            return true; // own hold still counts as occupied for others; caller decides
+        }
+
+        return true;
+    }
+
+    public static function slotHoldDayKey(int $mentorId, string $date): string
+    {
+        return 'session_slot_holds_day:'.$mentorId.':'.$date;
+    }
+
+    public static function putSlotHold(int $mentorId, int $menteeId, Carbon $scheduledAt, string $orderId): void
+    {
+        $scheduledAt = $scheduledAt->copy()->timezone(self::SCHEDULE_TIMEZONE);
+        $payload = [
+            'mentee_id' => $menteeId,
+            'order_id'  => $orderId,
+        ];
+        Cache::put(self::slotHoldCacheKey($mentorId, $scheduledAt), $payload, now()->addMinutes(self::PAYMENT_HOLD_MINUTES));
+
+        $dayKey = self::slotHoldDayKey($mentorId, $scheduledAt->toDateString());
+        $day = Cache::get($dayKey, []);
+        $day[$scheduledAt->format('H:i')] = $payload;
+        Cache::put($dayKey, $day, now()->addMinutes(self::PAYMENT_HOLD_MINUTES));
+    }
+
+    public static function clearSlotHold(int $mentorId, Carbon $scheduledAt): void
+    {
+        $scheduledAt = $scheduledAt->copy()->timezone(self::SCHEDULE_TIMEZONE);
+        Cache::forget(self::slotHoldCacheKey($mentorId, $scheduledAt));
+
+        $dayKey = self::slotHoldDayKey($mentorId, $scheduledAt->toDateString());
+        $day = Cache::get($dayKey, []);
+        unset($day[$scheduledAt->format('H:i')]);
+        if ($day === []) {
+            Cache::forget($dayKey);
+        } else {
+            Cache::put($dayKey, $day, now()->addMinutes(self::PAYMENT_HOLD_MINUTES));
+        }
+    }
+
+    /** @return list<string> HH:MM times held by unpaid checkouts */
+    public static function heldTimesForDate(int $mentorId, string $date): array
+    {
+        $day = Cache::get(self::slotHoldDayKey($mentorId, $date), []);
+
+        return array_keys(is_array($day) ? $day : []);
+    }
+
+    /** No-op compatibility: unpaid holds are cache-only now. */
     public static function expireAbandonedUnpaidPayments(): int
     {
-        return static::query()
-            ->where('status', self::STATUS_PENDING)
-            ->where('payment_status', 'pending')
-            ->where('created_at', '<', now()->subMinutes(self::PAYMENT_HOLD_MINUTES))
-            ->update([
-                'status'              => self::STATUS_CANCELLED,
-                'cancellation_reason' => 'Payment not completed within ' . self::PAYMENT_HOLD_MINUTES . ' minutes',
-                'cancelled_at'        => now(),
-            ]);
+        return 0;
     }
 
-    /**
-     * Immediately release this mentee's unpaid hold on a slot (payment cancelled / retry).
-     */
+    /** No-op compatibility: unpaid holds are cache-only now. */
     public static function releaseOwnUnpaidHold(int $menteeId, int $mentorId, Carbon $scheduledAt): int
     {
-        return static::query()
-            ->where('mentee_id', $menteeId)
-            ->where('mentor_id', $mentorId)
-            ->where('scheduled_at', $scheduledAt->copy()->timezone(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s'))
-            ->where('status', self::STATUS_PENDING)
-            ->where('payment_status', 'pending')
-            ->update([
-                'status'              => self::STATUS_CANCELLED,
-                'cancellation_reason' => 'Replaced by a new booking attempt (previous payment not completed)',
-                'cancelled_at'        => now(),
-                'cancelled_by'        => $menteeId,
-            ]);
+        self::clearSlotHold($mentorId, $scheduledAt);
+
+        return 0;
     }
 
     public function sessionTimezone(): string
@@ -274,13 +300,12 @@ class ConsultationSession extends Model
 
         return 'in '.$hours.'h '.$remainingMinutes.'m';
     }
- 
+
     public function scopeCompleted(Builder $q): Builder
     {
-        return $q->where('status', 'completed');
+        return $q->where('status', self::STATUS_COMPLETED);
     }
- 
-    // ── Accessors ─────────────────────────────────────────────
+
     public function getScheduledAtAttribute(?string $value): ?Carbon
     {
         return $this->parseScheduledAtRaw($value);
@@ -311,68 +336,43 @@ class ConsultationSession extends Model
     public function getStatusColorAttribute(): array
     {
         return match ($this->status) {
-            'pending'   => ['bg' => '#fef9c3', 'text' => '#854d0e', 'dot' => '#ca8a04'],
-            'confirmed' => ['bg' => '#dbeafe', 'text' => '#1e40af', 'dot' => '#2563eb'],
-            'ongoing'   => ['bg' => '#dcfce7', 'text' => '#166534', 'dot' => '#16a34a'],
+            'upcoming'  => ['bg' => '#dbeafe', 'text' => '#1e40af', 'dot' => '#2563eb'],
             'completed' => ['bg' => '#f0fdf4', 'text' => '#14532d', 'dot' => '#22c55e'],
             'cancelled' => ['bg' => '#fee2e2', 'text' => '#991b1b', 'dot' => '#dc2626'],
-            'no_show'   => ['bg' => '#f3f4f6', 'text' => '#374151', 'dot' => '#9ca3af'],
             default     => ['bg' => '#f3f4f6', 'text' => '#374151', 'dot' => '#9ca3af'],
         };
     }
- 
+
     public function getScheduledEndAttribute(): Carbon
     {
         return $this->scheduled_at->copy()->addMinutes($this->duration_minutes);
     }
- 
+
     public function getCanReviewAttribute(): bool
     {
-        return $this->status === 'completed';
+        return $this->status === self::STATUS_COMPLETED;
     }
- 
+
     public function getIsUpcomingAttribute(): bool
     {
-        return in_array($this->status, ['pending', 'confirmed'])
-            && $this->isScheduledInFuture();
+        return $this->status === self::STATUS_UPCOMING && $this->isScheduledInFuture();
     }
- 
+
     public function getActualDurationFormattedAttribute(): string
     {
         $s = $this->actual_duration_seconds ?? ($this->duration_minutes * 60);
+
         return sprintf('%dh %02dm', intdiv($s, 3600), intdiv($s % 3600, 60));
     }
- 
-    // ── Business logic ────────────────────────────────────────
 
     /**
-     * Mark only truly missed sessions as no_show.
-     *
-     * Never touches: completed, cancelled, ongoing, or any session that was
-     * started/attended (started_at / ended_at / actual duration present).
-     * Only pending / confirmed / upcoming whose scheduled end time has passed.
+     * After scheduled end time, mark remaining upcoming sessions as completed
+     * (whether attended or not).
      */
     public static function expireMissedSessions(?int $mentorId = null, ?int $menteeId = null): int
     {
         $query = static::query()
-            ->whereIn('status', [
-                self::STATUS_PENDING,
-                self::STATUS_CONFIRMED,
-                self::STATUS_UPCOMING,
-            ])
-            ->whereNotIn('status', [
-                self::STATUS_COMPLETED,
-                self::STATUS_CANCELLED,
-                self::STATUS_ONGOING,
-                self::STATUS_NO_SHOW,
-            ])
-            // Attended / started sessions must never become no_show
-            ->whereNull('started_at')
-            ->whereNull('ended_at')
-            ->where(function ($q) {
-                $q->whereNull('actual_duration_seconds')
-                    ->orWhere('actual_duration_seconds', 0);
-            })
+            ->where('status', self::STATUS_UPCOMING)
             ->whereRaw(
                 'DATE_ADD(scheduled_at, INTERVAL COALESCE(duration_minutes, 0) MINUTE) < ?',
                 [now()->timezone(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s')]
@@ -386,7 +386,13 @@ class ConsultationSession extends Model
             $query->where('mentee_id', $menteeId);
         }
 
-        return $query->update(['status' => self::STATUS_NO_SHOW]);
+        $count = 0;
+        foreach ($query->get() as $session) {
+            $session->complete();
+            $count++;
+        }
+
+        return $count;
     }
 
     public function getStatusLabelAttribute(): string
@@ -396,108 +402,62 @@ class ConsultationSession extends Model
 
     public function canJoinCall(): bool
     {
-        if (in_array($this->status, [
-            self::STATUS_COMPLETED,
-            self::STATUS_CANCELLED,
-            self::STATUS_NO_SHOW,
-        ], true)) {
-            return false;
-        }
-
-        return in_array($this->status, [
-            self::STATUS_PENDING,
-            self::STATUS_CONFIRMED,
-            self::STATUS_UPCOMING,
-            self::STATUS_ONGOING,
-        ], true);
+        return $this->status === self::STATUS_UPCOMING;
     }
 
+    /** @deprecated Confirm is removed; sessions are upcoming once paid. */
     public function confirm(): void
     {
-        $this->update(['status' => self::STATUS_CONFIRMED]);
+        if ($this->status !== self::STATUS_CANCELLED) {
+            $this->update(['status' => self::STATUS_UPCOMING]);
+        }
     }
- 
+
+    /**
+     * Record that a call started. Status stays upcoming until complete().
+     */
     public function start(): void
     {
+        if ($this->status !== self::STATUS_UPCOMING) {
+            return;
+        }
+
         $this->update([
-            'status'     => self::STATUS_ONGOING,
             'started_at' => $this->started_at ?? now(),
         ]);
     }
- 
+
     public function complete(): void
     {
         if ($this->status === self::STATUS_COMPLETED) {
             return;
         }
 
+        if ($this->status === self::STATUS_CANCELLED) {
+            return;
+        }
+
         $duration = $this->started_at ? (int) $this->started_at->diffInSeconds(now()) : null;
         $this->update([
-            'status'                   => self::STATUS_COMPLETED,
-            'ended_at'                 => now(),
-            'actual_duration_seconds'  => $duration,
+            'status'                  => self::STATUS_COMPLETED,
+            'ended_at'                => $this->ended_at ?? now(),
+            'actual_duration_seconds' => $this->actual_duration_seconds ?: $duration,
         ]);
-        // Increment mentor stats
         optional($this->mentor)->increment('total_sessions');
 
         $this->settleMentorPayout();
     }
 
     /**
-     * Mark ongoing sessions complete once booked duration has elapsed.
-     *
-     * A 10-minute grace is included so an in-call, unpersisted +10 minute
-     * extension on web is not cut off by list-page cleanup.
+     * Finalize past upcoming sessions (alias used by list pages).
      */
     public static function completeStaleOngoingSessions(
         ?int $mentorId = null,
         ?int $menteeId = null
     ): int {
-        $now = now()->timezone(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s');
-    
-        $query = static::query()
-            ->where('status', self::STATUS_ONGOING)
-            ->where(function ($q) use ($now) {
-                $q->where(function ($inner) use ($now) {
-                    $inner->whereNotNull('started_at')
-                        ->whereRaw(
-                            'DATE_ADD(started_at, INTERVAL COALESCE(duration_minutes, 30) + 10 MINUTE) <= ?',
-                            [$now]
-                        );
-                })->orWhere(function ($inner) use ($now) {
-                    $inner->whereNull('started_at')
-                        ->whereRaw(
-                            'DATE_ADD(scheduled_at, INTERVAL COALESCE(duration_minutes, 30) + 10 MINUTE) <= ?',
-                            [$now]
-                        );
-                });
-            });
-    
-        if ($mentorId) {
-            $query->where('mentor_id', $mentorId);
-        }
-    
-        if ($menteeId) {
-            $query->where('mentee_id', $menteeId);
-        }
-    
-        $count = 0;
-    
-        foreach ($query->get() as $session) {
-            $session->complete();
-            $count++;
-        }
-    
-        return $count;
+        return self::expireMissedSessions($mentorId, $menteeId);
     }
 
-    /**
-     * Credit mentor wallet with 80% of session amount when:
-     * - session is completed
-     * - mentee payment_status is paid
-     * - amount > 0
-     * Idempotent: skips if payout already recorded for this session.
-     */
     public function settleMentorPayout(): ?WalletTransaction
     {
         $this->refresh();
@@ -515,7 +475,7 @@ class ConsultationSession extends Model
             return null;
         }
 
-        $reference = 'SES-EARN-' . $this->id;
+        $reference = 'SES-EARN-'.$this->id;
 
         $existing = WalletTransaction::where('reference', $reference)->first()
             ?? WalletTransaction::where('user_id', $this->mentor_id)
@@ -551,22 +511,22 @@ class ConsultationSession extends Model
 
         return $mentor->creditWallet(
             $net,
-            'Session earning: ' . ($this->title ?: ('Session #' . $this->id)),
+            'Session earning: '.($this->title ?: ('Session #'.$this->id)),
             [
                 'reference'            => $reference,
                 'transactionable_type' => self::class,
                 'transactionable_id'   => $this->id,
                 'meta'                 => [
-                    'source'            => 'session_mentor_payout',
-                    'booking_ref'       => $this->booking_ref,
-                    'session_id'        => $this->id,
-                    'mentee_id'         => $this->mentee_id,
-                    'mentee_name'       => $this->mentee?->name,
+                    'source'           => 'session_mentor_payout',
+                    'booking_ref'      => $this->booking_ref,
+                    'session_id'       => $this->id,
+                    'mentee_id'        => $this->mentee_id,
+                    'mentee_name'      => $this->mentee?->name,
                     'duration_minutes' => $durationMinutes,
-                    'gross_amount'      => $gross,
-                    'platform_fee'      => $fee,
-                    'platform_fee_rate' => $feeRate,
-                    'net_amount'        => $net,
+                    'gross_amount'     => $gross,
+                    'platform_fee'     => $fee,
+                    'platform_fee_rate'=> $feeRate,
+                    'net_amount'       => $net,
                 ],
             ]
         );
@@ -577,6 +537,7 @@ class ConsultationSession extends Model
         $this->update([
             'status'              => self::STATUS_CANCELLED,
             'cancelled_by'        => $cancelledBy,
+            'cancelled_at'        => now(),
             'cancellation_reason' => $reason,
         ]);
     }

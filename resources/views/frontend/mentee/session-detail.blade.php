@@ -31,7 +31,7 @@
                             @if($session->canJoinCall())
                                 <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
                             @endif
-                            @if(in_array($session->status, ['pending', 'confirmed'], true) && $session->scheduled_at?->gt(now()->addHours(2)))
+                            @if($session->status === 'upcoming' && $session->scheduled_at?->gt(now()->addHours(2)))
                                 <button type="button" class="btn btn-outline" style="color:var(--error);" onclick="cancelSession({{ $session->id }})">Cancel</button>
                             @endif
                         </div>

@@ -15,7 +15,7 @@ class DashboardController extends Controller
 
         $upcomingSessions = ConsultationSession::where('mentor_id', $mentor->id)
             ->with('mentee')
-            ->whereIn('status', ['pending','confirmed'])
+            ->where('status', 'upcoming')
             ->where('scheduled_at', '>', now())
             ->orderBy('scheduled_at')
             ->limit(5)
@@ -53,7 +53,8 @@ class DashboardController extends Controller
                                         ->distinct('mentee_id')
                                         ->count('mentee_id'),
             'pending_sessions'     => ConsultationSession::where('mentor_id', $mentor->id)
-                                        ->where('status','pending')
+                                        ->where('status','upcoming')
+                                        ->where('scheduled_at', '>', now())
                                         ->count(),
             'pending_requests'     => $pendingMentorRequests->count(),
         ];

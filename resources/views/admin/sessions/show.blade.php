@@ -15,21 +15,11 @@
             All Sessions
         </a>
         <div class="flex gap-2">
-            @if($session->status === 'pending')
-            <form method="POST" action="{{ route('admin.sessions.confirm', $session) }}">
-                @csrf
-                <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl transition-colors">
-                    ✓ Confirm Session
-                </button>
-            </form>
-            @endif
-            @if(in_array($session->status, ['pending','confirmed']))
+            @if($session->status === 'upcoming')
             <button onclick="document.getElementById('cancel-modal').classList.remove('hidden')"
                     class="inline-flex items-center gap-1.5 text-sm font-medium bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-xl transition-colors border border-red-200">
                 Cancel Session
             </button>
-            @endif
-            @if($session->status === 'confirmed')
             <form method="POST" action="{{ route('admin.sessions.complete', $session) }}">
                 @csrf
                 <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-colors">
@@ -364,7 +354,7 @@
             </div>
 
             {{-- Mark no-show --}}
-            @if(in_array($session->status, ['confirmed','pending']))
+            @if($session->status === 'upcoming')
             <form method="POST" action="{{ route('admin.sessions.no-show', $session) }}"
                   onsubmit="return confirm('Mark this session as No Show?')">
                 @csrf

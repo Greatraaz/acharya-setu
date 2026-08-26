@@ -26,7 +26,7 @@ class PortalController extends Controller
             ->paginate(20);
 
         $sessionsWithoutNotes = ConsultationSession::where('mentor_id', $mentorId)
-            ->whereIn('status', ['completed', 'confirmed'])
+            ->where('status', 'completed')
             ->whereDoesntHave('notes')
             ->with('mentee')
             ->latest('scheduled_at')

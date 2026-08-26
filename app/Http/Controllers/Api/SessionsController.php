@@ -15,16 +15,40 @@ class SessionsController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $u        = $request->user();
-        $f        = $u->role === 'mentor' ? 'mentor_id' : 'mentee_id';
-        $sessions = ConsultationSession::where($f, $u->id)
+        $u = $request->user();
+        ConsultationSession::expireMissedSessions(
+            $u->role === 'mentor' ? $u->id : null,
+            $u->role === 'mentee' ? $u->id : null
+        );
+
+        $f = $u->role === 'mentor' ? 'mentor_id' : 'mentee_id';
+        $query = ConsultationSession::where($f, $u->id)
             ->with([
                 'mentor:id,name,avatar_url,gender',
                 'mentee:id,name,avatar_url',
                 'sessionInvoice',
                 'notes' => fn ($q) => $q->with('author:id,name,role,avatar_url')->latest(),
-            ])
-            ->orderByDesc('scheduled_at')
+            ]);
+
+        if ($request->filled('status') && array_key_exists($request->status, ConsultationSession::STATUSES)) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('date')) {
+            $query->whereDate('scheduled_at', $request->date);
+        }
+        if ($search = trim((string) $request->input('q', ''))) {
+            $query->where(function ($inner) use ($search, $u) {
+                $inner->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('booking_ref', 'like', '%'.$search.'%');
+                if ($u->role === 'mentee') {
+                    $inner->orWhereHas('mentor', fn ($m) => $m->where('name', 'like', '%'.$search.'%'));
+                } else {
+                    $inner->orWhereHas('mentee', fn ($m) => $m->where('name', 'like', '%'.$search.'%'));
+                }
+            });
+        }
+
+        $sessions = $query->orderByDesc('scheduled_at')
             ->get()
             ->map(fn ($s) => [
                 'id'             => $s->id,
@@ -37,6 +61,7 @@ class SessionsController extends Controller
                 'menteeAvatar'   => $s->mentee?->avatar_url,
                 'date'           => $s->scheduled_at?->format('d M Y'),
                 'time'           => $s->scheduled_at?->format('h:i A'),
+                'scheduledAt'    => $s->scheduled_at?->toDateTimeString(),
                 'duration'       => $s->duration_minutes,
                 'status'         => $s->status,
                 'topic'          => $s->title,
@@ -62,6 +87,7 @@ class SessionsController extends Controller
             'status'     => true,
             'statuscode' => 200,
             'sessions'   => $sessions,
+            'statuses'   => ConsultationSession::STATUSES,
         ]);
     }
 
@@ -261,7 +287,7 @@ class SessionsController extends Controller
         try {
             $s = $this->findOwnedSession($request, $id);
             $d = $request->validate([
-                'status' => 'sometimes|in:upcoming,completed,cancelled,pending',
+                'status' => 'sometimes|in:upcoming,completed,cancelled',
                 'notes'  => 'nullable|string',
             ]);
 

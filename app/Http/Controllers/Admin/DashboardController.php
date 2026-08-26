@@ -24,7 +24,10 @@ class DashboardController extends Controller
         $totalSessions    = ConsultationSession::count();
         $completedSessions= ConsultationSession::where('status', 'completed')->count();
         $sessionsToday    = ConsultationSession::whereDate('scheduled_at', today())->count();
-        $ongoingSessions  = ConsultationSession::where('status', 'ongoing')->count();
+        $ongoingSessions  = ConsultationSession::where('status', 'upcoming')
+            ->where('scheduled_at', '<=', now())
+            ->whereRaw('DATE_ADD(scheduled_at, INTERVAL COALESCE(duration_minutes, 0) MINUTE) >= ?', [now()])
+            ->count();
  
         $monthRevenue = ConsultationSession::where('status', 'completed')
             ->whereMonth('ended_at', now()->month)

@@ -1,7 +1,7 @@
 {{-- Shared mentor dashboard sidebar --}}
 @php
     $pendingCount = $pendingCount
-        ?? \App\Models\ConsultationSession::where('mentor_id', auth()->id())->where('status', 'pending')->count();
+        ?? \App\Models\ConsultationSession::where('mentor_id', auth()->id())->where('status', 'upcoming')->where('scheduled_at', '>', now())->count();
 @endphp
 <aside class="sidebar" id="dashSidebar">
     <div class="sidebar-section-label">Overview</div>

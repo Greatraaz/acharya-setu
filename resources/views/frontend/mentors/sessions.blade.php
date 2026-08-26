@@ -10,45 +10,53 @@
         <div class="dash-header flex-between">
             <div>
                 <div class="dash-title">My Sessions</div>
-                <div class="dash-subtitle">Manage, confirm and track all your mentoring sessions.</div>
+                <div class="dash-subtitle">Manage and track all your mentoring sessions.</div>
             </div>
         </div>
 
-        {{-- Pending requests banner --}}
-        @if($pendingCount ?? 0)
-        <div class="alert alert-warning" style="margin-bottom:20px;">
-            <span class="alert-icon">🔔</span>
-            <div>
-                <strong>{{ $pendingCount }} pending session request{{ $pendingCount > 1 ? 's' : '' }}</strong>
-                <p style="font-size:12px;margin-top:2px;">Please respond within 24 hours to maintain your response rate.</p>
+        <form method="GET" action="{{ route('mentor.sessions') }}" class="session-toolbar">
+            <div class="session-filter-tabs">
+                @foreach(['all'=>'All','upcoming'=>'Upcoming','completed'=>'Completed','cancelled'=>'Cancelled'] as $key=>$label)
+                @php
+                    $tabParams = array_filter([
+                        'filter' => $key === 'all' ? null : $key,
+                        'q' => $search ?? request('q') ?: null,
+                        'date' => request('date') ?: null,
+                    ]);
+                @endphp
+                <a href="{{ route('mentor.sessions', $tabParams) }}"
+                   class="session-filter-tab {{ ($filter ?? request('filter','all')) === $key ? 'active' : '' }}">
+                   {{ $label }}
+                </a>
+                @endforeach
             </div>
-        </div>
-        @endif
 
-        {{-- Filter tabs --}}
-        <div class="session-filter-tabs">
-            @foreach(['all'=>'All','pending'=>'Pending','confirmed'=>'Confirmed','ongoing'=>'Ongoing','completed'=>'Completed','missed'=>'Missed','cancelled'=>'Cancelled'] as $key=>$label)
-            <a href="{{ route('mentor.sessions', ['filter'=>$key]) }}"
-               class="session-filter-tab {{ ($filter ?? request('filter','all')) === $key ? 'active' : '' }}">
-               {{ $label }}
-               @if($key==='pending' && ($pendingCount??0))
-                   <span class="session-filter-count">{{ $pendingCount }}</span>
-               @endif
-            </a>
-            @endforeach
-        </div>
+            <div class="session-toolbar-controls">
+                @if(($filter ?? request('filter')) && ($filter ?? request('filter')) !== 'all')
+                    <input type="hidden" name="filter" value="{{ $filter ?? request('filter') }}">
+                @endif
+                <div class="session-search-field">
+                    <span class="session-search-icon" aria-hidden="true">🔍</span>
+                    <input type="search" name="q" class="form-input" value="{{ $search ?? request('q') }}"
+                           placeholder="Search by name, mentee, or ID…"
+                           autocomplete="off">
+                </div>
+                <input type="date" name="date" class="form-input session-date-input"
+                       value="{{ request('date') }}" title="Filter by date">
+                <button type="submit" class="btn btn-outline">Search</button>
+                @if(request()->filled('q') || request()->filled('date'))
+                    <a href="{{ route('mentor.sessions', array_filter(['filter' => (($filter ?? 'all') === 'all' ? null : ($filter ?? null))])) }}" class="btn btn-ghost">Clear</a>
+                @endif
+            </div>
+        </form>
 
-        {{-- Sessions --}}
         @forelse($sessions ?? [] as $session)
         @php
             $statusKey = $session->status;
             $statusLabel = $session->status_label;
             $barColor = match($statusKey) {
-                'confirmed' => 'var(--success)',
-                'ongoing' => 'var(--info)',
-                'pending', 'upcoming' => 'var(--warning)',
+                'upcoming' => 'var(--info)',
                 'completed' => 'var(--brand)',
-                'no_show' => 'var(--text-3)',
                 default => 'var(--error)',
             };
         @endphp
@@ -65,7 +73,12 @@
                         <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
                             <div>
                                 <div style="font-size:15px;font-weight:700;margin-bottom:3px;">{{ $session->title }}</div>
-                                <div style="font-size:13px;color:var(--text-2);">Mentee: <strong>{{ $session->mentee->name ?? '—' }}</strong></div>
+                                <div style="font-size:13px;color:var(--text-2);">
+                                    Mentee: <strong>{{ $session->mentee->name ?? '—' }}</strong>
+                                    @if($session->booking_ref)
+                                        · <span style="font-size:11px;color:var(--text-3);">{{ $session->booking_ref }}</span>
+                                    @endif
+                                </div>
                             </div>
                             <span class="session-status {{ str_replace('_', '-', $statusKey) }}">{{ $statusLabel }}</span>
                         </div>
@@ -75,18 +88,16 @@
                             <span style="font-size:12px;color:var(--text-2);">⏱ {{ $session->duration_minutes }} min</span>
                             <span style="font-size:12px;color:var(--success);">💰 ₹{{ number_format($session->mentor_earning ?? $session->amount ?? 0, 0) }}</span>
                         </div>
-                        @if($session->topic_notes ?? false)
+                        @if($session->agenda ?? $session->topic_notes ?? false)
                         <div style="margin-top:10px;padding:10px;background:var(--bg);border-radius:var(--radius-sm);font-size:12px;color:var(--text-2);">
-                            📝 <em>{{ Str::limit($session->topic_notes, 120) }}</em>
+                            📝 <em>{{ Str::limit($session->agenda ?? $session->topic_notes, 120) }}</em>
                         </div>
                         @endif
                     </div>
 
                     <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:flex-end;">
-                        @if($statusKey === 'pending')
-                            <button class="btn btn-success btn-sm" onclick="acceptSession({{ $session->id }})">✓ Accept</button>
-                            <button class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="declineSession({{ $session->id }})">✗ Decline</button>
-                        @elseif(in_array($statusKey, ['confirmed', 'upcoming', 'ongoing'], true))
+                        <a href="{{ route('mentor.sessions.show', $session->id) }}" class="btn btn-outline btn-sm">View</a>
+                        @if($statusKey === 'upcoming')
                             @if($session->canJoinCall())
                                 <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">🎥 Start Session</a>
                             @endif
@@ -94,10 +105,10 @@
                                     onclick="addMeetingLink({{ $session->id }}, {{ json_encode($session->meeting_link) }})">
                                 🔗 {{ $session->meeting_link ? 'Edit Link' : 'Add Link' }}
                             </button>
+                            <button type="button" class="btn btn-ghost btn-sm" onclick="completeSession({{ $session->id }})">Mark complete</button>
+                            <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="declineSession({{ $session->id }})">Cancel</button>
                         @elseif($statusKey === 'completed')
-                            <a href="{{ route('mentor.sessions.show', $session->id) }}" class="btn btn-outline btn-sm">📝 Session Notes</a>
-                        @elseif($statusKey === 'no_show')
-                            <span style="font-size:11px;color:var(--text-3);">Session time passed</span>
+                            <a href="{{ route('mentor.sessions.show', $session->id) }}" class="btn btn-ghost btn-sm">📝 Session Notes</a>
                         @endif
                     </div>
                 </div>
@@ -106,16 +117,6 @@
         @empty
         @php
             $activeFilter = $filter ?? request('filter', 'all');
-            $filterLabels = [
-                'all'       => 'sessions',
-                'pending'   => 'pending sessions',
-                'confirmed' => 'confirmed sessions',
-                'ongoing'   => 'ongoing sessions',
-                'completed' => 'completed sessions',
-                'missed'    => 'missed sessions',
-                'cancelled' => 'cancelled sessions',
-                'upcoming'  => 'upcoming sessions',
-            ];
             $u = auth()->user();
             $profileComplete = (bool) $u->avatar_url
                 && strlen(trim((string) ($u->bio ?? ''))) >= 50
@@ -125,11 +126,12 @@
         @endphp
         <div class="empty-state" style="padding:80px 0;">
             <div style="font-size:64px;margin-bottom:16px;">📅</div>
-            @if($activeFilter !== 'all')
-                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No {{ $filterLabels[$activeFilter] ?? 'sessions' }} found</div>
-                <p style="font-size:14px;color:var(--text-2);max-width:360px;margin:0 auto 24px;">
-                    Nothing matches this filter right now. Try another status or view all sessions.
-                </p>
+            @if(request()->filled('q') || request()->filled('date'))
+                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No matching sessions</div>
+                <p style="font-size:14px;color:var(--text-2);max-width:360px;margin:0 auto 24px;">Try another name or date — or clear the filters.</p>
+                <a href="{{ route('mentor.sessions', array_filter(['filter' => $activeFilter === 'all' ? null : $activeFilter])) }}" class="btn btn-outline">Clear filters</a>
+            @elseif($activeFilter !== 'all')
+                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No {{ $activeFilter }} sessions found</div>
                 <a href="{{ route('mentor.sessions') }}" class="btn btn-primary btn-lg">View all sessions</a>
             @elseif(! $profileComplete)
                 <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No sessions yet</div>
@@ -153,7 +155,6 @@
     </div>
 </div>
 
-{{-- Add meeting link modal — uses .open class (see app.css), not display toggles --}}
 <div id="link-modal" class="modal-overlay">
     <div class="modal" style="max-width:400px;">
         <div class="modal-header">
@@ -179,19 +180,20 @@
 
 @push('scripts')
 <script>
-function acceptSession(id) {
-    AjaxPost(`/mentor/sessions/${id}/confirm`, {}, {
+function declineSession(id) {
+    if (!confirm('Cancel this session?')) return;
+    AjaxPost(`/mentor/sessions/${id}/cancel`, { reason: 'Cancelled by mentor' }, {
         loader: true,
-        onSuccess: () => { showToast('success', '✅ Session confirmed! Mentee has been notified.'); location.reload(); },
-        onError: e => showToast('error', e.message || 'Could not confirm session.')
+        onSuccess: () => { showToast('info', 'Session cancelled.'); location.reload(); },
+        onError: e => showToast('error', e.message || 'Could not cancel session.')
     });
 }
-function declineSession(id) {
-    if (!confirm('Decline this session request?')) return;
-    AjaxPost(`/mentor/sessions/${id}/cancel`, {}, {
+function completeSession(id) {
+    if (!confirm('Mark this session as completed?')) return;
+    AjaxPost(`/mentor/sessions/${id}/complete`, {}, {
         loader: true,
-        onSuccess: () => { showToast('info', 'Session declined.'); location.reload(); },
-        onError: e => showToast('error', e.message || 'Could not decline session.')
+        onSuccess: (d) => { showToast('success', d.message || 'Completed.'); location.reload(); },
+        onError: e => showToast('error', e.message || 'Could not complete session.')
     });
 }
 window.addMeetingLink = function (id, currentLink) {

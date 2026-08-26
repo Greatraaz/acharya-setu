@@ -141,14 +141,7 @@ trait HasSubscription
 
         return ConsultationSession::where('mentee_id', $this->id)
             ->whereBetween('scheduled_at', [$start, $end])
-            ->whereNotIn('status', [
-                ConsultationSession::STATUS_CANCELLED,
-                ConsultationSession::STATUS_PENDING,
-            ])
-            ->where(function ($q) {
-                $q->whereNull('payment_status')
-                    ->orWhere('payment_status', '!=', 'pending');
-            })
+            ->where('status', '!=', ConsultationSession::STATUS_CANCELLED)
             ->count();
     }
 }

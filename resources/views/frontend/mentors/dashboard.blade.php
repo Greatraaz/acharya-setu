@@ -100,7 +100,7 @@
                 <div class="stat-card-icon">🎓</div>
                 <div class="stat-card-label">Active Mentees</div>
                 <div class="stat-card-value">{{ $stats['active_mentees'] ?? 0 }}</div>
-                <div class="stat-card-delta">{{ $stats['pending_sessions'] ?? 0 }} sessions pending</div>
+                <div class="stat-card-delta">{{ $stats['pending_sessions'] ?? 0 }} upcoming</div>
             </div>
         </div>
 
@@ -123,9 +123,7 @@
                     </div>
                     <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
                         <span class="session-status {{ $session->status }}">{{ ucfirst($session->status) }}</span>
-                        @if($session->status === 'pending')
-                        <button type="button" class="btn btn-success btn-sm" onclick="acceptSession({{ $session->id }})">Accept</button>
-                        @elseif($session->canJoinCall())
+                        @if($session->canJoinCall())
                         <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">Join</a>
                         @endif
                     </div>

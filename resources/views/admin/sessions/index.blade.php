@@ -192,10 +192,10 @@
                             <div class="flex items-center justify-end gap-1">
                                 <a href="{{ route('admin.sessions.show', $session) }}"
                                    class="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">View</a>
-                                @if($session->status === 'pending')
-                                <form method="POST" action="{{ route('admin.sessions.confirm', $session) }}">
+                                @if($session->status === 'upcoming')
+                                <form method="POST" action="{{ route('admin.sessions.complete', $session) }}">
                                     @csrf
-                                    <button type="submit" class="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors">Confirm</button>
+                                    <button type="submit" class="text-xs font-medium px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors">Complete</button>
                                 </form>
                                 @endif
                             </div>
