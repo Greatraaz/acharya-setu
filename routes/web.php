@@ -78,6 +78,7 @@ use App\Http\Controllers\Admin\AssessmentController;
 use App\Http\Controllers\Admin\AssessmentQuestionController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\BlogController;
+use App\Http\Controllers\Admin\WhitePaperController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\NotificationController;
 
@@ -536,6 +537,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('blogs/export/excel', [BlogController::class, 'exportExcel'])->name('blogs.export.excel');
     Route::get('blogs/export/pdf', [BlogController::class, 'exportPdf'])->name('blogs.export.pdf');
     Route::resource('blogs', BlogController::class)->except(['show']);
+    Route::resource('white-papers', WhitePaperController::class)->except(['show']);
 
     // ── Wallet ────────────────────────────────────────────────
     Route::prefix('wallet')->name('wallet.')->group(function () {

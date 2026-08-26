@@ -42,7 +42,11 @@
                 'type' => 'group',
                 'icon' => '📦',
                 'items' => collect(\App\Support\InsightsMenu::items())->map(function ($item) {
-                    $route = ($item['key'] ?? '') === 'blogs' ? 'admin.blogs.index' : '#';
+                    $route = match ($item['key'] ?? '') {
+                        'blogs' => 'admin.blogs.index',
+                        'white-papers' => 'admin.white-papers.index',
+                        default => '#',
+                    };
 
                     return [$route, $item['icon'], $item['label']];
                 })->all(),
