@@ -49,6 +49,27 @@
             <li><a href="{{ route('home') }}" @class(['active' => request()->routeIs('home')])>Home</a></li>
             <li><a href="{{ route('mentors.search') }}" @class(['active' => request()->routeIs('mentors.*')])>Find Mentors</a></li>
             <li><a href="{{ route('about') }}" @class(['active' => request()->routeIs('about')])>About</a></li>
+            <li class="nav-item-has-dropdown {{ request()->routeIs('insights.*') ? 'is-open-active' : '' }}">
+                <button type="button" class="nav-dropdown-trigger @if(request()->routeIs('insights.*')) active @endif" aria-expanded="false" aria-haspopup="true">
+                    Insights <span class="nav-caret">▾</span>
+                </button>
+                <div class="insights-dropdown" role="menu">
+                    <div class="insights-dropdown-grid">
+                        @foreach(\App\Support\InsightsMenu::columns() as $column)
+                            <div class="insights-dropdown-col">
+                                @foreach($column as $item)
+                                    <a href="{{ \App\Support\InsightsMenu::href($item) }}"
+                                       class="insights-dropdown-link {{ ($item['key'] ?? '') === 'blogs' && request()->routeIs('insights.blogs.*') ? 'active' : '' }}"
+                                       role="menuitem">
+                                        <span class="insights-dropdown-ico">{{ $item['icon'] }}</span>
+                                        <span>{{ $item['label'] }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </li>
             <li><a href="{{ route('contact') }}" @class(['active' => request()->routeIs('contact')])>Contact</a></li>
         </ul>
 
@@ -116,6 +137,18 @@
         <a href="{{ route('home') }}" class="mobile-nav-item @if(request()->routeIs('home')) active @endif">🏠 Home</a>
         <a href="{{ route('mentors.search') }}" class="mobile-nav-item @if(request()->routeIs('mentors.*')) active @endif">🔍 Find Mentors</a>
         <a href="{{ route('about') }}" class="mobile-nav-item">ℹ️ About</a>
+        <div class="mobile-nav-group">
+            <button type="button" class="mobile-nav-item mobile-nav-toggle" data-mobile-insights-toggle>
+                💡 Insights <span style="margin-left:auto;">▾</span>
+            </button>
+            <div class="mobile-insights-panel" id="mobileInsightsPanel" hidden>
+                @foreach(\App\Support\InsightsMenu::items() as $item)
+                    <a href="{{ \App\Support\InsightsMenu::href($item) }}" class="mobile-nav-item mobile-nav-sub">
+                        {{ $item['icon'] }} {{ $item['label'] }}
+                    </a>
+                @endforeach
+            </div>
+        </div>
         <a href="{{ route('contact') }}" class="mobile-nav-item">✉️ Contact</a>
         <div class="divider"></div>
         @auth
@@ -194,7 +227,7 @@
                     <li><a href="{{ route('about') }}">About Us</a></li>
                     <li><a href="{{ route('contact') }}">Contact</a></li>
                     <li><a href="#">Careers</a></li>
-                    <li><a href="#">Blog</a></li>
+                    <li><a href="{{ route('insights.blogs.index') }}">Blog</a></li>
                 </ul>
             </div>
             <div class="footer-col">

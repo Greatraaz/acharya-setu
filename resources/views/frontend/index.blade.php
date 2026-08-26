@@ -165,7 +165,7 @@
             padding: 1rem 2.5rem;
             font-size: 1.1rem;
             font-weight: 600;
-            border-radius: 12px;
+            border-radius: 8px;
             transition: all 0.3s ease;
             border: 2px solid transparent;
             text-decoration: none;
@@ -516,7 +516,7 @@
             background-color: var(--vedrix-yellow);
             color: var(--dark-bg);
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             font-weight: 700;
             font-size: 1.1rem;
             transition: all 0.3s ease;

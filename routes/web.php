@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\Frontend\MentorListingController;
 use App\Http\Controllers\Frontend\ContactController;
+use App\Http\Controllers\Frontend\BlogController as FrontendBlogController;
 
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LoginController;
@@ -76,6 +77,7 @@ use App\Http\Controllers\Admin\MentorProfileController as AdminMentorProfileCont
 use App\Http\Controllers\Admin\AssessmentController;
 use App\Http\Controllers\Admin\AssessmentQuestionController;
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\NotificationController;
 
@@ -121,6 +123,12 @@ Route::get('/contact', [ContactController::class, 'show'])->name('contact');
 Route::post('/contact',[ContactController::class, 'send'])->name('contact.send');
 Route::get('/privacy', fn() => view('frontend.privacy'))->name('privacy');
 Route::get('/terms',   fn() => view('frontend.terms'))  ->name('terms');
+
+// Insights (public content)
+Route::prefix('insights')->name('insights.')->group(function () {
+    Route::get('/blogs', [FrontendBlogController::class, 'index'])->name('blogs.index');
+    Route::get('/blogs/{slug}', [FrontendBlogController::class, 'show'])->name('blogs.show')->where('slug', '[A-Za-z0-9\-]+');
+});
 
 // Public job listings
 Route::get('/jobs',      [JobListingController::class, 'publicIndex'])->name('jobs.public');
@@ -523,6 +531,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     Route::resource('assessments', AssessmentController::class);
     Route::resource('assessment-questions', AssessmentQuestionController::class)->except(['show']);
+
+    // ── Utilities: Blogs ──────────────────────────────────────
+    Route::get('blogs/export/excel', [BlogController::class, 'exportExcel'])->name('blogs.export.excel');
+    Route::get('blogs/export/pdf', [BlogController::class, 'exportPdf'])->name('blogs.export.pdf');
+    Route::resource('blogs', BlogController::class)->except(['show']);
 
     // ── Wallet ────────────────────────────────────────────────
     Route::prefix('wallet')->name('wallet.')->group(function () {

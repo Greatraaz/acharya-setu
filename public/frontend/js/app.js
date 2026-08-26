@@ -310,13 +310,43 @@
            trigger.addEventListener("click", (e) => {
                e.stopPropagation();
                const dd = trigger.nextElementSibling;
+               document.querySelectorAll(".user-dropdown").forEach((el) => {
+                   if (el !== dd) el.classList.remove("open");
+               });
                if (dd) dd.classList.toggle("open");
            });
        });
+
+       // Insights dropdown (desktop click support; hover also works via CSS)
+       document.querySelectorAll(".nav-item-has-dropdown").forEach((item) => {
+           const trigger = item.querySelector(".nav-dropdown-trigger");
+           if (!trigger) return;
+           trigger.addEventListener("click", (e) => {
+               e.preventDefault();
+               e.stopPropagation();
+               const open = !item.classList.contains("is-open");
+               document.querySelectorAll(".nav-item-has-dropdown").forEach((el) => el.classList.remove("is-open"));
+               item.classList.toggle("is-open", open);
+               trigger.setAttribute("aria-expanded", open ? "true" : "false");
+           });
+       });
+
        document.addEventListener("click", () => {
+           document.querySelectorAll(".nav-item-has-dropdown").forEach((el) => {
+               el.classList.remove("is-open");
+               el.querySelector(".nav-dropdown-trigger")?.setAttribute("aria-expanded", "false");
+           });
            document.querySelectorAll(".user-dropdown").forEach((dd) => dd.classList.remove("open"));
        });
-   
+
+       document.querySelectorAll("[data-mobile-insights-toggle]").forEach((btn) => {
+           btn.addEventListener("click", () => {
+               const panel = document.getElementById("mobileInsightsPanel");
+               if (!panel) return;
+               panel.hidden = !panel.hidden;
+           });
+       });
+
        // Flash messages → show as toast
        const flash = document.querySelector("[data-flash]");
        if (flash) {

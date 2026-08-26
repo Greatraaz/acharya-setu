@@ -17,6 +17,25 @@
 ::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:9999px; }
 ::-webkit-scrollbar-thumb:hover{ background:#94a3b8; }
 *{ scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+
+/* All admin buttons: 8px radius (below 12px) */
+button,
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+.btn,
+a.btn,
+.dt-button,
+a[class*="bg-"][class*="rounded"],
+button[class*="rounded"],
+a[class*="px-"][class*="py-"][class*="rounded"] {
+    border-radius: 8px !important;
+}
+/* Keep true pills only for status badges / chips that are not actions */
+span[class*="rounded-full"] {
+    border-radius: 9999px !important;
+}
+
 #admin-sidebar-backdrop {
     position: fixed;
     inset: 0;
