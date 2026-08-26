@@ -92,6 +92,21 @@ class AvailabilityController extends Controller
             ]);
         }
 
+        if ($request->boolean('week') || $request->filled('days') || $request->filled('start')) {
+            $days = min(42, max(7, (int) $request->input('days', 14)));
+            $start = $request->filled('start')
+                ? \Carbon\Carbon::parse($request->input('start'), 'Asia/Kolkata')->startOfDay()
+                : null;
+            $overview = $this->availabilityService->weekOverview($mentor, $start, $days);
+
+            return response()->json([
+                'status'     => true,
+                'statuscode' => 200,
+                'mentor_id'  => $mentorId,
+                ...$overview,
+            ]);
+        }
+
         $slots = MentorAvailability::where('mentor_id', $mentorId)
             ->where('is_available', true)
             ->orderByRaw("FIELD(day_of_week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')")

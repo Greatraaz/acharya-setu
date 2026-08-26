@@ -102,10 +102,12 @@ class MentorAvailabilityService
         $meta = $schedule['days'][$dayKey] ?? null;
 
         $options = $this->slotOptionsForDate($mentor, $date, $schedule);
+        // Mentee may book any duration that fits inside the mentor window
+        // e.g. 09:00–09:30 (30m) allows 15 or 30, but not 60.
         if ($duration !== null && $duration > 0) {
             $options = array_values(array_filter(
                 $options,
-                fn ($opt) => (int) $opt['duration'] === (int) $duration
+                fn ($opt) => (int) $opt['duration'] >= (int) $duration
             ));
         }
 
@@ -123,7 +125,7 @@ class MentorAvailabilityService
         return [
             'date'         => $date,
             'day'          => $dayKey,
-            'slots'        => $starts,
+            'slots'        => array_values(array_unique($starts)),
             'slot_options' => $options,
             'booked'       => $booked,
             'available'    => count($starts) > 0,
@@ -139,7 +141,7 @@ class MentorAvailabilityService
 
         if ($duration !== null && $duration > 0) {
             foreach ($payload['slot_options'] as $opt) {
-                if ($opt['start_time'] === $time && (int) $opt['duration'] === (int) $duration) {
+                if ($opt['start_time'] === $time && (int) $opt['duration'] >= (int) $duration) {
                     return true;
                 }
             }

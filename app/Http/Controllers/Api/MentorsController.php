@@ -45,8 +45,11 @@ class MentorsController extends Controller
     }
 
     /**
-     * Discrete availability windows for a mentor.
-     * Optional ?date=YYYY-MM-DD returns bookable start times for that day.
+     * Mentor availability for booking UIs.
+     *
+     * - ?date=YYYY-MM-DD&duration=30  → non-booked start times that fit duration
+     * - ?week=1&days=31&start=YYYY-MM-DD → calendar overview (which dates have slots)
+     * - (no params) → weekly schedule + 7-day summary
      */
     public function availability(int $id, Request $request): JsonResponse
     {
@@ -68,6 +71,19 @@ class MentorsController extends Controller
                     $request->input('date'),
                     $request->filled('duration') ? (int) $request->input('duration') : null
                 ),
+            ]);
+        }
+
+        if ($request->boolean('week') || $request->filled('days') || $request->filled('start')) {
+            $days = min(42, max(7, (int) $request->input('days', 14)));
+            $start = $request->filled('start')
+                ? \Carbon\Carbon::parse($request->input('start'), 'Asia/Kolkata')->startOfDay()
+                : null;
+            $overview = $this->availabilityService->weekOverview($mentor, $start, $days);
+
+            return response()->json([
+                'mentor_id' => $mentor->id,
+                ...$overview,
             ]);
         }
 

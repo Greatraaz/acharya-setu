@@ -148,30 +148,46 @@
             <div id="book-section" style="position:sticky;top:calc(var(--nav-h) + 20px);">
                 <div class="card">
                     <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Book a Session</h3>
-                    <p style="font-size:12px;color:var(--text-2);margin-bottom:16px;">₹{{ $mentor->rate_per_minute ?? 10 }}/min · Free cancellation</p>
+                    <p style="font-size:12px;color:var(--text-2);margin-bottom:16px;">₹{{ $mentor->rate_per_minute ?? 10 }}/min</p>
 
-                    <div id="availabilitySummary"></div>
+                    <div class="booking-card" style="padding:0;border:0;background:transparent;box-shadow:none;">
+                        <p class="label-caps" style="margin-bottom:10px;">Mentor Availability</p>
+                        <div id="availabilitySummary"></div>
+                    </div>
 
-                    {{-- Date Grid --}}
-                    <p class="label-caps" style="margin-bottom:10px;">Choose Date</p>
-                    <div id="dateGrid" class="calendar-grid"></div>
+                    <div class="booking-cal-head" style="margin-top:8px;">
+                        <p class="label-caps" style="margin:0;">Select a Date</p>
+                        <div class="booking-cal-nav">
+                            <button type="button" class="btn btn-ghost btn-sm" id="cal-prev-month" aria-label="Previous month">‹</button>
+                            <strong id="cal-month-label"></strong>
+                            <button type="button" class="btn btn-ghost btn-sm" id="cal-next-month" aria-label="Next month">›</button>
+                        </div>
+                    </div>
+                    <div id="dateGrid" class="calendar-grid calendar-grid--month"></div>
 
-                    {{-- Time Slots --}}
-                    <p class="label-caps" style="margin:16px 0 10px;">Available Times</p>
+                    <p class="label-caps" style="margin:16px 0 10px;" id="slots-heading">Available Slots</p>
                     <div id="timeGrid" class="time-grid">
                         <div style="grid-column:1/-1;text-align:center;padding:12px;font-size:12px;color:var(--text-3);">Select an available date</div>
                     </div>
 
-                    {{-- Duration --}}
-                    <p class="label-caps" style="margin:16px 0 10px;">Duration</p>
+                    <p class="label-caps" style="margin:16px 0 10px;">Session Duration</p>
                     <div class="duration-btns">
-                        <div class="duration-btn" data-min="15" onclick="BookingWidget.setDuration(15)">15 min<br><small style="font-size:10px;color:inherit;">₹{{ ($mentor->rate_per_minute ?? 10) * 15 }}</small></div>
-                        <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30 min<br><small style="font-size:10px;color:inherit;">₹{{ ($mentor->rate_per_minute ?? 10) * 30 }}</small></div>
-                        <div class="duration-btn" data-min="60" onclick="BookingWidget.setDuration(60)">60 min<br><small style="font-size:10px;color:inherit;">₹{{ ($mentor->rate_per_minute ?? 10) * 60 }}</small></div>
-                        <div class="duration-btn" data-min="90" onclick="BookingWidget.setDuration(90)">90 min<br><small style="font-size:10px;color:inherit;">₹{{ ($mentor->rate_per_minute ?? 10) * 90 }}</small></div>
+                        <div class="duration-btn" data-min="15" onclick="BookingWidget.setDuration(15)">15m</div>
+                        <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30m</div>
+                        <div class="duration-btn" data-min="60" onclick="BookingWidget.setDuration(60)">60m</div>
+                        <div class="duration-btn" data-min="90" onclick="BookingWidget.setDuration(90)">90m</div>
                     </div>
 
-                    {{-- Summary --}}
+                    <p class="label-caps" style="margin:16px 0 10px;">Session Details</p>
+                    <div class="form-group">
+                        <label class="form-label">Topic <span style="color:var(--error)">*</span></label>
+                        <input type="text" class="form-input" id="booking-topic" placeholder="What would you like to discuss?" maxlength="255">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notes (optional)</label>
+                        <textarea class="form-input" rows="2" id="booking-agenda" placeholder="Any additional context..."></textarea>
+                    </div>
+
                     <div class="booking-summary" style="margin-top:16px;">
                         <div class="booking-summary-row"><span>Date</span><span id="bk-date">—</span></div>
                         <div class="booking-summary-row"><span>Time</span><span id="bk-time">—</span></div>
@@ -186,9 +202,8 @@
                     <input type="hidden" name="booking_amount">
 
                     <button class="btn btn-primary btn-full btn-lg" style="margin-top:16px;" onclick="confirmBooking()">
-                        ✓ Book This Session
+                        Book Session
                     </button>
-                    <p style="font-size:11px;color:var(--text-3);text-align:center;margin-top:8px;">Free cancellation up to 2 hrs before</p>
                 </div>
             </div>
 
@@ -216,6 +231,12 @@ function confirmBooking(paymentMethod) {
     const data = BookingWidget.getBookingData();
     if (!data) return;
     data.mentor_id = document.getElementById('booking-mentor-id').value;
+    data.title = document.getElementById('booking-topic')?.value?.trim() || '';
+    data.agenda = document.getElementById('booking-agenda')?.value || '';
+    if (!data.title) {
+        showToast('error', 'Please enter a topic for the session.');
+        return;
+    }
     if (paymentMethod) data.payment_method = paymentMethod;
 
     @guest

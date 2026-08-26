@@ -187,31 +187,55 @@
             <button class="modal-close" onclick="closeModal('booking-modal')">✕</button>
         </div>
         <div class="modal-body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+            <div style="display:grid;grid-template-columns:1.15fr .85fr;gap:28px;">
                 {{-- Left: Picker --}}
-                <div>
-                    <div id="availabilitySummary" style="margin-bottom:8px;"></div>
-
-                    <p class="label-caps" style="margin-bottom:12px;">Select Date</p>
-                    <div id="dateGrid" class="calendar-grid"></div>
-
-                    <p class="label-caps" style="margin:20px 0 12px;">Select Time</p>
-                    <div id="timeGrid" class="time-grid">
-                        <div class="text-sm text-muted" style="grid-column:1/-1;">Pick an available date</div>
+                <div class="booking-flow">
+                    <div class="booking-card">
+                        <p class="label-caps" style="margin-bottom:12px;">Mentor Availability</p>
+                        <div id="availabilitySummary"></div>
                     </div>
 
-                    <p class="label-caps" style="margin:20px 0 12px;">Duration</p>
-                    <div class="duration-btns">
-                        <div class="duration-btn" data-min="15" onclick="BookingWidget.setDuration(15)">15 min</div>
-                        <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30 min</div>
-                        <div class="duration-btn" data-min="60" onclick="BookingWidget.setDuration(60)">60 min</div>
-                        <div class="duration-btn" data-min="90" onclick="BookingWidget.setDuration(90)">90 min</div>
+                    <div class="booking-card">
+                        <div class="booking-cal-head">
+                            <p class="label-caps" style="margin:0;">Select a Date</p>
+                            <div class="booking-cal-nav">
+                                <button type="button" class="btn btn-ghost btn-sm" id="cal-prev-month" aria-label="Previous month">‹</button>
+                                <strong id="cal-month-label"></strong>
+                                <button type="button" class="btn btn-ghost btn-sm" id="cal-next-month" aria-label="Next month">›</button>
+                            </div>
+                        </div>
+                        <div id="dateGrid" class="calendar-grid calendar-grid--month"></div>
                     </div>
 
-                    <div class="form-group" style="margin-top:20px;">
-                        <label class="form-label">Session Goal (optional)</label>
-                        <textarea name="agenda" class="form-input" rows="2" id="booking-agenda"
-                                  placeholder="What do you want to achieve in this session?"></textarea>
+                    <div class="booking-card">
+                        <p class="label-caps" style="margin-bottom:12px;" id="slots-heading">Available Slots</p>
+                        <div id="timeGrid" class="time-grid">
+                            <div class="text-sm text-muted" style="grid-column:1/-1;">Pick an available date</div>
+                        </div>
+                    </div>
+
+                    <div class="booking-card">
+                        <p class="label-caps" style="margin-bottom:12px;">Session Duration</p>
+                        <div class="duration-btns">
+                            <div class="duration-btn" data-min="15" onclick="BookingWidget.setDuration(15)">15m</div>
+                            <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30m</div>
+                            <div class="duration-btn" data-min="60" onclick="BookingWidget.setDuration(60)">60m</div>
+                            <div class="duration-btn" data-min="90" onclick="BookingWidget.setDuration(90)">90m</div>
+                        </div>
+                    </div>
+
+                    <div class="booking-card">
+                        <p class="label-caps" style="margin-bottom:12px;">Session Details</p>
+                        <div class="form-group">
+                            <label class="form-label">Topic <span style="color:var(--error)">*</span></label>
+                            <input type="text" name="title" class="form-input" id="booking-topic"
+                                   placeholder="What would you like to discuss?" maxlength="255" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Notes (optional)</label>
+                            <textarea name="agenda" class="form-input" rows="3" id="booking-agenda"
+                                      placeholder="Any additional context..."></textarea>
+                        </div>
                     </div>
                 </div>
 
@@ -225,10 +249,6 @@
                         <div class="booking-summary-row"><span>Duration</span><strong id="bk-duration">30 min</strong></div>
                         <div class="booking-summary-row"><span>Rate</span><strong id="bk-rate">—</strong></div>
                         <div class="booking-summary-row"><span>Total</span><strong id="bk-total" style="color:var(--brand);font-size:18px;">—</strong></div>
-                    </div>
-
-                    <div style="background:var(--success-muted);border:1px solid rgba(34,197,94,.25);border-radius:var(--radius);padding:12px;margin-top:16px;font-size:12px;color:var(--text-2);">
-                        ✅ Paid from wallet, or free if your active plan still has included sessions this month. Free cancellation up to 2 hours before.
                     </div>
 
                     <input type="hidden" name="booking_mentor_id" id="booking-mentor-id">
@@ -287,7 +307,12 @@ function confirmBooking(paymentMethod) {
     if (!data) return;
 
     data.mentor_id = document.getElementById('booking-mentor-id').value;
+    data.title     = document.getElementById('booking-topic')?.value?.trim() || '';
     data.agenda    = document.getElementById('booking-agenda')?.value || '';
+    if (!data.title) {
+        showToast('error', 'Please enter a topic for the session.');
+        return;
+    }
     if (paymentMethod) data.payment_method = paymentMethod;
 
     AjaxPost('{{ route('mentee.sessions.book') }}', data, {

@@ -512,11 +512,13 @@
        let selectedDate = null,
            selectedTime = null,
            selectedDuration = 30,
+           selectedSlotMax = null,
            ratePerMin = 0,
            mentorId = null,
-           dayAvailability = {};
-
-       const DEFAULT_SLOTS = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+           dayAvailability = {},
+           weeklySummary = [],
+           viewYear = null,
+           viewMonth = null; // 0-indexed
 
        function resolveMentorId() {
            return (
@@ -535,6 +537,24 @@
            return `${y}-${m}-${day}`;
        }
 
+       function formatDisplayTime(hhmm) {
+           if (!hhmm) return "—";
+           const [h, m] = hhmm.split(":").map(Number);
+           const ampm = h >= 12 ? "PM" : "AM";
+           const hr = ((h + 11) % 12) + 1;
+           return `${hr}:${String(m).padStart(2, "0")} ${ampm}`;
+       }
+
+       function formatPrettyDate(iso) {
+           if (!iso) return "—";
+           const d = new Date(iso + "T12:00:00");
+           return d.toLocaleDateString("en-IN", {
+               weekday: "short",
+               day: "numeric",
+               month: "short",
+           });
+       }
+
        function renderSlots(slots, options = []) {
            const grid = document.getElementById("timeGrid");
            if (!grid) return;
@@ -545,7 +565,7 @@
            });
            if (!slots || !slots.length) {
                grid.innerHTML =
-                   '<div class="text-sm text-muted" style="grid-column:1/-1;text-align:center;padding:12px;">No slots for this duration on this day</div>';
+                   '<div class="text-sm text-muted" style="grid-column:1/-1;text-align:center;padding:12px;">No available slots for this duration</div>';
                return;
            }
            slots.forEach((slot) => {
@@ -555,20 +575,19 @@
                div.type = "button";
                div.className = "time-slot";
                div.dataset.time = start;
-               if (opt && opt.duration) {
-                   div.dataset.duration = String(opt.duration);
-                   div.innerHTML = `<span>${start}</span><small style="display:block;opacity:.75;font-size:11px;">${opt.duration} min</small>`;
-               } else {
-                   div.textContent = start;
-               }
+               if (opt && opt.duration) div.dataset.maxDuration = String(opt.duration);
+               div.textContent = formatDisplayTime(start);
                div.addEventListener("click", function (e) {
                    e.preventDefault();
                    e.stopPropagation();
                    document.querySelectorAll("#timeGrid .time-slot").forEach((s) => s.classList.remove("selected"));
                    div.classList.add("selected");
                    selectedTime = start;
-                   if (opt && opt.duration) {
-                       selectedDuration = Number(opt.duration) || selectedDuration;
+                   selectedSlotMax = opt && opt.duration ? Number(opt.duration) : null;
+                   constrainDurationButtons();
+                   if (selectedSlotMax && selectedDuration > selectedSlotMax) {
+                       const allowed = [15, 30, 60, 90].filter((m) => m <= selectedSlotMax);
+                       selectedDuration = allowed.length ? allowed[allowed.length - 1] : 15;
                        document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
                        document.querySelector(`.duration-btn[data-min="${selectedDuration}"]`)?.classList.add("selected");
                    }
@@ -578,15 +597,29 @@
            });
        }
 
+       function constrainDurationButtons() {
+           document.querySelectorAll(".duration-btn").forEach((btn) => {
+               const min = Number(btn.dataset.min);
+               const tooLong = selectedSlotMax != null && min > selectedSlotMax;
+               btn.classList.toggle("is-disabled", tooLong);
+               btn.style.opacity = tooLong ? "0.35" : "";
+               btn.style.pointerEvents = tooLong ? "none" : "";
+           });
+       }
+
        function updateSummary() {
            const el = (id) => document.getElementById(id);
-           if (el("bk-date")) el("bk-date").textContent = selectedDate || "—";
-           if (el("bk-time")) el("bk-time").textContent = selectedTime || "—";
+           if (el("bk-date")) el("bk-date").textContent = selectedDate ? formatPrettyDate(selectedDate) : "—";
+           if (el("bk-time")) el("bk-time").textContent = formatDisplayTime(selectedTime);
            if (el("bk-duration")) el("bk-duration").textContent = selectedDuration + " min";
            const total = selectedDuration * ratePerMin;
            if (el("bk-total")) el("bk-total").textContent = "₹" + total.toLocaleString("en-IN");
-           const confirmTotal = document.querySelector("[data-confirm-total]");
-           if (confirmTotal) confirmTotal.textContent = "₹" + total.toLocaleString("en-IN");
+           const heading = document.getElementById("slots-heading");
+           if (heading) {
+               heading.textContent = selectedDate
+                   ? `Available Slots on ${formatPrettyDate(selectedDate)}`
+                   : "Available Slots";
+           }
            ["date", "time", "duration", "amount"].forEach((k) => {
                const inp = document.querySelector(`[name="booking_${k}"]`);
                if (inp) {
@@ -603,64 +636,68 @@
        }
 
        function renderWeeklySummary(summary) {
+           weeklySummary = Array.isArray(summary) ? summary : [];
            const wrap = document.getElementById("availabilitySummary");
            if (!wrap) return;
-           if (!Array.isArray(summary) || !summary.length) {
+           if (!weeklySummary.length) {
                wrap.innerHTML = "";
                return;
            }
-           const chips = summary
-               .map((d) => {
-                   const hours = d.enabled
-                       ? d.windows || (d.from && d.to ? `${d.from}–${d.to}` : "Open")
-                       : "Off";
-                   return `<span class="avail-chip ${d.enabled ? "is-on" : "is-off"}" title="${d.label}: ${hours}">
-                        <strong>${d.label}</strong>
-                        <small>${hours}</small>
-                    </span>`;
+           const letters = ["M", "T", "W", "T", "F", "S", "S"];
+           const circles = weeklySummary
+               .map((d, i) => {
+                   const title = d.enabled
+                       ? `${d.label}: ${d.windows || (d.from && d.to ? `${d.from}–${d.to}` : "Open")}`
+                       : `${d.label}: Off`;
+                   return `<div class="avail-day-circle ${d.enabled ? "is-on" : "is-off"}" title="${title}">
+                        <span>${letters[i] || d.label?.[0] || "?"}</span>
+                        ${d.enabled ? '<i class="avail-day-dot"></i>' : ""}
+                    </div>`;
                })
                .join("");
-           wrap.innerHTML = `
-                <p class="label-caps" style="margin-bottom:8px;">Mentor weekly availability</p>
-                <div class="avail-chip-row">${chips}</div>
-            `;
+           wrap.innerHTML = `<div class="avail-day-row">${circles}</div>`;
        }
 
        function markDateButtons() {
-           document.querySelectorAll("#dateGrid .cal-day").forEach((btn) => {
+           document.querySelectorAll("#dateGrid .cal-day[data-date]").forEach((btn) => {
                const info = dayAvailability[btn.dataset.date];
                const isToday = btn.classList.contains("today");
                btn.classList.remove("disabled", "unavailable", "has-slots");
                btn.removeAttribute("disabled");
-               btn.title = isToday ? "Today" : "";
-               if (!info) return;
+               btn.querySelector(".cal-dot")?.remove();
+               if (!info) {
+                   if (btn.dataset.inMonth === "1") {
+                       btn.classList.add("disabled", "unavailable");
+                       btn.disabled = true;
+                   }
+                   return;
+               }
                if (!info.available) {
                    btn.classList.add("disabled", "unavailable");
                    btn.disabled = true;
                    btn.title = isToday ? "No remaining slots today" : "Mentor not available";
                } else {
                    btn.classList.add("has-slots");
-                   const detail = info.label
-                       ? `${info.slot_count} slots · ${info.label}`
-                       : `${info.slot_count} slots available`;
-                   btn.title = isToday ? `Today · ${detail}` : detail;
+                   const dot = document.createElement("i");
+                   dot.className = "cal-dot";
+                   btn.appendChild(dot);
+                   btn.title = `${info.slot_count || ""} slots available`.trim();
+               }
+               if (selectedDate && btn.dataset.date === selectedDate) {
+                   btn.classList.add("selected");
                }
            });
        }
 
        function selectDate(btn) {
-           if (!btn || btn.classList.contains("disabled") || btn.disabled) return;
+           if (!btn || btn.classList.contains("disabled") || btn.disabled || !btn.dataset.date) return;
            document.querySelectorAll("#dateGrid .cal-day").forEach((c) => c.classList.remove("selected"));
            btn.classList.add("selected");
            selectedDate = btn.dataset.date;
            selectedTime = null;
+           selectedSlotMax = null;
+           constrainDurationButtons();
            updateSummary();
-
-           const info = dayAvailability[selectedDate];
-           if (info && !info.available) {
-               renderSlots([]);
-               return;
-           }
 
            const grid = document.getElementById("timeGrid");
            if (grid) {
@@ -691,13 +728,17 @@
                        renderSlots([]);
                        return;
                    }
-                   if (dayAvailability[date]) {
-                       dayAvailability[date].available = !!data.available && (data.slots || []).length > 0;
-                       dayAvailability[date].slot_count = (data.slots || []).length;
-                       if (data.label) dayAvailability[date].label = data.label;
-                       markDateButtons();
-                   }
+                   dayAvailability[date] = {
+                       ...(dayAvailability[date] || {}),
+                       date,
+                       available: !!data.available && (data.slots || []).length > 0,
+                       slot_count: (data.slots || []).length,
+                       label: data.label || dayAvailability[date]?.label,
+                   };
+                   markDateButtons();
                    selectedTime = null;
+                   selectedSlotMax = null;
+                   constrainDurationButtons();
                    renderSlots(
                        Array.isArray(data.slots) ? data.slots : [],
                        Array.isArray(data.slot_options) ? data.slot_options : []
@@ -707,11 +748,84 @@
                .catch(() => renderSlots([]));
        }
 
-       function loadWeekOverview() {
+       function renderMonthCalendar() {
+           const grid = document.getElementById("dateGrid");
+           const label = document.getElementById("cal-month-label");
+           if (!grid) return;
+
+           const now = new Date();
+           now.setHours(12, 0, 0, 0);
+           if (viewYear == null || viewMonth == null) {
+               viewYear = now.getFullYear();
+               viewMonth = now.getMonth();
+           }
+
+           const first = new Date(viewYear, viewMonth, 1, 12);
+           const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+           const startWeekday = first.getDay(); // 0 Sun
+
+           if (label) {
+               label.textContent = first.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+           }
+
+           grid.innerHTML = "";
+           ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((d) => {
+               const h = document.createElement("div");
+               h.className = "cal-weekday";
+               h.textContent = d;
+               grid.appendChild(h);
+           });
+
+           for (let i = 0; i < startWeekday; i++) {
+               const empty = document.createElement("div");
+               empty.className = "cal-day is-empty";
+               grid.appendChild(empty);
+           }
+
+           const todayStr = localDateString(now);
+           for (let day = 1; day <= daysInMonth; day++) {
+               const d = new Date(viewYear, viewMonth, day, 12);
+               const iso = localDateString(d);
+               const btn = document.createElement("button");
+               btn.type = "button";
+               btn.className = "cal-day";
+               btn.dataset.date = iso;
+               btn.dataset.inMonth = "1";
+               if (iso === todayStr) btn.classList.add("today");
+               if (iso < todayStr) {
+                   btn.classList.add("disabled", "unavailable");
+                   btn.disabled = true;
+               }
+               btn.innerHTML = `<span class="cal-day-num">${day}</span>`;
+               btn.addEventListener("click", function (e) {
+                   e.preventDefault();
+                   e.stopPropagation();
+                   selectDate(btn);
+               });
+               grid.appendChild(btn);
+           }
+
+           markDateButtons();
+       }
+
+       function loadMonthOverview() {
            const id = resolveMentorId();
            if (!id) return Promise.resolve();
 
-           return fetch(`/api/mentors/${id}/availability?week=1&days=14`, {
+           const start = new Date(viewYear, viewMonth, 1, 12);
+           const today = new Date();
+           today.setHours(12, 0, 0, 0);
+           const fetchStart = start < today ? today : start;
+           const end = new Date(viewYear, viewMonth + 1, 0, 12);
+           const days = Math.max(1, Math.ceil((end - fetchStart) / 86400000) + 1);
+
+           const qs = new URLSearchParams({
+               week: "1",
+               days: String(Math.min(42, days)),
+               start: localDateString(fetchStart),
+           });
+
+           return fetch(`/api/mentors/${id}/availability?${qs.toString()}`, {
                headers: {
                    "X-Requested-With": "XMLHttpRequest",
                    Accept: "application/json",
@@ -720,81 +834,96 @@
                .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
                .then(({ ok, data }) => {
                    if (!ok || !data) return;
-                   dayAvailability = {};
                    (data.days || []).forEach((d) => {
                        dayAvailability[d.date] = d;
                    });
-                   renderWeeklySummary(data.weekly_summary || []);
+                   if (data.weekly_summary) renderWeeklySummary(data.weekly_summary);
                    markDateButtons();
 
-                   // Auto-select first available day
-                   const firstOpen = document.querySelector("#dateGrid .cal-day.has-slots:not(.disabled)");
-                   if (firstOpen && !selectedDate) {
-                       selectDate(firstOpen);
+                   if (!selectedDate) {
+                       const firstOpen = document.querySelector("#dateGrid .cal-day.has-slots:not(.disabled)");
+                       if (firstOpen) selectDate(firstOpen);
                    }
                })
-               .catch(() => {
-                   /* keep calendar clickable; slots load per date */
+               .catch(() => {});
+       }
+
+       function bindMonthNav() {
+           const prev = document.getElementById("cal-prev-month");
+           const next = document.getElementById("cal-next-month");
+           if (prev && !prev.dataset.bound) {
+               prev.dataset.bound = "1";
+               prev.addEventListener("click", () => {
+                   viewMonth -= 1;
+                   if (viewMonth < 0) {
+                       viewMonth = 11;
+                       viewYear -= 1;
+                   }
+                   selectedDate = null;
+                   selectedTime = null;
+                   renderMonthCalendar();
+                   loadMonthOverview();
+                   updateSummary();
                });
+           }
+           if (next && !next.dataset.bound) {
+               next.dataset.bound = "1";
+               next.addEventListener("click", () => {
+                   viewMonth += 1;
+                   if (viewMonth > 11) {
+                       viewMonth = 0;
+                       viewYear += 1;
+                   }
+                   selectedDate = null;
+                   selectedTime = null;
+                   renderMonthCalendar();
+                   loadMonthOverview();
+                   updateSummary();
+               });
+           }
        }
 
        return {
            init(rate, id = null) {
                ratePerMin = Number(rate) || 0;
                mentorId = id != null && id !== "" ? String(id) : null;
-               if (!mentorId) {
-                   mentorId = resolveMentorId();
-               }
+               if (!mentorId) mentorId = resolveMentorId();
                selectedDate = null;
                selectedTime = null;
                selectedDuration = 30;
+               selectedSlotMax = null;
                dayAvailability = {};
+               const now = new Date();
+               viewYear = now.getFullYear();
+               viewMonth = now.getMonth();
 
-               document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
+               document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected", "is-disabled"));
                document.querySelector('.duration-btn[data-min="30"]')?.classList.add("selected");
+               constrainDurationButtons();
 
                const timeGrid = document.getElementById("timeGrid");
                if (timeGrid) {
                    timeGrid.innerHTML =
-                       '<div class="text-sm text-muted" style="grid-column:1/-1;">Pick an available date</div>';
+                       '<div class="text-sm text-muted" style="grid-column:1/-1;text-align:center;padding:12px;">Pick an available date</div>';
                }
-
                const summary = document.getElementById("availabilitySummary");
-               if (summary) {
-                   summary.innerHTML =
-                       '<p class="avail-hint">Loading mentor availability…</p>';
-               }
+               if (summary) summary.innerHTML = '<p class="avail-hint">Loading…</p>';
 
-               const grid = document.getElementById("dateGrid");
-               if (grid) {
-                   grid.innerHTML = "";
-                   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                   for (let i = 0; i < 14; i++) {
-                       const d = new Date();
-                       d.setHours(12, 0, 0, 0);
-                       d.setDate(d.getDate() + i); // include today
-                       const btn = document.createElement("button");
-                       btn.type = "button";
-                       btn.className = "cal-day" + (i === 0 ? " today" : "");
-                       btn.innerHTML = `<span class="cal-day-label">${days[d.getDay()]}</span><span class="cal-day-num">${d.getDate()}</span>`;
-                       btn.dataset.date = localDateString(d);
-                       if (i === 0) btn.title = "Today";
-                       btn.addEventListener("click", function (e) {
-                           e.preventDefault();
-                           e.stopPropagation();
-                           selectDate(btn);
-                       });
-                       grid.appendChild(btn);
-                   }
-               }
+               bindMonthNav();
+               renderMonthCalendar();
                updateSummary();
-               loadWeekOverview();
+               loadMonthOverview();
            },
 
            selectDate,
            loadSlots,
            setDuration(min) {
-               selectedDuration = Number(min) || 30;
+               const next = Number(min) || 30;
+               if (selectedSlotMax != null && next > selectedSlotMax) {
+                   showToast("error", `This slot is only ${selectedSlotMax} minutes. Choose a shorter duration.`);
+                   return;
+               }
+               selectedDuration = next;
                selectedTime = null;
                document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
                document.querySelector(`.duration-btn[data-min="${selectedDuration}"]`)?.classList.add("selected");
@@ -807,12 +936,12 @@
                    showToast("error", "Please select an available date.");
                    return null;
                }
-               if (dayAvailability[selectedDate] && !dayAvailability[selectedDate].available) {
-                   showToast("error", "Mentor is not available on this date.");
-                   return null;
-               }
                if (!selectedTime) {
                    showToast("error", "Please select a time slot.");
+                   return null;
+               }
+               if (selectedSlotMax != null && selectedDuration > selectedSlotMax) {
+                   showToast("error", `This slot is only ${selectedSlotMax} minutes long.`);
                    return null;
                }
                return {
