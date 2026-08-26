@@ -17,9 +17,6 @@
     <a href="{{ route('mentor.availability') }}" class="sidebar-item @if(request()->routeIs('mentor.availability*')) active @endif">
         <span class="si-icon">⏰</span> Set Availability
     </a>
-    <a href="{{ route('mentor.notes') }}" class="sidebar-item @if(request()->routeIs('mentor.notes*')) active @endif">
-        <span class="si-icon">📝</span> Session Notes
-    </a>
 
     <div class="sidebar-section-label">Mentees</div>
     <a href="{{ route('mentor.requests') }}" class="sidebar-item @if(request()->routeIs('mentor.requests*')) active @endif">

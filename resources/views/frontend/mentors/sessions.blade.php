@@ -95,7 +95,7 @@
                         @endif
                     </div>
 
-                    <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:flex-end;">
+                    <div class="session-card-actions">
                         <a href="{{ route('mentor.sessions.show', $session->id) }}" class="btn btn-outline btn-sm">View</a>
                         @if($statusKey === 'upcoming')
                             @if($session->canJoinCall())
@@ -107,8 +107,6 @@
                             </button>
                             <button type="button" class="btn btn-ghost btn-sm" onclick="completeSession({{ $session->id }})">Mark complete</button>
                             <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="declineSession({{ $session->id }})">Cancel</button>
-                        @elseif($statusKey === 'completed')
-                            <a href="{{ route('mentor.sessions.show', $session->id) }}" class="btn btn-ghost btn-sm">📝 Session Notes</a>
                         @endif
                     </div>
                 </div>

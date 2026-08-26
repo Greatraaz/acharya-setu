@@ -2499,6 +2499,16 @@
        color: var(--text-2);
    }
 
+   .session-card-actions {
+       display: flex;
+       flex-wrap: wrap;
+       gap: 8px;
+       flex-shrink: 0;
+       align-items: center;
+       justify-content: flex-end;
+       max-width: 100%;
+   }
+
    .session-toolbar {
        display: flex;
        flex-wrap: wrap;

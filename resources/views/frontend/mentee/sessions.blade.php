@@ -107,7 +107,7 @@
                         @endif
                     </div>
 
-                    <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:flex-end;">
+                    <div class="session-card-actions">
                         <a href="{{ route('mentee.sessions.show', $session->id) }}" class="btn btn-outline btn-sm">View</a>
                         @if($session->sessionInvoice)
                             <a href="{{ route('mentee.session-invoices.download', $session->sessionInvoice) }}" class="btn btn-ghost btn-sm">Download invoice</a>
