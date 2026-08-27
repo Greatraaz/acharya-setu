@@ -15,21 +15,80 @@ class MentorsController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $q = User::where('role', 'mentor')->where('is_active', true);
-        if ($s = $request->search) {
-            $q->where(fn ($x) => $x->where('name', 'like', "%$s%")->orWhere('field', 'like', "%$s%")->orWhere('company', 'like', "%$s%"));
-        }
-        if ($f = $request->field) {
-            $q->where('field', 'like', "%$f%");
-        }
-        $mentors = $q->get(['id', 'name', 'field', 'expertise', 'bio', 'rating', 'total_sessions', 'avatar_url', 'gender', 'company', 'designation', 'experience_years'])
-            ->map(fn ($m) => array_merge($m->toArray(), [
-                'available' => true,
-                'nextSlot'  => 'Tomorrow 10 AM',
-                'initials'  => strtoupper(implode('', array_map(fn ($p) => $p[0], array_slice(explode(' ', $m->name), 0, 2)))),
-            ]));
+        $data = $request->validate([
+            'search'     => 'nullable|string|max:100',
+            'field'      => 'nullable|string|max:100',
+            'company'    => 'nullable|string|max:100',
+            'gender'     => 'nullable|string|max:20',
+            'min_rating' => 'nullable|numeric|min:0|max:5',
+            'sort'       => 'nullable|in:best,rating,sessions,name',
+            'per_page'   => 'nullable|integer|min:1|max:100',
+        ]);
 
-        return response()->json(['mentors' => $mentors]);
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+        $sort    = $data['sort'] ?? 'best';
+
+        $query = User::where('role', 'mentor')
+            ->where('is_active', true)
+            ->where('mentor_status', 'approved')
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('field', 'like', '%'.$search.'%')
+                        ->orWhere('company', 'like', '%'.$search.'%')
+                        ->orWhere('designation', 'like', '%'.$search.'%')
+                        ->orWhere('bio', 'like', '%'.$search.'%');
+                });
+            })
+            ->when(! empty($data['field']), fn ($q) => $q->where('field', 'like', '%'.$data['field'].'%'))
+            ->when(! empty($data['company']), fn ($q) => $q->where('company', 'like', '%'.$data['company'].'%'))
+            ->when(! empty($data['gender']), fn ($q) => $q->where('gender', $data['gender']))
+            ->when(isset($data['min_rating']), fn ($q) => $q->where('rating', '>=', (float) $data['min_rating']));
+
+        match ($sort) {
+            'rating'   => $query->orderByDesc('rating'),
+            'sessions' => $query->orderByDesc('total_sessions'),
+            'name'     => $query->orderBy('name'),
+            default    => $query->orderByDesc('rating')->orderByDesc('total_sessions'),
+        };
+
+        $paginator = $query
+            ->paginate($perPage, [
+                'id', 'name', 'field', 'expertise', 'bio', 'rating', 'total_sessions',
+                'avatar_url', 'gender', 'company', 'designation', 'experience_years',
+                'rate_per_minute', 'slug',
+            ])
+            ->withQueryString();
+
+        $mentors = collect($paginator->items())->map(fn ($m) => array_merge($m->toArray(), [
+            'available' => true,
+            'nextSlot'  => null,
+            'initials'  => strtoupper(implode('', array_map(
+                fn ($p) => $p[0] ?? '',
+                array_slice(explode(' ', (string) $m->name), 0, 2)
+            ))),
+        ]))->values();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'mentors'    => $mentors,
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'     => $search !== '' ? $search : null,
+                'field'      => $data['field'] ?? null,
+                'company'    => $data['company'] ?? null,
+                'gender'     => $data['gender'] ?? null,
+                'min_rating' => isset($data['min_rating']) ? (float) $data['min_rating'] : null,
+                'sort'       => $sort,
+            ],
+        ]);
     }
 
     public function show(int $id): JsonResponse

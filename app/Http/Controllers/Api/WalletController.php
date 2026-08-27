@@ -38,23 +38,51 @@ class WalletController extends Controller
 
     public function transactions(Request $request): JsonResponse
     {
-        $transactions = WalletTransaction::where('user_id', $request->user()->id)
+        $data = $request->validate([
+            'search'    => 'nullable|string|max:100',
+            'type'      => 'nullable|in:credit,debit,refund,transfer_in,transfer_out',
+            'status'    => 'nullable|in:pending,completed,failed,cancelled',
+            'date_from' => 'nullable|date',
+            'date_to'   => 'nullable|date|after_or_equal:date_from',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
+        $paginator = WalletTransaction::where('user_id', $request->user()->id)
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('description', 'like', '%'.$search.'%')
+                        ->orWhere('reference', 'like', '%'.$search.'%');
+                });
+            })
+            ->when(! empty($data['type']), fn ($q) => $q->where('type', $data['type']))
+            ->when(! empty($data['status']), fn ($q) => $q->where('status', $data['status']))
+            ->forDateRange($data['date_from'] ?? null, $data['date_to'] ?? null)
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString();
 
         return response()->json([
             'status'       => true,
             'statuscode'   => 200,
-            'transactions' => collect($transactions->items())
+            'transactions' => collect($paginator->items())
                 ->map(fn (WalletTransaction $txn) => $this->formatTransaction($txn))
                 ->values(),
-            'pagination'   => [
-                'total'        => $transactions->total(),
-                'per_page'     => $transactions->perPage(),
-                'current_page' => $transactions->currentPage(),
-                'last_page'    => $transactions->lastPage(),
-                'from'         => $transactions->firstItem(),
-                'to'           => $transactions->lastItem(),
+            'meta'         => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'      => [
+                'search'    => $search !== '' ? $search : null,
+                'type'      => $data['type'] ?? null,
+                'status'    => $data['status'] ?? null,
+                'date_from' => $data['date_from'] ?? null,
+                'date_to'   => $data['date_to'] ?? null,
             ],
         ], 200);
     }

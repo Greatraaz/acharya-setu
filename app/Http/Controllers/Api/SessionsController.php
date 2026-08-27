@@ -21,6 +21,19 @@ class SessionsController extends Controller
             $u->role === 'mentee' ? $u->id : null
         );
 
+        $data = $request->validate([
+            'status'    => 'nullable|in:'.implode(',', array_keys(ConsultationSession::STATUSES)),
+            'date'      => 'nullable|date',
+            'date_from' => 'nullable|date',
+            'date_to'   => 'nullable|date|after_or_equal:date_from',
+            'search'    => 'nullable|string|max:100',
+            'q'         => 'nullable|string|max:100',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? $data['q'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
         $f = $u->role === 'mentor' ? 'mentor_id' : 'mentee_id';
         $query = ConsultationSession::where($f, $u->id)
             ->with([
@@ -28,66 +41,78 @@ class SessionsController extends Controller
                 'mentee:id,name,avatar_url',
                 'sessionInvoice',
                 'notes' => fn ($q) => $q->with('author:id,name,role,avatar_url')->latest(),
-            ]);
+            ])
+            ->when(! empty($data['status']), fn ($q) => $q->where('status', $data['status']))
+            ->when(! empty($data['date']), fn ($q) => $q->whereDate('scheduled_at', $data['date']))
+            ->when(! empty($data['date_from']), fn ($q) => $q->whereDate('scheduled_at', '>=', $data['date_from']))
+            ->when(! empty($data['date_to']), fn ($q) => $q->whereDate('scheduled_at', '<=', $data['date_to']))
+            ->when($search !== '', function ($inner) use ($search, $u) {
+                $inner->where(function ($q) use ($search, $u) {
+                    $q->where('title', 'like', '%'.$search.'%')
+                        ->orWhere('booking_ref', 'like', '%'.$search.'%');
+                    if ($u->role === 'mentee') {
+                        $q->orWhereHas('mentor', fn ($m) => $m->where('name', 'like', '%'.$search.'%'));
+                    } else {
+                        $q->orWhereHas('mentee', fn ($m) => $m->where('name', 'like', '%'.$search.'%'));
+                    }
+                });
+            })
+            ->orderByDesc('scheduled_at')
+            ->orderByDesc('id');
 
-        if ($request->filled('status') && array_key_exists($request->status, ConsultationSession::STATUSES)) {
-            $query->where('status', $request->status);
-        }
-        if ($request->filled('date')) {
-            $query->whereDate('scheduled_at', $request->date);
-        }
-        if ($search = trim((string) $request->input('q', ''))) {
-            $query->where(function ($inner) use ($search, $u) {
-                $inner->where('title', 'like', '%'.$search.'%')
-                    ->orWhere('booking_ref', 'like', '%'.$search.'%');
-                if ($u->role === 'mentee') {
-                    $inner->orWhereHas('mentor', fn ($m) => $m->where('name', 'like', '%'.$search.'%'));
-                } else {
-                    $inner->orWhereHas('mentee', fn ($m) => $m->where('name', 'like', '%'.$search.'%'));
-                }
-            });
-        }
+        $paginator = $query->paginate($perPage)->withQueryString();
 
-        $sessions = $query->orderByDesc('scheduled_at')
-            ->get()
-            ->map(fn ($s) => [
-                'id'             => $s->id,
-                'mentorId'       => $s->mentor_id,
-                'mentorName'     => $s->mentor?->name,
-                'mentorAvatar'   => $s->mentor?->avatar_url,
-                'mentorGender'   => $s->mentor?->gender,
-                'menteeId'       => $s->mentee_id,
-                'menteeName'     => $s->mentee?->name,
-                'menteeAvatar'   => $s->mentee?->avatar_url,
-                'date'           => $s->scheduled_at?->format('d M Y'),
-                'time'           => $s->scheduled_at?->format('h:i A'),
-                'scheduledAt'    => $s->scheduled_at?->toDateTimeString(),
-                'duration'       => $s->duration_minutes,
-                'status'         => $s->status,
-                'topic'          => $s->title,
-                'agenda'         => $s->agenda,
-                'notes'          => $s->notes->map(fn (SessionNote $note) => $this->formatNote($note))->values(),
-                'meetingLink'    => $s->meeting_link,
-                'channel'        => $s->meeting_channel,
-                'canJoinCall'    => $s->canJoinCall(),
-                'amountPaid'     => (float) $s->amount,
-                'paymentStatus'  => $s->payment_status,
-                'paymentMethod'  => $s->payment_method,
-                'paymentMethodLabel' => $s->paymentMethodLabel(),
-                'walletAmount'   => (float) ($s->wallet_amount ?? 0),
-                'razorpayAmount' => (float) ($s->razorpay_amount ?? 0),
-                'invoice'        => $s->sessionInvoice ? [
-                    'id'             => $s->sessionInvoice->id,
-                    'invoice_number' => $s->sessionInvoice->invoice_number,
-                ] : null,
-                'bookingRef'     => $s->booking_ref,
-            ]);
+        $sessions = collect($paginator->items())->map(fn ($s) => [
+            'id'             => $s->id,
+            'mentorId'       => $s->mentor_id,
+            'mentorName'     => $s->mentor?->name,
+            'mentorAvatar'   => $s->mentor?->avatar_url,
+            'mentorGender'   => $s->mentor?->gender,
+            'menteeId'       => $s->mentee_id,
+            'menteeName'     => $s->mentee?->name,
+            'menteeAvatar'   => $s->mentee?->avatar_url,
+            'date'           => $s->scheduled_at?->format('d M Y'),
+            'time'           => $s->scheduled_at?->format('h:i A'),
+            'scheduledAt'    => $s->scheduled_at?->toDateTimeString(),
+            'duration'       => $s->duration_minutes,
+            'status'         => $s->status,
+            'topic'          => $s->title,
+            'agenda'         => $s->agenda,
+            'notes'          => $s->notes->map(fn (SessionNote $note) => $this->formatNote($note))->values(),
+            'meetingLink'    => $s->meeting_link,
+            'channel'        => $s->meeting_channel,
+            'canJoinCall'    => $s->canJoinCall(),
+            'amountPaid'     => (float) $s->amount,
+            'paymentStatus'  => $s->payment_status,
+            'paymentMethod'  => $s->payment_method,
+            'paymentMethodLabel' => $s->paymentMethodLabel(),
+            'walletAmount'   => (float) ($s->wallet_amount ?? 0),
+            'razorpayAmount' => (float) ($s->razorpay_amount ?? 0),
+            'invoice'        => $s->sessionInvoice ? [
+                'id'             => $s->sessionInvoice->id,
+                'invoice_number' => $s->sessionInvoice->invoice_number,
+            ] : null,
+            'bookingRef'     => $s->booking_ref,
+        ])->values();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'sessions'   => $sessions,
             'statuses'   => ConsultationSession::STATUSES,
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'status'    => $data['status'] ?? null,
+                'date'      => $data['date'] ?? null,
+                'date_from' => $data['date_from'] ?? null,
+                'date_to'   => $data['date_to'] ?? null,
+                'search'    => $search !== '' ? $search : null,
+            ],
         ]);
     }
 

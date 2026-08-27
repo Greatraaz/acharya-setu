@@ -12,33 +12,72 @@ class JobsController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $q = JobListing::where('is_active', true);
-        if ($s = $request->search) {
-            $q->where(fn ($x) => $x->where('title', 'like', "%$s%")->orWhere('company', 'like', "%$s%"));
-        }
-        if ($t = $request->type) {
-            $q->where('type', $t);
-        }
-        if ($m = $request->mode) {
-            $q->where('mode', $m);
-        }
+        $data = $request->validate([
+            'search'            => 'nullable|string|max:100',
+            'type'              => 'nullable|in:full_time,part_time,internship,contract,freelance',
+            'job_type'          => 'nullable|in:full_time,part_time,internship,contract,freelance',
+            'mode'              => 'nullable|in:remote,onsite,hybrid',
+            'location_type'     => 'nullable|in:remote,onsite,hybrid',
+            'department'        => 'nullable|string|max:100',
+            'experience_level'  => 'nullable|in:entry,mid,senior,lead,executive',
+            'per_page'          => 'nullable|integer|min:1|max:100',
+        ]);
 
-        $jobs = $q->latest()->paginate(20);
+        $search   = trim((string) ($data['search'] ?? ''));
+        $jobType  = $data['job_type'] ?? $data['type'] ?? null;
+        $location = $data['location_type'] ?? $data['mode'] ?? null;
+        $perPage  = $data['per_page'] ?? 20;
+
+        $query = JobListing::query()
+            ->active()
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('title', 'like', '%'.$search.'%')
+                        ->orWhere('department', 'like', '%'.$search.'%')
+                        ->orWhere('location', 'like', '%'.$search.'%');
+                });
+            })
+            ->when($jobType, fn ($q) => $q->where('job_type', $jobType))
+            ->when($location, fn ($q) => $q->where('location_type', $location))
+            ->when(! empty($data['department']), fn ($q) => $q->where('department', $data['department']))
+            ->when(! empty($data['experience_level']), fn ($q) => $q->where('experience_level', $data['experience_level']))
+            ->latest('published_at')
+            ->latest('id');
+
+        $paginator = $query->paginate($perPage)->withQueryString();
 
         $appliedJobIds = JobApplication::where('user_id', $request->user()->id)
-            ->whereIn('jobId', $jobs->getCollection()->pluck('id'))
+            ->whereIn('jobId', collect($paginator->items())->pluck('id'))
             ->pluck('jobId')
             ->flip();
 
-        $jobs->getCollection()->transform(function (JobListing $job) use ($appliedJobIds) {
+        $jobs = collect($paginator->items())->map(function (JobListing $job) use ($appliedJobIds) {
             $applied = $appliedJobIds->has($job->id);
-            $job->applied = $applied;
-            $job->application_status = $applied ? 'applied' : null;
+            $row = $job->toArray();
+            $row['applied'] = $applied;
+            $row['application_status'] = $applied ? 'applied' : null;
 
-            return $job;
-        });
+            return $row;
+        })->values();
 
-        return response()->json($jobs);
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'jobs'       => $jobs,
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'           => $search !== '' ? $search : null,
+                'job_type'         => $jobType,
+                'location_type'    => $location,
+                'department'       => $data['department'] ?? null,
+                'experience_level' => $data['experience_level'] ?? null,
+            ],
+        ]);
     }
 
     public function store(Request $request): JsonResponse
@@ -120,9 +159,15 @@ class JobsController extends Controller
 
     public function myApplications(Request $request): JsonResponse
     {
-        $perPage = (int) $request->input('per_page', 20);
+        $data = $request->validate([
+            'search'   => 'nullable|string|max:100',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
 
-        $applications = JobApplication::query()
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
+        $paginator = JobApplication::query()
             ->where('user_id', $request->user()->id)
             ->with(['job' => fn ($q) => $q->select([
                 'id', 'title', 'slug', 'department', 'location', 'location_type',
@@ -130,20 +175,30 @@ class JobsController extends Controller
                 'salary_currency', 'salary_period', 'salary_hidden', 'status',
                 'deadline', 'is_featured', 'published_at',
             ])])
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('fullname', 'like', '%'.$search.'%')
+                        ->orWhere('jobRole', 'like', '%'.$search.'%')
+                        ->orWhereHas('job', fn ($job) => $job->where('title', 'like', '%'.$search.'%'));
+                });
+            })
             ->latest()
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->withQueryString();
 
         return response()->json([
             'success'      => true,
             'status'       => true,
-            'applications' => $applications->items(),
-            'pagination'   => [
-                'total'        => $applications->total(),
-                'per_page'     => $applications->perPage(),
-                'current_page' => $applications->currentPage(),
-                'last_page'    => $applications->lastPage(),
-                'from'         => $applications->firstItem(),
-                'to'           => $applications->lastItem(),
+            'statuscode'   => 200,
+            'applications' => collect($paginator->items())->values(),
+            'meta'         => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'      => [
+                'search' => $search !== '' ? $search : null,
             ],
         ]);
     }
