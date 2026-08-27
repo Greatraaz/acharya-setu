@@ -14,11 +14,37 @@ class InvoiceController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $invoices = PlanInvoice::with(['plan:id,name,plan_name'])
+        $data = $request->validate([
+            'search'    => 'nullable|string|max:100',
+            'status'    => 'nullable|string|max:50',
+            'date_from' => 'nullable|date',
+            'date_to'   => 'nullable|date|after_or_equal:date_from',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
+        $paginator = PlanInvoice::with(['plan:id,name,plan_name'])
             ->where('user_id', $request->user()->id)
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('invoice_number', 'like', '%'.$search.'%')
+                        ->orWhereHas('plan', function ($p) use ($search) {
+                            $p->where('name', 'like', '%'.$search.'%')
+                                ->orWhere('plan_name', 'like', '%'.$search.'%');
+                        });
+                });
+            })
+            ->when(! empty($data['status']), fn ($q) => $q->where('status', $data['status']))
+            ->when(! empty($data['date_from']), fn ($q) => $q->whereDate('invoice_date', '>=', $data['date_from']))
+            ->when(! empty($data['date_to']), fn ($q) => $q->whereDate('invoice_date', '<=', $data['date_to']))
             ->latest('invoice_date')
             ->latest('id')
-            ->get()
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $invoices = collect($paginator->items())
             ->map->toPublicArray()
             ->values();
 
@@ -27,7 +53,18 @@ class InvoiceController extends Controller
             'statuscode' => 200,
             'message'    => 'Invoices fetched successfully.',
             'data'       => $invoices,
-            'total'      => $invoices->count(),
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'    => $search !== '' ? $search : null,
+                'status'    => $data['status'] ?? null,
+                'date_from' => $data['date_from'] ?? null,
+                'date_to'   => $data['date_to'] ?? null,
+            ],
         ]);
     }
 

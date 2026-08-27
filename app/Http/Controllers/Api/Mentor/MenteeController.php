@@ -10,10 +10,19 @@ class MenteeController extends Controller
 {
     // ─────────────────────────────────────────────
     //  GET /mentor/mentees
+    //  Query: search, per_page, page
     // ─────────────────────────────────────────────
     public function index(Request $request): JsonResponse
     {
         $mentor = $request->user();
+
+        $data = $request->validate([
+            'search'   => 'nullable|string|max:100',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
 
         $enrolledIds = MenteeEnrollment::where('mentor_id', $mentor->id)->pluck('mentee_id');
         $assignedIds = User::where('assigned_mentor_id', $mentor->id)
@@ -22,18 +31,36 @@ class MenteeController extends Controller
 
         $menteeIds = $enrolledIds->merge($assignedIds)->unique()->values();
 
-        $mentees = User::whereIn('id', $menteeIds)
+        $paginator = User::whereIn('id', $menteeIds)
             ->where('role', 'mentee')
             ->with(['enrollments' => fn ($q) => $q->where('mentor_id', $mentor->id)->with('stream:id,name,slug,icon,color')])
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('email', 'like', '%'.$search.'%');
+                });
+            })
             ->orderBy('name')
-            ->get()
-            ->map(fn (User $mentee) => $this->formatMentee($mentee, $mentor->id));
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $mentees = collect($paginator->items())
+            ->map(fn (User $mentee) => $this->formatMentee($mentee, $mentor->id))
+            ->values();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
-            'count'      => $mentees->count(),
             'mentees'    => $mentees,
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search' => $search !== '' ? $search : null,
+            ],
         ]);
     }
 

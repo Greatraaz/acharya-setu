@@ -144,16 +144,57 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
     {
         $user = $request->user();
 
-        $channels = Channel::visibleTo($user)
+        $data = $request->validate([
+            'search'   => 'nullable|string|max:100',
+            'type'     => 'nullable|in:public,private',
+            'category' => 'nullable|string|max:50',
+            'joined'   => 'nullable|boolean',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search   = trim((string) ($data['search'] ?? ''));
+        $type     = $data['type'] ?? null;
+        $category = isset($data['category']) ? trim((string) $data['category']) : null;
+        $joined   = array_key_exists('joined', $data) ? (bool) $data['joined'] : null;
+        $perPage  = $data['per_page'] ?? 20;
+
+        $query = Channel::visibleTo($user)
             ->withCount(['allMessages', 'members'])
             ->with('creator:id,name,avatar_url,role')
-            ->latest()
-            ->get()
-            ->map(fn (Channel $c) => $c->toApiArray($user));
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where('name', 'like', '%'.$search.'%');
+            })
+            ->when($type, fn ($q) => $q->where('type', $type))
+            ->when($category !== null && $category !== '', fn ($q) => $q->where('category', $category))
+            ->when($joined === true, function ($q) use ($user) {
+                $q->whereHas('members', fn ($m) => $m->where('user_id', $user->id));
+            })
+            ->when($joined === false, function ($q) use ($user) {
+                $q->whereDoesntHave('members', fn ($m) => $m->where('user_id', $user->id));
+            })
+            ->latest();
+
+        $paginator = $query->paginate($perPage)->withQueryString();
+
+        $channels = collect($paginator->items())
+            ->map(fn (Channel $c) => $c->toApiArray($user))
+            ->values();
 
         return response()->json([
             'channels'   => $channels,
             'categories' => Channel::CATEGORIES,
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'   => $search !== '' ? $search : null,
+                'type'     => $type,
+                'category' => $category !== null && $category !== '' ? $category : null,
+                'joined'   => $joined,
+            ],
         ]);
     }
 
@@ -238,24 +279,55 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
 
         abort_unless($channel->canAccess($user), 403);
 
-        $members = $channel->members()
+        $data = $request->validate([
+            'search'   => 'nullable|string|max:100',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
+        $mentorsCount = $channel->members()
+            ->wherePivotIn('role', [Channel::ROLE_MENTOR, Channel::ROLE_ADMIN])
+            ->count();
+        $menteesCount = $channel->members()
+            ->wherePivot('role', Channel::ROLE_MENTEE)
+            ->count();
+
+        $query = $channel->members()
             ->select('users.id', 'users.name', 'users.avatar_url', 'users.role')
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where('users.name', 'like', '%'.$search.'%');
+            });
+
+        $paginator = $query
             ->orderByPivot('role')
-            ->get()
-            ->map(fn (User $m) => [
-                'id'         => $m->id,
-                'name'       => $m->name,
-                'avatar_url' => $m->avatar_url,
-                'role'       => $m->role,
-                'channel_role' => $m->pivot->role,
-                'joined_at'  => $m->pivot->created_at,
-            ]);
+            ->orderBy('users.name')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $members = collect($paginator->items())->map(fn (User $m) => [
+            'id'           => $m->id,
+            'name'         => $m->name,
+            'avatar_url'   => $m->avatar_url,
+            'role'         => $m->role,
+            'channel_role' => $m->pivot->role,
+            'joined_at'    => $m->pivot->created_at,
+        ])->values();
 
         return response()->json([
-            'members'        => $members,
-            'mentors_count'  => $members->where('channel_role', Channel::ROLE_MENTOR)->count()
-                + $members->where('channel_role', Channel::ROLE_ADMIN)->count(),
-            'mentees_count'  => $members->where('channel_role', Channel::ROLE_MENTEE)->count(),
+            'members'       => $members,
+            'mentors_count' => $mentorsCount,
+            'mentees_count' => $menteesCount,
+            'meta'          => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'       => [
+                'search' => $search !== '' ? $search : null,
+            ],
         ]);
     }
 
@@ -655,6 +727,10 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
 
     /**
      * Paginated top-level messages with replies.
+     *
+     * Query:
+     *  - per_page=30
+     *  - page=1
      */
     public function messages(Request $request, int $channelId): JsonResponse
     {
@@ -663,6 +739,12 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
 
         abort_unless($channel->canAccess($user), 403);
 
+        $data = $request->validate([
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $perPage = $data['per_page'] ?? 30;
+
         // Auto-join public channels when reading (unless previously removed)
         if ($channel->type === Channel::TYPE_PUBLIC && ! $channel->isMember($user) && $channel->canSelfJoin($user)) {
             $channel->addMember($user);
@@ -670,7 +752,8 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
 
         $paginator = $channel->messagesForUser($user)
             ->withCount('replies')
-            ->paginate(30);
+            ->paginate($perPage)
+            ->withQueryString();
 
         $channel->markRead($user);
 

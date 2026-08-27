@@ -43,6 +43,14 @@ $materialProgressMap = $canViewProgress
 
 $tracks = EducationStream::where('mentee_id', $menteeId)
     ->where('is_active', true)
+    ->when($request->filled('search'), function ($q) use ($request) {
+        $term = '%'.trim((string) $request->search).'%';
+        $q->where(function ($inner) use ($term) {
+            $inner->where('name', 'like', $term)
+                ->orWhere('slug', 'like', $term);
+        });
+    })
+    ->when($request->filled('track_id'), fn ($q) => $q->where('id', (int) $request->track_id))
     ->with([
         'mentor:id,name,email,avatar_url',
         'months' => fn ($q) => $q
@@ -69,7 +77,10 @@ $tracks = EducationStream::where('mentee_id', $menteeId)
             ->orderBy('sort_order'),
     ])
     ->orderBy('sort_order')
-    ->get()
+    ->paginate((int) $request->input('per_page', 20))
+    ->withQueryString();
+
+$trackItems = collect($tracks->items())
     ->map(fn (EducationStream $track) => $this->formatTrack(
         $track,
         $menteeId,
@@ -78,13 +89,13 @@ $tracks = EducationStream::where('mentee_id', $menteeId)
         $canViewProgress
     ));
 
-$tracks = $tracks->map(function (array $track) use ($canViewProgress) {
+$trackItems = $trackItems->map(function (array $track) use ($canViewProgress) {
     $track['summary'] = $canViewProgress ? $this->buildTrackSummary($track) : null;
     return $track;
 })->values();
 
 $trackSummaries = $canViewProgress
-    ? $tracks->map(fn (array $track) => $track['summary'])->values()
+    ? $trackItems->map(fn (array $track) => $track['summary'])->values()
     : collect();
 
 return response()->json([
@@ -93,8 +104,17 @@ return response()->json([
     'mentee_id'       => $menteeId,
     'summary'         => $canViewProgress ? StudentCurriculumProgress::getMenteeProgressSummary($menteeId) : null,
     'track_summaries' => $trackSummaries,
-    'tracks'          => $tracks,
-    'total'           => $tracks->count(),
+    'tracks'          => $trackItems,
+    'meta'            => [
+        'current_page' => $tracks->currentPage(),
+        'last_page'    => $tracks->lastPage(),
+        'per_page'     => $tracks->perPage(),
+        'total'        => $tracks->total(),
+    ],
+    'filters'         => [
+        'search'   => $request->filled('search') ? trim((string) $request->search) : null,
+        'track_id' => $request->filled('track_id') ? (int) $request->track_id : null,
+    ],
     'entitlement'     => [
         'progress_report_enabled' => $canViewProgress,
     ],
@@ -103,14 +123,55 @@ return response()->json([
 
 // ─────────────────────────────────────────────
 //  GET /mentee/curriculum/tasks
-//  Curriculum tasks only, with status + completion summary.
+//  Query: search, status, type, week_id, track_id,
+//         completed_from, completed_to, per_page, page
 // ─────────────────────────────────────────────
 public function tasks(Request $request): JsonResponse
 {
 $menteeId = $request->user()->id;
 $canViewProgress = $request->user()->canAccessProgressReport();
 
-$tasks = CurriculumTask::where('mentee_id', $menteeId)
+$data = $request->validate([
+    'search'         => 'nullable|string|max:100',
+    'status'         => 'nullable|in:pending,in_progress,completed',
+    'type'           => 'nullable|in:'.implode(',', array_keys(CurriculumTask::TYPES)),
+    'week_id'        => 'nullable|integer',
+    'track_id'       => 'nullable|integer',
+    'completed_from' => 'nullable|date',
+    'completed_to'   => 'nullable|date|after_or_equal:completed_from',
+    'per_page'       => 'nullable|integer|min:1|max:100',
+]);
+
+$search  = trim((string) ($data['search'] ?? ''));
+$perPage = $data['per_page'] ?? 20;
+$status  = $canViewProgress ? ($data['status'] ?? null) : null;
+
+$summaryQuery = CurriculumTask::where('mentee_id', $menteeId)->where('is_active', true);
+$allTasks = (clone $summaryQuery)->pluck('id');
+$progressMapAll = $canViewProgress
+    ? StudentCurriculumProgress::where('user_id', $menteeId)
+        ->where('item_type', 'task')
+        ->whereIn('item_id', $allTasks)
+        ->get()
+        ->keyBy('item_id')
+    : collect();
+
+$summaryTotal = $allTasks->count();
+$summaryCompleted = $canViewProgress
+    ? $progressMapAll->where('is_completed', true)->count()
+    : null;
+$summaryInProgress = $canViewProgress
+    ? $progressMapAll->filter(fn ($p) => ! $p->is_completed && (
+        in_array($p->submission_status, ['submitted', 'reviewed', 'rejected'], true)
+        || $p->submission_text
+        || $p->submission_url
+    ))->count()
+    : null;
+$summaryPending = $canViewProgress
+    ? max(0, $summaryTotal - $summaryCompleted - $summaryInProgress)
+    : null;
+
+$query = CurriculumTask::where('mentee_id', $menteeId)
     ->where('is_active', true)
     ->with([
         'plan' => fn ($q) => $q->brief(),
@@ -118,19 +179,78 @@ $tasks = CurriculumTask::where('mentee_id', $menteeId)
         'week.month:id,stream_id,month_number,title',
         'week.month.stream:id,name,slug',
     ])
+    ->when($search !== '', fn ($q) => $q->where('title', 'like', '%'.$search.'%'))
+    ->when(! empty($data['type']), fn ($q) => $q->where('type', $data['type']))
+    ->when(! empty($data['week_id']), fn ($q) => $q->where('week_id', (int) $data['week_id']))
+    ->when(! empty($data['track_id']), function ($q) use ($data) {
+        $q->whereHas('week.month', fn ($m) => $m->where('stream_id', (int) $data['track_id']));
+    })
+    ->when(! empty($data['completed_from']) || ! empty($data['completed_to']), function ($q) use ($menteeId, $data) {
+        $q->whereExists(function ($sub) use ($menteeId, $data) {
+            $sub->selectRaw('1')
+                ->from('student_curriculum_progress as scp')
+                ->whereColumn('scp.item_id', 'curriculum_tasks.id')
+                ->where('scp.user_id', $menteeId)
+                ->where('scp.item_type', 'task')
+                ->where('scp.is_completed', 1)
+                ->when(! empty($data['completed_from']), fn ($s) => $s->whereDate('scp.completed_at', '>=', $data['completed_from']))
+                ->when(! empty($data['completed_to']), fn ($s) => $s->whereDate('scp.completed_at', '<=', $data['completed_to']));
+        });
+    })
+    ->when($status === 'completed', function ($q) use ($menteeId) {
+        $q->whereExists(function ($sub) use ($menteeId) {
+            $sub->selectRaw('1')
+                ->from('student_curriculum_progress as scp')
+                ->whereColumn('scp.item_id', 'curriculum_tasks.id')
+                ->where('scp.user_id', $menteeId)
+                ->where('scp.item_type', 'task')
+                ->where('scp.is_completed', 1);
+        });
+    })
+    ->when($status === 'in_progress', function ($q) use ($menteeId) {
+        $q->whereExists(function ($sub) use ($menteeId) {
+            $sub->selectRaw('1')
+                ->from('student_curriculum_progress as scp')
+                ->whereColumn('scp.item_id', 'curriculum_tasks.id')
+                ->where('scp.user_id', $menteeId)
+                ->where('scp.item_type', 'task')
+                ->where('scp.is_completed', 0)
+                ->where(function ($inner) {
+                    $inner->whereIn('scp.submission_status', ['submitted', 'reviewed', 'rejected'])
+                        ->orWhereNotNull('scp.submission_text')
+                        ->orWhereNotNull('scp.submission_url');
+                });
+        });
+    })
+    ->when($status === 'pending', function ($q) use ($menteeId) {
+        $q->whereNotExists(function ($sub) use ($menteeId) {
+            $sub->selectRaw('1')
+                ->from('student_curriculum_progress as scp')
+                ->whereColumn('scp.item_id', 'curriculum_tasks.id')
+                ->where('scp.user_id', $menteeId)
+                ->where('scp.item_type', 'task')
+                ->where(function ($inner) {
+                    $inner->where('scp.is_completed', 1)
+                        ->orWhereIn('scp.submission_status', ['submitted', 'reviewed', 'rejected'])
+                        ->orWhereNotNull('scp.submission_text')
+                        ->orWhereNotNull('scp.submission_url');
+                });
+        });
+    })
     ->orderBy('week_id')
-    ->orderBy('order_index')
-    ->get();
+    ->orderBy('order_index');
+
+$paginator = $query->paginate($perPage)->withQueryString();
 
 $progressMap = $canViewProgress
     ? StudentCurriculumProgress::where('user_id', $menteeId)
         ->where('item_type', 'task')
-        ->whereIn('item_id', $tasks->pluck('id'))
+        ->whereIn('item_id', collect($paginator->items())->pluck('id'))
         ->get()
         ->keyBy('item_id')
     : collect();
 
-$formatted = $tasks
+$taskList = collect($paginator->items())
     ->map(fn (CurriculumTask $task) => $this->formatTaskWithStatus(
         $task,
         $canViewProgress ? $progressMap->get($task->id) : null,
@@ -138,28 +258,33 @@ $formatted = $tasks
     ))
     ->values();
 
-$taskList = $formatted;
-if ($canViewProgress && $request->filled('status')) {
-    $taskList = $formatted->filter(fn ($task) => $task['status'] === $request->status)->values();
-}
-
-$total = $formatted->count();
-$completed  = $canViewProgress ? $formatted->where('status', 'completed')->count() : null;
-$inProgress = $canViewProgress ? $formatted->where('status', 'in_progress')->count() : null;
-$pending    = $canViewProgress ? $formatted->where('status', 'pending')->count() : null;
-
 return response()->json([
     'status'     => true,
     'statuscode' => 200,
     'mentee_id'  => $menteeId,
     'summary'    => $canViewProgress ? [
-        'total'       => $total,
-        'completed'   => $completed,
-        'in_progress' => $inProgress,
-        'pending'     => $pending,
-        'percent'     => $total ? (int) round($completed / $total * 100) : 0,
+        'total'       => $summaryTotal,
+        'completed'   => $summaryCompleted,
+        'in_progress' => $summaryInProgress,
+        'pending'     => $summaryPending,
+        'percent'     => $summaryTotal ? (int) round($summaryCompleted / $summaryTotal * 100) : 0,
     ] : null,
     'tasks'      => $taskList,
+    'meta'       => [
+        'current_page' => $paginator->currentPage(),
+        'last_page'    => $paginator->lastPage(),
+        'per_page'     => $paginator->perPage(),
+        'total'        => $paginator->total(),
+    ],
+    'filters'    => [
+        'search'         => $search !== '' ? $search : null,
+        'status'         => $status,
+        'type'           => $data['type'] ?? null,
+        'week_id'        => isset($data['week_id']) ? (int) $data['week_id'] : null,
+        'track_id'       => isset($data['track_id']) ? (int) $data['track_id'] : null,
+        'completed_from' => $data['completed_from'] ?? null,
+        'completed_to'   => $data['completed_to'] ?? null,
+    ],
     'entitlement'=> [
         'progress_report_enabled' => $canViewProgress,
     ],
@@ -168,14 +293,43 @@ return response()->json([
 
 // ─────────────────────────────────────────────
 //  GET /mentee/curriculum/mcqs
-//  Mentor-created curriculum MCQs grouped by topic, with status + summary.
+//  Query: search, status, week_id, track_id,
+//         attempted_from, attempted_to, per_page, page
 // ─────────────────────────────────────────────
 public function mcqs(Request $request): JsonResponse
 {
 $menteeId = $request->user()->id;
 $canViewProgress = $request->user()->canAccessProgressReport();
 
-$topics = CurriculumMcqTopic::where('mentee_id', $menteeId)
+$data = $request->validate([
+    'search'          => 'nullable|string|max:100',
+    'status'          => 'nullable|in:pending,in_progress,completed',
+    'week_id'         => 'nullable|integer',
+    'track_id'        => 'nullable|integer',
+    'attempted_from'  => 'nullable|date',
+    'attempted_to'    => 'nullable|date|after_or_equal:attempted_from',
+    'per_page'        => 'nullable|integer|min:1|max:100',
+]);
+
+$search  = trim((string) ($data['search'] ?? ''));
+$perPage = $data['per_page'] ?? 20;
+$status  = $canViewProgress ? ($data['status'] ?? null) : null;
+
+$baseTopics = CurriculumMcqTopic::where('mentee_id', $menteeId)
+    ->where('is_active', true)
+    ->with(['mcqs' => fn ($q) => $q->where('is_active', true)->orderBy('order_index')])
+    ->get();
+
+$allMcqsFormatted = $baseTopics
+    ->flatMap(fn (CurriculumMcqTopic $topic) => $this->formatMcqTopic($topic, $menteeId, $canViewProgress)['mcqs'])
+    ->values();
+
+$summaryTotal = $allMcqsFormatted->count();
+$summaryCompleted = $canViewProgress ? $allMcqsFormatted->where('status', 'completed')->count() : null;
+$summaryInProgress = $canViewProgress ? $allMcqsFormatted->where('status', 'in_progress')->count() : null;
+$summaryPending = $canViewProgress ? $allMcqsFormatted->where('status', 'pending')->count() : null;
+
+$query = CurriculumMcqTopic::where('mentee_id', $menteeId)
     ->where('is_active', true)
     ->with([
         'mcqs' => fn ($q) => $q->where('is_active', true)->orderBy('order_index'),
@@ -183,32 +337,44 @@ $topics = CurriculumMcqTopic::where('mentee_id', $menteeId)
         'week.month:id,stream_id,month_number,title',
         'week.month.stream:id,name,slug',
     ])
+    ->when($search !== '', function ($q) use ($search) {
+        $q->where(function ($inner) use ($search) {
+            $inner->where('name', 'like', '%'.$search.'%')
+                ->orWhereHas('mcqs', fn ($m) => $m->where('question', 'like', '%'.$search.'%'));
+        });
+    })
+    ->when(! empty($data['week_id']), fn ($q) => $q->where('week_id', (int) $data['week_id']))
+    ->when(! empty($data['track_id']), function ($q) use ($data) {
+        $q->whereHas('week.month', fn ($m) => $m->where('stream_id', (int) $data['track_id']));
+    })
+    ->when(! empty($data['attempted_from']) || ! empty($data['attempted_to']), function ($q) use ($menteeId, $data) {
+        $q->whereHas('mcqs', function ($mcqQ) use ($menteeId, $data) {
+            $mcqQ->whereHas('attempts', function ($a) use ($menteeId, $data) {
+                $a->where('user_id', $menteeId)
+                    ->when(! empty($data['attempted_from']), fn ($s) => $s->whereDate('attempted_at', '>=', $data['attempted_from']))
+                    ->when(! empty($data['attempted_to']), fn ($s) => $s->whereDate('attempted_at', '<=', $data['attempted_to']));
+            });
+        });
+    })
     ->orderBy('week_id')
-    ->orderBy('order_index')
-    ->get();
+    ->orderBy('order_index');
 
-$formattedTopics = $topics
+$paginator = $query->paginate($perPage)->withQueryString();
+
+$formattedTopics = collect($paginator->items())
     ->map(fn (CurriculumMcqTopic $topic) => $this->formatMcqTopicWithContext($topic, $menteeId, $canViewProgress))
     ->values();
 
-$allMcqs = $formattedTopics->flatMap(fn (array $topic) => $topic['mcqs'] ?? []);
-
-$total = $allMcqs->count();
-$completed  = $canViewProgress ? $allMcqs->where('status', 'completed')->count() : null;
-$inProgress = $canViewProgress ? $allMcqs->where('status', 'in_progress')->count() : null;
-$pending    = $canViewProgress ? $allMcqs->where('status', 'pending')->count() : null;
-
-if ($canViewProgress && $request->filled('status')) {
-    $statusFilter = $request->status;
+if ($status) {
     $formattedTopics = $formattedTopics
-        ->map(function (array $topic) use ($statusFilter) {
+        ->map(function (array $topic) use ($status) {
             $topic['mcqs'] = collect($topic['mcqs'] ?? [])
-                ->filter(fn ($mcq) => $mcq['status'] === $statusFilter)
+                ->filter(fn ($mcq) => ($mcq['status'] ?? null) === $status)
                 ->values();
 
             return $topic;
         })
-        ->filter(fn (array $topic) => $topic['mcqs']->isNotEmpty())
+        ->filter(fn (array $topic) => collect($topic['mcqs'])->isNotEmpty())
         ->values();
 }
 
@@ -217,13 +383,27 @@ return response()->json([
     'statuscode' => 200,
     'mentee_id'  => $menteeId,
     'summary'    => $canViewProgress ? [
-        'total'       => $total,
-        'completed'   => $completed,
-        'in_progress' => $inProgress,
-        'pending'     => $pending,
-        'percent'     => $total ? (int) round($completed / $total * 100) : 0,
+        'total'       => $summaryTotal,
+        'completed'   => $summaryCompleted,
+        'in_progress' => $summaryInProgress,
+        'pending'     => $summaryPending,
+        'percent'     => $summaryTotal ? (int) round($summaryCompleted / $summaryTotal * 100) : 0,
     ] : null,
     'mcq_topics' => $formattedTopics,
+    'meta'       => [
+        'current_page' => $paginator->currentPage(),
+        'last_page'    => $paginator->lastPage(),
+        'per_page'     => $paginator->perPage(),
+        'total'        => $paginator->total(),
+    ],
+    'filters'    => [
+        'search'         => $search !== '' ? $search : null,
+        'status'         => $status,
+        'week_id'        => isset($data['week_id']) ? (int) $data['week_id'] : null,
+        'track_id'       => isset($data['track_id']) ? (int) $data['track_id'] : null,
+        'attempted_from' => $data['attempted_from'] ?? null,
+        'attempted_to'   => $data['attempted_to'] ?? null,
+    ],
     'entitlement'=> [
         'progress_report_enabled' => $canViewProgress,
     ],
@@ -232,13 +412,21 @@ return response()->json([
 
 // ─────────────────────────────────────────────
 //  GET /mentee/curriculum/admin-mcqs
-//  Quizzes created from admin panel (quizzes + questions + options).
+//  Query: search, per_page, page
 // ─────────────────────────────────────────────
 public function adminMcqs(Request $request): JsonResponse
 {
 $menteeId = $request->user()->id;
 
-$quizzes = Quiz::where('is_published', true)
+$data = $request->validate([
+    'search'   => 'nullable|string|max:100',
+    'per_page' => 'nullable|integer|min:1|max:100',
+]);
+
+$search  = trim((string) ($data['search'] ?? ''));
+$perPage = $data['per_page'] ?? 20;
+
+$paginator = Quiz::where('is_published', true)
     ->where('is_active', true)
     ->with([
         'questions' => fn ($q) => $q->orderBy('order'),
@@ -246,16 +434,34 @@ $quizzes = Quiz::where('is_published', true)
         'creator:id,name',
     ])
     ->withCount('questions')
+    ->when($search !== '', function ($q) use ($search) {
+        $q->where(function ($inner) use ($search) {
+            $inner->where('title', 'like', '%'.$search.'%')
+                ->orWhere('description', 'like', '%'.$search.'%');
+        });
+    })
     ->latest()
-    ->get()
-    ->map(fn (Quiz $quiz) => $this->formatQuiz($quiz));
+    ->paginate($perPage)
+    ->withQueryString();
+
+$quizzes = collect($paginator->items())
+    ->map(fn (Quiz $quiz) => $this->formatQuiz($quiz))
+    ->values();
 
 return response()->json([
     'status'     => true,
     'statuscode' => 200,
     'mentee_id'  => $menteeId,
     'quizzes'    => $quizzes,
-    'total'      => $quizzes->count(),
+    'meta'       => [
+        'current_page' => $paginator->currentPage(),
+        'last_page'    => $paginator->lastPage(),
+        'per_page'     => $paginator->perPage(),
+        'total'        => $paginator->total(),
+    ],
+    'filters'    => [
+        'search' => $search !== '' ? $search : null,
+    ],
 ]);
 }
 

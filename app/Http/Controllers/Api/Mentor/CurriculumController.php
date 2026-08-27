@@ -22,19 +22,49 @@ class CurriculumController extends Controller
 {
     // ─────────────────────────────────────────────
     //  GET /mentor/curriculum/tracks
+    //  Query: search, mentee_id, is_active, per_page, page
     // ─────────────────────────────────────────────
     public function tracks(Request $request): JsonResponse
     {
-        $tracks = EducationStream::with('mentee:id,name,email,avatar_url')
+        $data = $request->validate([
+            'search'    => 'nullable|string|max:100',
+            'mentee_id' => 'nullable|integer',
+            'is_active' => 'nullable|boolean',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
+        $paginator = EducationStream::with('mentee:id,name,email,avatar_url')
             ->where('mentor_id', $request->user()->id)
-            ->when($request->filled('mentee_id'), fn ($q) => $q->where('mentee_id', $request->mentee_id))
+            ->when(! empty($data['mentee_id']), fn ($q) => $q->where('mentee_id', (int) $data['mentee_id']))
+            ->when(array_key_exists('is_active', $data), fn ($q) => $q->where('is_active', (bool) $data['is_active']))
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('slug', 'like', '%'.$search.'%');
+                });
+            })
             ->orderBy('sort_order')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
-            'tracks'     => $tracks,
+            'tracks'     => collect($paginator->items())->values(),
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'    => $search !== '' ? $search : null,
+                'mentee_id' => isset($data['mentee_id']) ? (int) $data['mentee_id'] : null,
+                'is_active' => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : null,
+            ],
         ]);
     }
 
@@ -247,21 +277,44 @@ class CurriculumController extends Controller
 
     // ─────────────────────────────────────────────
     //  GET /mentor/curriculum/tracks/{track}/months
+    //  Query: search, is_active, per_page, page
     // ─────────────────────────────────────────────
-    public function months(int $track): JsonResponse
+    public function months(Request $request, int $track): JsonResponse
     {
         $trackModel = EducationStream::findOrFail($track);
 
-        $months = $trackModel->months()
+        $data = $request->validate([
+            'search'   => 'nullable|string|max:100',
+            'is_active'=> 'nullable|boolean',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
+        $paginator = $trackModel->months()
             ->withCount('weeks')
+            ->when($search !== '', fn ($q) => $q->where('title', 'like', '%'.$search.'%'))
+            ->when(array_key_exists('is_active', $data), fn ($q) => $q->where('is_active', (bool) $data['is_active']))
             ->orderBy('month_number')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'track_id'   => $trackModel->id,
-            'months'     => $months,
+            'months'     => collect($paginator->items())->values(),
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'    => $search !== '' ? $search : null,
+                'is_active' => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : null,
+            ],
         ]);
     }
 
@@ -379,21 +432,44 @@ class CurriculumController extends Controller
 
     // ─────────────────────────────────────────────
     //  GET /mentor/curriculum/months/{month}/weeks
+    //  Query: search, is_active, per_page, page
     // ─────────────────────────────────────────────
-    public function weeks(int $month): JsonResponse
+    public function weeks(Request $request, int $month): JsonResponse
     {
         $monthModel = CurriculumMonth::findOrFail($month);
 
-        $weeks = $monthModel->weeks()
+        $data = $request->validate([
+            'search'   => 'nullable|string|max:100',
+            'is_active'=> 'nullable|boolean',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
+        $paginator = $monthModel->weeks()
             ->withCount(['tasks', 'mcqTopics', 'mcqs'])
+            ->when($search !== '', fn ($q) => $q->where('title', 'like', '%'.$search.'%'))
+            ->when(array_key_exists('is_active', $data), fn ($q) => $q->where('is_active', (bool) $data['is_active']))
             ->orderBy('week_number')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'month_id'   => $monthModel->id,
-            'weeks'      => $weeks,
+            'weeks'      => collect($paginator->items())->values(),
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'    => $search !== '' ? $search : null,
+                'is_active' => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : null,
+            ],
         ]);
     }
 
@@ -459,28 +535,84 @@ class CurriculumController extends Controller
 
     // ─────────────────────────────────────────────
     //  GET /mentor/curriculum/weeks/{week}/tasks
+    //  Query: search, type, mentee_id, completed, per_page, page
     // ─────────────────────────────────────────────
     public function tasks(Request $request, int $week): JsonResponse
     {
         $weekModel = CurriculumWeek::findOrFail($week);
-        $menteeId = $request->query('mentee_id');
 
-        $tasks = $weekModel->tasks()->with(['plan' => fn ($q) => $q->brief()])->orderBy('order_index')->get()->map(function (CurriculumTask $task) use ($menteeId) {
+        $data = $request->validate([
+            'search'    => 'nullable|string|max:100',
+            'type'      => 'nullable|in:'.implode(',', array_keys(CurriculumTask::TYPES)),
+            'mentee_id' => 'nullable|integer',
+            'completed' => 'nullable|boolean',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search   = trim((string) ($data['search'] ?? ''));
+        $perPage  = $data['per_page'] ?? 20;
+        $menteeId = isset($data['mentee_id']) ? (int) $data['mentee_id'] : null;
+        $completedFilter = array_key_exists('completed', $data) ? (bool) $data['completed'] : null;
+
+        $query = $weekModel->tasks()
+            ->with(['plan' => fn ($q) => $q->brief()])
+            ->when($search !== '', fn ($q) => $q->where('title', 'like', '%'.$search.'%'))
+            ->when(! empty($data['type']), fn ($q) => $q->where('type', $data['type']))
+            ->when($menteeId, fn ($q) => $q->where('mentee_id', $menteeId))
+            ->orderBy('order_index');
+
+        if ($menteeId !== null && $completedFilter !== null) {
+            if ($completedFilter) {
+                $query->whereExists(function ($sub) use ($menteeId) {
+                    $sub->selectRaw('1')
+                        ->from('student_curriculum_progress as scp')
+                        ->whereColumn('scp.item_id', 'curriculum_tasks.id')
+                        ->where('scp.user_id', $menteeId)
+                        ->where('scp.item_type', 'task')
+                        ->where('scp.is_completed', 1);
+                });
+            } else {
+                $query->whereNotExists(function ($sub) use ($menteeId) {
+                    $sub->selectRaw('1')
+                        ->from('student_curriculum_progress as scp')
+                        ->whereColumn('scp.item_id', 'curriculum_tasks.id')
+                        ->where('scp.user_id', $menteeId)
+                        ->where('scp.item_type', 'task')
+                        ->where('scp.is_completed', 1);
+                });
+            }
+        }
+
+        $paginator = $query->paginate($perPage)->withQueryString();
+
+        $tasks = collect($paginator->items())->map(function (CurriculumTask $task) use ($menteeId) {
             $row = $task->toArray();
             $row['is_completed'] = false;
 
             if ($menteeId) {
-                $row['is_completed'] = $task->isCompletedByUser((int) $menteeId);
+                $row['is_completed'] = $task->isCompletedByUser($menteeId);
             }
 
             return $row;
-        });
+        })->values();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'week_id'    => $weekModel->id,
             'tasks'      => $tasks,
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'    => $search !== '' ? $search : null,
+                'type'      => $data['type'] ?? null,
+                'mentee_id' => $menteeId,
+                'completed' => $completedFilter,
+            ],
         ]);
     }
 
@@ -496,19 +628,50 @@ class CurriculumController extends Controller
     {
         $weekModel = CurriculumWeek::findOrFail($week);
 
-        $mcqTopics = $weekModel->mcqTopics()
+        $data = $request->validate([
+            'search'    => 'nullable|string|max:100',
+            'mentee_id' => 'nullable|integer',
+            'is_active' => 'nullable|boolean',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
+        $paginator = $weekModel->mcqTopics()
             ->with(['mcqs' => fn ($q) => $q->orderBy('order_index')])
-            ->when($request->filled('mentee_id'), fn ($q) => $q->where('mentee_id', $request->mentee_id))
+            ->when(! empty($data['mentee_id']), fn ($q) => $q->where('mentee_id', (int) $data['mentee_id']))
+            ->when(array_key_exists('is_active', $data), fn ($q) => $q->where('is_active', (bool) $data['is_active']))
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', '%'.$search.'%')
+                        ->orWhereHas('mcqs', fn ($m) => $m->where('question', 'like', '%'.$search.'%'));
+                });
+            })
             ->orderBy('order_index')
-            ->get()
-            ->map(fn (CurriculumMcqTopic $topic) => $this->transformMcqTopic($topic));
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $mcqTopics = collect($paginator->items())
+            ->map(fn (CurriculumMcqTopic $topic) => $this->transformMcqTopic($topic))
+            ->values();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'week_id'    => $weekModel->id,
             'mcq_topics' => $mcqTopics,
-            'total'      => $mcqTopics->count(),
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'    => $search !== '' ? $search : null,
+                'mentee_id' => isset($data['mentee_id']) ? (int) $data['mentee_id'] : null,
+                'is_active' => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : null,
+            ],
         ]);
     }
 
@@ -798,21 +961,49 @@ class CurriculumController extends Controller
 
     // ─────────────────────────────────────────────
     //  GET /mentor/curriculum/weeks/{week}/supporting-materials
+    //  Query: search, type, mentee_id, is_active, per_page, page
     // ─────────────────────────────────────────────
     public function supportingMaterials(Request $request, int $week): JsonResponse
     {
         $weekModel = CurriculumWeek::findOrFail($week);
 
-        $materials = $weekModel->supportingMaterials()
-            ->when($request->filled('mentee_id'), fn ($q) => $q->where('mentee_id', $request->mentee_id))
+        $data = $request->validate([
+            'search'    => 'nullable|string|max:100',
+            'type'      => 'nullable|in:'.implode(',', array_keys(TaskSupportingMaterial::TYPES)),
+            'mentee_id' => 'nullable|integer',
+            'is_active' => 'nullable|boolean',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
+        $paginator = $weekModel->supportingMaterials()
+            ->when(! empty($data['mentee_id']), fn ($q) => $q->where('mentee_id', (int) $data['mentee_id']))
+            ->when(! empty($data['type']), fn ($q) => $q->where('type', $data['type']))
+            ->when(array_key_exists('is_active', $data), fn ($q) => $q->where('is_active', (bool) $data['is_active']))
+            ->when($search !== '', fn ($q) => $q->where('title', 'like', '%'.$search.'%'))
             ->orderBy('sort_order')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'week_id'    => $weekModel->id,
-            'materials'  => $materials,
+            'materials'  => collect($paginator->items())->values(),
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'    => $search !== '' ? $search : null,
+                'type'      => $data['type'] ?? null,
+                'mentee_id' => isset($data['mentee_id']) ? (int) $data['mentee_id'] : null,
+                'is_active' => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : null,
+            ],
         ]);
     }
 

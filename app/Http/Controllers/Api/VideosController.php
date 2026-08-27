@@ -83,32 +83,80 @@ class VideosController extends Controller
     {
         $menteeId = $request->user()->id;
 
+        $data = $request->validate([
+            'search'    => 'nullable|string|max:100',
+            'mentor_id' => 'nullable|integer',
+            'watched'   => 'nullable|boolean',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+        $watched = array_key_exists('watched', $data) ? (bool) $data['watched'] : null;
+
         $watchedFileIds = MentorVideoWatch::where('mentee_id', $menteeId)->pluck('mentor_video_file_id');
 
-        $videos = MentorVideo::where('is_active', true)
+        $query = MentorVideo::where('is_active', true)
             ->with(['files', 'mentor:id,name,avatar_url'])
-            ->latest()
-            ->get()
+            ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
+            ->when(! empty($data['mentor_id']), fn ($q) => $q->where('mentor_id', (int) $data['mentor_id']))
+            ->latest();
+
+        $allForSummary = (clone $query)->with('files')->get();
+        $summaryVideos = $allForSummary->map(fn (MentorVideo $video) => $this->formatMentorVideo($video, $watchedFileIds));
+        $totalFiles   = $summaryVideos->sum(fn ($v) => count($v['videos']));
+        $watchedCount = $summaryVideos->sum(fn ($v) => collect($v['videos'])->where('is_watched', true)->count());
+
+        if ($watched !== null) {
+            $matchingIds = $summaryVideos
+                ->filter(function (array $video) use ($watched) {
+                    $files = collect($video['videos'] ?? []);
+                    if ($files->isEmpty()) {
+                        return ! $watched;
+                    }
+
+                    $allWatched = $files->every(fn ($f) => ! empty($f['is_watched']));
+                    $anyWatched = $files->contains(fn ($f) => ! empty($f['is_watched']));
+
+                    return $watched ? $anyWatched : ! $allWatched;
+                })
+                ->pluck('id')
+                ->all();
+
+            $query->whereIn('id', $matchingIds ?: [0]);
+        }
+
+        $paginator = $query->paginate($perPage)->withQueryString();
+
+        $videos = collect($paginator->items())
             ->map(fn (MentorVideo $video) => array_merge($this->formatMentorVideo($video, $watchedFileIds), [
                 'mentor' => $video->mentor ? [
                     'id'         => $video->mentor->id,
                     'name'       => $video->mentor->name,
                     'avatar_url' => $video->mentor->avatar_url,
                 ] : null,
-            ]));
-
-        $totalFiles   = $videos->sum(fn ($v) => count($v['videos']));
-        $watchedCount = $videos->sum(fn ($v) => collect($v['videos'])->where('is_watched', true)->count());
+            ]))
+            ->values();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'videos'     => $videos,
-            'total'      => $videos->count(),
             'summary'    => [
                 'total_files'   => $totalFiles,
                 'watched'       => $watchedCount,
                 'percent'       => $totalFiles ? (int) round($watchedCount / $totalFiles * 100) : 0,
+            ],
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'    => $search !== '' ? $search : null,
+                'mentor_id' => isset($data['mentor_id']) ? (int) $data['mentor_id'] : null,
+                'watched'   => $watched,
             ],
         ]);
     }
@@ -117,17 +165,41 @@ class VideosController extends Controller
 
     public function mentorIndex(Request $request): JsonResponse
     {
-        $videos = MentorVideo::where('mentor_id', $request->user()->id)
+        $data = $request->validate([
+            'search'    => 'nullable|string|max:100',
+            'is_active' => 'nullable|boolean',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $search  = trim((string) ($data['search'] ?? ''));
+        $perPage = $data['per_page'] ?? 20;
+
+        $paginator = MentorVideo::where('mentor_id', $request->user()->id)
             ->with('files')
+            ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
+            ->when(array_key_exists('is_active', $data), fn ($q) => $q->where('is_active', (bool) $data['is_active']))
             ->latest()
-            ->get()
-            ->map(fn (MentorVideo $video) => $this->formatMentorVideo($video));
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $videos = collect($paginator->items())
+            ->map(fn (MentorVideo $video) => $this->formatMentorVideo($video))
+            ->values();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'videos'     => $videos,
-            'total'      => $videos->count(),
+            'meta'       => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'filters'    => [
+                'search'    => $search !== '' ? $search : null,
+                'is_active' => array_key_exists('is_active', $data) ? (bool) $data['is_active'] : null,
+            ],
         ], 200);
     }
 
