@@ -17,6 +17,7 @@ use App\Http\Controllers\Frontend\MentorListingController;
 use App\Http\Controllers\Frontend\ContactController;
 use App\Http\Controllers\Frontend\BlogController as FrontendBlogController;
 use App\Http\Controllers\Frontend\WhitePaperController as FrontendWhitePaperController;
+use App\Http\Controllers\Frontend\CaseStudyController as FrontendCaseStudyController;
 
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LoginController;
@@ -80,6 +81,7 @@ use App\Http\Controllers\Admin\AssessmentQuestionController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\WhitePaperController;
+use App\Http\Controllers\Admin\CaseStudyController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\NotificationController;
 
@@ -133,6 +135,10 @@ Route::prefix('insights')->name('insights.')->group(function () {
     Route::get('/white-papers', [FrontendWhitePaperController::class, 'index'])->name('white-papers.index');
     Route::get('/white-papers/{slug}/download', [FrontendWhitePaperController::class, 'download'])
         ->name('white-papers.download')
+        ->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/case-studies', [FrontendCaseStudyController::class, 'index'])->name('case-studies.index');
+    Route::get('/case-studies/{slug}', [FrontendCaseStudyController::class, 'show'])
+        ->name('case-studies.show')
         ->where('slug', '[A-Za-z0-9\-]+');
 });
 
@@ -543,6 +549,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('blogs/export/pdf', [BlogController::class, 'exportPdf'])->name('blogs.export.pdf');
     Route::resource('blogs', BlogController::class)->except(['show']);
     Route::resource('white-papers', WhitePaperController::class)->except(['show']);
+    Route::resource('case-studies', CaseStudyController::class)->except(['show']);
 
     // ── Wallet ────────────────────────────────────────────────
     Route::prefix('wallet')->name('wallet.')->group(function () {

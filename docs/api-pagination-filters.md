@@ -346,6 +346,123 @@ GET /mentor/mentees
 
 ---
 
+## 4. Jobs & wallet APIs
+
+### 4.1 Job listings
+
+```
+GET /{role}/jobs
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | string | Title, department, or location |
+| `job_type` / `type` | string | `full_time`, `part_time`, `internship`, `contract`, `freelance` |
+| `location_type` / `mode` | string | `remote`, `onsite`, `hybrid` |
+| `department` | string | Department filter |
+| `experience_level` | string | `entry`, `mid`, `senior`, `lead`, `executive` |
+| `page` | integer | Page number |
+| `per_page` | integer | Page size (default `20`) |
+
+**Example**
+
+```
+GET /mentee/jobs?search=developer&job_type=full_time&location_type=remote&page=1&per_page=20
+```
+
+---
+
+### 4.2 My job applications (mentee)
+
+```
+GET /mentee/jobs/my-applications
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | string | Job title / role / company name on application |
+| `page` | integer | Page number |
+| `per_page` | integer | Page size (default `20`) |
+
+---
+
+### 4.3 Wallet transactions
+
+```
+GET /{role}/wallet/transactions
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | string | Description or reference |
+| `type` | string | `credit`, `debit`, `refund`, `transfer_in`, `transfer_out` |
+| `status` | string | `pending`, `completed`, `failed`, `cancelled` |
+| `date_from` | date | Transaction date from (`YYYY-MM-DD`) |
+| `date_to` | date | Transaction date to (`YYYY-MM-DD`) |
+| `page` | integer | Page number |
+| `per_page` | integer | Page size (default `20`) |
+
+**Example**
+
+```
+GET /mentee/wallet/transactions?date_from=2026-01-01&date_to=2026-08-27&type=credit&page=1
+GET /mentor/wallet/transactions?date_from=2026-08-01&date_to=2026-08-27&per_page=50
+```
+
+---
+
+## 5. Sessions & mentor listing
+
+### 5.1 Sessions list
+
+```
+GET /{role}/sessions
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | `upcoming`, `completed`, `cancelled` |
+| `date` | date | Exact scheduled date |
+| `date_from` | date | Scheduled date from |
+| `date_to` | date | Scheduled date to |
+| `search` / `q` | string | Topic, booking ref, or counterparty name |
+| `page` | integer | Page number |
+| `per_page` | integer | Page size (default `20`) |
+
+**Example**
+
+```
+GET /mentee/sessions?status=upcoming&page=1&per_page=20
+GET /mentor/sessions?date_from=2026-08-01&date_to=2026-08-31&search=rahul
+```
+
+---
+
+### 5.2 Mentor listing
+
+```
+GET /{role}/mentors
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | string | Name, field, company, designation, bio |
+| `field` | string | Field / domain |
+| `company` | string | Company name |
+| `gender` | string | Gender filter |
+| `min_rating` | number | Minimum rating (0–5) |
+| `sort` | string | `best` (default), `rating`, `sessions`, `name` |
+| `page` | integer | Page number |
+| `per_page` | integer | Page size (default `20`) |
+
+**Example**
+
+```
+GET /mentee/mentors?search=career&field=engineering&min_rating=4&sort=rating&page=1
+```
+
+---
+
 ## Quick reference (all endpoints)
 
 | Method | Endpoint |
@@ -368,3 +485,8 @@ GET /mentor/mentees
 | GET | `/mentor/curriculum/weeks/{week}/supporting-materials` |
 | GET | `/mentor/videos` |
 | GET | `/mentor/mentees` |
+| GET | `/{role}/jobs` |
+| GET | `/mentee/jobs/my-applications` |
+| GET | `/{role}/wallet/transactions` |
+| GET | `/{role}/sessions` |
+| GET | `/{role}/mentors` |

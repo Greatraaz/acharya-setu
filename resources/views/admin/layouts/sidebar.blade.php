@@ -45,6 +45,7 @@
                     $route = match ($item['key'] ?? '') {
                         'blogs' => 'admin.blogs.index',
                         'white-papers' => 'admin.white-papers.index',
+                        'case-studies' => 'admin.case-studies.index',
                         default => '#',
                     };
 

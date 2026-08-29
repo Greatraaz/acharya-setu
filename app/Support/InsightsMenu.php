@@ -14,7 +14,7 @@ class InsightsMenu
         return [
             ['key' => 'blogs', 'label' => 'Blogs', 'icon' => '📰', 'route' => 'insights.blogs.index'],
             ['key' => 'white-papers', 'label' => 'White Papers', 'icon' => '📄', 'route' => 'insights.white-papers.index'],
-            ['key' => 'case-studies', 'label' => 'Case Studies', 'icon' => '📁', 'route' => null],
+            ['key' => 'case-studies', 'label' => 'Case Studies', 'icon' => '📁', 'route' => 'insights.case-studies.index'],
             ['key' => 'customer-stories', 'label' => 'Customer Stories', 'icon' => '💬', 'route' => null],
             ['key' => 'testimonials', 'label' => 'Testimonials', 'icon' => '⭐', 'route' => null],
             ['key' => 'webinars', 'label' => 'Webinars', 'icon' => '🎥', 'route' => null],
@@ -46,10 +46,15 @@ class InsightsMenu
             try {
                 return route($item['route']);
             } catch (\Throwable) {
-                return '#';
+                // Route may be missing on a stale deploy/cache — use path fallback below.
             }
         }
 
-        return '#';
+        return match ($item['key'] ?? '') {
+            'blogs' => url('/insights/blogs'),
+            'white-papers' => url('/insights/white-papers'),
+            'case-studies' => url('/insights/case-studies'),
+            default => '#',
+        };
     }
 }
