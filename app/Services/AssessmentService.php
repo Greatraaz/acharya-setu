@@ -24,19 +24,62 @@ class AssessmentService
             return collect();
         }
 
-        return Assessment::query()
-            ->withCount(['questions'])
-            ->withCount([
-                'progress as completion_count' => fn ($q) =>
-                    $q->whereNotNull('completed_at')
-            ])
-            ->latest()
+        return $this->statsQuery()
             ->get()
             ->map(function (Assessment $assessment) {
                 $assessment->question_count = (int) $assessment->questions_count;
 
                 return $assessment;
             });
+    }
+
+    public function listWithStatsPaginated(int $perPage = 20, ?Request $request = null)
+    {
+        if (! $this->tableExists()) {
+            return Assessment::query()->whereRaw('1 = 0')->paginate($perPage);
+        }
+
+        return $this->applyListFilters($this->statsQuery(), $request)
+            ->paginate($perPage)
+            ->withQueryString()
+            ->through(function (Assessment $assessment) {
+                $assessment->question_count = (int) $assessment->questions_count;
+
+                return $assessment;
+            });
+    }
+
+    private function statsQuery()
+    {
+        return Assessment::query()
+            ->withCount(['questions'])
+            ->withCount([
+                'progress as completion_count' => fn ($q) =>
+                    $q->whereNotNull('completed_at'),
+            ])
+            ->latest();
+    }
+
+    private function applyListFilters($query, ?Request $request)
+    {
+        if (! $request) {
+            return $query;
+        }
+
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
+            });
+        }
+
+        $status = $request->input('status');
+        if (in_array($status, ['active', 'inactive'], true)) {
+            $query->where('status', $status);
+        }
+
+        return $query;
     }
 
     public function createFromRequest(

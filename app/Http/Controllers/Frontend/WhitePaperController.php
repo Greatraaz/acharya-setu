@@ -16,13 +16,19 @@ class WhitePaperController extends Controller
 {
     public function index(Request $request): View
     {
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+
         $whitePapers = WhitePaper::query()
             ->where('status', WhitePaper::STATUS_ACTIVE)
+            ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
+                $inner->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
+            }))
             ->latest('id')
             ->paginate(9)
             ->withQueryString();
 
-        return view('frontend.insights.white-papers.index', compact('whitePapers'));
+        return view('frontend.insights.white-papers.index', compact('whitePapers', 'search'));
     }
 
     public function download(string $slug): SymfonyResponse

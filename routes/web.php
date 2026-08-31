@@ -18,6 +18,11 @@ use App\Http\Controllers\Frontend\ContactController;
 use App\Http\Controllers\Frontend\BlogController as FrontendBlogController;
 use App\Http\Controllers\Frontend\WhitePaperController as FrontendWhitePaperController;
 use App\Http\Controllers\Frontend\CaseStudyController as FrontendCaseStudyController;
+use App\Http\Controllers\Frontend\TestimonialController as FrontendTestimonialController;
+use App\Http\Controllers\Frontend\PodcastController as FrontendPodcastController;
+use App\Http\Controllers\Frontend\InsightVideoController as FrontendInsightVideoController;
+use App\Http\Controllers\Frontend\InsightEventController as FrontendInsightEventController;
+use App\Http\Controllers\Frontend\DownloadCentreController as FrontendDownloadCentreController;
 
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LoginController;
@@ -82,6 +87,11 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\WhitePaperController;
 use App\Http\Controllers\Admin\CaseStudyController;
+use App\Http\Controllers\Admin\TestimonialController;
+use App\Http\Controllers\Admin\PodcastController;
+use App\Http\Controllers\Admin\InsightVideoController;
+use App\Http\Controllers\Admin\InsightEventController;
+use App\Http\Controllers\Admin\DownloadCentreController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\NotificationController;
 
@@ -139,6 +149,27 @@ Route::prefix('insights')->name('insights.')->group(function () {
     Route::get('/case-studies', [FrontendCaseStudyController::class, 'index'])->name('case-studies.index');
     Route::get('/case-studies/{slug}', [FrontendCaseStudyController::class, 'show'])
         ->name('case-studies.show')
+        ->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/testimonials', [FrontendTestimonialController::class, 'index'])->name('testimonials.index');
+    Route::get('/podcasts', [FrontendPodcastController::class, 'index'])->name('podcasts.index');
+    Route::get('/videos', [FrontendInsightVideoController::class, 'index'])->name('videos.index');
+    Route::get('/webinars', [FrontendInsightEventController::class, 'webinarsIndex'])->name('webinars.index');
+    Route::get('/webinars/{slug}', [FrontendInsightEventController::class, 'webinarsShow'])
+        ->name('webinars.show')
+        ->where('slug', '[A-Za-z0-9\-]+');
+    Route::post('/webinars/{slug}/register', [FrontendInsightEventController::class, 'webinarsRegister'])
+        ->name('webinars.register')
+        ->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/download-centre', [FrontendDownloadCentreController::class, 'index'])->name('download-centre.index');
+    Route::get('/download-centre/{slug}/download', [FrontendDownloadCentreController::class, 'download'])
+        ->name('download-centre.download')
+        ->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/events', [FrontendInsightEventController::class, 'eventsIndex'])->name('events.index');
+    Route::get('/events/{slug}', [FrontendInsightEventController::class, 'eventsShow'])
+        ->name('events.show')
+        ->where('slug', '[A-Za-z0-9\-]+');
+    Route::post('/events/{slug}/register', [FrontendInsightEventController::class, 'eventsRegister'])
+        ->name('events.register')
         ->where('slug', '[A-Za-z0-9\-]+');
 });
 
@@ -550,6 +581,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::resource('blogs', BlogController::class)->except(['show']);
     Route::resource('white-papers', WhitePaperController::class)->except(['show']);
     Route::resource('case-studies', CaseStudyController::class)->except(['show']);
+    Route::resource('testimonials', TestimonialController::class)->except(['show']);
+    Route::resource('podcasts', PodcastController::class)->except(['show']);
+    Route::resource('videos', InsightVideoController::class)->except(['show']);
+    Route::resource('events-webinars', InsightEventController::class)->except(['show']);
+    Route::resource('download-centres', DownloadCentreController::class)->except(['show']);
 
     // ── Wallet ────────────────────────────────────────────────
     Route::prefix('wallet')->name('wallet.')->group(function () {

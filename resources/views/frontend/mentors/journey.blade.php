@@ -14,6 +14,29 @@
             <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-primary btn-sm">Build curriculum</a>
         </div>
 
+        <form method="GET" action="{{ route('mentor.journey') }}" class="session-toolbar" style="margin-bottom:16px;">
+            <div class="session-filter-tabs">
+                @foreach(['' => 'All', 'active' => 'Active', 'completed' => 'Completed', 'paused' => 'Paused'] as $key => $label)
+                    @php $tabParams = array_filter(['status' => $key ?: null, 'search' => ($search ?? request('search')) ?: null]); @endphp
+                    <a href="{{ route('mentor.journey', $tabParams) }}"
+                       class="session-filter-tab {{ ($status ?? request('status', '')) === $key ? 'active' : '' }}">
+                        {{ $label }}
+                    </a>
+                @endforeach
+            </div>
+            <div class="session-toolbar-controls">
+                @if(($status ?? request('status')))
+                    <input type="hidden" name="status" value="{{ $status ?? request('status') }}">
+                @endif
+                <div class="session-search-field">
+                    <span class="session-search-icon" aria-hidden="true">🔍</span>
+                    <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
+                           placeholder="Search mentee name…" autocomplete="off">
+                </div>
+                <button type="submit" class="btn btn-outline">Search</button>
+            </div>
+        </form>
+
         @forelse($enrollments as $enrollment)
         @php $progress = $enrollment->progress_data ?? []; @endphp
         <div class="card" style="margin-bottom:12px;padding:16px 18px;">
@@ -46,6 +69,8 @@
             <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-primary">Create curriculum</a>
         </div>
         @endforelse
+
+        @include('frontend.partials.pagination', ['paginator' => $enrollments])
 
         @if($menteesWithoutEnrollment->isNotEmpty())
         <div class="card" style="margin-top:20px;">

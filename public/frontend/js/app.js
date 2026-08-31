@@ -1020,12 +1020,31 @@
            });
        }
    
+       function updateCount(data) {
+           const wrap = document.getElementById("mentor-count-wrap");
+           const totalEl = document.getElementById("mentor-count");
+           const rangeEl = document.getElementById("mentor-count-range");
+           const total = data.total ?? 0;
+
+           if (!wrap) return;
+
+           if (total > 0 && data.from != null && data.to != null) {
+               if (rangeEl) {
+                   rangeEl.textContent = `${data.from}–${data.to}`;
+               } else {
+                   wrap.innerHTML = `Showing <strong id="mentor-count-range" style="color:var(--text);">${data.from}–${data.to}</strong> of <strong id="mentor-count" style="color:var(--text);">${total}</strong> mentors`;
+               }
+               if (totalEl) totalEl.textContent = total;
+           } else {
+               wrap.innerHTML = `Showing <strong id="mentor-count" style="color:var(--text);">0</strong> mentors`;
+           }
+       }
+
        function renderMentors(data) {
            const grid = document.getElementById("mentors-grid");
            if (!grid) return;
-           const count = document.getElementById("mentor-count");
-           if (count && data.total !== undefined) count.textContent = data.total;
-   
+           updateCount(data);
+
            const rows = data.data || data.mentors || [];
            if (!rows.length) {
                grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
@@ -1033,6 +1052,7 @@
            <h3>No mentors found</h3>
            <p>Try adjusting your filters or search term.</p>
          </div>`;
+               renderPagination({ ...data, last_page: 0 });
                return;
            }
    
@@ -1074,23 +1094,46 @@
    
        function renderPagination(data) {
            const pg = document.getElementById("pagination-wrap");
-           if (!pg || !data.last_page) return;
+           if (!pg) return;
+
+           const lp = Number(data.last_page || 0);
+           if (lp <= 1) {
+               pg.innerHTML = "";
+               return;
+           }
+
            let html = "";
-           const { current_page: cp, last_page: lp } = data;
-           html += `<a class="page-btn ${cp === 1 ? "disabled" : ""}" data-pg="${cp - 1}">‹</a>`;
+           const cp = Number(data.current_page || 1);
+           html += `<a class="page-btn ${cp === 1 ? "disabled" : ""}" data-pg="${cp - 1}" aria-label="Previous page">‹</a>`;
            for (let i = 1; i <= lp; i++) {
                if (i === 1 || i === lp || Math.abs(i - cp) <= 2)
-                   html += `<a class="page-btn ${i === cp ? "active" : ""}" data-pg="${i}">${i}</a>`;
-               else if (Math.abs(i - cp) === 3) html += `<span class="page-btn disabled">…</span>`;
+                   html += `<a class="page-btn ${i === cp ? "active" : ""}" data-pg="${i}" aria-label="Page ${i}">${i}</a>`;
+               else if (Math.abs(i - cp) === 3) html += `<span class="page-btn disabled" aria-hidden="true">…</span>`;
            }
-           html += `<a class="page-btn ${cp === lp ? "disabled" : ""}" data-pg="${cp + 1}">›</a>`;
+           html += `<a class="page-btn ${cp === lp ? "disabled" : ""}" data-pg="${cp + 1}" aria-label="Next page">›</a>`;
            pg.innerHTML = html;
+           pg.dataset.page = String(cp);
            pg.querySelectorAll("[data-pg]:not(.disabled):not(.active)").forEach((a) => {
-               a.addEventListener("click", () => {
+               a.addEventListener("click", (e) => {
+                   e.preventDefault();
                    doSearch(a.dataset.pg);
-                   window.scrollTo({ top: 0, behavior: "smooth" });
+                   const grid = document.getElementById("mentors-grid");
+                   (grid || pg).scrollIntoView({ behavior: "smooth", block: "start" });
                });
            });
+       }
+
+       function initialPaginationMeta() {
+           const pg = document.getElementById("pagination-wrap");
+           if (!pg) return null;
+
+           return {
+               current_page: Number(pg.dataset.currentPage || pg.dataset.page || 1),
+               last_page: Number(pg.dataset.lastPage || 1),
+               total: Number(pg.dataset.total || 0),
+               from: Number(pg.dataset.from || 0) || null,
+               to: Number(pg.dataset.to || 0) || null,
+           };
        }
    
        function doSearch(page) {
@@ -1114,6 +1157,9 @@
        return {
            init() {
                hydrateFromUrl();
+               const initial = initialPaginationMeta();
+               if (initial) renderPagination(initial);
+
                const inp = document.getElementById("mentor-search-input");
                if (inp) {
                    inp.addEventListener("input", () => {

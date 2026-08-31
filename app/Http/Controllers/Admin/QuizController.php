@@ -15,13 +15,14 @@ use Illuminate\Support\Facades\DB;
 class QuizController extends Controller
 {
  
-    public function index()
+    public function index(Request $request)
     {
         $quizzes = Quiz::where('is_published', true)
             ->with('creator')
             ->withCount('questions')
             ->latest()
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
  
         $myAttempts = QuizAttempt::where('user_id', Auth::id())
             ->pluck('quiz_id')

@@ -10,37 +10,53 @@ use Illuminate\Support\Facades\Schema;
 
 class AssessmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $assessments = collect();
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+        $status = $request->input('status', 'all');
 
         try {
             if (Schema::hasTable('assessments')) {
-                $assessments = Assessment::query()
+                $userId = auth()->id();
+
+                $query = Assessment::query()
                     ->withCount('questions')
-                    ->latest()
-                    ->get()
-                    ->map(function (Assessment $a) {
-                        $progress = null;
-                        if (Schema::hasTable('assessment_progress')) {
-                            $progress = AssessmentProgress::where('user_id', auth()->id())
-                                ->where('assessment_id', $a->id)
-                                ->first();
-                        }
+                    ->when($search !== '', function ($q) use ($search) {
+                        $q->where(function ($inner) use ($search) {
+                            $inner->where('title', 'like', '%'.$search.'%')
+                                ->orWhere('description', 'like', '%'.$search.'%');
+                        });
+                    })
+                    ->when($status === 'completed' && Schema::hasTable('assessment_progress'), function ($q) use ($userId) {
+                        $q->whereHas('progress', fn ($p) => $p->where('user_id', $userId)->whereNotNull('completed_at'));
+                    })
+                    ->when($status === 'pending' && Schema::hasTable('assessment_progress'), function ($q) use ($userId) {
+                        $q->whereDoesntHave('progress', fn ($p) => $p->where('user_id', $userId)->whereNotNull('completed_at'));
+                    })
+                    ->latest();
 
-                        $a->question_count = (int) $a->questions_count;
-                        $a->progress = $progress;
-                        $a->completed = (bool) ($progress?->completed_at);
-                        $a->score = $progress?->score;
+                $assessments = $query->paginate(15)->withQueryString()->through(function (Assessment $a) use ($userId) {
+                    $progress = null;
+                    if (Schema::hasTable('assessment_progress')) {
+                        $progress = AssessmentProgress::where('user_id', $userId)
+                            ->where('assessment_id', $a->id)
+                            ->first();
+                    }
 
-                        return $a;
-                    });
+                    $a->question_count = (int) $a->questions_count;
+                    $a->progress = $progress;
+                    $a->completed = (bool) ($progress?->completed_at);
+                    $a->score = $progress?->score;
+
+                    return $a;
+                });
             }
         } catch (\Throwable) {
             $assessments = collect();
         }
 
-        return view('frontend.mentee.assessments', compact('assessments'));
+        return view('frontend.mentee.assessments', compact('assessments', 'search', 'status'));
     }
 
     public function show(int $id)

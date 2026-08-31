@@ -37,15 +37,26 @@
         @endif
 
         @if($mentees->isNotEmpty())
-        <form method="GET" action="{{ route('mentor.curriculum.tracks') }}" style="margin-bottom:16px;display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
-            <div class="form-group" style="margin:0;min-width:220px;">
-                <label class="form-label">Filter by mentee</label>
-                <select name="mentee_id" class="form-select" onchange="this.form.submit()">
-                    <option value="">All mentees</option>
-                    @foreach($mentees as $m)
-                    <option value="{{ $m->id }}" @selected((string) request('mentee_id') === (string) $m->id)>{{ $m->name }}</option>
-                    @endforeach
-                </select>
+        <form method="GET" action="{{ route('mentor.curriculum.tracks') }}" class="session-toolbar" style="margin-bottom:16px;">
+            <div class="session-toolbar-controls" style="width:100%;flex-wrap:wrap;">
+                <div class="form-group" style="margin:0;min-width:200px;">
+                    <label class="form-label">Mentee</label>
+                    <select name="mentee_id" class="form-select">
+                        <option value="">All mentees</option>
+                        @foreach($mentees as $m)
+                        <option value="{{ $m->id }}" @selected((string) request('mentee_id') === (string) $m->id)>{{ $m->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="session-search-field" style="flex:1;min-width:200px;">
+                    <span class="session-search-icon" aria-hidden="true">🔍</span>
+                    <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
+                           placeholder="Search track name…" autocomplete="off">
+                </div>
+                <button type="submit" class="btn btn-outline" style="align-self:flex-end;">Apply</button>
+                @if(request()->filled('mentee_id') || request()->filled('search'))
+                    <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-ghost" style="align-self:flex-end;">Clear</a>
+                @endif
             </div>
         </form>
         @endif
@@ -85,6 +96,8 @@
             <button type="button" class="btn btn-primary" onclick="openModal('add-track-modal')">Create first track</button>
         </div>
         @endforelse
+
+        @include('frontend.partials.pagination', ['paginator' => $tracks])
     </div>
 </div>
 

@@ -25,7 +25,7 @@ class AssessmentController extends Controller
             ]);
         }
 
-        $assessments = $this->assessments->listWithStats();
+        $assessments = $this->assessments->listWithStatsPaginated();
 
         return view('admin.assessments.index', compact('assessments'));
     }

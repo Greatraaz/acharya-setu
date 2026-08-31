@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\File;
 
 class ChannelController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
@@ -21,11 +21,14 @@ class ChannelController extends Controller
             ->withCount(['allMessages', 'members'])
             ->with('creator:id,name')
             ->latest()
-            ->get()
-            ->map(function (Channel $ch) use ($user) {
-                $ch->unread_count = $ch->isMember($user) ? $ch->unreadCountFor($user) : 0;
-                return $ch;
-            });
+            ->paginate(18)
+            ->withQueryString();
+
+        $channels->getCollection()->transform(function (Channel $ch) use ($user) {
+            $ch->unread_count = $ch->isMember($user) ? $ch->unreadCountFor($user) : 0;
+
+            return $ch;
+        });
 
         return view('admin.community.index', compact('channels'));
     }

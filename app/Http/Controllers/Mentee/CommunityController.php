@@ -5,27 +5,16 @@ namespace App\Http\Controllers\Mentee;
 use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Models\User;
+use App\Support\ChannelIndexQuery;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class CommunityController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
-
-        $channels = Channel::query()
-            ->where(function ($q) use ($user) {
-                $q->where('type', Channel::TYPE_PUBLIC)
-                    ->orWhereHas('members', fn ($m) => $m->where('user_id', $user->id));
-            })
-            ->withCount(['allMessages', 'members'])
-            ->with('creator:id,name')
-            ->latest()
-            ->get()
-            ->map(function (Channel $ch) use ($user) {
-                $ch->unread_count = $ch->isMember($user) ? $ch->unreadCountFor($user) : 0;
-                return $ch;
-            });
+        $channels = ChannelIndexQuery::paginate($user, $request, 18);
 
         return view('frontend.mentee.community', compact('channels'));
     }
@@ -41,7 +30,8 @@ class CommunityController extends Controller
 
         $messages = $channel->messagesForUser($user)
             ->latest()
-            ->paginate(30);
+            ->paginate(30)
+            ->withQueryString();
 
         $channels = Channel::visibleTo($user)
             ->withCount(['allMessages', 'members'])
@@ -49,6 +39,7 @@ class CommunityController extends Controller
             ->get()
             ->map(function (Channel $ch) use ($user) {
                 $ch->unread_count = $ch->isMember($user) ? $ch->unreadCountFor($user) : 0;
+
                 return $ch;
             });
 

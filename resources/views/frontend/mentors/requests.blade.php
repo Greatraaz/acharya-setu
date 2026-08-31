@@ -18,9 +18,47 @@
             <div class="alert alert-error" style="margin-bottom:16px;">{{ session('error') }}</div>
         @endif
 
-        <div class="card" style="margin-bottom:20px;">
-            <h3 style="font-size:15px;font-weight:700;margin-bottom:14px;">Pending ({{ $pending->count() }})</h3>
-            @forelse($pending as $req)
+        @php
+            $activeStatus = $status ?? request('status', 'pending');
+            $tabParams = fn (string $key) => array_filter([
+                'status' => $key === 'all' ? null : $key,
+                'search' => ($search ?? request('search')) ?: null,
+            ]);
+        @endphp
+
+        <form method="GET" action="{{ route('mentor.requests') }}" class="session-toolbar">
+            <div class="session-filter-tabs">
+                @foreach([
+                    'pending' => 'Pending ('.((int) ($counts[\App\Models\MentorRequest::STATUS_PENDING] ?? 0)).')',
+                    'accepted' => 'Accepted',
+                    'rejected' => 'Declined',
+                    'all' => 'All',
+                ] as $key => $label)
+                    <a href="{{ route('mentor.requests', $tabParams($key)) }}"
+                       class="session-filter-tab {{ $activeStatus === $key ? 'active' : '' }}">
+                        {{ $label }}
+                    </a>
+                @endforeach
+            </div>
+
+            <div class="session-toolbar-controls">
+                @if($activeStatus !== 'all')
+                    <input type="hidden" name="status" value="{{ $activeStatus }}">
+                @endif
+                <div class="session-search-field">
+                    <span class="session-search-icon" aria-hidden="true">🔍</span>
+                    <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
+                           placeholder="Search mentee name or email…" autocomplete="off">
+                </div>
+                <button type="submit" class="btn btn-outline">Search</button>
+                @if(request()->filled('search'))
+                    <a href="{{ route('mentor.requests', array_filter(['status' => $activeStatus === 'all' ? null : $activeStatus])) }}" class="btn btn-ghost">Clear</a>
+                @endif
+            </div>
+        </form>
+
+        <div class="card">
+            @forelse($requests as $req)
             <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">
                 <div class="mentor-avatar-lg" style="width:48px;height:48px;flex-shrink:0;">
                     @if($req->mentee?->avatar_url)
@@ -34,11 +72,15 @@
                     <div style="font-size:12px;color:var(--text-2);margin-top:2px;">
                         {{ $req->mentee?->college ?? $req->mentee?->field ?? 'Mentee' }}
                         · Requested {{ $req->created_at?->diffForHumans() }}
+                        @if($req->status !== \App\Models\MentorRequest::STATUS_PENDING && $req->responded_at)
+                            · {{ ucfirst($req->status) }} {{ $req->responded_at->diffForHumans() }}
+                        @endif
                     </div>
                     @if($req->message)
                         <p style="font-size:13px;color:var(--text-2);margin:8px 0 0;line-height:1.5;">“{{ $req->message }}”</p>
                     @endif
                 </div>
+                @if($req->status === \App\Models\MentorRequest::STATUS_PENDING)
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <form method="POST" action="{{ route('mentor.requests.accept', $req->id) }}">
                         @csrf
@@ -49,23 +91,16 @@
                         <button type="submit" class="btn btn-ghost btn-sm">Decline</button>
                     </form>
                 </div>
+                @else
+                <span class="badge {{ $req->status === 'accepted' ? 'badge-success' : 'badge-muted' }}">{{ ucfirst($req->status) }}</span>
+                @endif
             </div>
             @empty
-            <p style="font-size:13px;color:var(--text-3);">No pending mentee requests.</p>
+            <p style="font-size:13px;color:var(--text-3);padding:12px 0;">No mentee requests match your filters.</p>
             @endforelse
         </div>
 
-        @if($recent->isNotEmpty())
-        <div class="card">
-            <h3 style="font-size:15px;font-weight:700;margin-bottom:14px;">Recent</h3>
-            @foreach($recent as $req)
-            <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;flex-wrap:wrap;">
-                <span><strong>{{ $req->mentee?->name }}</strong></span>
-                <span class="badge {{ $req->status === 'accepted' ? 'badge-success' : 'badge-muted' }}">{{ ucfirst($req->status) }}</span>
-            </div>
-            @endforeach
-        </div>
-        @endif
+        @include('frontend.partials.pagination', ['paginator' => $requests])
     </div>
 </div>
 @endsection

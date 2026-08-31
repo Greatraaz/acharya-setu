@@ -73,6 +73,22 @@
                 <a href="{{ route('mentors.search') }}" style="font-size:12px;color:var(--brand);">Browse all →</a>
             </div>
 
+            <form method="GET" action="{{ route('mentee.mentor.change') }}" class="session-toolbar" style="margin-bottom:16px;">
+                <div class="session-toolbar-controls" style="width:100%;flex-wrap:wrap;">
+                    <div class="session-search-field" style="flex:1;min-width:200px;">
+                        <span class="session-search-icon" aria-hidden="true">🔍</span>
+                        <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
+                               placeholder="Search name, company, field…" autocomplete="off">
+                    </div>
+                    <input type="text" name="field" class="form-input" value="{{ $field ?? request('field') }}"
+                           placeholder="Filter by field" style="min-width:160px;">
+                    <button type="submit" class="btn btn-outline btn-sm">Search</button>
+                    @if(request()->filled('search') || request()->filled('field'))
+                        <a href="{{ route('mentee.mentor.change') }}" class="btn btn-ghost btn-sm">Clear</a>
+                    @endif
+                </div>
+            </form>
+
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
                 @forelse($mentors as $mentor)
                 <div class="mentor-card" style="display:flex;flex-direction:column;gap:12px;">
@@ -110,7 +126,7 @@
                 @endforelse
             </div>
 
-            <div style="margin-top:20px;">{{ $mentors->links() }}</div>
+            @include('frontend.partials.pagination', ['paginator' => $mentors])
         </div>
     </div>
 </div>

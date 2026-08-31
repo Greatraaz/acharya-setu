@@ -17,7 +17,7 @@ class AssessmentController extends Controller
     {
     }
 
-    public function index()
+    public function index(Request $request)
     {
         if (! $this->assessments->tableExists()) {
             return view('frontend.mentors.assessments', [
@@ -27,12 +27,15 @@ class AssessmentController extends Controller
             ]);
         }
 
-        $assessments = $this->assessments->listWithStats();
+        $assessments = $this->assessments->listWithStatsPaginated(20, $request);
         $menteeCount = \App\Models\ConsultationSession::where('mentor_id', auth()->id())
             ->distinct()
             ->count('mentee_id');
 
-        return view('frontend.mentors.assessments', compact('assessments', 'menteeCount'));
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+        $status = $request->input('status', '');
+
+        return view('frontend.mentors.assessments', compact('assessments', 'menteeCount', 'search', 'status'));
     }
 
     public function create()

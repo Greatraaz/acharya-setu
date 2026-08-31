@@ -11,6 +11,11 @@
             <div class="dash-subtitle">Join discussions with mentors and other mentees.</div>
         </div>
 
+        @include('frontend.partials.community-filters', [
+            'routeName' => 'mentee.community.index',
+            'channels' => $channels,
+        ])
+
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
             @forelse($channels as $channel)
             <a href="{{ route('mentee.community.show', $channel->slug) }}" class="card" style="display:block;text-decoration:none;color:inherit;padding:18px;">
@@ -20,7 +25,7 @@
                 </div>
                 <div style="font-size:15px;font-weight:700;margin-bottom:4px;">{{ $channel->name }}</div>
                 <div style="font-size:12px;color:var(--text-2);margin-bottom:12px;min-height:36px;">{{ Str::limit($channel->description ?: 'No description', 90) }}</div>
-                <div style="font-size:11px;color:var(--text-3);display:flex;gap:12px;">
+                <div style="font-size:11px;color:var(--text-3);display:flex;gap:12px;flex-wrap:wrap;">
                     <span>{{ $channel->members_count }} members</span>
                     <span>{{ $channel->all_messages_count }} messages</span>
                     @if(($channel->unread_count ?? 0) > 0)
@@ -31,11 +36,13 @@
             @empty
             <div class="empty-state" style="grid-column:1/-1;padding:60px 0;">
                 <div style="font-size:48px;margin-bottom:12px;">💬</div>
-                <div style="font-size:16px;font-weight:700;margin-bottom:8px;">No channels yet</div>
-                <p style="font-size:13px;color:var(--text-2);">Community channels will appear here once they’re created.</p>
+                <div style="font-size:16px;font-weight:700;margin-bottom:8px;">No channels found</div>
+                <p style="font-size:13px;color:var(--text-2);">Try adjusting your filters to find more channels.</p>
             </div>
             @endforelse
         </div>
+
+        @include('frontend.partials.pagination', ['paginator' => $channels])
     </div>
 </div>
 @endsection

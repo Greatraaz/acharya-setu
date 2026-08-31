@@ -239,6 +239,8 @@
                         <p style="font-size:13px;color:var(--text-2);">Be the first to start the conversation.</p>
                     </div>
                 @endforelse
+
+                @include('frontend.partials.pagination', ['paginator' => $messages])
             </div>
 
             @if($canPost)

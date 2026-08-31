@@ -49,6 +49,9 @@ class MentorListingController extends Controller
                 'total'        => $mentors->total(),
                 'current_page' => $mentors->currentPage(),
                 'last_page'    => $mentors->lastPage(),
+                'per_page'     => $mentors->perPage(),
+                'from'         => $mentors->firstItem(),
+                'to'           => $mentors->lastItem(),
             ]);
         }
 

@@ -127,8 +127,13 @@
             <div>
                 {{-- Results header --}}
                 <div class="flex-between" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-                    <div style="font-size:13px;color:var(--text-2);">
-                        Showing <strong id="mentor-count" style="color:var(--text);">…</strong> mentors
+                    <div style="font-size:13px;color:var(--text-2);" id="mentor-count-wrap">
+                        @if(($mentors->total() ?? 0) > 0)
+                            Showing <strong id="mentor-count-range" style="color:var(--text);">{{ $mentors->firstItem() }}–{{ $mentors->lastItem() }}</strong>
+                            of <strong id="mentor-count" style="color:var(--text);">{{ $mentors->total() }}</strong> mentors
+                        @else
+                            Showing <strong id="mentor-count" style="color:var(--text);">0</strong> mentors
+                        @endif
                     </div>
                     <select data-sort-select style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;color:var(--text);cursor:pointer;">
                         <option value="best" @selected(request('sort', 'best') === 'best')>Best Match</option>
@@ -173,7 +178,13 @@
                 </div>
 
                 {{-- Pagination --}}
-                <div id="pagination-wrap" class="pagination" style="margin-top:32px;justify-content:center;"></div>
+                <div id="pagination-wrap" class="pagination" style="margin-top:32px;justify-content:center;"
+                     data-page="{{ $mentors->currentPage() }}"
+                     data-current-page="{{ $mentors->currentPage() }}"
+                     data-last-page="{{ $mentors->lastPage() }}"
+                     data-total="{{ $mentors->total() }}"
+                     data-from="{{ $mentors->firstItem() ?? 0 }}"
+                     data-to="{{ $mentors->lastItem() ?? 0 }}"></div>
             </div>
         </div>
     </div>
@@ -275,7 +286,6 @@
 <script>
 // Init search on page load
 MentorSearch.init();
-document.getElementById('mentor-count').textContent = '{{ $mentors->total() ?? count($mentors ?? []) }}';
 
 function clearAllFilters() {
     document.querySelectorAll('[data-filter]').forEach(el => {

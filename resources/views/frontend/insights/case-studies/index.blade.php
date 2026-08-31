@@ -23,6 +23,35 @@
 
     <section class="section insights-body">
         <div class="container">
+            @if($industries->isNotEmpty())
+            <div class="blog-filters">
+                <a href="{{ route('insights.case-studies.index', request()->only('search')) }}"
+                   class="blog-filter-chip {{ ($industry ?? '') === '' ? 'is-active' : '' }}">
+                    All Industries
+                </a>
+                @foreach($industries as $ind)
+                    <a href="{{ route('insights.case-studies.index', array_filter(['industry' => $ind, 'search' => ($search ?? '') ?: null])) }}"
+                       class="blog-filter-chip {{ ($industry ?? '') === $ind ? 'is-active' : '' }}">
+                        {{ $ind }}
+                    </a>
+                @endforeach
+            </div>
+            @endif
+
+            @include('frontend.partials.insights-search', [
+                'placeholder' => 'Search case studies…',
+                'search' => $search ?? '',
+                'preserve' => array_filter(['industry' => ($industry ?? '') ?: null]),
+            ])
+
+            @if(($industry ?? '') !== '' || ($search ?? '') !== '')
+            <p class="blog-filters-meta">
+                Showing {{ $caseStudies->total() }} {{ \Illuminate\Support\Str::plural('story', $caseStudies->total()) }}
+                @if(($industry ?? '') !== '') in <strong>{{ $industry }}</strong>@endif
+                @if(($search ?? '') !== '') matching “{{ $search }}”@endif
+            </p>
+            @endif
+
             @if($caseStudies->isEmpty())
                 <div class="blog-empty">
                     <div class="blog-empty__icon">📁</div>
@@ -53,9 +82,7 @@
                     @endforeach
                 </div>
 
-                @if(method_exists($caseStudies, 'hasPages') && $caseStudies->hasPages())
-                    <div class="blog-pagination">{{ $caseStudies->links() }}</div>
-                @endif
+                @include('frontend.partials.pagination', ['paginator' => $caseStudies])
             @endif
         </div>
     </section>

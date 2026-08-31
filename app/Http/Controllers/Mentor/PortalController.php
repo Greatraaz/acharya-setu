@@ -11,19 +11,36 @@ use App\Models\MenteeEnrollment;
 use App\Models\SessionNote;
 use App\Models\StudentCurriculumProgress;
 use App\Models\User;
+use App\Support\ChannelIndexQuery;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class PortalController extends Controller
 {
-    public function notes()
+    public function notes(Request $request)
     {
         $mentorId = auth()->id();
+
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+        $visibility = $request->input('visibility');
 
         $notes = SessionNote::query()
             ->whereHas('session', fn ($q) => $q->where('mentor_id', $mentorId))
             ->with(['session.mentee', 'author'])
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('content', 'like', '%'.$search.'%')
+                        ->orWhereHas('session', function ($s) use ($search) {
+                            $s->where('title', 'like', '%'.$search.'%')
+                                ->orWhereHas('mentee', fn ($m) => $m->where('name', 'like', '%'.$search.'%'));
+                        });
+                });
+            })
+            ->when($visibility === 'shared', fn ($q) => $q->where('is_shared', true))
+            ->when($visibility === 'private', fn ($q) => $q->where('is_shared', false))
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         $sessionsWithoutNotes = ConsultationSession::where('mentor_id', $mentorId)
             ->where('status', 'completed')
@@ -33,14 +50,26 @@ class PortalController extends Controller
             ->limit(8)
             ->get();
 
-        return view('frontend.mentors.notes', compact('notes', 'sessionsWithoutNotes'));
+        return view('frontend.mentors.notes', compact('notes', 'sessionsWithoutNotes', 'search', 'visibility'));
     }
 
-    public function mentees()
+    public function mentees(Request $request)
     {
-        $mentees = $this->mentorMenteesQuery()->paginate(20);
+        $search = trim((string) $request->input('search', $request->input('q', '')));
 
-        return view('frontend.mentors.mentees', compact('mentees'));
+        $mentees = $this->mentorMenteesQuery()
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('email', 'like', '%'.$search.'%')
+                        ->orWhere('college', 'like', '%'.$search.'%')
+                        ->orWhere('field', 'like', '%'.$search.'%');
+                });
+            })
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('frontend.mentors.mentees', compact('mentees', 'search'));
     }
 
     public function menteeShow(int $id)
@@ -70,35 +99,50 @@ class PortalController extends Controller
         return view('frontend.mentors.mentee-show', compact('mentee', 'sessions', 'enrollments', 'tracks'));
     }
 
-    public function journey()
+    public function journey(Request $request)
     {
         $mentorId = auth()->id();
 
         $this->syncEnrollmentsFromTracks($mentorId);
 
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+        $status = $request->input('status');
+
         $enrollments = MenteeEnrollment::where('mentor_id', $mentorId)
             ->with(['mentee', 'stream'])
+            ->when($search !== '', fn ($q) => $q->whereHas('mentee', fn ($m) => $m->where('name', 'like', '%'.$search.'%')))
+            ->when(in_array($status, ['active', 'completed', 'paused'], true), fn ($q) => $q->where('status', $status))
             ->latest()
-            ->get()
-            ->map(function (MenteeEnrollment $enrollment) {
+            ->paginate(15)
+            ->withQueryString()
+            ->through(function (MenteeEnrollment $enrollment) {
                 $enrollment->progress_data = $enrollment->progress;
+
                 return $enrollment;
             });
 
         $assignedMenteeIds = EducationStream::where('mentor_id', $mentorId)
             ->whereNotNull('mentee_id')
             ->pluck('mentee_id')
-            ->merge($enrollments->pluck('mentee_id'))
+            ->merge(
+                MenteeEnrollment::where('mentor_id', $mentorId)->pluck('mentee_id')
+            )
             ->unique()
             ->filter()
             ->values();
 
         $menteesWithoutEnrollment = $this->mentorMenteesQuery()
             ->whereNotIn('id', $assignedMenteeIds)
-            ->limit(20)
+            ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
+            ->limit(10)
             ->get();
 
-        return view('frontend.mentors.journey', compact('enrollments', 'menteesWithoutEnrollment'));
+        return view('frontend.mentors.journey', compact(
+            'enrollments',
+            'menteesWithoutEnrollment',
+            'search',
+            'status'
+        ));
     }
 
     public function journeyShow(int $menteeId)
@@ -130,24 +174,10 @@ class PortalController extends Controller
         return view('frontend.mentors.journey-show', compact('mentee', 'enrollments', 'tracks'));
     }
 
-    public function community()
+    public function community(Request $request)
     {
         $user = auth()->user();
-
-        $channels = Channel::query()
-            ->where('is_active', true)
-            ->where(function ($q) use ($user) {
-                $q->where('type', Channel::TYPE_PUBLIC)
-                    ->orWhereHas('members', fn ($m) => $m->where('user_id', $user->id));
-            })
-            ->withCount(['allMessages', 'members'])
-            ->with('creator:id,name')
-            ->latest()
-            ->get()
-            ->map(function (Channel $ch) use ($user) {
-                $ch->unread_count = $ch->isMember($user) ? $ch->unreadCountFor($user) : 0;
-                return $ch;
-            });
+        $channels = ChannelIndexQuery::paginate($user, $request, 18);
 
         return view('frontend.mentors.community', compact('channels'));
     }
@@ -163,7 +193,8 @@ class PortalController extends Controller
 
         $messages = $channel->messagesForUser($user)
             ->latest()
-            ->paginate(30);
+            ->paginate(30)
+            ->withQueryString();
 
         $channels = Channel::visibleTo($user)
             ->withCount(['allMessages', 'members'])

@@ -56,9 +56,9 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    @foreach($blogs as $index => $blog)
+                    @foreach($blogs as $blog)
                     <tr class="hover:bg-gray-50/70">
-                        <td class="px-5 py-4 text-gray-500">{{ $index + 1 }}</td>
+                        <td class="px-5 py-4 text-gray-500">{{ $blogs->firstItem() + $loop->index }}</td>
                         <td class="px-5 py-4">
                             @if($blog->imageUrl())
                                 <img src="{{ $blog->imageUrl() }}" class="w-14 h-14 rounded-lg object-cover" alt="">
@@ -96,6 +96,7 @@
                 </tbody>
             </table>
         </div>
+        @include('admin.partials.pagination', ['paginator' => $blogs])
         @endif
     </div>
 </div>

@@ -11,6 +11,29 @@
             <div class="dash-subtitle">Notes and resources you’ve added across mentoring sessions.</div>
         </div>
 
+        <form method="GET" action="{{ route('mentor.notes') }}" class="session-toolbar" style="margin-bottom:16px;">
+            <div class="session-filter-tabs">
+                @foreach(['' => 'All', 'shared' => 'Shared', 'private' => 'Private'] as $key => $label)
+                    @php $tabParams = array_filter(['visibility' => $key ?: null, 'search' => ($search ?? request('search')) ?: null]); @endphp
+                    <a href="{{ route('mentor.notes', $tabParams) }}"
+                       class="session-filter-tab {{ ($visibility ?? request('visibility', '')) === $key ? 'active' : '' }}">
+                        {{ $label }}
+                    </a>
+                @endforeach
+            </div>
+            <div class="session-toolbar-controls">
+                @if(($visibility ?? request('visibility')))
+                    <input type="hidden" name="visibility" value="{{ $visibility ?? request('visibility') }}">
+                @endif
+                <div class="session-search-field">
+                    <span class="session-search-icon" aria-hidden="true">🔍</span>
+                    <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
+                           placeholder="Search notes, session, or mentee…" autocomplete="off">
+                </div>
+                <button type="submit" class="btn btn-outline">Search</button>
+            </div>
+        </form>
+
         @if($sessionsWithoutNotes->isNotEmpty())
         <div class="card" style="margin-bottom:20px;">
             <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Sessions needing notes</h3>
@@ -52,9 +75,7 @@
         </div>
         @endforelse
 
-        @if($notes->hasPages())
-        <div style="margin-top:24px;display:flex;justify-content:center;">{{ $notes->links() }}</div>
-        @endif
+        @include('frontend.partials.pagination', ['paginator' => $notes])
     </div>
 </div>
 @endsection

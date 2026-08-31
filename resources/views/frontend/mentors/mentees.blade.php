@@ -11,6 +11,20 @@
             <div class="dash-subtitle">People assigned to you or who have booked sessions with you.</div>
         </div>
 
+        <form method="GET" action="{{ route('mentor.mentees') }}" class="session-toolbar" style="margin-bottom:16px;">
+            <div class="session-toolbar-controls" style="width:100%;">
+                <div class="session-search-field" style="flex:1;">
+                    <span class="session-search-icon" aria-hidden="true">🔍</span>
+                    <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
+                           placeholder="Search by name, email, college, or field…" autocomplete="off">
+                </div>
+                <button type="submit" class="btn btn-outline">Search</button>
+                @if(request()->filled('search'))
+                    <a href="{{ route('mentor.mentees') }}" class="btn btn-ghost">Clear</a>
+                @endif
+            </div>
+        </form>
+
         @forelse($mentees as $mentee)
         <div class="card" style="margin-bottom:12px;padding:16px 18px;">
             <div style="display:flex;gap:14px;align-items:center;">
@@ -44,9 +58,7 @@
         </div>
         @endforelse
 
-        @if($mentees->hasPages())
-        <div style="margin-top:24px;display:flex;justify-content:center;">{{ $mentees->links() }}</div>
-        @endif
+        @include('frontend.partials.pagination', ['paginator' => $mentees])
     </div>
 </div>
 @endsection

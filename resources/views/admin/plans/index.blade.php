@@ -45,10 +45,10 @@
         $activePlans = $plans->where('is_active', true)->where('deleted_at', null);
         @endphp
         @foreach([
-            ['Total Plans',    $plans->whereNull('deleted_at')->count(),                           'bg-blue-50',   'text-blue-600'],
-            ['Active',         $activePlans->count(),                                              'bg-green-50',  'text-green-600'],
-            ['Featured',       $plans->where('is_featured',true)->whereNull('deleted_at')->count(),'bg-amber-50',  'text-amber-600'],
-            ['Archived',       $plans->whereNotNull('deleted_at')->count(),                        'bg-gray-50',   'text-gray-500'],
+            ['Total Plans',    $planStats['total'] ?? $plans->whereNull('deleted_at')->count(),                           'bg-blue-50',   'text-blue-600'],
+            ['Active',         $planStats['active'] ?? $activePlans->count(),                                              'bg-green-50',  'text-green-600'],
+            ['Featured',       $planStats['featured'] ?? $plans->where('is_featured',true)->whereNull('deleted_at')->count(),'bg-amber-50',  'text-amber-600'],
+            ['Archived',       $planStats['archived'] ?? $plans->whereNotNull('deleted_at')->count(),                        'bg-gray-50',   'text-gray-500'],
         ] as [$label, $count, $bg, $tc])
         <div class="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
             <div class="w-10 h-10 {{ $bg }} rounded-lg flex items-center justify-center flex-shrink-0">
@@ -63,7 +63,7 @@
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h3 class="text-sm font-semibold text-gray-800">All Plans</h3>
-            <span class="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">{{ $plans->whereNull('deleted_at')->count() }} plans</span>
+            <span class="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">{{ $planStats['total'] ?? $plans->total() }} plans</span>
         </div>
 
         <div class="overflow-x-auto">
@@ -208,6 +208,7 @@
                 </tbody>
             </table>
         </div>
+        @include('admin.partials.pagination', ['paginator' => $plans])
     </div>
 
     {{-- Preview Cards --}}

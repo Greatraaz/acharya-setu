@@ -15,14 +15,12 @@ class InsightsMenu
             ['key' => 'blogs', 'label' => 'Blogs', 'icon' => '📰', 'route' => 'insights.blogs.index'],
             ['key' => 'white-papers', 'label' => 'White Papers', 'icon' => '📄', 'route' => 'insights.white-papers.index'],
             ['key' => 'case-studies', 'label' => 'Case Studies', 'icon' => '📁', 'route' => 'insights.case-studies.index'],
-            ['key' => 'customer-stories', 'label' => 'Customer Stories', 'icon' => '💬', 'route' => null],
-            ['key' => 'testimonials', 'label' => 'Testimonials', 'icon' => '⭐', 'route' => null],
-            ['key' => 'webinars', 'label' => 'Webinars', 'icon' => '🎥', 'route' => null],
-            ['key' => 'events', 'label' => 'Events', 'icon' => '📅', 'route' => null],
-            ['key' => 'podcasts', 'label' => 'Podcasts', 'icon' => '🎙️', 'route' => null],
-            ['key' => 'videos', 'label' => 'Videos', 'icon' => '🎬', 'route' => null],
-            ['key' => 'download-centre', 'label' => 'Download Centre', 'icon' => '⬇️', 'route' => null],
-            ['key' => 'assessment-tools', 'label' => 'Assessment Tools', 'icon' => '🧰', 'route' => null],
+            ['key' => 'testimonials', 'label' => 'Testimonials', 'icon' => '⭐', 'route' => 'insights.testimonials.index'],
+            ['key' => 'webinars', 'label' => 'Webinars', 'icon' => '🎥', 'route' => 'insights.webinars.index'],
+            ['key' => 'events', 'label' => 'Events', 'icon' => '📅', 'route' => 'insights.events.index'],
+            ['key' => 'podcasts', 'label' => 'Podcasts', 'icon' => '🎙️', 'route' => 'insights.podcasts.index'],
+            ['key' => 'videos', 'label' => 'Videos', 'icon' => '🎬', 'route' => 'insights.videos.index'],
+            ['key' => 'download-centre', 'label' => 'Download Centre', 'icon' => '⬇️', 'route' => 'insights.download-centre.index'],
         ];
     }
 
@@ -34,9 +32,9 @@ class InsightsMenu
         $items = self::items();
 
         return [
-            array_slice($items, 0, 4),
-            array_slice($items, 4, 4),
-            array_slice($items, 8, 3),
+            array_slice($items, 0, 3),
+            array_slice($items, 3, 3),
+            array_slice($items, 6, 3),
         ];
     }
 
@@ -54,6 +52,12 @@ class InsightsMenu
             'blogs' => url('/insights/blogs'),
             'white-papers' => url('/insights/white-papers'),
             'case-studies' => url('/insights/case-studies'),
+            'testimonials' => url('/insights/testimonials'),
+            'webinars' => url('/insights/webinars'),
+            'events' => url('/insights/events'),
+            'podcasts' => url('/insights/podcasts'),
+            'videos' => url('/insights/videos'),
+            'download-centre' => url('/insights/download-centre'),
             default => '#',
         };
     }

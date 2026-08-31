@@ -90,6 +90,7 @@
         </div>
         @endforeach
     </div>
+    @include('admin.partials.pagination', ['paginator' => $streams])
     @endif
 </div>
 

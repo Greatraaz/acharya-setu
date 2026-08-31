@@ -14,22 +14,33 @@ class MentorRequestController extends Controller
         private readonly MentorRequestService $requests
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $pending = MentorRequest::where('mentor_id', auth()->id())
-            ->where('status', MentorRequest::STATUS_PENDING)
-            ->with('mentee')
-            ->latest()
-            ->get();
+        $status = $request->input('status', 'pending');
+        $search = trim((string) $request->input('search', $request->input('q', '')));
 
-        $recent = MentorRequest::where('mentor_id', auth()->id())
-            ->whereIn('status', [MentorRequest::STATUS_ACCEPTED, MentorRequest::STATUS_REJECTED])
+        $query = MentorRequest::where('mentor_id', auth()->id())
             ->with('mentee')
-            ->latest('responded_at')
-            ->limit(20)
-            ->get();
+            ->when($status !== 'all' && in_array($status, [
+                MentorRequest::STATUS_PENDING,
+                MentorRequest::STATUS_ACCEPTED,
+                MentorRequest::STATUS_REJECTED,
+            ], true), fn ($q) => $q->where('status', $status))
+            ->when($search !== '', fn ($q) => $q->whereHas('mentee', function ($m) use ($search) {
+                $m->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('email', 'like', '%'.$search.'%')
+                    ->orWhere('college', 'like', '%'.$search.'%');
+            }))
+            ->latest($status === MentorRequest::STATUS_PENDING ? 'created_at' : 'responded_at');
 
-        return view('frontend.mentors.requests', compact('pending', 'recent'));
+        $requests = $query->paginate(15)->withQueryString();
+
+        $counts = MentorRequest::where('mentor_id', auth()->id())
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return view('frontend.mentors.requests', compact('requests', 'status', 'search', 'counts'));
     }
 
     public function accept(int $id)

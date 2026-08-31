@@ -83,7 +83,7 @@
 
             @if($questions->hasPages())
             <div style="padding:14px 18px;border-top:1px solid var(--border);">
-                {{ $questions->links() }}
+            @include('frontend.partials.pagination', ['paginator' => $questions])
             </div>
             @endif
         </div>

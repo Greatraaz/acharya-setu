@@ -28,7 +28,8 @@ class CurriculumController extends Controller
                 fn ($q) => $q->whereNotNull('mentee_id')
             )
             ->orderBy('sort_order')
-            ->get();
+            ->paginate(12)
+            ->withQueryString();
 
         $mentees = User::where('role', 'mentee')
             ->where('is_active', true)
@@ -46,7 +47,8 @@ class CurriculumController extends Controller
             ->withCount(['enrollments'])
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get();
+            ->paginate(12)
+            ->withQueryString();
 
         return view('admin.curriculum.catalog.index', compact('streams'));
     }

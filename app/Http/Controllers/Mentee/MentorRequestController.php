@@ -16,7 +16,7 @@ class MentorRequestController extends Controller
     ) {}
 
     /** Change / choose mentor page */
-    public function change()
+    public function change(Request $request)
     {
         $mentee = auth()->user();
         $assignedMentor = $mentee->assignedMentor;
@@ -26,12 +26,26 @@ class MentorRequestController extends Controller
             ->latest()
             ->get();
 
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+        $field = trim((string) $request->input('field', ''));
+
         $mentors = User::where('role', 'mentor')
             ->where('mentor_status', 'approved')
             ->where('is_active', true)
             ->when($mentee->assigned_mentor_id, fn ($q) => $q->where('id', '!=', $mentee->assigned_mentor_id))
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('designation', 'like', '%'.$search.'%')
+                        ->orWhere('company', 'like', '%'.$search.'%')
+                        ->orWhere('field', 'like', '%'.$search.'%')
+                        ->orWhere('bio', 'like', '%'.$search.'%');
+                });
+            })
+            ->when($field !== '', fn ($q) => $q->where('field', 'like', '%'.$field.'%'))
             ->orderByDesc('rating')
-            ->paginate(12);
+            ->paginate(12)
+            ->withQueryString();
 
         $pendingMentorIds = $pendingRequests->pluck('mentor_id')->all();
 
@@ -39,7 +53,9 @@ class MentorRequestController extends Controller
             'assignedMentor',
             'pendingRequests',
             'mentors',
-            'pendingMentorIds'
+            'pendingMentorIds',
+            'search',
+            'field'
         ));
     }
 

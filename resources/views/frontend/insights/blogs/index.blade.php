@@ -76,9 +76,7 @@
                     @endforeach
                 </div>
 
-                @if($blogs->hasPages())
-                    <div class="blog-pagination">{{ $blogs->links() }}</div>
-                @endif
+                @include('frontend.partials.pagination', ['paginator' => $blogs])
             @endif
         </div>
     </section>

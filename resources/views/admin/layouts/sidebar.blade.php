@@ -41,16 +41,22 @@
             'Utilities' => [
                 'type' => 'group',
                 'icon' => '📦',
-                'items' => collect(\App\Support\InsightsMenu::items())->map(function ($item) {
+                'items' => collect(\App\Support\InsightsMenu::items())
+                    ->reject(fn ($item) => in_array($item['key'] ?? '', ['webinars', 'events'], true))
+                    ->map(function ($item) {
                     $route = match ($item['key'] ?? '') {
                         'blogs' => 'admin.blogs.index',
                         'white-papers' => 'admin.white-papers.index',
                         'case-studies' => 'admin.case-studies.index',
+                        'testimonials' => 'admin.testimonials.index',
+                        'podcasts' => 'admin.podcasts.index',
+                        'videos' => 'admin.videos.index',
+                        'download-centre' => 'admin.download-centres.index',
                         default => '#',
                     };
 
                     return [$route, $item['icon'], $item['label']];
-                })->all(),
+                })->push(['admin.events-webinars.index', '🎥', 'Events & Webinars'])->values()->all(),
             ],
             'Configuration' => [
                 ['admin.settings.index',  '⚙️', 'App Settings'],

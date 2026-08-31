@@ -38,9 +38,9 @@
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
-                @forelse($assessments as $index => $assessment)
+                @forelse($assessments as $assessment)
                 <tr class="hover:bg-gray-50/70">
-                    <td class="px-5 py-4 text-gray-500">{{ $index + 1 }}</td>
+                    <td class="px-5 py-4 text-gray-500">{{ method_exists($assessments, 'firstItem') ? $assessments->firstItem() + $loop->index : $loop->iteration }}</td>
                     <td class="px-5 py-4">
                         @if($assessment->imageUrl())
                             <img src="{{ $assessment->imageUrl() }}" class="w-14 h-14 rounded-lg object-cover" alt="">
@@ -88,6 +88,7 @@
             </tbody>
         </table>
     </div>
+    @include('admin.partials.pagination', ['paginator' => $assessments])
     @endif
 </div>
 @endsection

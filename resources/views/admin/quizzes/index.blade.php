@@ -62,4 +62,5 @@
     </div>
     @endforelse
 </div>
+@include('admin.partials.pagination', ['paginator' => $quizzes])
 @endsection

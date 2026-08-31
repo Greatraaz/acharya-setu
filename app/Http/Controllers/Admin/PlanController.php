@@ -11,9 +11,16 @@ class PlanController extends Controller
 {
     public function index()
     {
-        $plans = Plan::withTrashed()->ordered()->get();
+        $planStats = [
+            'total' => Plan::whereNull('deleted_at')->count(),
+            'active' => Plan::whereNull('deleted_at')->where('is_active', true)->count(),
+            'featured' => Plan::whereNull('deleted_at')->where('is_featured', true)->count(),
+            'archived' => Plan::onlyTrashed()->count(),
+        ];
 
-        return view('admin.plans.index', compact('plans'));
+        $plans = Plan::withTrashed()->ordered()->paginate(20)->withQueryString();
+
+        return view('admin.plans.index', compact('plans', 'planStats'));
     }
 
     public function create()

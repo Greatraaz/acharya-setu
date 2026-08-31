@@ -147,9 +147,7 @@
         </div>
         @endforelse
 
-        @if(isset($sessions) && $sessions->hasPages())
-        <div style="margin-top:24px;display:flex;justify-content:center;">{{ $sessions->withQueryString()->links() }}</div>
-        @endif
+        @include('frontend.partials.pagination', ['paginator' => $sessions])
     </div>
 </div>
 

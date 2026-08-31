@@ -12,20 +12,35 @@ use Illuminate\Support\Facades\DB;
 
 class QuizController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $quizzes = Quiz::where('is_published', true)
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+        $status = $request->input('status', 'all');
+        $userId = Auth::id();
+
+        $query = Quiz::where('is_published', true)
             ->with('creator')
             ->withCount('questions')
-            ->latest()
-            ->get();
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('title', 'like', '%'.$search.'%')
+                        ->orWhere('description', 'like', '%'.$search.'%');
+                });
+            })
+            ->when($status === 'completed', fn ($q) => $q->whereHas('attempts', fn ($a) => $a->where('user_id', $userId)->whereNotNull('completed_at')))
+            ->when($status === 'not_attempted', fn ($q) => $q->whereDoesntHave('attempts', fn ($a) => $a->where('user_id', $userId)->whereNotNull('completed_at')))
+            ->when($status === 'passed', fn ($q) => $q->whereHas('attempts', fn ($a) => $a->where('user_id', $userId)->where('passed', true)))
+            ->when($status === 'failed', fn ($q) => $q->whereHas('attempts', fn ($a) => $a->where('user_id', $userId)->whereNotNull('completed_at')->where('passed', false)))
+            ->latest();
 
-        $myAttempts = QuizAttempt::where('user_id', Auth::id())
+        $quizzes = $query->paginate(12)->withQueryString();
+
+        $myAttempts = QuizAttempt::where('user_id', $userId)
             ->whereNotNull('completed_at')
             ->get()
             ->keyBy('quiz_id');
 
-        return view('frontend.mentee.quizzes', compact('quizzes', 'myAttempts'));
+        return view('frontend.mentee.quizzes', compact('quizzes', 'myAttempts', 'search', 'status'));
     }
 
     public function show(Quiz $quiz)

@@ -23,6 +23,29 @@
         @if($tableMissing ?? false)
         <div class="alert alert-error">Assessments are not available yet. Ask admin to run database migrations.</div>
         @else
+        <form method="GET" action="{{ route('mentor.assessments.index') }}" class="session-toolbar">
+            <div class="session-filter-tabs">
+                @foreach(['' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $key => $label)
+                    @php $tabParams = array_filter(['status' => $key ?: null, 'search' => ($search ?? request('search')) ?: null]); @endphp
+                    <a href="{{ route('mentor.assessments.index', $tabParams) }}"
+                       class="session-filter-tab {{ ($status ?? request('status', '')) === $key ? 'active' : '' }}">
+                        {{ $label }}
+                    </a>
+                @endforeach
+            </div>
+            <div class="session-toolbar-controls">
+                @if(($status ?? request('status')))
+                    <input type="hidden" name="status" value="{{ $status ?? request('status') }}">
+                @endif
+                <div class="session-search-field">
+                    <span class="session-search-icon" aria-hidden="true">🔍</span>
+                    <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
+                           placeholder="Search assessments…" autocomplete="off">
+                </div>
+                <button type="submit" class="btn btn-outline">Search</button>
+            </div>
+        </form>
+
         <div class="assess-table-wrap">
             <table class="assess-table">
                 <thead>
@@ -38,7 +61,7 @@
                 <tbody>
                     @forelse($assessments as $index => $assessment)
                     <tr>
-                        <td class="num" data-label="Sr. No.">{{ $index + 1 }}</td>
+                        <td class="num" data-label="Sr. No.">{{ $assessments->firstItem() + $index }}</td>
                         <td data-label="Image">
                             @if($assessment->imageUrl())
                                 <img src="{{ $assessment->imageUrl() }}" class="assess-thumb" alt="">
@@ -84,6 +107,7 @@
                 </tbody>
             </table>
         </div>
+        @include('frontend.partials.pagination', ['paginator' => $assessments])
         @endif
     </div>
 </div>

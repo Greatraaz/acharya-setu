@@ -90,7 +90,7 @@
             </table>
 
             @if($transactions->hasPages())
-            <div style="margin-top:16px;display:flex;justify-content:center;">{{ $transactions->links() }}</div>
+            @include('frontend.partials.pagination', ['paginator' => $transactions])
             @endif
         </div>
     </div>

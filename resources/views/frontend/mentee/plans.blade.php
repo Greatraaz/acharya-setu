@@ -141,9 +141,33 @@
         </div>
         @endif
 
-        @if($history->isNotEmpty())
+        @if($history->isNotEmpty() || request()->filled('status') || request()->filled('search'))
         <div class="card">
             <h3 style="font-size:15px;font-weight:700;margin-bottom:14px;">Subscription history</h3>
+
+            <form method="GET" action="{{ route('mentee.plans') }}" class="session-toolbar" style="margin-bottom:14px;">
+                <div class="session-filter-tabs">
+                    @foreach(['' => 'All', 'active' => 'Active', 'cancelled' => 'Cancelled', 'expired' => 'Expired', 'pending' => 'Pending'] as $key => $label)
+                        @php $tabParams = array_filter(['status' => $key ?: null, 'search' => ($search ?? request('search')) ?: null]); @endphp
+                        <a href="{{ route('mentee.plans', $tabParams) }}"
+                           class="session-filter-tab {{ ($status ?? request('status', '')) === $key ? 'active' : '' }}">
+                            {{ $label }}
+                        </a>
+                    @endforeach
+                </div>
+                <div class="session-toolbar-controls">
+                    @if(($status ?? request('status')))
+                        <input type="hidden" name="status" value="{{ $status ?? request('status') }}">
+                    @endif
+                    <div class="session-search-field">
+                        <span class="session-search-icon" aria-hidden="true">🔍</span>
+                        <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
+                               placeholder="Search plan or subscription ID…" autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn btn-outline btn-sm">Search</button>
+                </div>
+            </form>
+
             <table class="data-table">
                 <thead>
                     <tr>
@@ -186,6 +210,8 @@
                     @endforeach
                 </tbody>
             </table>
+
+            @include('frontend.partials.pagination', ['paginator' => $history])
         </div>
         @endif
     </div>

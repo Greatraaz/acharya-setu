@@ -23,6 +23,11 @@
 
     <section class="section insights-body">
         <div class="container">
+            @include('frontend.partials.insights-search', [
+                'placeholder' => 'Search white papers…',
+                'search' => $search ?? '',
+            ])
+
             @if($whitePapers->isEmpty())
                 <div class="blog-empty">
                     <div class="blog-empty__icon">📄</div>
@@ -52,9 +57,7 @@
                     @endforeach
                 </div>
 
-                @if(method_exists($whitePapers, 'hasPages') && $whitePapers->hasPages())
-                    <div class="blog-pagination">{{ $whitePapers->links() }}</div>
-                @endif
+                @include('frontend.partials.pagination', ['paginator' => $whitePapers])
             @endif
         </div>
     </section>

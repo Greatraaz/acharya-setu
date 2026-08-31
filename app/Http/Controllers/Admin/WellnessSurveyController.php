@@ -15,13 +15,14 @@ use Illuminate\Support\Facades\DB;
 class WellnessSurveyController extends Controller
 {
  
-    public function index()
+    public function index(Request $request)
     {
         $surveys = WellnessSurvey::where('is_active', true)
             ->with('creator')
             ->withCount('responses')
             ->latest()
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
  
         return view('admin.wellness.index', compact('surveys'));
     }

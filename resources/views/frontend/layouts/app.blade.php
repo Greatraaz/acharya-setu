@@ -59,7 +59,7 @@
                             <div class="insights-dropdown-col">
                                 @foreach($column as $item)
                                     <a href="{{ \App\Support\InsightsMenu::href($item) }}"
-                                       class="insights-dropdown-link {{ in_array($item['key'] ?? '', ['blogs', 'white-papers', 'case-studies'], true) && request()->routeIs('insights.'.($item['key']).'.*') ? 'active' : '' }}"
+                                       class="insights-dropdown-link {{ in_array($item['key'] ?? '', ['blogs', 'white-papers', 'case-studies', 'testimonials', 'webinars', 'events', 'podcasts', 'videos', 'download-centre'], true) && request()->routeIs('insights.'.($item['key']).'.*') ? 'active' : '' }}"
                                        role="menuitem">
                                         <span class="insights-dropdown-ico">{{ $item['icon'] }}</span>
                                         <span>{{ $item['label'] }}</span>

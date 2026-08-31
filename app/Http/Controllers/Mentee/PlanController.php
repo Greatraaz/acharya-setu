@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 
 class PlanController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
 
@@ -29,13 +29,21 @@ class PlanController extends Controller
             ->latest('starts_at')
             ->first();
 
+        $status = $request->input('status');
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+
         $history = UserSubscription::with(['plan', 'invoice'])
             ->where('user_id', $user->id)
+            ->when(in_array($status, ['active', 'cancelled', 'expired', 'pending'], true), fn ($q) => $q->where('status', $status))
+            ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
+                $inner->where('subscription_id', 'like', '%'.$search.'%')
+                    ->orWhereHas('plan', fn ($p) => $p->where('name', 'like', '%'.$search.'%'));
+            }))
             ->latest()
-            ->limit(10)
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
-        return view('frontend.mentee.plans', compact('plans', 'current', 'history'));
+        return view('frontend.mentee.plans', compact('plans', 'current', 'history', 'status', 'search'));
     }
 
     /**

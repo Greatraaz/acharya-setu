@@ -30,20 +30,23 @@ class CurriculumController extends Controller
     public function tracks(Request $request)
     {
         $mentorId = auth()->id();
+        $search = trim((string) $request->input('search', $request->input('q', '')));
 
         $tracks = EducationStream::with('mentee:id,name,email,avatar_url')
             ->withCount('months')
             ->where('mentor_id', $mentorId)
             ->when($request->filled('mentee_id'), fn ($q) => $q->where('mentee_id', $request->mentee_id))
+            ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
             ->orderBy('sort_order')
-            ->get();
+            ->paginate(12)
+            ->withQueryString();
 
         $mentees = $this->mentorMenteesQuery()->get(['id', 'name', 'email']);
         $filterMentee = $request->filled('mentee_id')
             ? $mentees->firstWhere('id', (int) $request->mentee_id)
             : null;
 
-        return view('frontend.mentors.curriculum.tracks', compact('tracks', 'mentees', 'filterMentee'));
+        return view('frontend.mentors.curriculum.tracks', compact('tracks', 'mentees', 'filterMentee', 'search'));
     }
 
     public function storeTrack(Request $request)

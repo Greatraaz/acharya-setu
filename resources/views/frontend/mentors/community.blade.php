@@ -6,13 +6,18 @@
     @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
-        <div class="dash-header">
-            <div class="dash-title">Community</div>
-            <div class="dash-subtitle">Channels you can join and discuss with mentees and other mentors.</div>
-        </div>
-        <div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+        <div class="dash-header flex-between" style="flex-wrap:wrap;gap:12px;">
+            <div>
+                <div class="dash-title">Community</div>
+                <div class="dash-subtitle">Channels you can join and discuss with mentees and other mentors.</div>
+            </div>
             <a href="{{ route('mentor.community.create') }}" class="btn btn-primary btn-sm">+ Create Channel</a>
         </div>
+
+        @include('frontend.partials.community-filters', [
+            'routeName' => 'mentor.community',
+            'channels' => $channels,
+        ])
 
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
             @forelse($channels as $channel)
@@ -23,7 +28,7 @@
                 </div>
                 <div style="font-size:15px;font-weight:700;margin-bottom:4px;">{{ $channel->name }}</div>
                 <div style="font-size:12px;color:var(--text-2);margin-bottom:12px;min-height:36px;">{{ Str::limit($channel->description ?: 'No description', 90) }}</div>
-                <div style="font-size:11px;color:var(--text-3);display:flex;gap:12px;">
+                <div style="font-size:11px;color:var(--text-3);display:flex;gap:12px;flex-wrap:wrap;">
                     <span>{{ $channel->members_count }} members</span>
                     <span>{{ $channel->all_messages_count }} messages</span>
                     @if(($channel->unread_count ?? 0) > 0)
@@ -34,11 +39,13 @@
             @empty
             <div class="empty-state" style="grid-column:1/-1;padding:60px 0;">
                 <div style="font-size:48px;margin-bottom:12px;">💬</div>
-                <div style="font-size:16px;font-weight:700;margin-bottom:8px;">No channels yet</div>
-                <p style="font-size:13px;color:var(--text-2);">Community channels will appear here once they’re created.</p>
+                <div style="font-size:16px;font-weight:700;margin-bottom:8px;">No channels found</div>
+                <p style="font-size:13px;color:var(--text-2);">Try adjusting your filters or create a new channel.</p>
             </div>
             @endforelse
         </div>
+
+        @include('frontend.partials.pagination', ['paginator' => $channels])
     </div>
 </div>
 @endsection

@@ -110,7 +110,7 @@
                 </tbody>
             </table>
             @if($withdrawals->hasPages())
-            <div style="margin-top:16px;display:flex;justify-content:center;">{{ $withdrawals->links() }}</div>
+            @include('frontend.partials.pagination', ['paginator' => $withdrawals])
             @endif
         </div>
 
@@ -176,7 +176,7 @@
             </table>
 
             @if($transactions->hasPages())
-            <div style="margin-top:16px;display:flex;justify-content:center;">{{ $transactions->links() }}</div>
+            @include('frontend.partials.pagination', ['paginator' => $transactions])
             @endif
         </div>
     </div>
