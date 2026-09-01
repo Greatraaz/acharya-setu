@@ -30,7 +30,7 @@
         @endforeach
     </div>
 
-    <div class="session-toolbar-controls">
+    <div class="session-toolbar-controls community-filters-toolbar__controls">
         @if($joinedKey === 'joined')
             <input type="hidden" name="joined" value="1">
         @elseif($joinedKey === 'not_joined')
@@ -56,7 +56,7 @@
             @endforeach
         </select>
 
-        <button type="submit" class="btn btn-outline">Apply</button>
+        <button type="submit" class="btn btn-outline">Search</button>
 
         @if($search !== '' || $type !== '' || $category !== '' || $joinedKey !== 'all')
             <a href="{{ route($routeName) }}" class="btn btn-ghost">Clear</a>

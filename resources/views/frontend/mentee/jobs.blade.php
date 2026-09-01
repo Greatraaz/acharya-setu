@@ -11,8 +11,8 @@
             <div class="dash-subtitle">Open roles curated for mentees on Vedrix.</div>
         </div>
 
-        <form method="GET" action="{{ route('mentee.jobs') }}" class="card" style="margin-bottom:18px;padding:14px 16px;">
-            <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end;">
+        <form method="GET" action="{{ route('mentee.jobs') }}" class="card dash-filter-form">
+            <div class="dash-filter-form__grid">
                 <div class="form-group" style="margin:0;">
                     <label class="form-label">Search</label>
                     <input type="text" name="search" class="form-input" value="{{ request('search') }}" placeholder="Title, department, location">
@@ -35,7 +35,7 @@
                         @endforeach
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary">Filter</button>
+                <button type="submit" class="btn btn-primary">Search</button>
             </div>
         </form>
 

@@ -715,17 +715,28 @@ class CurriculumController extends Controller
 
     private function ensureEnrollmentForTrack(EducationStream $track): void
     {
-        if (! $track->mentee_id || ! $track->mentor_id) {
+        if (! $track->mentee_id) {
             return;
+        }
+
+        $mentorId = $track->mentor_id
+            ?? User::find($track->mentee_id)?->assigned_mentor_id;
+
+        if (! $mentorId) {
+            return;
+        }
+
+        if ((int) $track->mentor_id !== (int) $mentorId) {
+            $track->update(['mentor_id' => $mentorId]);
         }
 
         MenteeEnrollment::firstOrCreate(
             [
                 'mentee_id' => $track->mentee_id,
-                'mentor_id' => $track->mentor_id,
                 'stream_id' => $track->id,
             ],
             [
+                'mentor_id'         => $mentorId,
                 'start_date'        => now()->toDateString(),
                 'expected_end_date' => now()->addMonths(6)->toDateString(),
                 'status'            => 'active',

@@ -230,10 +230,43 @@ class Channel extends Model
 
     public static function validateMessageBody(?string $body): void
     {
-        if (self::findBannedWordIn($body) !== null) {
+        self::validateContent($body, 'body');
+    }
+
+    public static function abusiveContentMessage(string $field = 'body'): string
+    {
+        return match ($field) {
+            'name'        => 'The channel name contains language that isn\'t allowed. Please remove offensive or abusive words.',
+            'description' => 'The description contains language that isn\'t allowed. Please remove offensive or abusive words.',
+            default       => 'Your message contains language that isn\'t allowed in this community. Please remove offensive or abusive words and try again.',
+        };
+    }
+
+    public static function validateContent(?string $text, string $field = 'body'): void
+    {
+        if (self::findBannedWordIn($text) !== null) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'body' => ['Your message contains blocked or abusive language and cannot be posted.'],
+                $field => [self::abusiveContentMessage($field)],
             ]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $fields
+     */
+    public static function validateChannelTextFields(array $fields): void
+    {
+        foreach (['name', 'description'] as $field) {
+            if (! array_key_exists($field, $fields)) {
+                continue;
+            }
+
+            $value = trim((string) ($fields[$field] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+
+            self::validateContent($value, $field);
         }
     }
 

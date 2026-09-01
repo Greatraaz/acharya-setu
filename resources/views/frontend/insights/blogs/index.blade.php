@@ -27,7 +27,7 @@
     <section class="section insights-body">
         <div class="container">
             {{-- Category filters --}}
-            <div class="blog-filters">
+            <div class="blog-filters blog-filters--inline">
                 <a href="{{ route('insights.blogs.index') }}"
                    class="blog-filter-chip {{ $category === '' ? 'is-active' : '' }}">
                     All Articles

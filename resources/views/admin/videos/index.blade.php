@@ -17,9 +17,9 @@
     @endif
 
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
-            <div class="flex flex-wrap gap-2" id="videos-export-buttons"></div>
-            <form method="GET" class="flex flex-wrap items-center gap-2">
+        <div class="admin-table-toolbar px-5 py-4 border-b border-gray-100">
+            <div class="admin-table-toolbar__exports" id="videos-export-buttons"></div>
+            <form method="GET" class="admin-table-filters">
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search title or slug…"
                        class="border border-gray-200 rounded-lg px-3.5 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 min-w-[220px]">
                 <select name="status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
@@ -112,17 +112,6 @@
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
 <style>
-    #videos-export-buttons .dt-button {
-        background: #f8fafc !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        padding: 0.4rem 0.85rem !important;
-        font-size: 0.75rem !important;
-        font-weight: 600 !important;
-        color: #334155 !important;
-        margin: 0 0.25rem 0 0 !important;
-        box-shadow: none !important;
-    }
     #videos-table_wrapper .dataTables_filter,
     #videos-table_wrapper .dataTables_length,
     #videos-table_wrapper .dataTables_info,
@@ -140,7 +129,7 @@ $(function () {
                 { extend: 'copyHtml5', text: 'Copy', exportOptions: { columns: [0, 2, 3, 4] } },
                 { extend: 'excelHtml5', text: 'Excel', exportOptions: { columns: [0, 2, 3, 4] } },
                 { extend: 'pdfHtml5', text: 'PDF', orientation: 'landscape', exportOptions: { columns: [0, 2, 3, 4] } },
-                { extend: 'colvis', text: 'Column visibility' }
+                { extend: 'colvis', text: 'Column visibility', dropIcon: '' }
             ]
         },
         columnDefs: [{ orderable: false, targets: [1, 5] }]

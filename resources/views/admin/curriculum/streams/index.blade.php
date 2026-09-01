@@ -9,12 +9,6 @@
     <div class="flex items-center justify-between">
         <div>
             <p class="text-sm text-gray-500">Build the 6-month plan on each mentee’s stream copy. Global catalog streams live under Curriculum Streams.</p>
-            @if($filterMentee ?? null)
-            <div class="mt-2 inline-flex items-center gap-2 bg-violet-50 border border-violet-100 text-violet-800 text-xs font-medium px-3 py-1.5 rounded-xl">
-                Showing journeys for <span class="font-semibold">{{ $filterMentee->name }}</span>
-                <a href="{{ route('admin.curriculum.streams') }}" class="text-violet-600 hover:text-violet-800 underline">Clear filter</a>
-            </div>
-            @endif
         </div>
         <button onclick="document.getElementById('add-stream-modal').classList.remove('hidden')"
                 class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
@@ -46,6 +40,65 @@
     </div>
     @endif
 
+    {{-- Filters --}}
+    <div class="bg-white border border-gray-200 rounded-2xl p-4">
+        <form method="GET" action="{{ route('admin.curriculum.streams') }}" class="flex flex-wrap items-end gap-3">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
+                <div class="relative">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="search" name="search" value="{{ $search ?? request('search') }}"
+                           placeholder="Stream name, slug, mentee…"
+                           class="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all">
+                </div>
+            </div>
+
+            <div class="min-w-[180px]">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Mentee</label>
+                <select name="mentee_id"
+                        class="w-full border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 cursor-pointer">
+                    <option value="">All mentees</option>
+                    @foreach($mentees as $mentee)
+                    <option value="{{ $mentee->id }}" @selected((string) request('mentee_id') === (string) $mentee->id)>
+                        {{ $mentee->name }}
+                    </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="min-w-[140px]">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                <select name="status"
+                        class="w-full border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 cursor-pointer">
+                    <option value="">All</option>
+                    <option value="active" @selected(($status ?? request('status')) === 'active')>Active</option>
+                    <option value="inactive" @selected(($status ?? request('status')) === 'inactive')>Inactive</option>
+                </select>
+            </div>
+
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">
+                Search
+            </button>
+
+            @if(request()->filled('search') || request()->filled('mentee_id') || request()->filled('status'))
+            <a href="{{ route('admin.curriculum.streams') }}"
+               class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
+                Clear
+            </a>
+            @endif
+        </form>
+    </div>
+
+    @if($streams->total() > 0 || request()->hasAny(['search', 'mentee_id', 'status']))
+    <p class="text-xs text-gray-500">
+        {{ $streams->total() }} {{ \Illuminate\Support\Str::plural('stream', $streams->total()) }}
+        @if($search ?? request('search'))
+            matching “{{ $search ?? request('search') }}”
+        @endif
+    </p>
+    @endif
+
     {{-- Streams Grid --}}
     @if($streams->isEmpty())
     <div class="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-16 text-center">
@@ -53,9 +106,17 @@
         @if($filterMentee ?? null)
         <p class="text-gray-600 font-semibold mb-1">No journeys for {{ $filterMentee->name }} yet</p>
         <p class="text-gray-400 text-sm mb-5">Create a stream for this mentee to start their 6-month plan.</p>
+        @elseif(request()->hasAny(['search', 'status']))
+        <p class="text-gray-600 font-semibold mb-1">No streams match your filters</p>
+        <p class="text-gray-400 text-sm mb-5">Try different search terms or clear the filters.</p>
         @else
         <p class="text-gray-600 font-semibold mb-1">No mentee journeys yet</p>
         <p class="text-gray-400 text-sm mb-5">Mentee copies appear here after they pick a global stream in onboarding, or you create one below.</p>
+        @endif
+        @if(request()->hasAny(['search', 'mentee_id', 'status']))
+        <a href="{{ route('admin.curriculum.streams') }}" class="inline-flex items-center gap-2 border border-gray-200 text-gray-600 text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-gray-50 transition-colors mr-2">
+            Clear filters
+        </a>
         @endif
         <button onclick="document.getElementById('add-stream-modal').classList.remove('hidden')"
                 class="inline-flex items-center gap-2 bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-violet-700 transition-colors">
@@ -63,7 +124,7 @@
         </button>
     </div>
     @else
-    <div class="grid grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         @foreach($streams as $stream)
         <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow group">
             {{-- Color bar --}}

@@ -1021,3 +1021,88 @@ html[data-theme="light"] .dash-content .community-channel-card {
     --ct-text: #111827;
     --ct-text-muted: #52525b;
 }
+
+/* Abusive / blocked content warnings */
+.community-content-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0 16px 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(239, 68, 68, .35);
+    background: rgba(254, 226, 226, .65);
+    color: #991b1b;
+}
+
+.community-content-warning--inline {
+    margin: 0 0 10px;
+}
+
+.community-content-warning__icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: #dc2626;
+}
+
+.community-content-warning__title {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0 0 2px;
+    color: #991b1b;
+}
+
+.community-content-warning__text {
+    font-size: 12px;
+    line-height: 1.45;
+    margin: 0;
+    color: #b91c1c;
+}
+
+.community-thread__composer-input.is-invalid {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, .15);
+}
+
+.community-thread__flash {
+    margin: 0 16px 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.community-thread__flash--success {
+    background: var(--ct-success-bg, rgba(34, 197, 94, .12));
+    color: var(--ct-success-text, #15803d);
+    border: 1px solid rgba(34, 197, 94, .25);
+}
+
+.community-thread__flash--error {
+    background: rgba(254, 226, 226, .75);
+    color: #991b1b;
+    border: 1px solid rgba(239, 68, 68, .3);
+}
+
+html[data-theme="dark"] .community-content-warning {
+    background: rgba(127, 29, 29, .35);
+    border-color: rgba(248, 113, 113, .35);
+    color: #fecaca;
+}
+
+html[data-theme="dark"] .community-content-warning__title {
+    color: #fecaca;
+}
+
+html[data-theme="dark"] .community-content-warning__text {
+    color: #fca5a5;
+}
+
+html[data-theme="dark"] .community-thread__flash--error {
+    background: rgba(127, 29, 29, .4);
+    color: #fecaca;
+    border-color: rgba(248, 113, 113, .3);
+}
+

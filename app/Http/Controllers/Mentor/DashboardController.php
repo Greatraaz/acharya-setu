@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
 use App\Models\MentorRequest;
 use App\Models\WalletTransaction;
+use App\Support\MentorMenteesQuery;
 
 class DashboardController extends Controller
 {
@@ -48,10 +49,7 @@ class DashboardController extends Controller
                                         ->where('type','credit')
                                         ->whereMonth('created_at', now()->month)
                                         ->sum('amount'),
-            'active_mentees'       => ConsultationSession::where('mentor_id', $mentor->id)
-                                        ->where('status','completed')
-                                        ->distinct('mentee_id')
-                                        ->count('mentee_id'),
+            'active_mentees'       => MentorMenteesQuery::for($mentor->id)->count(),
             'pending_sessions'     => ConsultationSession::where('mentor_id', $mentor->id)
                                         ->where('status','upcoming')
                                         ->where('scheduled_at', '>', now())

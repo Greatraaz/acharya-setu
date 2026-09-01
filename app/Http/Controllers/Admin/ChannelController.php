@@ -59,6 +59,15 @@ class ChannelController extends Controller
 
         $request->validate(Channel::storeValidationRules());
 
+        try {
+            Channel::validateChannelTextFields([
+                'name'        => $request->name,
+                'description' => $request->description,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withInput()->withErrors($e->errors());
+        }
+
         $channel = Channel::create([
             'name'        => $request->name,
             'slug'        => $request->slug,

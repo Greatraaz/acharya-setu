@@ -50,7 +50,7 @@
                     <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
                            placeholder="Search track name…" autocomplete="off">
                 </div>
-                <button type="submit" class="btn btn-outline">Apply</button>
+                <button type="submit" class="btn btn-outline">Search</button>
                 @if(request()->filled('mentee_id') || request()->filled('search'))
                     <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-ghost">Clear</a>
                 @endif

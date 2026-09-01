@@ -168,6 +168,7 @@
                 </div>
             </form>
 
+            <div class="table-scroll">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -210,6 +211,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
 
             @include('frontend.partials.pagination', ['paginator' => $history])
         </div>

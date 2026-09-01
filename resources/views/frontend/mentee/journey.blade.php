@@ -25,23 +25,51 @@
             <div class="empty-state" style="padding:56px 20px;">
                 <div style="font-size:48px;margin-bottom:12px;">🗺️</div>
                 <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No active journey yet</div>
+                @if($assignedMentor)
                 <p style="font-size:13px;color:var(--text-2);max-width:420px;margin:0 auto 18px;">
-                    Once you’re enrolled in a curriculum track by your mentor or admin, your months, weeks, and tasks will appear here.
+                    You’re connected with <strong>{{ $assignedMentor->name }}</strong>.
+                    Your personalized curriculum will appear here once your mentor or admin publishes your learning track.
+                </p>
+                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-primary">View my mentor</a>
+                @else
+                <p style="font-size:13px;color:var(--text-2);max-width:420px;margin:0 auto 18px;">
+                    Connect with a mentor to get a personalized curriculum — your months, weeks, and tasks will appear here once you’re enrolled in a track.
                 </p>
                 <a href="{{ route('mentors.search') }}" class="btn btn-primary">Find a Mentor</a>
+                @endif
             </div>
 
-            @if($streams->isNotEmpty())
+            @if($personalTracks->isNotEmpty())
             <div class="card" style="margin-top:20px;">
-                <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Available tracks</h3>
+                <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Your assigned tracks</h3>
                 <div style="display:grid;gap:10px;">
-                    @foreach($streams as $stream)
+                    @foreach($personalTracks as $track)
+                    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+                        <div>
+                            <div style="font-weight:600;font-size:14px;">{{ $track->name }}</div>
+                            <div style="font-size:12px;color:var(--text-2);">{{ Str::limit($track->description ?? 'Personalized curriculum track', 90) }}</div>
+                        </div>
+                        @if($track->months_count > 0)
+                        <span class="tag" style="background:var(--brand-soft);color:var(--brand);">Setting up</span>
+                        @else
+                        <span class="tag">Awaiting content</span>
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+            @elseif($catalogStreams->isNotEmpty())
+            <div class="card" style="margin-top:20px;">
+                <h3 style="font-size:14px;font-weight:700;margin-bottom:6px;">Learning areas</h3>
+                <p style="font-size:12px;color:var(--text-2);margin-bottom:12px;">Topics you can explore once matched with a mentor.</p>
+                <div style="display:grid;gap:10px;">
+                    @foreach($catalogStreams as $stream)
                     <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
                         <div>
                             <div style="font-weight:600;font-size:14px;">{{ $stream->name }}</div>
                             <div style="font-size:12px;color:var(--text-2);">{{ Str::limit($stream->description ?? 'Curriculum track', 90) }}</div>
                         </div>
-                        <span class="tag">Coming soon</span>
+                        <span class="tag">Browse only</span>
                     </div>
                     @endforeach
                 </div>

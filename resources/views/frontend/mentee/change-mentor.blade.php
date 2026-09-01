@@ -73,18 +73,22 @@
                 <a href="{{ route('mentors.search') }}" style="font-size:12px;color:var(--brand);">Browse all →</a>
             </div>
 
-            <form method="GET" action="{{ route('mentee.mentor.change') }}" class="session-toolbar" style="margin-bottom:16px;">
-                <div class="session-toolbar-controls" style="width:100%;flex-wrap:wrap;">
-                    <div class="session-search-field" style="flex:1;min-width:200px;">
+            <form method="GET" action="{{ route('mentee.mentor.change') }}" class="mentor-change-toolbar">
+                <div class="session-toolbar-controls mentor-change-toolbar__controls">
+                    <div class="session-search-field mentor-change-toolbar__search">
                         <span class="session-search-icon" aria-hidden="true">🔍</span>
                         <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
                                placeholder="Search name, company, field…" autocomplete="off">
                     </div>
-                    <input type="text" name="field" class="form-input" value="{{ $field ?? request('field') }}"
-                           placeholder="Filter by field" style="min-width:160px;">
-                    <button type="submit" class="btn btn-outline btn-sm">Search</button>
+                    <select name="field" class="form-input form-select mentor-change-toolbar__field" aria-label="Filter by field">
+                        <option value="">All fields</option>
+                        @foreach($fieldOptions ?? [] as $fieldOption)
+                        <option value="{{ $fieldOption }}" @selected(($field ?? request('field')) === $fieldOption)>{{ $fieldOption }}</option>
+                        @endforeach
+                    </select>
+                    <button type="submit" class="btn btn-outline">Search</button>
                     @if(request()->filled('search') || request()->filled('field'))
-                        <a href="{{ route('mentee.mentor.change') }}" class="btn btn-ghost btn-sm">Clear</a>
+                        <a href="{{ route('mentee.mentor.change') }}" class="btn btn-ghost">Clear</a>
                     @endif
                 </div>
             </form>

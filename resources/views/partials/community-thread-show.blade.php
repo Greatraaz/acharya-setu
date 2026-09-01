@@ -103,6 +103,20 @@
             </div>
         </div>
 
+        @if(session('success'))
+        <div class="community-thread__flash community-thread__flash--success" role="status">
+            {{ session('success') }}
+        </div>
+        @endif
+
+        @if(session('error'))
+        <div class="community-thread__flash community-thread__flash--error" role="alert">
+            {{ session('error') }}
+        </div>
+        @endif
+
+        @include('partials.community-content-warning')
+
         {{-- Messages --}}
         <div class="community-thread__messages" id="messages-container">
             @if($messages->hasPages() && $messages->currentPage() > 1)
@@ -152,7 +166,7 @@
             <form method="POST" action="{{ route($r.'.messages.store', $channel->slug) }}" id="main-form" enctype="multipart/form-data" class="channel-composer-form">
                 @csrf
                 <div class="community-thread__composer">
-                    <input type="text" name="body" id="main-input" placeholder="Message #{{ $channel->name }}…" autocomplete="off" class="community-thread__composer-input">
+                    <input type="text" name="body" id="main-input" value="{{ old('body') }}" placeholder="Message #{{ $channel->name }}…" autocomplete="off" class="community-thread__composer-input @error('body') is-invalid @enderror">
                     <label class="community-thread__composer-icon" title="Add image">
                         <input type="file" name="image" id="main-image" accept="image/*" class="hidden" onchange="previewMainImage(this)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -386,6 +400,12 @@ document.addEventListener('DOMContentLoaded', () => {
     scrollMessagesToBottom();
     requestAnimationFrame(scrollMessagesToBottom);
     setTimeout(scrollMessagesToBottom, 100);
+
+    const warning = document.querySelector('[data-community-content-warning]');
+    if (warning) {
+        document.getElementById('main-input')?.focus();
+        warning.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 });
 
 document.getElementById('main-input')?.addEventListener('keydown', function (e) {
@@ -396,5 +416,6 @@ document.getElementById('main-input')?.addEventListener('keydown', function (e) 
 });
 </script>
 @include('partials.community-composer-scripts')
+@include('partials.community-content-guard-scripts')
 @endpush
 @endonce

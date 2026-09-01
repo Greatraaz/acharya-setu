@@ -23,10 +23,13 @@
 
     <section class="section insights-body">
         <div class="container">
-            @include('frontend.partials.insights-search', [
-                'placeholder' => 'Search downloads…',
-                'search' => $search ?? '',
-            ])
+            <div class="insights-toolbar insights-toolbar--search-only">
+                @include('frontend.partials.insights-search', [
+                    'placeholder' => 'Search downloads…',
+                    'search' => $search ?? '',
+                    'variant' => 'toolbar',
+                ])
+            </div>
 
             @if($downloads->isEmpty())
                 <div class="blog-empty">

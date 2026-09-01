@@ -20,6 +20,9 @@ class CurriculumController extends Controller
             $filterMentee = User::where('role', 'mentee')->find($request->mentee_id);
         }
 
+        $search = trim((string) $request->input('search', ''));
+        $status = (string) $request->input('status', '');
+
         $streams = EducationStream::with('mentee:id,name,email')
             ->withCount(['months', 'enrollments'])
             ->when(
@@ -27,7 +30,21 @@ class CurriculumController extends Controller
                 fn ($q) => $q->where('mentee_id', $filterMentee->id),
                 fn ($q) => $q->whereNotNull('mentee_id')
             )
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('slug', 'like', '%'.$search.'%')
+                        ->orWhere('description', 'like', '%'.$search.'%')
+                        ->orWhereHas('mentee', function ($mentee) use ($search) {
+                            $mentee->where('name', 'like', '%'.$search.'%')
+                                ->orWhere('email', 'like', '%'.$search.'%');
+                        });
+                });
+            })
+            ->when($status === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($status === 'inactive', fn ($q) => $q->where('is_active', false))
             ->orderBy('sort_order')
+            ->orderBy('name')
             ->paginate(12)
             ->withQueryString();
 
@@ -35,8 +52,14 @@ class CurriculumController extends Controller
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
- 
-        return view('admin.curriculum.streams.index', compact('streams', 'mentees', 'filterMentee'));
+
+        return view('admin.curriculum.streams.index', compact(
+            'streams',
+            'mentees',
+            'filterMentee',
+            'search',
+            'status'
+        ));
     }
 
     // ── Global catalog streams (onboarding picker) ────────────

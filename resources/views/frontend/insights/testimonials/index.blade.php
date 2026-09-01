@@ -33,10 +33,13 @@
                 </p>
             </div>
 
-            @include('frontend.partials.insights-search', [
-                'placeholder' => 'Search testimonials…',
-                'search' => $search ?? '',
-            ])
+            <div class="insights-toolbar insights-toolbar--search-only">
+                @include('frontend.partials.insights-search', [
+                    'placeholder' => 'Search testimonials…',
+                    'search' => $search ?? '',
+                    'variant' => 'toolbar',
+                ])
+            </div>
 
             @if($testimonials->isEmpty())
                 <div class="blog-empty">

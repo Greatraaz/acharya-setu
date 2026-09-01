@@ -58,6 +58,64 @@ span[class*="rounded-full"] {
         transform: translateX(0);
     }
 }
+
+/* Admin table toolbar — export utilities + filter fields */
+.admin-table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.admin-table-toolbar__exports,
+[id$="-export-buttons"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+.dt-buttons {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+.admin-table-toolbar__exports .dt-button,
+[id$="-export-buttons"] .dt-button {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 0.4rem 0.85rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #334155 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+.admin-table-toolbar__exports .dt-button:hover,
+[id$="-export-buttons"] .dt-button:hover {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    border-color: #bfdbfe !important;
+}
+.admin-table-toolbar__exports .dt-button span.dt-down-arrow,
+[id$="-export-buttons"] .dt-button span.dt-down-arrow,
+.dt-button.buttons-colvis::after {
+    display: none !important;
+}
+.admin-table-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+.admin-table-filters input[type="text"],
+.admin-table-filters input[type="search"] {
+    min-width: 220px;
+}
+.admin-table-filters select {
+    min-width: 140px;
+}
 </style>
 <script>
  tailwind.config = {

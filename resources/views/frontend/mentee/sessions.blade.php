@@ -71,7 +71,7 @@
         <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden;">
             <div style="display:flex;align-items:stretch;">
                 <div style="width:4px;flex-shrink:0;background:{{ $barColor }};"></div>
-                <div style="flex:1;padding:18px;display:flex;gap:16px;align-items:flex-start;">
+                <div style="flex:1;padding:18px;" class="session-card-inner">
                     <div class="mentor-avatar-lg" style="width:50px;height:50px;font-size:18px;">
                         @if($session->mentor->avatar_url ?? false)
                             <img src="{{ $session->mentor->avatar_url }}" alt="">
@@ -80,7 +80,7 @@
                         @endif
                     </div>
 
-                    <div style="flex:1;min-width:0;">
+                    <div class="session-card-body">
                         <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
                             <div>
                                 <div style="font-size:15px;font-weight:700;margin-bottom:3px;">{{ $session->title ?: 'Mentoring Session' }}</div>

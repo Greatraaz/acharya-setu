@@ -16,7 +16,7 @@ class AssessmentController extends Controller
     {
     }
 
-    public function index()
+    public function index(Request $request)
     {
         if (! $this->assessments->tableExists()) {
             return view('admin.assessments.index', [
@@ -25,9 +25,12 @@ class AssessmentController extends Controller
             ]);
         }
 
-        $assessments = $this->assessments->listWithStatsPaginated();
+        $assessments = $this->assessments->listWithStatsPaginated(20, $request);
 
-        return view('admin.assessments.index', compact('assessments'));
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+        $status = $request->input('status', '');
+
+        return view('admin.assessments.index', compact('assessments', 'search', 'status'));
     }
 
     public function create()

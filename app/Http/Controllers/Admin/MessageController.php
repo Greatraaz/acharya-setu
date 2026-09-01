@@ -23,7 +23,7 @@ class MessageController extends Controller
         try {
             $attrs = Message::buildPostAttributes($request, $channel);
         } catch (ValidationException $e) {
-            return back()->withErrors($e->errors());
+            return back()->withInput()->withErrors($e->errors());
         }
 
         if (! $channel->isMember($user) && $channel->canSelfJoin($user)) {

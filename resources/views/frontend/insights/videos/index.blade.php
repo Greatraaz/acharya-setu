@@ -31,10 +31,13 @@
                 <p class="media-library-intro__hint">Click any video to watch the full presentation in a large player.</p>
             </div>
 
-            @include('frontend.partials.insights-search', [
-                'placeholder' => 'Search videos…',
-                'search' => $search ?? '',
-            ])
+            <div class="insights-toolbar insights-toolbar--search-only">
+                @include('frontend.partials.insights-search', [
+                    'placeholder' => 'Search videos…',
+                    'search' => $search ?? '',
+                    'variant' => 'toolbar',
+                ])
+            </div>
 
             @if($videos->isEmpty())
                 <div class="blog-empty">

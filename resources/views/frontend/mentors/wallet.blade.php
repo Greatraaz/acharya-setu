@@ -27,11 +27,11 @@
         </div>
         @endif
 
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+        <div class="dash-stats-grid">
             <div class="wallet-card">
                 <div style="position:relative;z-index:1;">
                     <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Available to Withdraw</div>
-                    <div style="font-size:36px;font-weight:800;font-family:var(--font-head);color:white;">₹{{ number_format($stats['available'] ?? $stats['balance'] ?? auth()->user()->wallet_balance ?? 0, 2) }}</div>
+                    <div class="wallet-balance-value">₹{{ number_format($stats['available'] ?? $stats['balance'] ?? auth()->user()->wallet_balance ?? 0, 2) }}</div>
                     @if(($stats['pending_hold'] ?? 0) > 0)
                     <div style="font-size:12px;color:rgba(255,255,255,.65);margin-top:4px;">
                         Wallet ₹{{ number_format($stats['balance'] ?? 0, 0) }} · Pending hold ₹{{ number_format($stats['pending_hold'], 0) }}
@@ -68,6 +68,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <h3 style="font-size:15px;font-weight:700;">Withdrawal Requests</h3>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -109,6 +110,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
             @if($withdrawals->hasPages())
             @include('frontend.partials.pagination', ['paginator' => $withdrawals])
             @endif
@@ -118,6 +120,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <h3 style="font-size:15px;font-weight:700;">Earnings History</h3>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -174,6 +177,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
 
             @if($transactions->hasPages())
             @include('frontend.partials.pagination', ['paginator' => $transactions])

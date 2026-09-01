@@ -19,24 +19,23 @@
         @endif
 
         {{-- Filter bar --}}
-        <form method="GET" class="assess-form-card" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-bottom:20px;padding:16px 18px;">
-            <div style="flex:1;min-width:180px;">
-                <label class="form-label" style="margin-bottom:6px;">Search</label>
-                <input type="text" name="search" value="{{ request('search') }}"
-                       placeholder="Question text…" class="form-input">
-            </div>
-            <div>
-                <label class="form-label" style="margin-bottom:6px;">Assessment</label>
-                <select name="assessment_id" class="form-select" style="min-width:180px;">
-                    <option value="">All</option>
+        <form method="GET" action="{{ route('mentor.assessment-questions.index') }}" class="session-toolbar assess-questions-toolbar">
+            <div class="session-toolbar-controls assess-questions-toolbar__controls">
+                <div class="session-search-field assess-questions-toolbar__search">
+                    <span class="session-search-icon" aria-hidden="true">🔍</span>
+                    <input type="search" name="search" value="{{ request('search') }}"
+                           placeholder="Question text…" class="form-input" autocomplete="off">
+                </div>
+                <select name="assessment_id" class="form-input form-select assess-questions-toolbar__select" aria-label="Filter by assessment">
+                    <option value="">All assessments</option>
                     @foreach($assessments as $a)
                     <option value="{{ $a->id }}" @selected((string) request('assessment_id') === (string) $a->id)>{{ $a->title }}</option>
                     @endforeach
                 </select>
-            </div>
-            <div style="display:flex;gap:8px;align-items:flex-end;">
-                <button class="btn btn-primary btn-sm" type="submit">Filter</button>
-                <a href="{{ route('mentor.assessment-questions.index') }}" class="btn btn-outline btn-sm">Reset</a>
+                <button type="submit" class="btn btn-outline">Search</button>
+                @if(request()->filled('search') || request()->filled('assessment_id'))
+                <a href="{{ route('mentor.assessment-questions.index') }}" class="btn btn-ghost">Clear</a>
+                @endif
             </div>
         </form>
 

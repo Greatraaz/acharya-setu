@@ -78,6 +78,48 @@ class EducationStream extends Model
             ->where(fn (Builder $q) => $q->whereNull('mentor_id')->orWhere('mentor_id', '!=', $mentorId))
             ->update(['mentor_id' => $mentorId]);
     }
+
+    /** Ensure MenteeEnrollment rows exist for all active tracks assigned to this mentee. */
+    public static function syncEnrollmentsForMentee(int $menteeId): void
+    {
+        $mentee = User::find($menteeId);
+
+        if (! $mentee) {
+            return;
+        }
+
+        $tracks = static::query()
+            ->where('mentee_id', $menteeId)
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($tracks as $track) {
+            $mentorId = $track->mentor_id ?? $mentee->assigned_mentor_id;
+
+            if (! $mentorId) {
+                continue;
+            }
+
+            if ((int) $track->mentor_id !== (int) $mentorId) {
+                $track->update(['mentor_id' => $mentorId]);
+            }
+
+            MenteeEnrollment::firstOrCreate(
+                [
+                    'mentee_id' => $menteeId,
+                    'stream_id' => $track->id,
+                ],
+                [
+                    'mentor_id'         => $mentorId,
+                    'start_date'        => now()->toDateString(),
+                    'expected_end_date' => now()->addMonths(6)->toDateString(),
+                    'status'            => 'active',
+                    'current_month'     => 1,
+                    'current_week'      => 1,
+                ]
+            );
+        }
+    }
  
     public function getTotalTasksAttribute(): int
     {

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Mentee;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\MentorResource;
 use App\Models\MentorRequest;
 use App\Models\User;
 use App\Services\MentorRequestService;
+use App\Support\MentorBrowseQuery;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
 
@@ -29,23 +31,15 @@ class MentorRequestController extends Controller
         $search = trim((string) $request->input('search', $request->input('q', '')));
         $field = trim((string) $request->input('field', ''));
 
-        $mentors = User::where('role', 'mentor')
-            ->where('mentor_status', 'approved')
-            ->where('is_active', true)
-            ->when($mentee->assigned_mentor_id, fn ($q) => $q->where('id', '!=', $mentee->assigned_mentor_id))
-            ->when($search !== '', function ($q) use ($search) {
-                $q->where(function ($inner) use ($search) {
-                    $inner->where('name', 'like', '%'.$search.'%')
-                        ->orWhere('designation', 'like', '%'.$search.'%')
-                        ->orWhere('company', 'like', '%'.$search.'%')
-                        ->orWhere('field', 'like', '%'.$search.'%')
-                        ->orWhere('bio', 'like', '%'.$search.'%');
-                });
-            })
-            ->when($field !== '', fn ($q) => $q->where('field', 'like', '%'.$field.'%'))
-            ->orderByDesc('rating')
+        $request->merge(['exclude_assigned' => true]);
+        $query = MentorBrowseQuery::fromRequest($request, $mentee);
+        MentorBrowseQuery::applySort($query, 'best');
+
+        $mentors = $query
             ->paginate(12)
             ->withQueryString();
+
+        $fieldOptions = MentorResource::distinctFields();
 
         $pendingMentorIds = $pendingRequests->pluck('mentor_id')->all();
 
@@ -55,7 +49,8 @@ class MentorRequestController extends Controller
             'mentors',
             'pendingMentorIds',
             'search',
-            'field'
+            'field',
+            'fieldOptions'
         ));
     }
 

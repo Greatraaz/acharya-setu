@@ -34,6 +34,20 @@ class CommunityController extends Controller
 
         $data = $request->validate(Channel::storeValidationRules());
 
+        try {
+            Channel::validateChannelTextFields([
+                'name'        => $data['name'],
+                'description' => $data['description'] ?? null,
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $firstError = collect($e->errors())->flatten()->first();
+
+            return response()->json([
+                'message' => $firstError ?: 'This content is not allowed.',
+                'errors'  => $e->errors(),
+            ], 422);
+        }
+
         $channel = Channel::create([
             'name'        => $data['name'],
             'slug'        => $data['slug'] ?? null,
@@ -91,6 +105,20 @@ public function updateChannel(Request $request, int $channelId): JsonResponse
         'type'        => 'required|in:' . Channel::TYPE_PUBLIC . ',' . Channel::TYPE_PRIVATE,
         'category'    => 'nullable|string|max:100',
     ]);
+
+    try {
+        Channel::validateChannelTextFields([
+            'name'        => $data['name'],
+            'description' => $data['description'] ?? null,
+        ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        $firstError = collect($e->errors())->flatten()->first();
+
+        return response()->json([
+            'message' => $firstError ?: 'This content is not allowed.',
+            'errors'  => $e->errors(),
+        ], 422);
+    }
 
     $channel->update([
         'name'        => $data['name'],

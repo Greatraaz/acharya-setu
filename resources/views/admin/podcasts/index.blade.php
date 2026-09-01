@@ -17,9 +17,9 @@
     @endif
 
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
-            <div class="flex flex-wrap gap-2" id="podcasts-export-buttons"></div>
-            <form method="GET" class="flex flex-wrap items-center gap-2">
+        <div class="admin-table-toolbar px-5 py-4 border-b border-gray-100">
+            <div class="admin-table-toolbar__exports" id="podcasts-export-buttons"></div>
+            <form method="GET" class="admin-table-filters">
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search title or slug…"
                        class="border border-gray-200 rounded-lg px-3.5 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 min-w-[220px]">
                 <select name="podcast_type" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
@@ -54,7 +54,7 @@
                         <th class="text-left px-5 py-3 font-semibold text-gray-600 w-24">Image</th>
                         <th class="text-left px-5 py-3 font-semibold text-gray-600">Title</th>
                         <th class="text-left px-5 py-3 font-semibold text-gray-600">Slug</th>
-                        <th class="text-left px-5 py-3 font-semibold text-gray-600 w-28">Type</th>
+                        <th class="text-left px-5 py-3 font-semibold text-gray-600 whitespace-nowrap">Type</th>
                         <th class="text-left px-5 py-3 font-semibold text-gray-600 w-28">Status</th>
                         <th class="text-right px-5 py-3 font-semibold text-gray-600 w-32">Action</th>
                     </tr>
@@ -74,8 +74,8 @@
                             <div class="line-clamp-2">{{ $item->title }}</div>
                         </td>
                         <td class="px-5 py-4 text-gray-600">{{ $item->slug }}</td>
-                        <td class="px-5 py-4">
-                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium {{ $item->isAudio() ? 'bg-purple-100 text-purple-800' : 'bg-red-100 text-red-800' }}">
+                        <td class="px-5 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ $item->isAudio() ? 'bg-purple-100 text-purple-800' : 'bg-red-100 text-red-800' }}">
                                 {{ $item->typeLabel() }}
                             </span>
                         </td>
@@ -123,18 +123,6 @@
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
 <style>
-    #podcasts-export-buttons .dt-button {
-        background: #f8fafc !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 8px !important;
-        padding: 0.4rem 0.85rem !important;
-        font-size: 0.75rem !important;
-        font-weight: 600 !important;
-        color: #334155 !important;
-        margin: 0 0.25rem 0 0 !important;
-        box-shadow: none !important;
-    }
-    #podcasts-export-buttons .dt-button:hover { background: #eff6ff !important; color: #1d4ed8 !important; border-color: #bfdbfe !important; }
     #podcasts-table_wrapper .dataTables_filter,
     #podcasts-table_wrapper .dataTables_length,
     #podcasts-table_wrapper .dataTables_info,
@@ -157,7 +145,7 @@ $(function () {
                 { extend: 'copyHtml5', text: 'Copy', exportOptions: { columns: [0, 2, 3, 4, 5] } },
                 { extend: 'excelHtml5', text: 'Excel', exportOptions: { columns: [0, 2, 3, 4, 5] } },
                 { extend: 'pdfHtml5', text: 'PDF', orientation: 'landscape', exportOptions: { columns: [0, 2, 3, 4, 5] } },
-                { extend: 'colvis', text: 'Column visibility' }
+                { extend: 'colvis', text: 'Column visibility', dropIcon: '' }
             ]
         },
         columnDefs: [

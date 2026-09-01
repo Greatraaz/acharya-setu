@@ -23,7 +23,9 @@
     </div>
 
     <div class="bg-white border border-gray-100 rounded-2xl p-6">
-        <form method="POST" action="{{ route($r.'.store') }}" enctype="multipart/form-data" class="space-y-5">
+        @include('partials.community-content-warning')
+
+        <form method="POST" action="{{ route($r.'.store') }}" enctype="multipart/form-data" class="space-y-5 community-content-guarded">
             @csrf
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Channel Name</label>
@@ -51,6 +53,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
                 <textarea name="description" rows="3" placeholder="What is this channel about?"
                           class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none">{{ old('description') }}</textarea>
+                @error('description')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
@@ -92,6 +95,7 @@
 
 @push('scripts')
 @include('partials.community-composer-scripts')
+@include('partials.community-content-guard-scripts')
 <script>
 (function () {
     const nameInput = document.getElementById('channel-name');

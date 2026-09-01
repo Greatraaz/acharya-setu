@@ -17,13 +17,16 @@
                 <a href="{{ $backUrl }}" class="btn btn-ghost btn-sm">← Back</a>
             </div>
 
-            <form method="POST" action="{{ route('mentor.community.store') }}" enctype="multipart/form-data" class="space-y-5">
+            @include('partials.community-content-warning')
+
+            <form method="POST" action="{{ route('mentor.community.store') }}" enctype="multipart/form-data" class="space-y-5 community-content-guarded">
                 @csrf
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1.5">Channel Name</label>
                     <input type="text" name="name" value="{{ old('name') }}" placeholder="e.g. Career Tips"
                            class="form-input" required>
+                    @error('name')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
@@ -42,6 +45,7 @@
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
                     <textarea name="description" rows="3" placeholder="What is this channel about?" class="form-input" style="resize:none;">{{ old('description') }}</textarea>
+                    @error('description')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
                 </div>
 
                 <div>
@@ -79,6 +83,7 @@
 </div>
 @push('scripts')
 @include('partials.community-composer-scripts')
+@include('partials.community-content-guard-scripts')
 @endpush
 
 @endsection

@@ -18,17 +18,33 @@ class JourneyController extends Controller
 {
     public function index()
     {
-        $canViewProgress = auth()->user()->canAccessProgressReport();
+        $mentee = auth()->user();
+        $canViewProgress = $mentee->canAccessProgressReport();
 
-        $enrollment = MenteeEnrollment::where('mentee_id', auth()->id())
+        EducationStream::syncEnrollmentsForMentee($mentee->id);
+
+        $enrollment = MenteeEnrollment::where('mentee_id', $mentee->id)
             ->where('status', 'active')
             ->with('stream')
             ->first();
 
-        $streams = EducationStream::query()
+        $personalTracks = EducationStream::query()
+            ->where('mentee_id', $mentee->id)
             ->where('is_active', true)
+            ->withCount('months')
             ->orderBy('sort_order')
             ->get();
+
+        $catalogStreams = collect();
+        if (! $enrollment && ! $mentee->assigned_mentor_id) {
+            $catalogStreams = EducationStream::query()
+                ->whereNull('mentee_id')
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->get();
+        }
+
+        $assignedMentor = $mentee->assignedMentor;
 
         $months = collect();
         $progress = ['percent' => 0, 'completed' => 0, 'total' => 0];
@@ -38,10 +54,10 @@ class JourneyController extends Controller
             $months = $enrollment->stream->months()->with('weeks')->orderBy('month_number')->get();
 
             if ($canViewProgress) {
-                $progress = StudentCurriculumProgress::getOverallProgress(auth()->id(), $enrollment->stream_id);
+                $progress = StudentCurriculumProgress::getOverallProgress($mentee->id, $enrollment->stream_id);
                 $monthProgress = $months->map(fn ($m) => array_merge(
                     ['month' => $m],
-                    $m->getProgressForUser(auth()->id())
+                    $m->getProgressForUser($mentee->id)
                 ));
             } else {
                 $monthProgress = $months->map(fn ($m) => [
@@ -55,7 +71,9 @@ class JourneyController extends Controller
 
         return view('frontend.mentee.journey', compact(
             'enrollment',
-            'streams',
+            'personalTracks',
+            'catalogStreams',
+            'assignedMentor',
             'months',
             'progress',
             'monthProgress',
