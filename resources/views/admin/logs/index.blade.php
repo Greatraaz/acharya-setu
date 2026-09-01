@@ -6,32 +6,30 @@
 <div class="space-y-5">
 
     {{-- Header row --}}
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <p class="text-sm text-gray-500">Real-time audit trail of all system and user activity.</p>
-        <div class="flex items-center gap-2">
+        <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             {{-- Live indicator --}}
-            <div class="flex items-center gap-1.5 text-xs text-gray-400 bg-white border border-gray-200 px-3 py-2 rounded-xl" id="live-indicator">
+            <div class="flex items-center justify-center gap-1.5 text-xs text-gray-400 bg-white border border-gray-200 px-3 py-2 rounded-xl col-span-2 sm:col-span-1 sm:justify-start" id="live-indicator">
                 <span class="w-2 h-2 bg-gray-300 rounded-full" id="live-dot"></span>
                 <span id="live-text">Paused</span>
             </div>
             <button onclick="toggleLiveTail()"
                     id="live-btn"
-                    class="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-xl transition-colors">
+                    class="w-full sm:w-auto text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-xl transition-colors">
                 Enable Live Tail
             </button>
             <a href="{{ route('admin.logs.export', request()->all()) }}"
-               class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-xl transition-colors">
+               class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-xl transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
                 Export CSV
             </a>
-            <div class="relative" x-data="{ open: false }">
-                <button onclick="document.getElementById('purge-modal').classList.remove('hidden')"
-                        class="text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 px-3 py-2 rounded-xl transition-colors">
-                    Purge Logs
-                </button>
-            </div>
+            <button type="button" onclick="document.getElementById('purge-modal').classList.remove('hidden')"
+                    class="w-full sm:w-auto text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 px-3 py-2 rounded-xl transition-colors">
+                Purge Logs
+            </button>
         </div>
     </div>
 
@@ -60,13 +58,13 @@
     </div>
 
     {{-- Filter bar --}}
-    <div class="bg-white border border-gray-200 rounded-2xl p-4">
-        <form method="GET" class="flex flex-wrap items-end gap-3">
-            <div class="flex-1 min-w-48">
+    <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5">
+        <form method="GET" class="admin-filter-form grid grid-cols-1 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-end gap-3">
+            <div class="sm:col-span-2 xl:flex-1 xl:min-w-48">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
                 <input type="text" name="search" value="{{ request('search') }}"
                        placeholder="Description, user, IP, event…"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
             </div>
 
             @foreach([
@@ -74,11 +72,11 @@
                 ['level',  'Level',  ['' => 'All Levels', 'info' => 'Info', 'success' => 'Success', 'warning' => 'Warning', 'danger' => 'Danger']],
                 ['event',  'Event',  $events->mapWithKeys(fn($e) => [$e => str_replace('_', ' ', ucfirst($e))])->prepend('All Events', '')->toArray()],
             ] as [$name, $label, $opts])
-            <div>
+            <div class="w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">{{ $label }}</label>
                 <div class="relative">
                     <select name="{{ $name }}"
-                            class="border border-gray-200 rounded-xl px-3.5 py-2 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
+                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
                         @foreach($opts as $val => $text)
                         <option value="{{ $val }}" {{ request($name) === (string)$val ? 'selected' : '' }}>{{ $text }}</option>
                         @endforeach
@@ -90,11 +88,11 @@
             </div>
             @endforeach
 
-            <div>
+            <div class="w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">User</label>
                 <div class="relative">
                     <select name="user_id"
-                            class="border border-gray-200 rounded-xl px-3.5 py-2 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
+                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
                         <option value="">All Users</option>
                         @foreach($users as $u)
                         <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>{{ $u->name }}</option>
@@ -106,19 +104,21 @@
                 </div>
             </div>
 
-            <div>
+            <div class="w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">From</label>
                 <input type="date" name="date_from" value="{{ request('date_from') }}"
-                       class="border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
             </div>
-            <div>
+            <div class="w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">To</label>
                 <input type="date" name="date_to" value="{{ request('date_to') }}"
-                       class="border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
             </div>
 
-            <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">Filter</button>
-            <a href="{{ route('admin.logs.index') }}" class="text-sm text-gray-500 border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
+            <div class="sm:col-span-2 xl:col-span-full flex flex-col sm:flex-row gap-2 xl:w-auto xl:col-span-auto">
+                <button type="submit" class="w-full sm:flex-1 xl:w-auto bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors">Filter</button>
+                <a href="{{ route('admin.logs.index') }}" class="w-full sm:flex-1 xl:w-auto text-center text-sm text-gray-500 border border-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
+            </div>
         </form>
     </div>
 
@@ -127,10 +127,10 @@
 
     {{-- Log Table --}}
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-            <div class="flex items-center gap-3">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3.5 border-b border-gray-100">
+            <div class="flex items-center gap-3 min-w-0">
                 <h3 class="text-sm font-semibold text-gray-800">Log Entries</h3>
-                <span class="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-medium">{{ $logs->total() }} records</span>
+                <span class="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-medium whitespace-nowrap">{{ $logs->total() }} records</span>
             </div>
             <div class="text-xs text-gray-400">Showing {{ $logs->firstItem() }}–{{ $logs->lastItem() }}</div>
         </div>
@@ -244,7 +244,7 @@
         </div>
 
         {{-- Pagination --}}
-        <div class="flex items-center justify-between px-5 py-3.5 border-t border-gray-100">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3.5 border-t border-gray-100">
             <div class="text-xs text-gray-500">
                 Showing {{ $logs->firstItem() }}–{{ $logs->lastItem() }} of {{ number_format($logs->total()) }}
             </div>

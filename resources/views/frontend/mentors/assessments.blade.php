@@ -6,13 +6,15 @@
     @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
-        <div class="dash-header">
-            <div>
+        <div class="dash-header dash-header--actions">
+            <div class="dash-header__main">
                 <div class="dash-title">Assessments</div>
                 <div class="dash-subtitle">Manage assessment categories with score bands and status{{ isset($menteeCount) ? ' · '.$menteeCount.' mentee'.($menteeCount === 1 ? '' : 's') : '' }}.</div>
             </div>
             @unless($tableMissing ?? false)
-            <a href="{{ route('mentor.assessments.create') }}" class="btn btn-primary btn-sm">+ Add New</a>
+            <div class="dash-header__actions">
+                <a href="{{ route('mentor.assessments.create') }}" class="btn btn-primary btn-sm">+ Add New</a>
+            </div>
             @endunless
         </div>
 
@@ -23,7 +25,7 @@
         @if($tableMissing ?? false)
         <div class="alert alert-error">Assessments are not available yet. Ask admin to run database migrations.</div>
         @else
-        <form method="GET" action="{{ route('mentor.assessments.index') }}" class="session-toolbar">
+        <form method="GET" action="{{ route('mentor.assessments.index') }}" class="session-toolbar assess-toolbar">
             <div class="session-filter-tabs">
                 @foreach(['' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $key => $label)
                     @php $tabParams = array_filter(['status' => $key ?: null, 'search' => ($search ?? request('search')) ?: null]); @endphp
@@ -33,21 +35,21 @@
                     </a>
                 @endforeach
             </div>
-            <div class="session-toolbar-controls">
+            <div class="assess-toolbar__grid">
                 @if(($status ?? request('status')))
                     <input type="hidden" name="status" value="{{ $status ?? request('status') }}">
                 @endif
-                <div class="session-search-field">
+                <div class="assess-toolbar__search session-search-field">
                     <span class="session-search-icon" aria-hidden="true">🔍</span>
                     <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
                            placeholder="Search assessments…" autocomplete="off">
                 </div>
-                <button type="submit" class="btn btn-outline">Search</button>
+                <button type="submit" class="btn btn-outline assess-toolbar__submit">Search</button>
             </div>
         </form>
 
         <div class="assess-table-wrap">
-            <table class="assess-table">
+            <table class="assess-table assess-table--assessments">
                 <thead>
                     <tr>
                         <th class="num">Sr. No.</th>

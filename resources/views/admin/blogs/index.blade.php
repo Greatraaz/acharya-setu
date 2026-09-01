@@ -21,8 +21,8 @@
             <div class="admin-table-toolbar__exports" id="blogs-export-buttons"></div>
             <form method="GET" class="admin-table-filters">
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search title, category, author…"
-                       class="border border-gray-200 rounded-lg px-3.5 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 min-w-[220px]">
-                <select name="status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
+                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 w-full sm:min-w-[220px]">
+                <select name="status" class="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white">
                     <option value="">All status</option>
                     <option value="active" @selected(request('status') === 'active')>Active</option>
                     <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>

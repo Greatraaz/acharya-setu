@@ -2,29 +2,29 @@
 @section('title', 'Sign In — Vedrix')
 
 @section('content')
-<div style="min-height:100vh;display:grid;grid-template-columns:1fr 1fr;padding-top:var(--nav-h);">
+<div class="auth-wrap">
 
     {{-- Left decorative panel --}}
-    <div style="background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;padding:60px;position:relative;overflow:hidden;">
-        <div style="position:absolute;inset:0;background:radial-gradient(ellipse 70% 70% at 50% 50%,rgba(245,158,11,.07) 0%,transparent 70%);pointer-events:none;"></div>
-        <div style="position:relative;">
-            <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin-bottom:36px;">
-            <h2 style="font-size:32px;font-weight:800;line-height:1.15;margin-bottom:16px;">
+    <div class="auth-left">
+        <div class="auth-left-glow"></div>
+        <div class="auth-left-inner">
+            <img src="{{ asset('images/logo.png') }}" alt="Vedrix" class="auth-logo">
+            <h2 class="auth-heading">
                 Your career journey<br><span class="text-brand">starts here.</span>
             </h2>
-            <p style="font-size:15px;color:var(--text-2);line-height:1.75;margin-bottom:36px;">
+            <p class="auth-lead">
                 Connect with verified mentors, book sessions at transparent pricing, and track your growth — all in one place.
             </p>
-            <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="auth-features">
                 @foreach([
                     ['✅','2,400+ verified mentors across 30+ domains'],
                     ['⏱️','Pay-per-minute — no subscription needed'],
                     ['📊','Track your 6-month career journey'],
                     ['🔒','Secure payments & data privacy'],
                 ] as [$icon, $text])
-                <div style="display:flex;gap:12px;align-items:center;">
-                    <span style="font-size:18px;width:28px;flex-shrink:0;">{{ $icon }}</span>
-                    <span style="font-size:14px;color:var(--text-2);">{{ $text }}</span>
+                <div class="auth-feature-item">
+                    <span class="auth-feature-icon">{{ $icon }}</span>
+                    <span class="auth-feature-text">{{ $text }}</span>
                 </div>
                 @endforeach
             </div>
@@ -32,8 +32,8 @@
     </div>
 
     {{-- Right login form --}}
-    <div style="display:flex;align-items:center;justify-content:center;padding:40px;">
-        <div style="width:100%;max-width:400px;">
+    <div class="auth-right">
+        <div class="auth-box">
             <h1 class="auth-title">Welcome back</h1>
             <p class="auth-subtitle">Sign in to continue your journey</p>
 

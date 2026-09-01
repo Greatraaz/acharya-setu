@@ -9,31 +9,31 @@
     <div class="dash-content">
 
         {{-- Breadcrumb --}}
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:13px;color:var(--text-2);">
+        <div class="session-detail-breadcrumb">
             <a href="{{ route('mentor.sessions') }}" style="color:var(--brand);">← Sessions</a>
             <span>/</span>
             <span>Session #{{ $session->id ?? '—' }}</span>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start;">
+        <div class="session-detail-layout">
 
             {{-- Left: Session details --}}
-            <div>
+            <div class="session-detail-main">
                 {{-- Header card --}}
-                <div class="card" style="margin-bottom:20px;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
-                        <div style="flex:1;">
-                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
-                                <h2 style="font-size:18px;font-weight:800;">{{ $session->title ?? 'Mentoring Session' }}</h2>
+                <div class="card session-detail-card">
+                    <div class="session-detail-header-top">
+                        <div class="session-detail-header-main">
+                            <div class="session-detail-title-row">
+                                <h2 class="session-detail-title">{{ $session->title ?? 'Mentoring Session' }}</h2>
                                 <span class="session-status {{ $session->status ?? 'pending' }}">{{ ucfirst($session->status ?? 'Pending') }}</span>
                             </div>
-                            <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px;color:var(--text-2);">
+                            <div class="session-detail-meta">
                                 <span>📅 {{ $session->scheduled_at?->format('D, d M Y · g:i A') ?? '—' }}</span>
                                 <span>⏱ {{ $session->duration_minutes ?? 30 }} min</span>
                                 <span>💰 ₹{{ number_format($session->amount_paid ?? 0, 0) }} (your cut: ₹{{ number_format(($session->amount_paid ?? 0) * 0.8, 0) }})</span>
                             </div>
                         </div>
-                        <div style="display:flex;gap:10px;flex-shrink:0;">
+                        <div class="session-detail-actions">
                             @if($session->status === 'upcoming' && $session->canJoinCall())
                                 <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
                                 <button class="btn btn-outline" onclick="openMeetingLinkModal()">🔗 Meeting link</button>
@@ -48,17 +48,17 @@
 
                 {{-- Mentee topic / intro --}}
                 @if($session->topic ?? false)
-                <div class="card" style="margin-bottom:20px;">
+                <div class="card session-detail-card">
                     <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;">📋 What the Mentee Wants to Discuss</h3>
-                    <p style="font-size:14px;color:var(--text-2);line-height:1.8;">{{ $session->topic }}</p>
+                    <p style="font-size:14px;color:var(--text-2);line-height:1.8;margin:0;">{{ $session->topic }}</p>
                 </div>
                 @endif
 
                 {{-- Session Notes (mentor shares with mentee) --}}
-                <div class="card" style="margin-bottom:20px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                        <h3 style="font-size:14px;font-weight:700;">📝 Shared Session Notes</h3>
-                        <span style="font-size:11px;color:var(--text-3);">Visible to your mentee</span>
+                <div class="card session-detail-card">
+                    <div class="session-detail-card-head">
+                        <h3>📝 Shared Session Notes</h3>
+                        <span class="session-detail-card-hint">Visible to your mentee</span>
                     </div>
                     @if(in_array($session->status, ['upcoming', 'completed'], true))
                     <form action="{{ route('mentor.sessions.notes', $session->id) }}" method="POST"
@@ -87,7 +87,7 @@
 
                 {{-- Review received --}}
                 @if($session->menteeReview)
-                <div class="card" style="margin-bottom:20px;border:1px solid rgba(245,158,11,.3);background:var(--brand-muted);">
+                <div class="card session-detail-card" style="border:1px solid rgba(245,158,11,.3);background:var(--brand-muted);">
                     <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">⭐ Review from Mentee</h3>
                     <div class="stars" style="margin-bottom:8px;">{{ str_repeat('★', $session->menteeReview->overall_rating ?? 5) }}</div>
                     <p style="font-size:13px;color:var(--text-2);line-height:1.8;margin-bottom:12px;">"{{ $session->menteeReview->review_text ?? '' }}"</p>
@@ -111,36 +111,34 @@
             </div>
 
             {{-- Right: Mentee info + receipt --}}
-            <div style="display:flex;flex-direction:column;gap:20px;">
+            <div class="session-detail-sidebar">
 
                 {{-- Mentee card --}}
                 <div class="card">
                     <h3 style="font-size:14px;font-weight:700;margin-bottom:14px;">👤 Mentee</h3>
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-                        <div style="width:48px;height:48px;border-radius:50%;background:var(--brand-muted);
-                                    display:flex;align-items:center;justify-content:center;
-                                    font-size:18px;font-weight:800;color:var(--brand);flex-shrink:0;">
+                    <div class="session-detail-person">
+                        <div class="session-detail-person__avatar">
                             @if($session->mentee->avatar_url ?? false)
-                                <img src="{{ $session->mentee->avatar_url }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                                <img src="{{ $session->mentee->avatar_url }}" alt="">
                             @else
                                 {{ strtoupper(substr($session->mentee->name ?? 'M', 0, 1)) }}
                             @endif
                         </div>
-                        <div>
-                            <div style="font-size:14px;font-weight:700;">{{ $session->mentee->name ?? '—' }}</div>
-                            <div style="font-size:12px;color:var(--text-2);">{{ $session->mentee->email ?? '' }}</div>
+                        <div class="session-detail-person__info">
+                            <div class="session-detail-person__name">{{ $session->mentee->name ?? '—' }}</div>
+                            <div class="session-detail-person__email">{{ $session->mentee->email ?? '' }}</div>
                         </div>
                     </div>
-                    <div style="font-size:12px;color:var(--text-2);display:flex;flex-direction:column;gap:6px;">
+                    <div class="session-detail-person__stats">
                         <div>Stream: <strong>{{ $session->mentee->stream_name ?? 'N/A' }}</strong></div>
                         <div>Total sessions with you: <strong>{{ $session->mentee->sessions_with_mentor ?? 0 }}</strong></div>
                     </div>
-                    <div style="display:flex;gap:8px;margin-top:14px;">
-                        @if($session->mentee_id)
-                        <a href="{{ route('mentor.mentees.show', $session->mentee_id) }}" class="btn btn-outline btn-sm" style="flex:1;text-align:center;">View Profile</a>
-                        <a href="{{ route('mentor.sessions', ['filter' => 'all', 'mentee' => $session->mentee_id]) }}" class="btn btn-ghost btn-sm" style="flex:1;text-align:center;">All Sessions</a>
-                        @endif
+                    @if($session->mentee_id)
+                    <div class="session-detail-person__actions">
+                        <a href="{{ route('mentor.mentees.show', $session->mentee_id) }}" class="btn btn-outline btn-sm">View Profile</a>
+                        <a href="{{ route('mentor.sessions', ['filter' => 'all', 'mentee' => $session->mentee_id]) }}" class="btn btn-ghost btn-sm">All Sessions</a>
                     </div>
+                    @endif
                 </div>
 
                 {{-- Receipt --}}

@@ -3,7 +3,7 @@
 @section('heading', 'Notifications')
 @section('content')
 
-<div class="max-w-3xl space-y-4">
+<div class="max-w-3xl mx-auto w-full space-y-4 px-1 sm:px-0">
     <p class="text-sm text-gray-500">Actionable alerts from mentor approvals, profile changes, and system logs.</p>
 
     @forelse($notifications as $item)
@@ -14,9 +14,9 @@
                 {{ $item['icon'] }}
             </div>
             <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between gap-3">
-                    <h3 class="text-sm font-semibold text-gray-900">{{ $item['title'] }}</h3>
-                    <span class="text-xs text-gray-400 whitespace-nowrap">{{ $item['time'] }}</span>
+                <div class="flex items-start sm:items-center justify-between gap-3">
+                    <h3 class="text-sm font-semibold text-gray-900 min-w-0">{{ $item['title'] }}</h3>
+                    <span class="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{{ $item['time'] }}</span>
                 </div>
                 <p class="text-sm text-gray-500 mt-0.5">{{ $item['body'] }}</p>
             </div>

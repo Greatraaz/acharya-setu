@@ -39,7 +39,7 @@
 
     {{-- Filters --}}
     <div class="bg-white border border-gray-200 rounded-2xl p-4">
-        <form method="GET" class="flex flex-wrap items-end gap-3">
+        <form method="GET" class="admin-filter-form flex flex-wrap items-end gap-3">
             <div class="flex-1 min-w-48">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
                 <input type="text" name="search" value="{{ request('search') }}"

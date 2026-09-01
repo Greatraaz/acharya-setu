@@ -9,9 +9,9 @@
         <a href="{{ route('admin.subscriptions.index') }}" class="text-sm font-medium text-blue-600 hover:underline">← Subscriptions</a>
     </div>
 
-    <form method="GET" class="bg-white border border-gray-200 rounded-2xl p-4 flex gap-3 flex-wrap">
+    <form method="GET" class="admin-filter-form bg-white border border-gray-200 rounded-2xl p-4 flex gap-3 flex-wrap">
         <input type="text" name="q" value="{{ request('q') }}" placeholder="Search invoice / mentee / plan"
-               class="flex-1 min-w-[220px] border border-gray-200 rounded-xl px-3 py-2 text-sm">
+               class="flex-1 w-full sm:min-w-[220px] border border-gray-200 rounded-xl px-3 py-2.5 text-sm">
         <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl px-4 py-2">Search</button>
     </form>
 

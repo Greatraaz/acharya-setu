@@ -56,9 +56,133 @@
     .maintenance-warning { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; margin-top: 12px; }
     .gateway-tab-btn { padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid #e5e7eb; background: white; color: #6b7280; cursor: pointer; transition: all .15s; }
     .gateway-tab-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+    .settings-shell { min-height: calc(100vh - 120px); background: #f9fafb; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; }
+    .settings-main { min-width: 0; }
+    .settings-tab-header { gap: 1rem; }
+    @media (max-width: 1023px) {
+        .settings-shell { flex-direction: column !important; min-height: auto; border-radius: 12px; }
+        .settings-sidebar {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-height: none;
+            border-right: none !important;
+            border-bottom: 1px solid #e5e7eb;
+            flex-direction: row !important;
+            flex-wrap: nowrap;
+            align-items: stretch;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+            gap: 0.25rem;
+        }
+        .settings-sidebar.collapsed {
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+        .settings-sidebar > .flex.items-center.justify-between { display: none; }
+        .settings-sidebar .nav-group-label,
+        .settings-sidebar .px-3.mb-1.mt-3 { display: none; }
+        .settings-sidebar nav {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            flex-shrink: 0;
+            gap: 0.35rem;
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+            margin-bottom: 0 !important;
+        }
+        .settings-sidebar .nav-item {
+            width: auto;
+            white-space: nowrap;
+            flex-shrink: 0;
+            border-right: none !important;
+            padding-left: 0.875rem;
+            padding-right: 0.875rem;
+        }
+        .settings-main {
+            padding: 1rem !important;
+            overflow-x: hidden;
+        }
+        .settings-tab-header {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+        .settings-tab-header .save-btn {
+            width: 100%;
+            text-align: center;
+        }
+        .settings-tab-header .flex.gap-2 {
+            flex-direction: column;
+            width: 100%;
+        }
+        .settings-tab-header .flex.gap-2 .save-btn,
+        .settings-tab-header .flex.gap-2 a.save-btn {
+            width: 100%;
+            text-align: center;
+            justify-content: center;
+        }
+        .settings-shell .section-card .flex.gap-2:has(.form-input) {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .settings-shell .section-card .flex.gap-2:has(.form-input) .save-btn {
+            width: 100%;
+        }
+        .settings-shell .grid {
+            min-width: 0;
+        }
+        .settings-shell .grid.grid-cols-2,
+        .settings-shell .grid.grid-cols-3 {
+            grid-template-columns: 1fr !important;
+        }
+        .settings-shell .col-span-2 {
+            grid-column: span 1 / span 1 !important;
+        }
+        .setting-row {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 0.75rem;
+        }
+        .setting-row .toggle-switch {
+            align-self: flex-start;
+        }
+        .section-card {
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .provider-card {
+            min-width: 0;
+        }
+        .gateway-tabs,
+        .settings-shell .flex.gap-2.mb-5.flex-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .gateway-tab-btn {
+            flex: 1 1 calc(50% - 0.25rem);
+            min-width: 7rem;
+            text-align: center;
+        }
+        .settings-shell .flex.items-center.gap-3.mb-4 {
+            flex-wrap: wrap;
+        }
+        .settings-shell .ml-auto {
+            margin-left: 0 !important;
+            width: 100%;
+            justify-content: flex-start;
+        }
+        .settings-shell .flex.items-center.justify-between.mb-2 {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+    }
 </style>
 
-<div class="flex gap-0" style="min-height: calc(100vh - 120px); background: #f9fafb; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+<div class="settings-shell flex flex-col lg:flex-row gap-0">
 
     {{-- ============ MINI SIDEBAR ============ --}}
     <aside class="settings-sidebar bg-white border-r border-gray-100 flex flex-col py-4 overflow-y-auto" id="settingsSidebar">
@@ -109,14 +233,14 @@
     </aside>
 
     {{-- ============ MAIN CONTENT ============ --}}
-    <main class="flex-1 overflow-y-auto p-6 bg-gray-50">
+    <main class="settings-main flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50 min-w-0">
 
         {{-- ===== APP SETTINGS ===== --}}
         <div id="tab-app" class="tab-section active">
             <form action="{{ route('admin.settings.update') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="section" value="app">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-800">Application Settings</h2>
                         <p class="text-sm text-gray-500">Configure your application's core settings and preferences.</p>
@@ -310,7 +434,7 @@
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
                 <input type="hidden" name="section" value="appearance">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div><h2 class="text-lg font-semibold text-gray-800">Appearance</h2><p class="text-sm text-gray-500">Customize how your application looks.</p></div>
                     <button type="submit" class="save-btn">Save Changes</button>
                 </div>
@@ -350,7 +474,7 @@
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
                 <input type="hidden" name="section" value="notifications">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div><h2 class="text-lg font-semibold text-gray-800">Notification Settings</h2><p class="text-sm text-gray-500">Control how and when notifications are sent.</p></div>
                     <button type="submit" class="save-btn">Save Changes</button>
                 </div>
@@ -383,7 +507,7 @@
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
                 <input type="hidden" name="section" value="email">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div><h2 class="text-lg font-semibold text-gray-800">Email / SMTP Settings</h2><p class="text-sm text-gray-500">Configure outgoing email server settings.</p></div>
                     <div class="flex gap-2">
                         <a href="{{ route('admin.settings.test-email') }}" class="save-btn secondary">Test Connection</a>
@@ -427,7 +551,7 @@
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
                 <input type="hidden" name="section" value="storage">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div><h2 class="text-lg font-semibold text-gray-800">Storage Settings</h2><p class="text-sm text-gray-500">Configure where files and media are stored.</p></div>
                     <button type="submit" class="save-btn">Save Changes</button>
                 </div>
@@ -467,7 +591,7 @@
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
                 <input type="hidden" name="section" value="payment">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-800">Payment Gateways</h2>
                         <p class="text-sm text-gray-500">Configure payment providers and API credentials.</p>
@@ -476,7 +600,7 @@
                 </div>
 
                 {{-- Gateway Tabs --}}
-                <div class="flex gap-2 mb-5 flex-wrap">
+                <div class="gateway-tabs flex gap-2 mb-5 flex-wrap">
                     @foreach([
                         ['razorpay','Razorpay','#2563eb'],
                         ['stripe','Stripe','#635bff'],
@@ -776,7 +900,7 @@
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
                 <input type="hidden" name="section" value="sms">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-800">SMS Gateways</h2>
                         <p class="text-sm text-gray-500">Configure SMS providers for OTP and notifications.</p>
@@ -785,7 +909,7 @@
                 </div>
 
                 {{-- SMS provider tabs --}}
-                <div class="flex gap-2 mb-5 flex-wrap">
+                <div class="gateway-tabs flex gap-2 mb-5 flex-wrap">
                     @foreach(['msg91'=>'MSG91','twilio'=>'Twilio','fast2sms'=>'Fast2SMS','sns'=>'AWS SNS','vonage'=>'Vonage'] as $gw=>$label)
                     <button type="button" onclick="showSms('{{ $gw }}')" id="smstab-{{ $gw }}" class="gateway-tab-btn {{ $gw === 'msg91' ? 'active' : '' }}">
                         {{ $label }}
@@ -963,7 +1087,7 @@
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
                 <input type="hidden" name="section" value="videocall">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div><h2 class="text-lg font-semibold text-gray-800">Video Call Settings</h2><p class="text-sm text-gray-500">Configure your preferred video call provider and behavior.</p></div>
                     <button type="submit" class="save-btn">Save Changes</button>
                 </div>
@@ -1025,7 +1149,7 @@
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
                 <input type="hidden" name="section" value="agora">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div><h2 class="text-lg font-semibold text-gray-800">Agora Configuration</h2><p class="text-sm text-gray-500">Real-time Video & Voice SDK</p></div>
                     <div class="flex gap-2">
                         <a href="{{ route('admin.settings.test-agora') }}" class="save-btn success">Test Connection</a>
@@ -1052,7 +1176,7 @@
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
                 <input type="hidden" name="section" value="zoom">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div><h2 class="text-lg font-semibold text-gray-800">Zoom Configuration</h2><p class="text-sm text-gray-500">Enterprise Video Meetings — OAuth 2.0</p></div>
                     <div class="flex gap-2">
                         <a href="{{ route('admin.settings.zoom-connect') }}" class="save-btn success">Connect Zoom</a>
@@ -1081,7 +1205,7 @@
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
                 <input type="hidden" name="section" value="google">
-                <div class="flex items-center justify-between mb-6">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div><h2 class="text-lg font-semibold text-gray-800">Google Meet Configuration</h2><p class="text-sm text-gray-500">Google Workspace Video Calls</p></div>
                     <div class="flex gap-2">
                         <a href="{{ route('admin.settings.google-connect') }}" class="save-btn danger">Connect Google</a>
@@ -1131,6 +1255,7 @@
 
 <script>
 function toggleSidebar() {
+    if (window.matchMedia('(max-width: 1023px)').matches) return;
     document.getElementById('settingsSidebar').classList.toggle('collapsed');
 }
 

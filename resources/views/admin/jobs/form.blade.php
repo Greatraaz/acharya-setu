@@ -13,7 +13,7 @@
 </style>
 
 {{-- Page top bar --}}
-<div class="flex items-center gap-2 mb-6 text-sm">
+<div class="flex items-center gap-2 mb-6 text-sm flex-wrap">
     <a href="{{ route('admin.jobs.index') }}"
        class="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-700 transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -39,21 +39,21 @@
 
 <form method="POST"
       action="{{ $job->exists ? route('admin.jobs.update', $job) : route('admin.jobs.store') }}"
-      class="max-w-5xl">
+      class="max-w-5xl w-full">
     @csrf
     @if($job->exists) @method('PUT') @endif
 
-    <div class="grid grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
 
         {{-- ═══════════════ LEFT COLUMN ═══════════════ --}}
-        <div class="col-span-2 space-y-5">
+        <div class="lg:col-span-2 space-y-5 min-w-0">
 
             {{-- Job Details card --}}
             <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/60">
+                <div class="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/60">
                     <h3 class="text-sm font-semibold text-gray-800">Job Details</h3>
                 </div>
-                <div class="p-6 space-y-5">
+                <div class="p-4 sm:p-6 space-y-5">
 
                     {{-- Title --}}
                     <div>
@@ -73,7 +73,7 @@
                     </div>
 
                     {{-- Dept + Openings --}}
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Department</label>
                             <input type="text" name="department"
@@ -96,7 +96,7 @@
                     </div>
 
                     {{-- Job type + Experience + Location type --}}
-                    <div class="grid grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach([
                             ['job_type',         'Job Type',         \App\Models\JobListing::JOB_TYPES,         null],
                             ['experience_level', 'Experience Level', \App\Models\JobListing::EXPERIENCE_LEVELS, 'mid'],
@@ -139,11 +139,11 @@
 
             {{-- Compensation card --}}
             <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/60">
+                <div class="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/60">
                     <h3 class="text-sm font-semibold text-gray-800">Compensation</h3>
                 </div>
-                <div class="p-6">
-                    <div class="grid grid-cols-2 gap-5">
+                <div class="p-4 sm:p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Minimum Salary</label>
                             <div class="relative">
@@ -177,7 +177,7 @@
                                 </span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 pt-5">
+                        <div class="flex items-center gap-3 sm:col-span-2 lg:col-span-1 pt-1 sm:pt-5">
                             <label class="toggle-switch flex-shrink-0">
                                 <input type="hidden" name="salary_hidden" value="0">
                                 <input type="checkbox" name="salary_hidden" value="1"
@@ -195,10 +195,10 @@
 
             {{-- Job Description card --}}
             <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/60">
+                <div class="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/60">
                     <h3 class="text-sm font-semibold text-gray-800">Job Description</h3>
                 </div>
-                <div class="p-6 space-y-5">
+                <div class="p-4 sm:p-6 space-y-5">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">
                             Overview <span class="text-red-400">*</span>
@@ -231,10 +231,10 @@
 
             {{-- Skills card --}}
             <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/60">
+                <div class="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/60">
                     <h3 class="text-sm font-semibold text-gray-800">Skills & Technologies</h3>
                 </div>
-                <div class="p-6">
+                <div class="p-4 sm:p-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Skills / Tags</label>
 
                     <div id="skills-chips" class="flex flex-wrap gap-2 mb-3 min-h-[32px]">
@@ -247,12 +247,12 @@
                         @endforeach
                     </div>
 
-                    <div class="flex gap-2">
+                    <div class="flex flex-col sm:flex-row gap-2">
                         <input type="text" id="skill-input"
                                placeholder="PHP, Laravel, MySQL… press Enter or comma to add"
-                               class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 placeholder-gray-400">
+                               class="flex-1 min-w-0 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 placeholder-gray-400">
                         <button type="button" onclick="addChip()"
-                                class="px-4 py-2.5 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl transition-colors flex-shrink-0">
+                                class="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl transition-colors flex-shrink-0 whitespace-nowrap">
                             Add
                         </button>
                     </div>
@@ -264,11 +264,11 @@
 
             {{-- Application Settings card --}}
             <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/60">
+                <div class="px-4 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/60">
                     <h3 class="text-sm font-semibold text-gray-800">Application Settings</h3>
                 </div>
-                <div class="p-6">
-                    <div class="grid grid-cols-2 gap-5">
+                <div class="p-4 sm:p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">
                                 Apply URL
@@ -299,14 +299,14 @@
         </div>{{-- /left column --}}
 
         {{-- ═══════════════ SIDEBAR ═══════════════ --}}
-        <div class="space-y-5">
+        <div class="space-y-5 min-w-0">
 
             {{-- Publish card (sticky) --}}
-            <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden sticky top-4">
-                <div class="px-5 py-4 border-b border-gray-100 bg-gray-50/60">
+            <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden lg:sticky lg:top-4">
+                <div class="px-4 sm:px-5 py-4 border-b border-gray-100 bg-gray-50/60">
                     <h3 class="text-sm font-semibold text-gray-800">Publish</h3>
                 </div>
-                <div class="p-5 space-y-4">
+                <div class="p-4 sm:p-5 space-y-4">
                     {{-- Status --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">
@@ -342,13 +342,13 @@
                 </div>
 
                 {{-- CTA --}}
-                <div class="px-5 pb-5 flex gap-2">
+                <div class="px-4 sm:px-5 pb-4 sm:pb-5 flex flex-col sm:flex-row gap-2">
                     <button type="submit"
-                            class="flex-1 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+                            class="w-full sm:flex-1 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold py-2.5 px-4 rounded-xl transition-colors whitespace-nowrap">
                         {{ $job->exists ? 'Update Job' : 'Post Job' }}
                     </button>
                     <a href="{{ route('admin.jobs.index') }}"
-                       class="px-4 py-2.5 text-sm font-medium text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-center">
+                       class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-center whitespace-nowrap">
                         Cancel
                     </a>
                 </div>
@@ -356,11 +356,11 @@
 
             {{-- Live Preview card --}}
             <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-                <div class="px-5 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between">
+                <div class="px-4 sm:px-5 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between gap-2">
                     <h3 class="text-sm font-semibold text-gray-800">Preview</h3>
                     <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Live</span>
                 </div>
-                <div class="p-5">
+                <div class="p-4 sm:p-5">
                     <div class="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-3">
                         {{-- Header --}}
                         <div class="flex items-start gap-2.5">
@@ -393,7 +393,7 @@
             </div>
 
             {{-- Tips card --}}
-            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 sm:p-5">
                 <div class="flex items-center gap-2 mb-3">
                     <div class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-blue-600" fill="currentColor" viewBox="0 0 16 16">

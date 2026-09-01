@@ -116,6 +116,175 @@ span[class*="rounded-full"] {
 .admin-table-filters select {
     min-width: 140px;
 }
+
+/* Universal admin filter/search forms */
+.admin-filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    min-width: 0;
+}
+.admin-filter-form > div,
+.admin-filter-form > label {
+    min-width: 0;
+}
+.admin-filter-bar {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 1rem;
+    padding: 1rem;
+}
+.admin-filter-form input:not([type="hidden"]),
+.admin-filter-form select,
+.admin-filter-form .form-input {
+    box-sizing: border-box;
+}
+.admin-filter-form .admin-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Admin page header actions — keep add/create labels on one line */
+main .flex.items-center.justify-between > a.inline-flex,
+main .flex.items-center.justify-between > button.inline-flex,
+main .flex.items-center.justify-between > div > a.inline-flex,
+main .flex.items-center.justify-between > div > button.inline-flex,
+main .flex.items-center.justify-between.flex-wrap > a.inline-flex,
+main a.inline-flex.items-center[class*="bg-blue"],
+main a.inline-flex.items-center[class*="bg-indigo"],
+main a.inline-flex.items-center[class*="bg-violet"],
+main a.inline-flex.items-center[class*="bg-emerald"],
+main a.inline-flex.items-center[class*="bg-green"],
+main a.inline-flex.items-center[class*="bg-orange"],
+main button.inline-flex.items-center[class*="bg-blue"],
+main button.inline-flex.items-center[class*="bg-indigo"],
+main button.inline-flex.items-center[class*="bg-violet"],
+main button.inline-flex.items-center[class*="bg-emerald"],
+main button.inline-flex.items-center[class*="bg-green"],
+main button.inline-flex.items-center[class*="bg-orange"] {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Admin table toolbar & filters — mobile */
+@media (max-width: 767px) {
+    .admin-table-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    .admin-table-toolbar__exports,
+    [id$="-export-buttons"],
+    .dt-buttons {
+        width: 100%;
+    }
+    .admin-table-toolbar__exports .dt-button,
+    [id$="-export-buttons"] .dt-button {
+        flex: 1 1 calc(50% - 0.25rem);
+        min-width: 0;
+        justify-content: center;
+    }
+    .admin-table-filters,
+    .admin-filter-form,
+    .filter-bar form[method="GET"],
+    main form[method="GET"].admin-filter-form {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        align-items: stretch !important;
+        width: 100%;
+        gap: 0.75rem;
+    }
+    .admin-filter-form.grid,
+    form.admin-filter-form[class*="grid-cols"] {
+        grid-template-columns: 1fr !important;
+    }
+    .admin-filter-form.grid > [class*="col-span"],
+    form.admin-filter-form[class*="grid-cols"] > [class*="col-span"] {
+        grid-column: 1 / -1 !important;
+    }
+    .admin-table-filters input[type="text"],
+    .admin-table-filters input[type="search"],
+    .admin-table-filters input[type="date"],
+    .admin-table-filters select,
+    .admin-filter-form > div,
+    .admin-filter-form > .flex-1,
+    .admin-filter-form > [class*="min-w-"],
+    .admin-filter-form > [class*="w-"],
+    .filter-bar form[method="GET"] > div {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+    .admin-filter-form input:not([type="hidden"]),
+    .admin-filter-form select,
+    .admin-filter-form .form-input,
+    .admin-table-filters input[type="text"],
+    .admin-table-filters input[type="search"],
+    .admin-table-filters input[type="date"],
+    .admin-table-filters select,
+    .admin-table-filters input[class*="min-w"],
+    .filter-bar form[method="GET"] input,
+    .filter-bar form[method="GET"] select {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+    .admin-filter-form .admin-filter-actions,
+    .admin-filter-form > div.flex.items-end,
+    .admin-filter-form > div:has(button[type="submit"]) {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+    .admin-filter-form > button,
+    .admin-filter-form > a,
+    .admin-table-filters button,
+    .admin-table-filters a[class*="border"],
+    .admin-table-filters a[class*="bg-"],
+    .filter-bar form[method="GET"] button,
+    .filter-bar form[method="GET"] a.btn,
+    .filter-bar form[method="GET"] .btn {
+        width: 100% !important;
+        text-align: center;
+        justify-content: center;
+    }
+    .admin-filter-bar,
+    .filter-bar {
+        padding: 1rem !important;
+    }
+}
+
+/* Admin header — notification & user menus on mobile */
+@media (max-width: 639px) {
+    #admin-notif-dropdown,
+    #admin-user-menu-dropdown {
+        position: fixed !important;
+        left: 1rem !important;
+        right: 1rem !important;
+        top: 4.5rem !important;
+        width: auto !important;
+        max-width: none !important;
+        margin-top: 0 !important;
+        z-index: 60;
+    }
+    #admin-notif-btn {
+        padding: 0.625rem !important;
+    }
+    #admin-user-menu-btn {
+        padding: 0.5rem !important;
+    }
+    #admin-user-menu-btn .w-10 {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+}
 </style>
 <script>
  tailwind.config = {

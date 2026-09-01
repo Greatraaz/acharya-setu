@@ -43,7 +43,9 @@
     .table-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
     .pagination-wrap { padding: 14px 18px; border-top: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: space-between; }
     .chart-bar { height: 6px; border-radius: 3px; background: #2563eb; transition: width .4s; }
-    select.form-input { min-width: 130px; }
+    @media (min-width: 1280px) {
+        select.form-input { min-width: 130px; }
+    }
 </style>
 
 <div class="space-y-5">
@@ -75,46 +77,44 @@
 
     {{-- ── Filter Bar ── --}}
     <div class="filter-bar">
-        <form method="GET" action="{{ route('admin.call-logs.index') }}" class="flex flex-wrap items-end gap-3">
-            <div>
+        <form method="GET" action="{{ route('admin.call-logs.index') }}" class="admin-filter-form grid grid-cols-1 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-end gap-3">
+            <div class="sm:col-span-2 xl:flex-1 xl:min-w-48 w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
-                <input type="text" name="search" class="form-input" style="width:220px;" placeholder="Channel, session, name…" value="{{ request('search') }}">
+                <input type="text" name="search" class="form-input w-full" placeholder="Channel, session, name…" value="{{ request('search') }}">
             </div>
-            <div>
+            <div class="w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
-                <select name="status" class="form-input form-select">
+                <select name="status" class="form-input form-select w-full">
                     <option value="">All Statuses</option>
                     @foreach(['initiated'=>'Initiated','ongoing'=>'Ongoing','completed'=>'Completed','missed'=>'Missed','failed'=>'Failed','cancelled'=>'Cancelled'] as $val=>$label)
                     <option value="{{ $val }}" {{ request('status') === $val ? 'selected' : '' }}>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
-            <div>
+            <div class="w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Provider</label>
-                <select name="provider" class="form-input form-select">
+                <select name="provider" class="form-input form-select w-full">
                     <option value="">All Providers</option>
                     <option value="agora"  {{ request('provider') === 'agora'  ? 'selected' : '' }}>Agora</option>
                     <option value="zoom"   {{ request('provider') === 'zoom'   ? 'selected' : '' }}>Zoom</option>
                     <option value="google" {{ request('provider') === 'google' ? 'selected' : '' }}>Google Meet</option>
                 </select>
             </div>
-            <div>
+            <div class="w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">From</label>
-                <input type="date" name="date_from" class="form-input" value="{{ request('date_from') }}">
+                <input type="date" name="date_from" class="form-input w-full" value="{{ request('date_from') }}">
             </div>
-            <div>
+            <div class="w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">To</label>
-                <input type="date" name="date_to" class="form-input" value="{{ request('date_to') }}">
+                <input type="date" name="date_to" class="form-input w-full" value="{{ request('date_to') }}">
             </div>
-            <div class="flex gap-2">
-                <button type="submit" class="btn btn-primary">
+            <div class="admin-filter-actions sm:col-span-2 flex flex-col sm:flex-row sm:flex-wrap gap-2 xl:ml-auto xl:w-auto">
+                <button type="submit" class="btn btn-primary whitespace-nowrap w-full sm:w-auto sm:flex-1 xl:flex-none justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
                     Filter
                 </button>
-                <a href="{{ route('admin.call-logs.index') }}" class="btn btn-secondary">Reset</a>
-            </div>
-            <div class="ml-auto flex gap-2">
-                <a href="{{ route('admin.call-logs.export', request()->all()) }}" class="btn btn-secondary">
+                <a href="{{ route('admin.call-logs.index') }}" class="btn btn-secondary whitespace-nowrap w-full sm:w-auto sm:flex-1 xl:flex-none justify-center">Reset</a>
+                <a href="{{ route('admin.call-logs.export', request()->all()) }}" class="btn btn-secondary whitespace-nowrap w-full sm:w-auto sm:flex-1 xl:flex-none justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
                     Export CSV
                 </a>

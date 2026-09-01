@@ -52,7 +52,7 @@
     </div>
 
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <form method="GET" class="flex flex-wrap gap-3 items-end">
+        <form method="GET" class="admin-filter-form flex flex-wrap gap-3 items-end">
             <div class="flex-1 min-w-[200px]">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Mentor name, email, UPI..."

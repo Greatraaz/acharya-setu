@@ -18,31 +18,31 @@ $stats = [
 <div class="space-y-5">
 
     {{-- Header --}}
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <p class="text-sm text-gray-500">Manage all mentors — approvals, profile changes, and assignments.</p>
-        <div class="flex gap-2">
+        <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center w-full lg:w-auto">
             @if($stats['pending_changes'] > 0)
             <a href="{{ route('admin.mentors.pending-changes') }}"
-               class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 px-3 py-2 rounded-xl transition-colors">
+               class="col-span-2 inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 px-3 py-2.5 rounded-xl transition-colors whitespace-nowrap">
                 ✏️ Profile Change Requests
                 <span class="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ $stats['pending_changes'] }}</span>
             </a>
             @endif
-            
+
             <a href="{{ route('admin.mentors.create') }}"
-                class="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl transition-colors">
+                class="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
                 + Add Mentor
             </a>
             <a href="{{ route('admin.mentor-approvals.index') }}"
-               class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 px-3 py-2 rounded-xl transition-colors">
+               class="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 px-3 py-2.5 rounded-xl transition-colors whitespace-nowrap">
                 Approval Queue
                 @if($stats['pending'] > 0)
                 <span class="bg-indigo-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ $stats['pending'] }}</span>
                 @endif
             </a>
             <a href="{{ route('admin.mentors.trashed') }}"
-               class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-xl transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+               class="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-500 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 Deleted
                 @if($stats['deleted'] > 0)
                 <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ $stats['deleted'] }}</span>
@@ -59,7 +59,7 @@ $stats = [
     @endif
 
     {{-- Stats --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         @foreach([
             ['Total',      $stats['total'],     'bg-slate-50',   'text-slate-700',   'border-slate-200'],
             ['Approved',   $stats['approved'],  'bg-green-50',   'text-green-700',   'border-green-200'],
@@ -68,49 +68,51 @@ $stats = [
             ['Suspended',  $stats['suspended'], 'bg-gray-50',    'text-gray-600',    'border-gray-200'],
             ['Deleted',    $stats['deleted'],   'bg-rose-50',    'text-rose-600',    'border-rose-200'],
         ] as [$label, $count, $bg, $tc, $bc])
-        <div class="{{ $bg }} border {{ $bc }} rounded-xl p-4">
-            <div class="text-2xl font-bold {{ $tc }}">{{ number_format($count) }}</div>
+        <div class="{{ $bg }} border {{ $bc }} rounded-xl p-3.5 sm:p-4">
+            <div class="text-xl sm:text-2xl font-bold {{ $tc }}">{{ number_format($count) }}</div>
             <div class="text-xs font-medium text-gray-500 mt-0.5">{{ $label }}</div>
         </div>
         @endforeach
     </div>
 
     {{-- Status tabs --}}
-    <div class="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+    <div class="overflow-x-auto -mx-1 px-1 pb-1">
+        <div class="flex gap-1 bg-gray-100 p-1 rounded-xl w-max min-w-full sm:w-fit">
         @foreach(['' => 'All', 'approved' => 'Approved', 'pending' => 'Pending', 'rejected' => 'Rejected', 'suspended' => 'Suspended'] as $val => $label)
         <a href="{{ route('admin.mentors.index') }}{{ $val ? '?mentor_status=' . $val : '' }}{{ request('search') ? '&search='.request('search') : '' }}"
-           class="px-4 py-2 rounded-lg text-xs font-semibold transition-all {{ request('mentor_status', '') === $val ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
+           class="flex-shrink-0 px-4 py-2.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all {{ request('mentor_status', '') === $val ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}">
             {{ $label }}
         </a>
         @endforeach
+        </div>
     </div>
 
     {{-- Filters --}}
-    <div class="bg-white border border-gray-200 rounded-2xl p-4">
-        <form method="GET" class="flex flex-wrap items-end gap-3">
+    <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5">
+        <form method="GET" class="admin-filter-form grid grid-cols-1 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-end gap-3">
             @if(request('mentor_status'))
             <input type="hidden" name="mentor_status" value="{{ request('mentor_status') }}">
             @endif
-            <div class="flex-1 min-w-48">
+            <div class="sm:col-span-2 xl:flex-1 xl:min-w-48 w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
                 <div class="relative">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input type="text" name="search" value="{{ request('search') }}"
                            placeholder="Name, email, company…"
-                           class="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
+                           class="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
                 </div>
             </div>
 
-            <div>
+            <div class="w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Field</label>
                 <input type="text" name="field" value="{{ request('field') }}" placeholder="Engineering, Design…"
-                       class="border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all w-36">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
             </div>
 
-            <div>
+            <div class="w-full min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Pending Changes</label>
                 <div class="relative">
-                    <select name="pending_changes" class="border border-gray-200 rounded-xl px-3.5 py-2 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
+                    <select name="pending_changes" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
                         <option value="">All</option>
                         <option value="1" {{ request('pending_changes') === '1' ? 'selected' : '' }}>Has Pending</option>
                     </select>
@@ -120,16 +122,18 @@ $stats = [
                 </div>
             </div>
 
-            <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">Filter</button>
-            <a href="{{ route('admin.mentors.index') }}" class="text-sm text-gray-500 border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
+            <div class="admin-filter-actions sm:col-span-2 flex flex-col sm:flex-row gap-2 xl:ml-auto xl:w-auto">
+                <button type="submit" class="w-full sm:w-auto sm:flex-1 xl:flex-none bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">Filter</button>
+                <a href="{{ route('admin.mentors.index') }}" class="w-full sm:w-auto sm:flex-1 xl:flex-none text-center text-sm text-gray-500 border border-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors whitespace-nowrap">Reset</a>
+            </div>
         </form>
     </div>
 
     {{-- Table --}}
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3.5 border-b border-gray-100">
             <h3 class="text-sm font-semibold text-gray-800">All Mentors</h3>
-            <span class="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-medium">{{ $mentors->total() }} records</span>
+            <span class="self-start sm:self-auto text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-medium">{{ $mentors->total() }} records</span>
         </div>
 
         @if($mentors->isEmpty())
@@ -269,7 +273,7 @@ $stats = [
         </div>
 
         {{-- Pagination --}}
-        <div class="flex items-center justify-between px-5 py-3.5 border-t border-gray-100">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3.5 border-t border-gray-100">
             <div class="text-xs text-gray-500">Showing {{ $mentors->firstItem() }}–{{ $mentors->lastItem() }} of {{ $mentors->total() }}</div>
             {{ $mentors->links() }}
         </div>

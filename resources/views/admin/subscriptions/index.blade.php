@@ -15,7 +15,7 @@
     <div class="bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3 rounded-xl">{{ session('error') }}</div>
     @endif
 
-    <form method="GET" class="bg-white border border-gray-200 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-5 gap-3">
+    <form method="GET" class="admin-filter-form bg-white border border-gray-200 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-5 gap-3">
         <input type="text" name="q" value="{{ request('q') }}" placeholder="Search mentee / email / payment"
                class="md:col-span-2 border border-gray-200 rounded-xl px-3 py-2 text-sm">
         <select name="plan_id" class="border border-gray-200 rounded-xl px-3 py-2 text-sm">

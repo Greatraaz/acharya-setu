@@ -2,29 +2,42 @@
 @section('title', 'My Dashboard — Vedrix')
 
 @section('content')
-<div class="dash-layout">
+@php
+    $firstName = auth()->user()->first_name ?? explode(' ', auth()->user()->name)[0];
+    $hour = now()->hour;
+    $greeting = $hour < 12 ? 'morning' : ($hour < 17 ? 'afternoon' : 'evening');
+    $monthSessions = (int) ($stats['this_month_sessions'] ?? 0);
+    $plan = $planAllowance ?? [];
+    $hasPlan = filled($plan['plan_name'] ?? null);
+@endphp
+<div class="dash-layout mentee-dash">
 
     @include('frontend.mentee.partials.sidebar')
 
-    {{-- CONTENT --}}
     <div class="dash-content">
 
-        {{-- Header --}}
-        <div class="dash-header flex-between">
-            <div>
-                <div class="dash-title">Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 17 ? 'afternoon' : 'evening') }}, {{ auth()->user()->first_name ?? explode(' ', auth()->user()->name)[0] }}! 👋</div>
+        <div class="dash-header dash-header--actions flex-between mentee-dash__header">
+            <div class="dash-header__main">
+                <div class="dash-title">Good {{ $greeting }}, {{ $firstName }}! 👋</div>
                 <div class="dash-subtitle">Here's what's happening with your learning journey.</div>
             </div>
-            <a href="{{ route('mentors.search') }}" class="btn btn-primary">🔍 Find a Mentor</a>
+            <div class="dash-header__actions">
+                <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-sm">🔍 Find a Mentor</a>
+            </div>
         </div>
 
-        {{-- Stats --}}
-        <div class="stats-grid">
+        <div class="stats-grid mentee-dash__stats">
             <div class="stat-card">
                 <div class="stat-card-icon">📅</div>
                 <div class="stat-card-label">Sessions Completed</div>
                 <div class="stat-card-value">{{ $stats['sessions'] ?? 0 }}</div>
-                <div class="stat-card-delta">+2 this month</div>
+                <div class="stat-card-delta">
+                    @if($monthSessions > 0)
+                        +{{ $monthSessions }} this month
+                    @else
+                        No sessions this month yet
+                    @endif
+                </div>
             </div>
             <div class="stat-card">
                 <div class="stat-card-icon">⏱️</div>
@@ -35,75 +48,165 @@
             <div class="stat-card">
                 <div class="stat-card-icon">💰</div>
                 <div class="stat-card-label">Wallet Balance</div>
-                <div class="stat-card-value">₹{{ number_format(auth()->user()->wallet_balance, 0) }}</div>
-                <a href="{{ route('mentee.wallet') }}" style="font-size:11px;color:var(--brand);">Add Money →</a>
+                <div class="stat-card-value">₹{{ number_format($stats['balance'] ?? 0, 0) }}</div>
+                <a href="{{ route('mentee.wallet') }}" class="mentee-dash__stat-link">Add Money →</a>
             </div>
             <div class="stat-card">
                 <div class="stat-card-icon">📈</div>
                 <div class="stat-card-label">Journey Progress</div>
                 @if($canViewProgress ?? false)
                 <div class="stat-card-value">{{ $stats['progress'] ?? 0 }}%</div>
-                <div class="progress-bar" style="margin-top:8px;">
+                <div class="progress-bar mentee-dash__stat-progress">
                     <div class="progress-fill" style="width:{{ $stats['progress'] ?? 0 }}%"></div>
                 </div>
                 @else
-                <div class="stat-card-value" style="font-size:16px;">Locked</div>
-                <a href="{{ route('mentee.plans') }}" style="font-size:11px;color:var(--brand);">Upgrade plan →</a>
+                <div class="stat-card-value mentee-dash__stat-locked">Locked</div>
+                <a href="{{ route('mentee.plans') }}" class="mentee-dash__stat-link">Upgrade plan →</a>
                 @endif
             </div>
         </div>
 
-        {{-- My Mentor --}}
-        <div class="card" style="margin-bottom:24px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
-                <h3 style="font-size:15px;font-weight:700;margin:0;">My Mentor</h3>
+        <div class="mentee-dash__panels mentee-dash__panels--2">
+            <div class="card mentee-dash__plan-card">
+                <div class="mentee-dash__card-head">
+                    <h3 class="mentee-dash__card-title">Your plan</h3>
+                    <a href="{{ route('mentee.plans') }}" class="mentee-dash__card-link">
+                        {{ $hasPlan ? 'Manage →' : 'View plans →' }}
+                    </a>
+                </div>
+                @if($hasPlan)
+                <div class="mentee-dash__plan-name">{{ $plan['plan_name'] }}</div>
+                <div class="mentee-dash__plan-grid">
+                    <div class="mentee-dash__plan-stat">
+                        <span class="mentee-dash__plan-label">Sessions used</span>
+                        <span class="mentee-dash__plan-value">{{ $plan['used'] ?? 0 }}</span>
+                    </div>
+                    <div class="mentee-dash__plan-stat">
+                        <span class="mentee-dash__plan-label">Remaining</span>
+                        <span class="mentee-dash__plan-value">
+                            @if(!empty($plan['unlimited']))
+                                Unlimited
+                            @elseif(isset($plan['remaining']))
+                                {{ $plan['remaining'] }}
+                            @else
+                                —
+                            @endif
+                        </span>
+                    </div>
+                    @if(!empty($plan['limit']) && (int) $plan['limit'] > 0)
+                    <div class="mentee-dash__plan-stat">
+                        <span class="mentee-dash__plan-label">Monthly limit</span>
+                        <span class="mentee-dash__plan-value">{{ $plan['limit'] }}</span>
+                    </div>
+                    @endif
+                </div>
+                @if(($plan['covered'] ?? false) && !empty($plan['unlimited']))
+                <p class="mentee-dash__plan-hint">Included sessions are unlimited on your current plan.</p>
+                @elseif(($plan['covered'] ?? false) && ($plan['remaining'] ?? 0) > 0)
+                <p class="mentee-dash__plan-hint">Book sessions without extra cost while allowance lasts.</p>
+                @elseif(($plan['covered'] ?? false))
+                <p class="mentee-dash__plan-hint">Monthly allowance used — wallet or pay-per-session applies.</p>
+                @endif
+                @else
+                <div class="mentee-dash__empty mentee-dash__empty--compact">
+                    <div class="mentee-dash__empty-icon">📦</div>
+                    <p>No active subscription</p>
+                    <a href="{{ route('mentee.plans') }}" class="btn btn-primary btn-sm">Choose a plan</a>
+                </div>
+                @endif
+            </div>
+
+            <div class="card">
+                <div class="mentee-dash__card-head">
+                    <h3 class="mentee-dash__card-title">Today's focus</h3>
+                    @if(($upcomingCount ?? 0) > 0)
+                    <a href="{{ route('mentee.sessions') }}" class="mentee-dash__card-link">{{ $upcomingCount }} upcoming →</a>
+                    @endif
+                </div>
+                @if(($agendaItems ?? collect())->isNotEmpty())
+                <ul class="mentee-dash__agenda">
+                    @foreach($agendaItems as $item)
+                    <li class="mentee-dash__agenda-item mentee-dash__agenda-item--{{ $item['type'] }}">
+                        <div class="mentee-dash__agenda-main">
+                            <span class="mentee-dash__agenda-type">
+                                @if($item['type'] === 'session') 🎥
+                                @elseif($item['type'] === 'request') 📨
+                                @elseif($item['type'] === 'assessment') 📝
+                                @elseif($item['type'] === 'quiz') 🧠
+                                @else 📌
+                                @endif
+                            </span>
+                            <div class="mentee-dash__agenda-text">
+                                <a href="{{ $item['url'] }}" class="mentee-dash__agenda-label">{{ $item['label'] }}</a>
+                                <span class="mentee-dash__agenda-meta">{{ $item['meta'] }}</span>
+                            </div>
+                        </div>
+                        @if(!empty($item['cta_url']))
+                        <a href="{{ $item['cta_url'] }}" class="btn {{ $item['type'] === 'session' && ($item['cta'] ?? '') === 'Join' ? 'btn-primary' : 'btn-outline' }} btn-sm">{{ $item['cta'] }}</a>
+                        @endif
+                    </li>
+                    @endforeach
+                </ul>
+                @else
+                <div class="mentee-dash__empty mentee-dash__empty--compact">
+                    <div class="mentee-dash__empty-icon">✅</div>
+                    <p>You're all caught up for now.</p>
+                    <a href="{{ route('mentors.search') }}" class="btn btn-outline btn-sm">Book a session</a>
+                </div>
+                @endif
+            </div>
+        </div>
+
+        <div class="card mentee-dash__mentor-card">
+            <div class="mentee-dash__card-head">
+                <h3 class="mentee-dash__card-title">My Mentor</h3>
                 <a href="{{ route('mentee.mentor.change') }}" class="btn btn-outline btn-sm">
                     {{ ($assignedMentor ?? null) ? 'Change mentor' : 'Choose mentor' }}
                 </a>
             </div>
 
             @if($assignedMentor ?? null)
-            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-                <a href="{{ $assignedMentor->profile_url }}" style="display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit;flex:1;min-width:220px;">
-                    <div class="mentor-avatar-lg" style="width:56px;height:56px;border-radius:16px;overflow:hidden;flex-shrink:0;">
+            <div class="mentee-dash__mentor-row">
+                <a href="{{ $assignedMentor->profile_url }}" class="mentee-dash__mentor-profile">
+                    <div class="mentor-avatar-lg mentee-dash__mentor-avatar">
                         @if($assignedMentor->avatar_url)
-                            <img src="{{ $assignedMentor->avatar_url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                            <img src="{{ $assignedMentor->avatar_url }}" alt="">
                         @else
                             {{ strtoupper(substr($assignedMentor->name, 0, 1)) }}
                         @endif
                     </div>
-                    <div>
-                        <div style="font-size:16px;font-weight:700;">{{ $assignedMentor->name }}</div>
-                        <div style="font-size:13px;color:var(--text-2);margin-top:2px;">
+                    <div class="mentee-dash__mentor-info">
+                        <div class="mentee-dash__mentor-name">{{ $assignedMentor->name }}</div>
+                        <div class="mentee-dash__mentor-role">
                             {{ $assignedMentor->designation }}{{ $assignedMentor->company ? ' · '.$assignedMentor->company : '' }}
                         </div>
-                        <div style="font-size:12px;color:var(--text-3);margin-top:6px;">
+                        <div class="mentee-dash__mentor-meta">
                             ⭐ {{ number_format((float) ($assignedMentor->rating ?? 0), 1) }}
                             · ₹{{ $assignedMentor->rate_per_minute }}/min
                         </div>
                     </div>
                 </a>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div class="mentee-dash__mentor-actions">
                     <a href="{{ $assignedMentor->profile_url }}" class="btn btn-primary btn-sm">Book session</a>
                     <a href="{{ route('mentee.mentor.change') }}" class="btn btn-ghost btn-sm">Change</a>
                 </div>
             </div>
             @else
-            <div class="empty-state" style="padding:28px 0;">
-                <div style="font-size:36px;">🎓</div>
-                <p style="font-size:13px;color:var(--text-2);margin-top:8px;">You don’t have an assigned mentor yet</p>
-                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-primary btn-sm" style="margin-top:12px;">Find & request a mentor</a>
+            <div class="mentee-dash__empty">
+                <div class="mentee-dash__empty-icon">🎓</div>
+                <p>You don't have an assigned mentor yet</p>
+                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-primary btn-sm">Find & request a mentor</a>
             </div>
             @endif
 
             @if(($pendingMentorRequests ?? collect())->isNotEmpty())
-            <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
-                <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Pending requests</div>
+            <div class="mentee-dash__pending">
+                <div class="mentee-dash__pending-label">Pending requests</div>
                 @foreach($pendingMentorRequests as $req)
-                <div style="display:flex;align-items:center;gap:10px;padding:8px 0;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:160px;font-size:13px;">
+                <div class="mentee-dash__pending-row">
+                    <div class="mentee-dash__pending-main">
                         <strong>{{ $req->mentor?->name }}</strong>
-                        <span style="color:var(--text-3);"> · {{ $req->created_at?->diffForHumans() }}</span>
+                        <span> · {{ $req->created_at?->diffForHumans() }}</span>
                     </div>
                     <span class="badge badge-muted">Pending</span>
                     <form method="POST" action="{{ route('mentee.mentor-requests.destroy', $req->id) }}">
@@ -117,90 +220,192 @@
             @endif
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
-
-            {{-- Upcoming Sessions --}}
-            <div class="card">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                    <h3 style="font-size:15px;font-weight:700;">Upcoming Sessions</h3>
-                    <a href="{{ route('mentee.sessions') }}" style="font-size:12px;color:var(--brand);">View all →</a>
+        <div class="mentee-dash__panels">
+            <div class="card mentee-dash__panel">
+                <div class="mentee-dash__card-head">
+                    <h3 class="mentee-dash__card-title">Upcoming Sessions</h3>
+                    <a href="{{ route('mentee.sessions') }}" class="mentee-dash__card-link">View all →</a>
                 </div>
 
                 @forelse($upcomingSessions ?? [] as $session)
-                <div class="session-card" style="margin-bottom:8px;">
+                <div class="session-card mentee-dash__session-card">
                     <div class="session-card-icon">🎥</div>
-                    <div style="flex:1;">
-                        <div style="font-size:13px;font-weight:600;margin-bottom:2px;">{{ $session->title }}</div>
-                        <div style="font-size:12px;color:var(--text-2);">with {{ $session->mentor->name }}</div>
-                        <div style="font-size:12px;color:var(--text-2);margin-top:4px;">📅 {{ $session->scheduled_at->format('D, d M Y · g:i A') }}</div>
+                    <div class="mentee-dash__session-main">
+                        <div class="mentee-dash__session-title">{{ $session->title }}</div>
+                        <div class="mentee-dash__session-meta">with {{ $session->mentor->name }}</div>
+                        <div class="mentee-dash__session-meta">📅 {{ $session->scheduled_at->format('D, d M Y · g:i A') }}</div>
                     </div>
-                    <div>
+                    <div class="mentee-dash__session-actions">
                         <span class="session-status {{ $session->status }}">{{ ucfirst($session->status) }}</span>
                         @if($session->canJoinCall())
-                        <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm" style="margin-top:6px;">Join</a>
+                        <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">Join</a>
                         @endif
                     </div>
                 </div>
                 @empty
-                <div class="empty-state" style="padding:32px 0;">
-                    <div style="font-size:36px;">📅</div>
-                    <p style="font-size:13px;color:var(--text-2);margin-top:8px;">No upcoming sessions yet</p>
-                    <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-sm" style="margin-top:12px;">Book Now</a>
+                <div class="mentee-dash__empty mentee-dash__empty--compact">
+                    <div class="mentee-dash__empty-icon">📅</div>
+                    <p>No upcoming sessions yet</p>
+                    <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-sm">Book Now</a>
                 </div>
                 @endforelse
             </div>
 
-            {{-- My Journey Progress --}}
-            <div class="card">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                    <h3 style="font-size:15px;font-weight:700;">6-Month Journey</h3>
-                    <a href="{{ route('mentee.journey.index') }}" style="font-size:12px;color:var(--brand);">Continue →</a>
+            <div class="card mentee-dash__panel">
+                <div class="mentee-dash__card-head">
+                    <h3 class="mentee-dash__card-title">6-Month Journey</h3>
+                    <a href="{{ route('mentee.journey.index') }}" class="mentee-dash__card-link">Continue →</a>
                 </div>
 
                 @if($enrollment ?? false)
-                <div style="margin-bottom:16px;">
-                    <div style="font-size:13px;font-weight:600;margin-bottom:4px;">{{ $enrollment->stream->name ?? 'Engineering' }}</div>
-                    <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;">Month {{ $enrollment->current_month }} · Week {{ $enrollment->current_week }}</div>
+                <div class="mentee-dash__journey-head">
+                    <div class="mentee-dash__journey-stream">{{ $enrollment->stream->name ?? 'Engineering' }}</div>
+                    <div class="mentee-dash__journey-week">Month {{ $enrollment->current_month }} · Week {{ $enrollment->current_week }}</div>
                     @if($canViewProgress ?? false)
                     <div class="progress-bar">
                         <div class="progress-fill" style="width:{{ ($enrollment->current_month/6)*100 }}%"></div>
                     </div>
                     @else
-                    <div style="font-size:11px;color:var(--text-3);">Task list shown without scores. <a href="{{ route('mentee.plans') }}" style="color:var(--brand);">Upgrade for progress report →</a></div>
+                    <div class="mentee-dash__journey-upgrade">
+                        Task list shown without scores.
+                        <a href="{{ route('mentee.plans') }}">Upgrade for progress report →</a>
+                    </div>
                     @endif
                 </div>
                 @forelse($weekTasks ?? [] as $task)
-                <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+                <div class="mentee-dash__task-row">
                     @if($canViewProgress ?? false)
-                    <span style="font-size:16px;">{{ $task->is_completed ? '✅' : '⬜' }}</span>
-                    <span style="font-size:13px;{{ $task->is_completed ? 'text-decoration:line-through;color:var(--text-3)' : '' }}">{{ $task->title }}</span>
+                    <span class="mentee-dash__task-icon">{{ $task->is_completed ? '✅' : '⬜' }}</span>
+                    <span class="mentee-dash__task-title {{ $task->is_completed ? 'is-done' : '' }}">{{ $task->title }}</span>
                     @else
-                    <span style="font-size:16px;">⬜</span>
-                    <span style="font-size:13px;">{{ $task->title }}</span>
+                    <span class="mentee-dash__task-icon">⬜</span>
+                    <span class="mentee-dash__task-title">{{ $task->title }}</span>
                     @endif
                 </div>
                 @empty
-                <div style="font-size:12px;color:var(--text-3);padding:8px 0;">No tasks for this week yet.</div>
+                <div class="mentee-dash__task-empty">No tasks for this week yet.</div>
                 @endforelse
                 @else
-                <div class="empty-state" style="padding:32px 0;">
-                    <div style="font-size:36px;">🗺️</div>
-                    <p style="font-size:13px;color:var(--text-2);margin-top:8px;">You haven't enrolled in a journey yet</p>
-                    <a href="{{ route('mentee.journey.index') }}" class="btn btn-primary btn-sm" style="margin-top:12px;">Start Journey</a>
+                <div class="mentee-dash__empty mentee-dash__empty--compact">
+                    <div class="mentee-dash__empty-icon">🗺️</div>
+                    <p>You haven't enrolled in a journey yet</p>
+                    <a href="{{ route('mentee.journey.index') }}" class="btn btn-primary btn-sm">Start Journey</a>
                 </div>
                 @endif
             </div>
         </div>
 
-        {{-- Recommended Mentors --}}
-        <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                <h3 style="font-size:15px;font-weight:700;">Recommended Mentors for You</h3>
-                <a href="{{ route('mentors.search') }}" style="font-size:12px;color:var(--brand);">Browse all →</a>
+        <div class="mentee-dash__panels mentee-dash__panels--2">
+            <div class="card mentee-dash__panel">
+                <div class="mentee-dash__card-head">
+                    <h3 class="mentee-dash__card-title">Assessments</h3>
+                    <a href="{{ route('mentee.assessments.index') }}" class="mentee-dash__card-link">View all →</a>
+                </div>
+                @forelse($pendingAssessments ?? [] as $assessment)
+                <div class="mentee-dash__activity-row">
+                    <div class="mentee-dash__activity-main">
+                        <div class="mentee-dash__activity-title">{{ $assessment->title }}</div>
+                        <div class="mentee-dash__activity-meta">Self-assessment · not completed</div>
+                    </div>
+                    <a href="{{ route('mentee.assessments.show', $assessment->id) }}" class="btn btn-primary btn-sm">Start</a>
+                </div>
+                @empty
+                <div class="mentee-dash__empty mentee-dash__empty--compact">
+                    <div class="mentee-dash__empty-icon">📝</div>
+                    <p>No pending assessments.</p>
+                    <a href="{{ route('mentee.assessments.index') }}" class="btn btn-outline btn-sm">Browse assessments</a>
+                </div>
+                @endforelse
             </div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+
+            <div class="card mentee-dash__panel">
+                <div class="mentee-dash__card-head">
+                    <h3 class="mentee-dash__card-title">Quizzes</h3>
+                    <a href="{{ route('mentee.quizzes.index') }}" class="mentee-dash__card-link">View all →</a>
+                </div>
+                @forelse($availableQuizzes ?? [] as $quiz)
+                <div class="mentee-dash__activity-row">
+                    <div class="mentee-dash__activity-main">
+                        <div class="mentee-dash__activity-title">{{ $quiz->title }}</div>
+                        <div class="mentee-dash__activity-meta">{{ $quiz->questions_count ?? 0 }} questions</div>
+                    </div>
+                    <a href="{{ route('mentee.quizzes.show', $quiz) }}" class="btn btn-outline btn-sm">Try</a>
+                </div>
+                @empty
+                <div class="mentee-dash__empty mentee-dash__empty--compact">
+                    <div class="mentee-dash__empty-icon">🧠</div>
+                    <p>No new quizzes right now.</p>
+                    <a href="{{ route('mentee.quizzes.index') }}" class="btn btn-outline btn-sm">Browse quizzes</a>
+                </div>
+                @endforelse
+            </div>
+        </div>
+
+        <div class="mentee-dash__panels mentee-dash__panels--2">
+            <div class="card mentee-dash__panel">
+                <div class="mentee-dash__card-head">
+                    <h3 class="mentee-dash__card-title">Community</h3>
+                    <a href="{{ route('mentee.community.index') }}" class="mentee-dash__card-link">
+                        @if(($communityUnread ?? 0) > 0)
+                            {{ $communityUnread }} unread →
+                        @else
+                            Open community →
+                        @endif
+                    </a>
+                </div>
+                @forelse($recentCommunityMessages ?? [] as $message)
+                <a href="{{ route('mentee.community.show', $message->channel?->slug) }}" class="mentee-dash__community-row">
+                    <span class="mentee-dash__community-icon">{{ $message->channel?->icon ?? '💬' }}</span>
+                    <div class="mentee-dash__community-main">
+                        <span class="mentee-dash__community-channel">{{ $message->channel?->name }}</span>
+                        <span class="mentee-dash__community-preview">{{ Str::limit($message->body ?: '📎 Attachment', 60) }}</span>
+                    </div>
+                    <span class="mentee-dash__community-time">{{ $message->created_at?->diffForHumans(short: true) }}</span>
+                </a>
+                @empty
+                <div class="mentee-dash__empty mentee-dash__empty--compact">
+                    <div class="mentee-dash__empty-icon">💬</div>
+                    <p>No community activity yet.</p>
+                    <a href="{{ route('mentee.community.index') }}" class="btn btn-outline btn-sm">Explore channels</a>
+                </div>
+                @endforelse
+            </div>
+
+            <div class="card mentee-dash__panel">
+                <div class="mentee-dash__card-head">
+                    <h3 class="mentee-dash__card-title">Job opportunities</h3>
+                    <a href="{{ route('mentee.jobs') }}" class="mentee-dash__card-link">View all →</a>
+                </div>
+                @forelse($recentJobs ?? [] as $job)
+                <a href="{{ route('mentee.jobs.show', $job->id) }}" class="mentee-dash__job-row">
+                    <div class="mentee-dash__job-main">
+                        <div class="mentee-dash__job-title">{{ $job->title }}</div>
+                        <div class="mentee-dash__job-meta">
+                            {{ $job->department ?: 'General' }}
+                            @if($job->location) · {{ $job->location }} @endif
+                            · {{ $job->job_type_label }}
+                        </div>
+                    </div>
+                    <span class="mentee-dash__job-salary">{{ $job->salary_range }}</span>
+                </a>
+                @empty
+                <div class="mentee-dash__empty mentee-dash__empty--compact">
+                    <div class="mentee-dash__empty-icon">💼</div>
+                    <p>No open roles at the moment.</p>
+                    <a href="{{ route('mentee.jobs') }}" class="btn btn-outline btn-sm">Check jobs</a>
+                </div>
+                @endforelse
+            </div>
+        </div>
+
+        <div class="card mentee-dash__recommended">
+            <div class="mentee-dash__card-head">
+                <h3 class="mentee-dash__card-title">Recommended Mentors for You</h3>
+                <a href="{{ route('mentors.search') }}" class="mentee-dash__card-link">Browse all →</a>
+            </div>
+            <div class="mentee-dash__mentors-grid">
                 @forelse($recommendedMentors ?? [] as $mentor)
-                <div class="mentor-card" style="cursor:pointer;" onclick="window.location='{{ $mentor->profile_url }}'">
+                <div class="mentor-card mentee-dash__mentor-card-item" role="link" tabindex="0" onclick="window.location='{{ $mentor->profile_url }}'" onkeydown="if(event.key==='Enter')window.location='{{ $mentor->profile_url }}'">
                     <div class="mentor-card-head">
                         <div class="mentor-avatar-lg">{{ strtoupper(substr($mentor->name, 0, 1)) }}</div>
                         <div class="mentor-card-info">
@@ -219,7 +424,7 @@
                     ['P','Priya N.','SDE-2 · Microsoft','₹15/min','4.8'],
                     ['A','Ananya G.','Consultant · McKinsey','₹10/min','5.0'],
                 ] as [$i,$n,$r,$rate,$rating])
-                <div class="mentor-card">
+                <div class="mentor-card mentee-dash__mentor-card-item">
                     <div class="mentor-card-head">
                         <div class="mentor-avatar-lg">{{ $i }}</div>
                         <div class="mentor-card-info">
@@ -232,7 +437,7 @@
                         <span class="mentor-rating">⭐ {{ $rating }}</span>
                     </div>
                     <div class="mentor-card-actions">
-                        <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-sm" style="flex:1;">Book</a>
+                        <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-sm">Book</a>
                     </div>
                 </div>
                 @endforeach

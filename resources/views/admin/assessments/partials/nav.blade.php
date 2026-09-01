@@ -13,7 +13,7 @@
             : route('admin.assessment-questions.index');
     @endphp
     <a href="{{ $href }}"
-       class="px-4 py-2 rounded-xl text-sm font-medium border transition
+       class="px-4 py-2 rounded-xl text-sm font-medium border transition whitespace-nowrap
               {{ $isActive
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">

@@ -3,7 +3,7 @@
 
 @section('content')
 @php $user = $user ?? auth()->user(); @endphp
-<div class="dash-layout">
+<div class="dash-layout account-settings-page">
     @if($user->role === 'mentor')
         @include('frontend.mentors.partials.sidebar')
     @else
@@ -17,41 +17,40 @@
         </div>
 
         @if(session('success'))
-        <div class="alert alert-success" style="margin-bottom:16px;">{{ session('success') }}</div>
+        <div class="alert alert-success account-settings-page__alert">{{ session('success') }}</div>
         @endif
         @if($errors->any())
-        <div class="alert alert-error" style="margin-bottom:16px;">
+        <div class="alert alert-error account-settings-page__alert">
             <span class="alert-icon">❌</span>
             <div>
-                <ul style="margin:0;padding-left:16px;font-size:13px;">
+                <ul class="account-settings-page__error-list">
                     @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
                 </ul>
             </div>
         </div>
         @endif
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
-            {{-- Account info --}}
-            <div class="card">
-                <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">Basic Information</h3>
+        <div class="account-settings-layout">
+            <div class="card account-settings-card">
+                <h3 class="account-settings-card__title">Basic Information</h3>
 
-                <div style="display:flex;gap:16px;align-items:center;margin-bottom:18px;">
-                    <div style="width:72px;height:72px;border-radius:16px;overflow:hidden;background:var(--brand-muted);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:var(--brand);flex-shrink:0;">
+                <div class="account-settings-avatar">
+                    <div class="account-settings-avatar__preview">
                         @if($user->avatar_url)
-                            <img src="{{ $user->avatar_url }}" alt="" style="width:100%;height:100%;object-fit:cover;" id="settings-avatar-img">
+                            <img src="{{ $user->avatar_url }}" alt="" id="settings-avatar-img">
                         @else
                             <span id="settings-avatar-fallback">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
                         @endif
                     </div>
-                    <form action="{{ route('account.avatar') }}" method="POST" enctype="multipart/form-data" id="avatar-form">
+                    <form action="{{ route('account.avatar') }}" method="POST" enctype="multipart/form-data" id="avatar-form" class="account-settings-avatar__form">
                         @csrf
-                        <input type="file" name="avatar" id="avatar-input" accept="image/*" style="display:none;" onchange="this.form.submit()">
+                        <input type="file" name="avatar" id="avatar-input" accept="image/*" class="sr-only" onchange="this.form.submit()">
                         <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('avatar-input').click()">Change Photo</button>
-                        <div class="form-hint" style="margin-top:6px;">JPG/PNG up to 2MB</div>
+                        <div class="form-hint account-settings-avatar__hint">JPG/PNG up to 2MB</div>
                     </form>
                 </div>
 
-                <form action="{{ route('account.update') }}" method="POST">
+                <form action="{{ route('account.update') }}" method="POST" class="account-settings-form">
                     @csrf
                     @method('PUT')
                     <div class="form-group">
@@ -76,14 +75,13 @@
                             @endforeach
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="submit" class="btn btn-primary account-settings-form__submit">Save Changes</button>
                 </form>
             </div>
 
-            {{-- Password --}}
-            <div class="card">
-                <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">Change Password</h3>
-                <form action="{{ route('account.password') }}" method="POST">
+            <div class="card account-settings-card">
+                <h3 class="account-settings-card__title">Change Password</h3>
+                <form action="{{ route('account.password') }}" method="POST" class="account-settings-form">
                     @csrf
                     @method('PUT')
                     <div class="form-group">
@@ -98,13 +96,13 @@
                         <label class="form-label">Confirm New Password</label>
                         <input type="password" name="password_confirmation" class="form-input" required minlength="8" autocomplete="new-password">
                     </div>
-                    <button type="submit" class="btn btn-primary">Update Password</button>
+                    <button type="submit" class="btn btn-primary account-settings-form__submit">Update Password</button>
                 </form>
 
                 @if($user->role === 'mentor')
-                <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border);">
-                    <div style="font-size:13px;color:var(--text-2);margin-bottom:10px;">Want to edit your public mentor profile?</div>
-                    <a href="{{ route('mentor.profile.edit') }}" class="btn btn-outline btn-sm">Open Mentor Profile Editor →</a>
+                <div class="account-settings-mentor-link">
+                    <p>Want to edit your public mentor profile?</p>
+                    <a href="{{ route('mentor.profile.edit') }}" class="btn btn-outline btn-sm account-settings-mentor-link__btn">Open Mentor Profile Editor →</a>
                 </div>
                 @endif
             </div>

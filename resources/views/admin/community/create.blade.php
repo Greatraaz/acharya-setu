@@ -82,6 +82,7 @@
             @include('partials.community-channel-image-input', [
                 'labelClass' => 'block text-sm font-medium text-gray-700 mb-1.5',
                 'hintClass' => 'text-xs text-gray-400 mt-1',
+                'pickerClass' => 'inline-flex items-center gap-2 cursor-pointer text-sm text-gray-600 hover:text-blue-600 border border-gray-200 rounded-xl px-3.5 py-2.5 transition-colors',
                 'hint' => 'Channel cover image shown on cards and in the channel header. JPEG, PNG, WebP, GIF · max 5MB.',
             ])
             <button type="submit"

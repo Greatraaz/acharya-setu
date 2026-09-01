@@ -79,7 +79,7 @@
     {{-- Filters --}}
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 min-w-0">
         <form method="GET" action="{{ route('admin.wallet.index') }}">
-            <div class="flex flex-wrap items-end gap-3 min-w-0">
+            <div class="admin-filter-form flex flex-wrap items-end gap-3 min-w-0">
 
                 <div class="flex flex-col gap-1 min-w-[140px]">
                     <label class="text-xs font-medium text-gray-600">From Date</label>
@@ -113,7 +113,7 @@
                     </div>
                 </div>
 
-                <div class="flex items-end gap-2 pb-0">
+                <div class="admin-filter-actions flex items-end gap-2 pb-0 w-full sm:w-auto">
                     <button type="submit"
                         class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
                         <iconify-icon icon="fa-solid:filter"></iconify-icon> Filter

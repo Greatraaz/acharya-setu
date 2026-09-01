@@ -6,14 +6,14 @@
     @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
-        <div class="dash-header flex-between">
-            <div>
+        <div class="dash-header dash-header--actions flex-between">
+            <div class="dash-header__main">
                 <div class="dash-title">{{ $mentee->name }}</div>
                 <div class="dash-subtitle">{{ $mentee->email }}@if($mentee->phone) · {{ $mentee->phone }}@endif</div>
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <a href="{{ route('mentor.curriculum.tracks', ['mentee_id' => $mentee->id]) }}" class="btn btn-primary">Curriculum</a>
-                <a href="{{ route('mentor.journey.show', $mentee->id) }}" class="btn btn-outline">Progress</a>
+            <div class="dash-header__actions">
+                <a href="{{ route('mentor.curriculum.tracks', ['mentee_id' => $mentee->id]) }}" class="btn btn-primary btn-sm">Curriculum</a>
+                <a href="{{ route('mentor.journey.show', $mentee->id) }}" class="btn btn-outline btn-sm">Progress</a>
             </div>
         </div>
 

@@ -21,7 +21,7 @@
             <div class="admin-table-toolbar__exports" id="testimonials-export-buttons"></div>
             <form method="GET" class="admin-table-filters">
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name or designation…"
-                       class="border border-gray-200 rounded-lg px-3.5 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 min-w-[220px]">
+                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 w-full sm:min-w-[220px]">
                 <select name="status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
                     <option value="">All status</option>
                     <option value="active" @selected(request('status') === 'active')>Active</option>

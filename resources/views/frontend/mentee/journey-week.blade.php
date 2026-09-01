@@ -2,25 +2,25 @@
 @section('title', ($week->title ?: 'Week '.$week->week_number).' — Journey')
 
 @section('content')
-<div class="dash-layout">
+<div class="dash-layout journey-page">
     @include('frontend.mentee.partials.sidebar')
 
     <div class="dash-content">
-        <div class="dash-header">
-            <div style="font-size:12px;margin-bottom:8px;">
-                <a href="{{ route('mentee.journey.index') }}" style="color:var(--brand);">My Journey</a>
-                <span style="color:var(--text-3);"> / </span>
-                <a href="{{ route('mentee.journey.month', $week->month_id) }}" style="color:var(--brand);">Month {{ $week->month->month_number ?? '' }}</a>
-                <span style="color:var(--text-3);"> / </span>
-                <span style="color:var(--text-2);">Week {{ $week->week_number }}</span>
-            </div>
-            <div class="dash-title">{{ $week->title ?: 'Week '.$week->week_number }}</div>
-            <div class="dash-subtitle">{{ $week->focus ?: 'Tasks, quizzes, and weekly check-in' }}</div>
+        <div class="dash-header journey-page__header">
+            <nav class="journey-page__breadcrumbs" aria-label="Breadcrumb">
+                <a href="{{ route('mentee.journey.index') }}">My Journey</a>
+                <span class="journey-page__breadcrumb-sep">/</span>
+                <a href="{{ route('mentee.journey.month', $week->month_id) }}">Month {{ $week->month->month_number ?? '' }}</a>
+                <span class="journey-page__breadcrumb-sep">/</span>
+                <span class="journey-page__breadcrumb-current">Week {{ $week->week_number }}</span>
+            </nav>
+            <div class="dash-title journey-page__title">{{ $week->title ?: 'Week '.$week->week_number }}</div>
+            <div class="dash-subtitle journey-page__subtitle">{{ $week->focus ?: 'Tasks, quizzes, and weekly check-in' }}</div>
         </div>
 
         @if($canViewProgress ?? false)
-        <div class="card" style="margin-bottom:20px;">
-            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-2);margin-bottom:8px;">
+        <div class="card journey-page__progress-card">
+            <div class="journey-page__progress-head">
                 <span>Week progress</span>
                 <span>{{ (int) ($progress['percent'] ?? 0) }}%</span>
             </div>
@@ -29,121 +29,121 @@
             </div>
         </div>
         @else
-        <div class="alert alert-warning" style="margin-bottom:16px;">
+        <div class="alert alert-warning journey-page__alert">
             <span class="alert-icon">🔒</span>
-            <div style="font-size:13px;">
+            <div class="journey-page__alert-body">
                 You can work on tasks and MCQs. Scores, past submissions, and completion status stay hidden until you upgrade.
-                <a href="{{ route('mentee.plans') }}" style="color:var(--brand);font-weight:600;">View plans →</a>
+                <a href="{{ route('mentee.plans') }}">View plans →</a>
             </div>
         </div>
         @endif
 
-        {{-- Tasks --}}
-        <div class="card" style="margin-bottom:20px;">
-            <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">Tasks</h3>
+        <div class="card journey-page__section">
+            <h3 class="journey-page__section-title">Tasks</h3>
             @forelse($week->tasks as $task)
             @php $done = ($canViewProgress ?? false) && in_array($task->id, $completedTaskIds ?? [], true); @endphp
-            <div class="card" style="margin-bottom:12px;padding:14px 16px;" id="task-{{ $task->id }}">
-                <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-                    <div style="flex:1;">
-                        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
-                            <span>{{ \App\Models\CurriculumTask::TYPE_ICONS[$task->type] ?? '✅' }}</span>
-                            <div style="font-size:14px;font-weight:700;">{{ $task->title }}</div>
+            <div class="journey-page__item-card" id="task-{{ $task->id }}">
+                <div class="journey-page__item-row">
+                    <div class="journey-page__item-body">
+                        <div class="journey-page__item-head">
+                            <span class="journey-page__item-icon">{{ \App\Models\CurriculumTask::TYPE_ICONS[$task->type] ?? '✅' }}</span>
+                            <h4 class="journey-page__item-title">{{ $task->title }}</h4>
                             @if($done)<span class="session-status completed">Done</span>@endif
                         </div>
                         @if($task->description)
-                        <div style="font-size:13px;color:var(--text-2);line-height:1.55;">{{ $task->description }}</div>
+                        <p class="journey-page__item-desc">{{ $task->description }}</p>
                         @endif
-                        <div style="font-size:11px;color:var(--text-3);margin-top:6px;">
+                        <div class="journey-page__item-meta">
                             {{ ucfirst($task->type ?? 'task') }}
                             @if($task->estimated_minutes) · {{ $task->estimated_minutes }} min @endif
                             @if($task->is_required) · Required @endif
                         </div>
                     </div>
                     @unless($done)
-                    <button type="button" class="btn btn-primary btn-sm" onclick="completeTask({{ $task->id }}, this)">
+                    <button type="button" class="btn btn-primary btn-sm journey-page__item-action" onclick="completeTask({{ $task->id }}, this)">
                         {{ ($canViewProgress ?? false) ? 'Mark done' : 'Submit' }}
                     </button>
                     @endunless
                 </div>
             </div>
             @empty
-            <div style="font-size:13px;color:var(--text-2);">No tasks for this week.</div>
+            <p class="journey-page__empty">No tasks for this week.</p>
             @endforelse
         </div>
 
-        {{-- MCQs --}}
-        <div class="card" style="margin-bottom:20px;">
-            <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;">Practice MCQs</h3>
+        <div class="card journey-page__section">
+            <h3 class="journey-page__section-title">Practice MCQs</h3>
             @forelse($week->mcqs as $mcq)
             @php
                 $attempt = ($canViewProgress ?? false) ? ($mcqAttempts[$mcq->id] ?? null) : null;
                 $options = is_array($mcq->options) ? $mcq->options : [];
             @endphp
-            <div class="card" style="margin-bottom:12px;padding:14px 16px;" id="mcq-{{ $mcq->id }}">
-                <div style="font-size:14px;font-weight:700;margin-bottom:10px;">{{ $mcq->question }}</div>
-                <div style="display:grid;gap:8px;" data-mcq-options="{{ $mcq->id }}">
+            <div class="journey-page__item-card" id="mcq-{{ $mcq->id }}">
+                <p class="journey-page__mcq-question">{{ $mcq->question }}</p>
+                <div class="journey-page__mcq-options" data-mcq-options="{{ $mcq->id }}">
                     @foreach($options as $idx => $option)
                     <button type="button"
-                        class="btn btn-ghost"
-                        style="justify-content:flex-start;text-align:left;{{ $attempt && (int)$attempt->selected_index === (int)$idx ? 'border-color:var(--brand);' : '' }}"
+                        class="btn btn-ghost journey-page__mcq-option"
+                        @if($attempt && (int)$attempt->selected_index === (int)$idx) style="border-color:var(--brand);" @endif
                         @if($attempt && $attempt->is_correct) disabled @endif
                         onclick="answerMcq({{ $mcq->id }}, {{ (int)$idx }}, this)">
-                        {{ chr(65 + (int)$idx) }}. {{ is_array($option) ? ($option['text'] ?? json_encode($option)) : $option }}
+                        <span class="journey-page__mcq-option-label">{{ chr(65 + (int)$idx) }}.</span>
+                        <span class="journey-page__mcq-option-text">{{ is_array($option) ? ($option['text'] ?? json_encode($option)) : $option }}</span>
                     </button>
                     @endforeach
                 </div>
-                <div data-mcq-result="{{ $mcq->id }}" style="margin-top:10px;font-size:13px;">
+                <div class="journey-page__mcq-result" data-mcq-result="{{ $mcq->id }}">
                     @if($attempt)
                         @if($attempt->is_correct)
-                            <span style="color:var(--success);font-weight:600;">Correct · +{{ $attempt->points_earned }} pts</span>
+                            <span class="journey-page__mcq-result--correct">Correct · +{{ $attempt->points_earned }} pts</span>
                         @else
-                            <span style="color:var(--error);font-weight:600;">Incorrect — try again</span>
+                            <span class="journey-page__mcq-result--wrong">Incorrect — try again</span>
                         @endif
                         @if($mcq->explanation)
-                        <div style="color:var(--text-2);margin-top:4px;">{{ $mcq->explanation }}</div>
+                        <p class="journey-page__mcq-explanation">{{ $mcq->explanation }}</p>
                         @endif
                     @endif
                 </div>
             </div>
             @empty
-            <div style="font-size:13px;color:var(--text-2);">No MCQs for this week.</div>
+            <p class="journey-page__empty">No MCQs for this week.</p>
             @endforelse
         </div>
 
-        {{-- Check-in --}}
-        <div class="card">
-            <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;">Weekly Check-in</h3>
+        <div class="card journey-page__section journey-page__section--last">
+            <h3 class="journey-page__section-title">Weekly Check-in</h3>
             @if(($canViewProgress ?? false) && $checkin)
-            <div class="alert alert-success" style="margin-bottom:14px;">
+            <div class="alert alert-success journey-page__alert">
                 <span class="alert-icon">✅</span>
-                <div style="font-size:13px;">Submitted {{ $checkin->submitted_at?->format('d M Y') ?? '' }}. Mood: {{ $checkin->mood_score ?? '—' }}/5</div>
+                <div class="journey-page__alert-body">
+                    Submitted {{ $checkin->submitted_at?->format('d M Y') ?? '' }}. Mood: {{ $checkin->mood_score ?? '—' }}/5
+                </div>
             </div>
             @if($checkin->mentor_response)
-            <div style="font-size:13px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:12px;">
+            <div class="journey-page__mentor-reply">
                 <strong>Mentor reply:</strong>
-                <div style="margin-top:4px;color:var(--text-2);">{{ $checkin->mentor_response }}</div>
+                <p>{{ $checkin->mentor_response }}</p>
             </div>
             @endif
             @endif
 
             <div class="form-group">
-                <label class="form-label">Mood (1–5)</label>
+                <label class="form-label" for="checkin-mood">Mood (1–5)</label>
                 <input type="number" id="checkin-mood" class="form-input" min="1" max="5" value="{{ ($canViewProgress ?? false) ? ($checkin->mood_score ?? 3) : 3 }}">
             </div>
             <div class="form-group">
-                <label class="form-label">Wins this week</label>
+                <label class="form-label" for="checkin-wins">Wins this week</label>
                 <textarea id="checkin-wins" class="form-input" rows="2" placeholder="What went well?">{{ ($canViewProgress ?? false) ? ($checkin->wins ?? '') : '' }}</textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Challenges</label>
+                <label class="form-label" for="checkin-challenges">Challenges</label>
                 <textarea id="checkin-challenges" class="form-input" rows="2" placeholder="What was hard?">{{ ($canViewProgress ?? false) ? ($checkin->challenges ?? '') : '' }}</textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Questions for mentor</label>
+                <label class="form-label" for="checkin-questions">Questions for mentor</label>
                 <textarea id="checkin-questions" class="form-input" rows="2" placeholder="Anything you want help with?">{{ ($canViewProgress ?? false) ? ($checkin->questions ?? '') : '' }}</textarea>
             </div>
-            <button type="button" class="btn btn-primary" id="checkin-btn" onclick="submitCheckin()">
+            <button type="button" class="btn btn-primary journey-page__checkin-btn" id="checkin-btn" onclick="submitCheckin()">
                 {{ (($canViewProgress ?? false) && $checkin) ? 'Update Check-in' : 'Submit Check-in' }}
             </button>
         </div>
@@ -178,17 +178,17 @@ function answerMcq(mcqId, selectedIndex, btn) {
             const box = document.querySelector(`[data-mcq-result="${mcqId}"]`);
             if (!canViewProgress || data.progress_report_enabled === false) {
                 if (box) {
-                    box.innerHTML = `<span style="color:var(--text-2);font-weight:600;">Answer submitted. Scores unlock with Progress report.</span>`;
+                    box.innerHTML = `<span class="journey-page__mcq-result--neutral">Answer submitted. Scores unlock with Progress report.</span>`;
                 }
                 showToast('success', data.message || 'Answer submitted.');
                 return;
             }
             if (box) {
                 box.innerHTML = data.correct
-                    ? `<span style="color:var(--success);font-weight:600;">Correct · +${data.points_earned || 0} pts</span>`
-                    : `<span style="color:var(--error);font-weight:600;">Incorrect — try again</span>`;
+                    ? `<span class="journey-page__mcq-result--correct">Correct · +${data.points_earned || 0} pts</span>`
+                    : `<span class="journey-page__mcq-result--wrong">Incorrect — try again</span>`;
                 if (data.explanation) {
-                    box.innerHTML += `<div style="color:var(--text-2);margin-top:4px;">${data.explanation}</div>`;
+                    box.innerHTML += `<p class="journey-page__mcq-explanation">${data.explanation}</p>`;
                 }
             }
             showToast(data.correct ? 'success' : 'error', data.correct ? 'Correct!' : 'Not quite — try again.');

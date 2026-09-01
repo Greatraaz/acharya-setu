@@ -6,12 +6,10 @@
 <div class="space-y-6">
 
     {{-- Page header --}}
-    <div class="flex items-center justify-between">
-        <div>
-            <p class="text-sm text-gray-500">Build the 6-month plan on each mentee’s stream copy. Global catalog streams live under Curriculum Streams.</p>
-        </div>
-        <button onclick="document.getElementById('add-stream-modal').classList.remove('hidden')"
-                class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-sm text-gray-500">Build the 6-month plan on each mentee’s stream copy. Global catalog streams live under Curriculum Streams.</p>
+        <button type="button" onclick="document.getElementById('add-stream-modal').classList.remove('hidden')"
+                class="inline-flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap flex-shrink-0 w-full sm:w-auto">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             New Stream
         </button>
@@ -42,7 +40,7 @@
 
     {{-- Filters --}}
     <div class="bg-white border border-gray-200 rounded-2xl p-4">
-        <form method="GET" action="{{ route('admin.curriculum.streams') }}" class="flex flex-wrap items-end gap-3">
+        <form method="GET" action="{{ route('admin.curriculum.streams') }}" class="admin-filter-form flex flex-wrap items-end gap-3">
             <div class="flex-1 min-w-[200px]">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
                 <div class="relative">
@@ -124,7 +122,7 @@
         </button>
     </div>
     @else
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
         @foreach($streams as $stream)
         <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow group">
             {{-- Color bar --}}
@@ -136,9 +134,9 @@
                              style="background: {{ $stream->color ?: '#7c3aed' }}18;">
                             {{ $stream->icon ?: '📚' }}
                         </div>
-                        <div>
-                            <h3 class="font-bold text-gray-900 text-sm">{{ $stream->name }}</h3>
-                            <div class="text-xs text-gray-400 font-mono mt-0.5">{{ $stream->slug }}</div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-bold text-gray-900 text-sm break-words">{{ $stream->name }}</h3>
+                            <div class="text-xs text-gray-400 font-mono mt-0.5 break-all">{{ $stream->slug }}</div>
                         </div>
                     </div>
                     <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full

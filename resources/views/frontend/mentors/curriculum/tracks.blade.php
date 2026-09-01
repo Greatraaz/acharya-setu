@@ -6,12 +6,12 @@
     @include('frontend.mentors.partials.sidebar')
 
     <div class="dash-content">
-        <div class="dash-header flex-between" style="flex-wrap:wrap;gap:12px;">
-            <div>
+        <div class="dash-header dash-header--actions flex-between">
+            <div class="dash-header__main">
                 <div class="dash-title">Mentee Curriculum</div>
                 <div class="dash-subtitle">Create and manage personalized learning tracks for your mentees.</div>
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="dash-header__actions">
                 <a href="{{ route('mentor.journey') }}" class="btn btn-outline btn-sm">Progress tracker</a>
                 <button type="button" class="btn btn-primary btn-sm" onclick="openModal('add-track-modal')">+ New Track</button>
             </div>
@@ -37,44 +37,52 @@
         @endif
 
         @if($mentees->isNotEmpty())
-        <form method="GET" action="{{ route('mentor.curriculum.tracks') }}" class="session-toolbar curriculum-tracks-toolbar">
-            <div class="session-toolbar-controls curriculum-tracks-toolbar__controls">
-                <select name="mentee_id" class="form-input form-select curriculum-tracks-toolbar__select" aria-label="Filter by mentee">
-                    <option value="">All mentees</option>
-                    @foreach($mentees as $m)
-                    <option value="{{ $m->id }}" @selected((string) request('mentee_id') === (string) $m->id)>{{ $m->name }}</option>
-                    @endforeach
-                </select>
-                <div class="session-search-field curriculum-tracks-toolbar__search">
-                    <span class="session-search-icon" aria-hidden="true">🔍</span>
-                    <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
-                           placeholder="Search track name…" autocomplete="off">
+        <form method="GET" action="{{ route('mentor.curriculum.tracks') }}" class="curriculum-tracks-toolbar">
+            <div class="curriculum-tracks-toolbar__grid">
+                <div class="curriculum-tracks-toolbar__field">
+                    <label class="curriculum-tracks-toolbar__label" for="curriculum-mentee-filter">Mentee</label>
+                    <select id="curriculum-mentee-filter" name="mentee_id" class="form-input form-select" aria-label="Filter by mentee">
+                        <option value="">All mentees</option>
+                        @foreach($mentees as $m)
+                        <option value="{{ $m->id }}" @selected((string) request('mentee_id') === (string) $m->id)>{{ $m->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <button type="submit" class="btn btn-outline">Search</button>
-                @if(request()->filled('mentee_id') || request()->filled('search'))
-                    <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-ghost">Clear</a>
-                @endif
+                <div class="curriculum-tracks-toolbar__field curriculum-tracks-toolbar__field--search">
+                    <label class="curriculum-tracks-toolbar__label" for="curriculum-track-search">Track</label>
+                    <div class="session-search-field">
+                        <span class="session-search-icon" aria-hidden="true">🔍</span>
+                        <input id="curriculum-track-search" type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
+                               placeholder="Search track name…" autocomplete="off">
+                    </div>
+                </div>
+                <div class="curriculum-tracks-toolbar__btns">
+                    <button type="submit" class="btn btn-outline">Search</button>
+                    @if(request()->filled('mentee_id') || request()->filled('search'))
+                        <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-ghost">Clear</a>
+                    @endif
+                </div>
             </div>
         </form>
         @endif
 
         @forelse($tracks as $track)
-        <div class="card" style="margin-bottom:12px;padding:16px 18px;">
-            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-                <div style="flex:1;min-width:200px;">
-                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                        <div style="font-size:15px;font-weight:700;">{{ $track->name }}</div>
+        <div class="card curriculum-track-card">
+            <div class="curriculum-track-card__inner">
+                <div class="curriculum-track-card__main">
+                    <div class="curriculum-track-card__title-row">
+                        <div class="curriculum-track-card__title">{{ $track->name }}</div>
                         <span class="session-status {{ $track->is_active ? 'confirmed' : 'pending' }}">{{ $track->is_active ? 'Active' : 'Inactive' }}</span>
                     </div>
-                    <div style="font-size:12px;color:var(--text-2);margin-top:4px;">
+                    <div class="curriculum-track-card__meta">
                         {{ $track->mentee->name ?? 'No mentee' }}
                         · {{ $track->months_count }} month(s)
-                        @if($track->description)
+                        @if($track->description && $track->description !== $track->name)
                         · {{ Str::limit($track->description, 80) }}
                         @endif
                     </div>
                 </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div class="curriculum-track-card__actions">
                     <a href="{{ route('mentor.curriculum.months', $track) }}" class="btn btn-primary btn-sm">Manage months</a>
                     <button type="button" class="btn btn-outline btn-sm" onclick='openEditTrack(@json($track))'>Edit</button>
                     @if($track->mentee_id)

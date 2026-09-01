@@ -11,72 +11,86 @@
             <div class="dash-subtitle">Create a community channel for your mentees.</div>
         </div>
 
-        <div class="card" style="max-width: 720px; margin: 0 auto;">
+        <div class="card community-channel-form-card">
             @php $backUrl = route('mentor.community'); @endphp
-            <div style="margin-bottom:16px;">
+            <div class="community-channel-form-card__back">
                 <a href="{{ $backUrl }}" class="btn btn-ghost btn-sm">← Back</a>
             </div>
 
             @include('partials.community-content-warning')
 
-            <form method="POST" action="{{ route('mentor.community.store') }}" enctype="multipart/form-data" class="space-y-5 community-content-guarded">
+            <form method="POST" action="{{ route('mentor.community.store') }}" enctype="multipart/form-data" class="community-channel-form community-content-guarded">
                 @csrf
 
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Channel Name</label>
-                    <input type="text" name="name" value="{{ old('name') }}" placeholder="e.g. Career Tips"
-                           class="form-input" required>
-                    @error('name')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
+                <div class="community-channel-form__grid community-channel-form__grid--top">
+                    <div class="form-group community-channel-form__name">
+                        <label class="form-label" for="channel-name">Channel Name</label>
+                        <input type="text" name="name" id="channel-name" value="{{ old('name') }}" placeholder="e.g. Career Tips"
+                               class="form-input" required>
+                        @error('name')<p class="form-error">{{ $message }}</p>@enderror
+                    </div>
+
+                    <div class="form-group community-channel-form__icon">
+                        <label class="form-label" for="channel-icon">Icon (emoji)</label>
+                        <input type="text" name="icon" id="channel-icon" value="{{ old('icon', '💬') }}" maxlength="4" class="form-input">
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Slug</label>
-                    <input type="text" name="slug" value="{{ old('slug') }}" placeholder="ask-a-mentor"
+                <div class="form-group">
+                    <label class="form-label" for="channel-slug">Slug</label>
+                    <input type="text" name="slug" id="channel-slug" value="{{ old('slug') }}" placeholder="ask-a-mentor"
                            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
                            class="form-input">
-                    <p class="text-xs text-gray-500 mt-1">URL-friendly id. Leave blank to auto-generate from name.</p>
+                    <p class="form-hint">URL-friendly id. Leave blank to auto-generate from name.</p>
+                    @error('slug')<p class="form-error">{{ $message }}</p>@enderror
                 </div>
 
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Icon (emoji)</label>
-                    <input type="text" name="icon" value="{{ old('icon', '💬') }}" maxlength="4" class="form-input" style="max-width: 120px;">
+                <div class="form-group">
+                    <label class="form-label" for="channel-description">Description</label>
+                    <textarea name="description" id="channel-description" rows="4" placeholder="What is this channel about?" class="form-textarea">{{ old('description') }}</textarea>
+                    @error('description')<p class="form-error">{{ $message }}</p>@enderror
                 </div>
 
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
-                    <textarea name="description" rows="3" placeholder="What is this channel about?" class="form-input" style="resize:none;">{{ old('description') }}</textarea>
-                    @error('description')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Category</label>
-                    <select name="category" class="form-input">
-                        <option value="">Select category</option>
-                        @foreach(($categories ?? \App\Models\Channel::CATEGORIES) as $key => $label)
-                            <option value="{{ $key }}" {{ old('category') === $key ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Visibility</label>
-                    <div class="flex gap-3" style="flex-wrap:wrap;">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="type" value="public" {{ old('type','public')==='public' ? 'checked' : '' }} class="accent-blue-600">
-                            <span class="text-sm text-gray-700">Public - mentors &amp; mentees can join</span>
+                <div class="form-group">
+                    <span class="form-label" id="channel-category-label">Category</span>
+                    <div class="community-category-options" role="radiogroup" aria-labelledby="channel-category-label">
+                        <label class="community-category-option">
+                            <input type="radio" name="category" value="" {{ old('category', '') === '' ? 'checked' : '' }}>
+                            <span>No category</span>
                         </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="type" value="private" {{ old('type')==='private' ? 'checked' : '' }} class="accent-blue-600">
-                            <span class="text-sm text-gray-700">Private - invite only</span>
+                        @foreach(($categories ?? \App\Models\Channel::CATEGORIES) as $key => $label)
+                            <label class="community-category-option">
+                                <input type="radio" name="category" value="{{ $key }}" {{ old('category') === $key ? 'checked' : '' }}>
+                                <span>{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <span class="form-label">Visibility</span>
+                    <div class="community-visibility-options">
+                        <label class="community-visibility-option">
+                            <input type="radio" name="type" value="public" {{ old('type','public')==='public' ? 'checked' : '' }}>
+                            <span>Public — mentors &amp; mentees can join</span>
+                        </label>
+                        <label class="community-visibility-option">
+                            <input type="radio" name="type" value="private" {{ old('type')==='private' ? 'checked' : '' }}>
+                            <span>Private — invite only</span>
                         </label>
                     </div>
                 </div>
 
                 @include('partials.community-channel-image-input', [
+                    'label' => 'Cover image (optional)',
                     'hint' => 'Channel cover image shown on cards and in the channel header. JPEG, PNG, WebP, GIF · max 5MB.',
+                    'labelClass' => 'form-label',
+                    'hintClass' => 'form-hint',
                 ])
 
-                <button type="submit" class="btn btn-primary w-full" style="margin-top:10px;">Create Channel</button>
+                <div class="community-channel-form__actions">
+                    <button type="submit" class="btn btn-primary w-full">Create Channel</button>
+                </div>
             </form>
         </div>
     </div>
@@ -84,7 +98,27 @@
 @push('scripts')
 @include('partials.community-composer-scripts')
 @include('partials.community-content-guard-scripts')
+<script>
+(function () {
+    const nameInput = document.getElementById('channel-name');
+    const slugInput = document.getElementById('channel-slug');
+    if (!nameInput || !slugInput) return;
+
+    let slugTouched = slugInput.value.trim() !== '';
+    slugInput.addEventListener('input', () => { slugTouched = true; });
+
+    nameInput.addEventListener('input', function () {
+        if (slugTouched) return;
+        slugInput.value = this.value
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/[\s_]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+    });
+})();
+</script>
 @endpush
 
 @endsection
-

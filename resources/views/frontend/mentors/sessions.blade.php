@@ -60,55 +60,52 @@
                 default => 'var(--error)',
             };
         @endphp
-        <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden;">
-            <div style="display:flex;align-items:stretch;">
-                <div style="width:4px;flex-shrink:0;background:{{ $barColor }};"></div>
-                <div style="flex:1;padding:18px;display:flex;gap:16px;align-items:flex-start;">
+        <div class="card session-list-card">
+            <div class="session-list-card__accent" style="background:{{ $barColor }};"></div>
+            <div class="session-card-inner">
+                <div class="mentor-avatar-lg session-list-card__avatar">
+                    @if($session->mentee->avatar_url ?? false)<img src="{{ $session->mentee->avatar_url }}" alt="">@else{{ strtoupper(substr($session->mentee->name ?? '?',0,1)) }}@endif
+                </div>
 
-                    <div class="mentor-avatar-lg" style="width:50px;height:50px;font-size:18px;">
-                        @if($session->mentee->avatar_url ?? false)<img src="{{ $session->mentee->avatar_url }}" alt="">@else{{ strtoupper(substr($session->mentee->name ?? '?',0,1)) }}@endif
-                    </div>
-
-                    <div style="flex:1;min-width:0;">
-                        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
-                            <div>
-                                <div style="font-size:15px;font-weight:700;margin-bottom:3px;">{{ $session->title }}</div>
-                                <div style="font-size:13px;color:var(--text-2);">
-                                    Mentee: <strong>{{ $session->mentee->name ?? '—' }}</strong>
-                                    @if($session->booking_ref)
-                                        · <span style="font-size:11px;color:var(--text-3);">{{ $session->booking_ref }}</span>
-                                    @endif
-                                </div>
+                <div class="session-card-body">
+                    <div class="session-card-header">
+                        <div class="session-card-header__main">
+                            <div class="session-card-title">{{ $session->title }}</div>
+                            <div class="session-card-subtitle">
+                                Mentee: <strong>{{ $session->mentee->name ?? '—' }}</strong>
+                                @if($session->booking_ref)
+                                    · <span class="session-card-ref">{{ $session->booking_ref }}</span>
+                                @endif
                             </div>
-                            <span class="session-status {{ str_replace('_', '-', $statusKey) }}">{{ $statusLabel }}</span>
                         </div>
-                        <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:10px;">
-                            <span style="font-size:12px;color:var(--text-2);">📅 {{ $session->scheduled_at->format('D, d M Y') }}</span>
-                            <span style="font-size:12px;color:var(--text-2);">🕐 {{ $session->scheduled_at->format('g:i A') }}</span>
-                            <span style="font-size:12px;color:var(--text-2);">⏱ {{ $session->duration_minutes }} min</span>
-                            <span style="font-size:12px;color:var(--success);">💰 ₹{{ number_format($session->mentor_earning ?? $session->amount ?? 0, 0) }}</span>
-                        </div>
-                        @if($session->agenda ?? $session->topic_notes ?? false)
-                        <div style="margin-top:10px;padding:10px;background:var(--bg);border-radius:var(--radius-sm);font-size:12px;color:var(--text-2);">
-                            📝 <em>{{ Str::limit($session->agenda ?? $session->topic_notes, 120) }}</em>
-                        </div>
-                        @endif
+                        <span class="session-status {{ str_replace('_', '-', $statusKey) }}">{{ $statusLabel }}</span>
                     </div>
+                    <div class="session-card-meta">
+                        <span>📅 {{ $session->scheduled_at->format('D, d M Y') }}</span>
+                        <span>🕐 {{ $session->scheduled_at->format('g:i A') }}</span>
+                        <span>⏱ {{ $session->duration_minutes }} min</span>
+                        <span class="session-card-meta__earn">💰 ₹{{ number_format($session->mentor_earning ?? $session->amount ?? 0, 0) }}</span>
+                    </div>
+                    @if($session->agenda ?? $session->topic_notes ?? false)
+                    <div class="session-card-notes">
+                        📝 <em>{{ Str::limit($session->agenda ?? $session->topic_notes, 120) }}</em>
+                    </div>
+                    @endif
+                </div>
 
-                    <div class="session-card-actions">
-                        <a href="{{ route('mentor.sessions.show', $session->id) }}" class="btn btn-outline btn-sm">View</a>
-                        @if($statusKey === 'upcoming')
-                            @if($session->canJoinCall())
-                                <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">🎥 Start Session</a>
-                            @endif
-                            <button type="button" class="btn btn-outline btn-sm"
-                                    onclick="addMeetingLink({{ $session->id }}, {{ json_encode($session->meeting_link) }})">
-                                🔗 {{ $session->meeting_link ? 'Edit Link' : 'Add Link' }}
-                            </button>
-                            <button type="button" class="btn btn-ghost btn-sm" onclick="completeSession({{ $session->id }})">Mark complete</button>
-                            <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="declineSession({{ $session->id }})">Cancel</button>
+                <div class="session-card-actions">
+                    <a href="{{ route('mentor.sessions.show', $session->id) }}" class="btn btn-outline btn-sm">View</a>
+                    @if($statusKey === 'upcoming')
+                        @if($session->canJoinCall())
+                            <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">🎥 Start Session</a>
                         @endif
-                    </div>
+                        <button type="button" class="btn btn-outline btn-sm"
+                                onclick="addMeetingLink({{ $session->id }}, {{ json_encode($session->meeting_link) }})">
+                            🔗 {{ $session->meeting_link ? 'Edit Link' : 'Add Link' }}
+                        </button>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="completeSession({{ $session->id }})">Mark complete</button>
+                        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="declineSession({{ $session->id }})">Cancel</button>
+                    @endif
                 </div>
             </div>
         </div>

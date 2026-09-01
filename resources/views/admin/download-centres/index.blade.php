@@ -17,10 +17,10 @@
     @endif
 
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
-            <form method="GET" class="flex flex-wrap items-center gap-2">
+        <div class="admin-table-toolbar px-4 sm:px-5 py-4 border-b border-gray-100">
+            <form method="GET" class="admin-table-filters w-full">
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search title or slug…"
-                       class="border border-gray-200 rounded-lg px-3.5 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 min-w-[220px]">
+                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 w-full sm:min-w-[220px]">
                 <select name="status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
                     <option value="">All status</option>
                     <option value="active" @selected(request('status') === 'active')>Active</option>

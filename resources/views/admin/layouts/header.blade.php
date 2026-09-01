@@ -35,18 +35,18 @@
                 </button>
 
                 <div id="admin-notif-dropdown"
-                     class="hidden absolute right-0 mt-3 w-[calc(100vw-2rem)] sm:w-96 max-w-sm bg-white rounded-2xl border shadow-xl z-50 overflow-hidden">
-                    <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                        <div>
+                     class="hidden absolute sm:right-0 mt-3 w-[min(24rem,calc(100vw-2rem))] sm:w-96 max-w-[calc(100vw-2rem)] sm:max-w-sm bg-white rounded-2xl border shadow-xl z-50 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
                             <p class="text-sm font-semibold text-slate-800">Notifications</p>
                             <p class="text-xs text-slate-400">{{ $notifCount }} pending</p>
                         </div>
-                        <a href="{{ route('admin.notifications.index') }}" class="text-xs font-medium text-violet-600 hover:text-violet-700">
+                        <a href="{{ route('admin.notifications.index') }}" class="text-xs font-medium text-violet-600 hover:text-violet-700 whitespace-nowrap flex-shrink-0">
                             View all
                         </a>
                     </div>
 
-                    <div class="max-h-96 overflow-y-auto divide-y divide-slate-50">
+                    <div class="max-h-[min(24rem,60vh)] overflow-y-auto divide-y divide-slate-50">
                         @forelse($notifItems as $item)
                         <a href="{{ $item['url'] }}"
                            class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
@@ -54,7 +54,7 @@
                                 {{ $item['icon'] }}
                             </div>
                             <div class="min-w-0 flex-1">
-                                <p class="text-sm font-medium text-slate-800 truncate">{{ $item['title'] }}</p>
+                                <p class="text-sm font-medium text-slate-800">{{ $item['title'] }}</p>
                                 <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">{{ $item['body'] }}</p>
                                 <p class="text-[11px] text-slate-400 mt-1">{{ $item['time'] }}</p>
                             </div>
@@ -90,7 +90,7 @@
                 </button>
 
                 <div id="admin-user-menu-dropdown"
-                     class="hidden absolute right-0 mt-3 w-64 bg-white rounded-2xl border shadow-xl z-50 overflow-hidden">
+                     class="hidden absolute sm:right-0 mt-3 w-[min(16rem,calc(100vw-2rem))] sm:w-64 max-w-[calc(100vw-2rem)] bg-white rounded-2xl border shadow-xl z-50 overflow-hidden">
                     <div class="p-2">
                         <a href="{{ route('admin.profile.show') }}"
                            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-sm text-slate-700">

@@ -5,16 +5,16 @@
         ->where('type', 'note')
         ->first();
 @endphp
-<div class="card" style="margin-bottom:20px;" id="my-session-notes" data-save-url="{{ route('sessions.my-note.save', $session->id) }}">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-        <h3 style="font-size:14px;font-weight:700;margin:0;">📝 My Personal Notes</h3>
-        <span style="font-size:11px;color:var(--text-3);">Private — only you can see these</span>
+<div class="card session-detail-card" id="my-session-notes" data-save-url="{{ route('sessions.my-note.save', $session->id) }}">
+    <div class="session-detail-card-head">
+        <h3>📝 My Personal Notes</h3>
+        <span class="session-detail-card-hint">Private — only you can see these</span>
     </div>
     <textarea id="my-note-content" class="form-textarea" rows="5"
               placeholder="Notes you took during the session…">{{ $myNote->content ?? '' }}</textarea>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;gap:12px;flex-wrap:wrap;">
         <span id="my-note-status" style="font-size:12px;color:var(--text-3);"></span>
-        <button type="button" class="btn btn-primary btn-sm" id="my-note-save">Save Notes</button>
+        <button type="button" class="btn btn-primary btn-sm" id="my-note-save" style="margin-left:auto;">Save Notes</button>
     </div>
 </div>
 
