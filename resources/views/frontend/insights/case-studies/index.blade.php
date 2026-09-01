@@ -23,37 +23,25 @@
 
     <section class="section insights-body">
         <div class="container">
-            <div class="insights-toolbar">
-                @if($industries->isNotEmpty())
-                <div class="insights-toolbar__filters">
-                    <div class="blog-filters blog-filters--inline">
-                        <a href="{{ route('insights.case-studies.index', request()->only('search')) }}"
-                           class="blog-filter-chip {{ ($industry ?? '') === '' ? 'is-active' : '' }}">
-                            All Industries
-                        </a>
-                        @foreach($industries as $ind)
-                            <a href="{{ route('insights.case-studies.index', array_filter(['industry' => $ind, 'search' => ($search ?? '') ?: null])) }}"
-                               class="blog-filter-chip {{ ($industry ?? '') === $ind ? 'is-active' : '' }}">
-                                {{ $ind }}
-                            </a>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-
-                @include('frontend.partials.insights-search', [
-                    'placeholder' => 'Search case studies…',
-                    'search' => $search ?? '',
-                    'preserve' => array_filter(['industry' => ($industry ?? '') ?: null]),
-                    'variant' => 'toolbar',
-                ])
+            @if($industries->isNotEmpty())
+            <div class="blog-filters blog-filters--inline">
+                <a href="{{ route('insights.case-studies.index') }}"
+                   class="blog-filter-chip {{ ($industry ?? '') === '' ? 'is-active' : '' }}">
+                    All Industries
+                </a>
+                @foreach($industries as $ind)
+                    <a href="{{ route('insights.case-studies.index', ['industry' => $ind]) }}"
+                       class="blog-filter-chip {{ ($industry ?? '') === $ind ? 'is-active' : '' }}">
+                        {{ $ind }}
+                    </a>
+                @endforeach
             </div>
+            @endif
 
-            @if(($industry ?? '') !== '' || ($search ?? '') !== '')
+            @if(($industry ?? '') !== '')
             <p class="blog-filters-meta">
                 Showing {{ $caseStudies->total() }} {{ \Illuminate\Support\Str::plural('story', $caseStudies->total()) }}
-                @if(($industry ?? '') !== '') in <strong>{{ $industry }}</strong>@endif
-                @if(($search ?? '') !== '') matching “{{ $search }}”@endif
+                in <strong>{{ $industry }}</strong>
             </p>
             @endif
 

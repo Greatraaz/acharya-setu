@@ -16,6 +16,34 @@ class MentorsController extends Controller
     ) {}
 
     /**
+     * Distinct mentor specialty fields (domain / industry) for active approved mentors.
+     * GET /api/v1/mentee/mentors/fields
+     */
+    public function fields(): JsonResponse
+    {
+        $rows = User::query()
+            ->where('role', 'mentor')
+            ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
+            ->where('is_active', true)
+            ->whereNotNull('field')
+            ->where('field', '!=', '')
+            ->selectRaw('field, COUNT(*) as mentor_count')
+            ->groupBy('field')
+            ->orderBy('field')
+            ->get();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'fields'     => $rows->map(fn ($row) => [
+                'field'        => $row->field,
+                'mentor_count' => (int) $row->mentor_count,
+            ])->values(),
+            'total'      => $rows->count(),
+        ]);
+    }
+
+    /**
      * List approved mentors (full public profile fields).
      * GET /api/v1/mentee/mentors
      */

@@ -185,6 +185,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // Mentors
         Route::prefix('mentors')->name('mentors.')->group(function () {
+            Route::get('/fields',            [MentorsController::class, 'fields'])->name('fields');
             Route::get('/available',         [MentorsController::class, 'available'])->name('available');
             Route::get('/',                  [MentorsController::class, 'index'])->name('index');
             Route::get('/{id}',              [MentorsController::class, 'show'])->name('show')->whereNumber('id');
@@ -379,6 +380,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
         // Mentors
         Route::prefix('mentors')->name('mentors.')->group(function () {
+            Route::get('/fields',          [MentorsController::class, 'fields'])->name('fields');
             Route::get('/',                [MentorsController::class, 'index'])->name('index');
             Route::get('/{id}',            [MentorsController::class, 'show'])->name('show');
             Route::get('/{id}/availability', [MentorsController::class, 'availability'])->name('availability');
