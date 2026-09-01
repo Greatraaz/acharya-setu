@@ -47,6 +47,37 @@ class EducationStream extends Model
     {
         return $q->where('is_active', true);
     }
+
+    /** Tracks a mentor may view/manage for their mentees (includes admin-created rows with missing mentor_id). */
+    public function scopeForMentor(Builder $q, int $mentorId, iterable $menteeIds): Builder
+    {
+        $menteeIds = collect($menteeIds)->filter()->values();
+
+        return $q->whereNotNull('mentee_id')
+            ->where(function (Builder $inner) use ($mentorId, $menteeIds) {
+                $inner->where('mentor_id', $mentorId);
+
+                if ($menteeIds->isNotEmpty()) {
+                    $inner->orWhereIn('mentee_id', $menteeIds);
+                }
+            });
+    }
+
+    /** Backfill mentor_id on mentee tracks when the mentee is assigned to this mentor. */
+    public static function syncMentorForAssignedMentees(int $mentorId, iterable $menteeIds): void
+    {
+        $menteeIds = collect($menteeIds)->filter()->values();
+
+        if ($menteeIds->isEmpty()) {
+            return;
+        }
+
+        static::query()
+            ->whereIn('mentee_id', $menteeIds)
+            ->whereHas('mentee', fn (Builder $q) => $q->where('assigned_mentor_id', $mentorId))
+            ->where(fn (Builder $q) => $q->whereNull('mentor_id')->orWhere('mentor_id', '!=', $mentorId))
+            ->update(['mentor_id' => $mentorId]);
+    }
  
     public function getTotalTasksAttribute(): int
     {

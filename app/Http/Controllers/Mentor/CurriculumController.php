@@ -32,16 +32,19 @@ class CurriculumController extends Controller
         $mentorId = auth()->id();
         $search = trim((string) $request->input('search', $request->input('q', '')));
 
+        $mentees = $this->mentorMenteesQuery()->get(['id', 'name', 'email']);
+        $menteeIds = $mentees->pluck('id');
+
+        EducationStream::syncMentorForAssignedMentees($mentorId, $menteeIds);
+
         $tracks = EducationStream::with('mentee:id,name,email,avatar_url')
             ->withCount('months')
-            ->where('mentor_id', $mentorId)
+            ->forMentor($mentorId, $menteeIds)
             ->when($request->filled('mentee_id'), fn ($q) => $q->where('mentee_id', $request->mentee_id))
             ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
             ->orderBy('sort_order')
             ->paginate(12)
             ->withQueryString();
-
-        $mentees = $this->mentorMenteesQuery()->get(['id', 'name', 'email']);
         $filterMentee = $request->filled('mentee_id')
             ? $mentees->firstWhere('id', (int) $request->mentee_id)
             : null;
@@ -734,7 +737,25 @@ class CurriculumController extends Controller
 
     private function assertOwnsTrack(?EducationStream $track): void
     {
-        abort_unless($track && (int) $track->mentor_id === (int) auth()->id(), 403);
+        if (! $track) {
+            abort(403);
+        }
+
+        $mentorId = (int) auth()->id();
+
+        if ((int) $track->mentor_id === $mentorId) {
+            return;
+        }
+
+        if ($track->mentee_id && $this->mentorMenteesQuery()->where('id', $track->mentee_id)->exists()) {
+            if ((int) $track->mentor_id !== $mentorId) {
+                $track->update(['mentor_id' => $mentorId]);
+            }
+
+            return;
+        }
+
+        abort(403);
     }
 
     private function assertMentorMentee(int $menteeId): void

@@ -191,10 +191,7 @@ class PortalController extends Controller
             $channel->markRead($user);
         }
 
-        $messages = $channel->messagesForUser($user)
-            ->latest()
-            ->paginate(30)
-            ->withQueryString();
+        $messages = $channel->paginateMessagesForUser($user, 30);
 
         $channels = Channel::visibleTo($user)
             ->withCount(['allMessages', 'members'])

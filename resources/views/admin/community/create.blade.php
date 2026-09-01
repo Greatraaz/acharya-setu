@@ -79,10 +79,7 @@
             @include('partials.community-channel-image-input', [
                 'labelClass' => 'block text-sm font-medium text-gray-700 mb-1.5',
                 'hintClass' => 'text-xs text-gray-400 mt-1',
-            ])
-            @include('partials.community-channel-video-input', [
-                'labelClass' => 'block text-sm font-medium text-gray-700 mb-1.5',
-                'hintClass' => 'text-xs text-gray-400 mt-1',
+                'hint' => 'Channel cover image shown on cards and in the channel header. JPEG, PNG, WebP, GIF · max 5MB.',
             ])
             <button type="submit"
                     class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-colors">

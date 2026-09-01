@@ -133,20 +133,34 @@ class Channel extends Model
 
     public function messages(): HasMany
     {
-        return $this->hasMany(Message::class)->whereNull('parent_id')->latest();
+        return $this->hasMany(Message::class)->whereNull('parent_id')->oldest();
     }
 
     /**
-     * Top-level messages visible to a user (excludes posts they reported).
+     * All channel messages visible to a user (top-level + replies), oldest first.
      */
     public function messagesForUser(User $user)
     {
-        return $this->messages()
+        return $this->allMessages()
             ->visibleToUser($user)
             ->with([
                 'user',
-                'replies' => fn ($q) => $q->visibleToUser($user)->with('user')->latest(),
-            ]);
+                'parent' => fn ($q) => $q->with('user'),
+            ])
+            ->oldest();
+    }
+
+    /** Paginate messages oldest→newest; defaults to the last page so latest appear at the bottom. */
+    public function paginateMessagesForUser(User $user, int $perPage = 30)
+    {
+        $query = $this->messagesForUser($user);
+
+        $total = (clone $query)->toBase()->getCountForPagination();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = (int) request()->input('page', $lastPage);
+        $page = max(1, min($page, $lastPage));
+
+        return $query->paginate($perPage, ['*'], 'page', $page)->withQueryString();
     }
 
     public static function storeValidationRules(): array
@@ -159,7 +173,6 @@ class Channel extends Model
             'type'        => 'required|in:public,private',
             'category'    => 'nullable|string|max:50',
             'image'       => 'nullable|image|mimes:jpeg,jpg,png,webp,gif|max:5120',
-            'video'       => 'nullable|file|mimes:mp4,mov,avi,webm,mpeg|max:10240',
         ];
     }
 

@@ -37,25 +37,22 @@
         @endif
 
         @if($mentees->isNotEmpty())
-        <form method="GET" action="{{ route('mentor.curriculum.tracks') }}" class="session-toolbar" style="margin-bottom:16px;">
-            <div class="session-toolbar-controls" style="width:100%;flex-wrap:wrap;">
-                <div class="form-group" style="margin:0;min-width:200px;">
-                    <label class="form-label">Mentee</label>
-                    <select name="mentee_id" class="form-select">
-                        <option value="">All mentees</option>
-                        @foreach($mentees as $m)
-                        <option value="{{ $m->id }}" @selected((string) request('mentee_id') === (string) $m->id)>{{ $m->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="session-search-field" style="flex:1;min-width:200px;">
+        <form method="GET" action="{{ route('mentor.curriculum.tracks') }}" class="session-toolbar curriculum-tracks-toolbar">
+            <div class="session-toolbar-controls curriculum-tracks-toolbar__controls">
+                <select name="mentee_id" class="form-input form-select curriculum-tracks-toolbar__select" aria-label="Filter by mentee">
+                    <option value="">All mentees</option>
+                    @foreach($mentees as $m)
+                    <option value="{{ $m->id }}" @selected((string) request('mentee_id') === (string) $m->id)>{{ $m->name }}</option>
+                    @endforeach
+                </select>
+                <div class="session-search-field curriculum-tracks-toolbar__search">
                     <span class="session-search-icon" aria-hidden="true">🔍</span>
                     <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
                            placeholder="Search track name…" autocomplete="off">
                 </div>
-                <button type="submit" class="btn btn-outline" style="align-self:flex-end;">Apply</button>
+                <button type="submit" class="btn btn-outline">Apply</button>
                 @if(request()->filled('mentee_id') || request()->filled('search'))
-                    <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-ghost" style="align-self:flex-end;">Clear</a>
+                    <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-ghost">Clear</a>
                 @endif
             </div>
         </form>

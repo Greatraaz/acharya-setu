@@ -750,10 +750,7 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
             $channel->addMember($user);
         }
 
-        $paginator = $channel->messagesForUser($user)
-            ->withCount('replies')
-            ->paginate($perPage)
-            ->withQueryString();
+        $paginator = $channel->paginateMessagesForUser($user, $perPage);
 
         $channel->markRead($user);
 

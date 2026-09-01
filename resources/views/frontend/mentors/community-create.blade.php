@@ -68,8 +68,9 @@
                     </div>
                 </div>
 
-                @include('partials.community-channel-image-input')
-                @include('partials.community-channel-video-input')
+                @include('partials.community-channel-image-input', [
+                    'hint' => 'Channel cover image shown on cards and in the channel header. JPEG, PNG, WebP, GIF · max 5MB.',
+                ])
 
                 <button type="submit" class="btn btn-primary w-full" style="margin-top:10px;">Create Channel</button>
             </form>

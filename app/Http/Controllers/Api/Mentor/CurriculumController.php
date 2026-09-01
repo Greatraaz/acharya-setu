@@ -12,6 +12,9 @@ use App\Models\{
     CurriculumMcqTopic,
     StudentCurriculumProgress,
     TaskSupportingMaterial,
+    User,
+    ConsultationSession,
+    MenteeEnrollment,
 };
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\Storage;
@@ -35,9 +38,13 @@ class CurriculumController extends Controller
 
         $search  = trim((string) ($data['search'] ?? ''));
         $perPage = $data['per_page'] ?? 20;
+        $mentorId = (int) $request->user()->id;
+        $menteeIds = $this->mentorMenteeIds($mentorId);
+
+        EducationStream::syncMentorForAssignedMentees($mentorId, $menteeIds);
 
         $paginator = EducationStream::with('mentee:id,name,email,avatar_url')
-            ->where('mentor_id', $request->user()->id)
+            ->forMentor($mentorId, $menteeIds)
             ->when(! empty($data['mentee_id']), fn ($q) => $q->where('mentee_id', (int) $data['mentee_id']))
             ->when(array_key_exists('is_active', $data), fn ($q) => $q->where('is_active', (bool) $data['is_active']))
             ->when($search !== '', function ($q) use ($search) {
@@ -1402,5 +1409,15 @@ class CurriculumController extends Controller
             'is_active'     => (bool) ($row['is_active'] ?? true),
             'order_index'   => $row['order_index'] ?? 0,
         ]);
+    }
+
+    private function mentorMenteeIds(int $mentorId)
+    {
+        $sessionIds = ConsultationSession::where('mentor_id', $mentorId)->pluck('mentee_id');
+        $assignedIds = User::where('assigned_mentor_id', $mentorId)->where('role', 'mentee')->pluck('id');
+        $enrolledIds = MenteeEnrollment::where('mentor_id', $mentorId)->pluck('mentee_id');
+        $trackIds = EducationStream::where('mentor_id', $mentorId)->pluck('mentee_id');
+
+        return $sessionIds->merge($assignedIds)->merge($enrolledIds)->merge($trackIds)->unique()->filter()->values();
     }
 }

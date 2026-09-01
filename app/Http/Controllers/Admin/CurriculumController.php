@@ -134,7 +134,9 @@ class CurriculumController extends Controller
         $data['mentor_id']  = $mentee->assigned_mentor_id;
         $data['slug']       = $this->resolveStreamSlug($data['name'], $data['mentee_id']);
  
-        EducationStream::create($data);
+        $stream = EducationStream::create($data);
+        $this->ensureEnrollmentForStream($stream);
+
         return redirect()->back()->with('success', 'Stream created.');
     }
  
@@ -159,6 +161,8 @@ class CurriculumController extends Controller
         $data['slug']      = $this->resolveStreamSlug($data['name'], $data['mentee_id'], $stream->id);
  
         $stream->update($data);
+        $this->ensureEnrollmentForStream($stream->fresh());
+
         return redirect()->back()->with('success', 'Stream updated.');
     }
  
@@ -539,5 +543,38 @@ class CurriculumController extends Controller
         }
 
         return (int) $menteeId;
+    }
+
+    private function ensureEnrollmentForStream(EducationStream $stream): void
+    {
+        if (! $stream->mentee_id) {
+            return;
+        }
+
+        $mentorId = $stream->mentor_id
+            ?? User::find($stream->mentee_id)?->assigned_mentor_id;
+
+        if (! $mentorId) {
+            return;
+        }
+
+        if ((int) $stream->mentor_id !== (int) $mentorId) {
+            $stream->update(['mentor_id' => $mentorId]);
+        }
+
+        MenteeEnrollment::firstOrCreate(
+            [
+                'mentee_id' => $stream->mentee_id,
+                'stream_id' => $stream->id,
+            ],
+            [
+                'mentor_id'         => $mentorId,
+                'start_date'        => now()->toDateString(),
+                'expected_end_date' => now()->addMonths(6)->toDateString(),
+                'status'            => 'active',
+                'current_month'     => 1,
+                'current_week'      => 1,
+            ]
+        );
     }
 }

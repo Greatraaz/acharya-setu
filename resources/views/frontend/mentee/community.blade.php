@@ -2,6 +2,8 @@
 @section('title', 'Community — Vedrix')
 
 @section('content')
+<link rel="stylesheet" href="{{ asset('css/community-thread.css') }}?v={{ filemtime(public_path('css/community-thread.css')) }}">
+
 <div class="dash-layout">
     @include('frontend.mentee.partials.sidebar')
 
@@ -16,23 +18,13 @@
             'channels' => $channels,
         ])
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;">
+        <div class="community-channel-grid">
             @forelse($channels as $channel)
-            <a href="{{ route('mentee.community.show', $channel->slug) }}" class="card" style="display:block;text-decoration:none;color:inherit;padding:18px;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-                    <div style="font-size:28px;">{{ $channel->icon ?: '💬' }}</div>
-                    <span class="session-status {{ $channel->type === 'public' ? 'confirmed' : 'pending' }}">{{ ucfirst($channel->type) }}</span>
-                </div>
-                <div style="font-size:15px;font-weight:700;margin-bottom:4px;">{{ $channel->name }}</div>
-                <div style="font-size:12px;color:var(--text-2);margin-bottom:12px;min-height:36px;">{{ Str::limit($channel->description ?: 'No description', 90) }}</div>
-                <div style="font-size:11px;color:var(--text-3);display:flex;gap:12px;flex-wrap:wrap;">
-                    <span>{{ $channel->members_count }} members</span>
-                    <span>{{ $channel->all_messages_count }} messages</span>
-                    @if(($channel->unread_count ?? 0) > 0)
-                        <span style="color:var(--brand);font-weight:700;">{{ $channel->unread_count }} unread</span>
-                    @endif
-                </div>
-            </a>
+                @include('partials.community-channel-card', [
+                    'channel' => $channel,
+                    'showRoute' => 'mentee.community.show',
+                    'canDelete' => false,
+                ])
             @empty
             <div class="empty-state" style="grid-column:1/-1;padding:60px 0;">
                 <div style="font-size:48px;margin-bottom:12px;">💬</div>

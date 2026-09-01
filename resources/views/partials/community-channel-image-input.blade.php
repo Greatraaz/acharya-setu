@@ -2,7 +2,7 @@
     $inputId = $inputId ?? 'channel-image';
     $chipId = $chipId ?? 'channel-image-chip';
     $label = $label ?? 'Image (optional)';
-    $hint = $hint ?? 'If provided, this image is posted as the first channel message. JPEG, PNG, WebP, GIF · max 5MB.';
+    $hint = $hint ?? 'Channel cover image shown on cards and in the channel header. JPEG, PNG, WebP, GIF · max 5MB.';
     $labelClass = $labelClass ?? 'block text-sm font-semibold text-gray-700 mb-1.5';
     $hintClass = $hintClass ?? 'text-xs text-gray-500 mt-1';
 @endphp

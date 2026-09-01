@@ -113,11 +113,25 @@ class Message extends Model
             Channel::validateMessageBody($body);
         }
 
+        $parentId = $data['parent_id'] ?? $request->input('parent_id');
+        if ($parentId) {
+            $parent = self::query()
+                ->where('id', $parentId)
+                ->where('channel_id', $channel->id)
+                ->first();
+
+            if (! $parent) {
+                throw ValidationException::withMessages([
+                    'parent_id' => ['Invalid reply target for this channel.'],
+                ]);
+            }
+        }
+
         return [
             'body'       => $body,
             'image_path' => $hasImage ? self::storeUploadedImage($request->file('image'), $channel->id) : null,
             'video_path' => $hasVideo ? self::storeUploadedVideo($request->file('video'), $channel->id) : null,
-            'parent_id'  => $data['parent_id'] ?? $request->input('parent_id'),
+            'parent_id'  => $parentId ?: null,
         ];
     }
 
@@ -219,6 +233,16 @@ class Message extends Model
             'video_path'    => $videoUrl,
             'video_url'     => $videoUrl,
             'parent_id'     => $this->parent_id,
+            'parent'        => $this->relationLoaded('parent') && $this->parent
+                ? [
+                    'id'      => $this->parent->id,
+                    'user_id' => $this->parent->user_id,
+                    'body'    => $this->parent->body,
+                    'user'    => $this->parent->relationLoaded('user')
+                        ? $this->parent->user?->only(['id', 'name'])
+                        : null,
+                ]
+                : null,
             'likes'         => (int) $this->likes_count,
             'likes_count'   => (int) $this->likes_count,
             'liked_by'      => $this->liked_by ?? [],

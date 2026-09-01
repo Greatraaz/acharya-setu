@@ -7,6 +7,7 @@ use App\Services\ActivityLogger;
 use App\Services\MenteeOnboardingService;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\EducationStream;
 
 class UserController extends Controller
 {
@@ -72,6 +73,11 @@ class UserController extends Controller
  
         $old = $mentee->assigned_mentor_id;
         $mentee->update(['assigned_mentor_id' => $request->mentor_id ?: null]);
+
+        if ($request->mentor_id) {
+            EducationStream::where('mentee_id', $mentee->id)
+                ->update(['mentor_id' => $request->mentor_id]);
+        }
  
         $mentor = $request->mentor_id ? User::find($request->mentor_id) : null;
         ActivityLogger::record(

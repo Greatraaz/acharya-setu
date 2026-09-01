@@ -42,7 +42,20 @@ class MessageController extends Controller
 
         $channel->markRead($user);
 
-        return back();
+        return redirect()->route($this->communityShowRoute(), $channel->slug);
+    }
+
+    private function communityShowRoute(): string
+    {
+        if (request()->is('admin/*') || request()->is('admin')) {
+            return 'admin.community.show';
+        }
+
+        if (request()->is('mentor/*')) {
+            return 'mentor.community.show';
+        }
+
+        return 'mentee.community.show';
     }
 
     public function like(Message $message)

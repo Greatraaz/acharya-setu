@@ -94,9 +94,7 @@ class ChannelController extends Controller
             $channel->markRead($user);
         }
 
-        $messages = $channel->messagesForUser($user)
-            ->withCount('replies')
-            ->paginate(30);
+        $messages = $channel->paginateMessagesForUser($user, 30);
 
         $channels = Channel::visibleTo($user)
             ->get()
