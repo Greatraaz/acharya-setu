@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\ConsultationSession;
 use App\Models\InsightEvent;
+use App\Observers\ConsultationSessionObserver;
 use App\Services\PublicFileStorage;
 use Carbon\Carbon;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -36,5 +38,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Route::bind('events_webinar', fn ($value) => InsightEvent::findOrFail($value));
+
+        ConsultationSession::observe(ConsultationSessionObserver::class);
     }
 }

@@ -16,13 +16,10 @@
 
     <div class="dash-content">
 
-        <div class="dash-header dash-header--actions flex-between mentee-dash__header">
+        <div class="dash-header mentee-dash__header">
             <div class="dash-header__main">
                 <div class="dash-title">Good {{ $greeting }}, {{ $firstName }}! 👋</div>
                 <div class="dash-subtitle">Here's what's happening with your learning journey.</div>
-            </div>
-            <div class="dash-header__actions">
-                <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-sm">🔍 Find a Mentor</a>
             </div>
         </div>
 

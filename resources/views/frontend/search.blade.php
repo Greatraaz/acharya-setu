@@ -192,23 +192,22 @@
 
 {{-- ═══════════════════ BOOKING MODAL ═══════════════════ --}}
 <div id="booking-modal" class="modal-overlay">
-    <div class="modal modal-lg">
+    <div class="modal modal-lg booking-modal">
         <div class="modal-header">
             <span class="modal-title" id="booking-mentor-name">Book a Session</span>
             <button class="modal-close" onclick="closeModal('booking-modal')">✕</button>
         </div>
-        <div class="modal-body">
-            <div style="display:grid;grid-template-columns:1.15fr .85fr;gap:28px;">
-                {{-- Left: Picker --}}
+        <div class="modal-body booking-modal__body">
+            <div class="booking-modal__layout">
                 <div class="booking-flow">
                     <div class="booking-card">
-                        <p class="label-caps" style="margin-bottom:12px;">Mentor Availability</p>
+                        <p class="label-caps booking-card__label">Mentor Availability</p>
                         <div id="availabilitySummary"></div>
                     </div>
 
                     <div class="booking-card">
                         <div class="booking-cal-head">
-                            <p class="label-caps" style="margin:0;">Select a Date</p>
+                            <p class="label-caps booking-cal-head__label">Select a Date</p>
                             <div class="booking-cal-nav">
                                 <button type="button" class="btn btn-ghost btn-sm" id="cal-prev-month" aria-label="Previous month">‹</button>
                                 <strong id="cal-month-label"></strong>
@@ -219,14 +218,14 @@
                     </div>
 
                     <div class="booking-card">
-                        <p class="label-caps" style="margin-bottom:12px;" id="slots-heading">Available Slots</p>
+                        <p class="label-caps booking-card__label" id="slots-heading">Available Slots</p>
                         <div id="timeGrid" class="time-grid">
-                            <div class="text-sm text-muted" style="grid-column:1/-1;">Pick an available date</div>
+                            <div class="text-sm text-muted booking-slot-placeholder">Pick an available date</div>
                         </div>
                     </div>
 
                     <div class="booking-card">
-                        <p class="label-caps" style="margin-bottom:12px;">Session Duration</p>
+                        <p class="label-caps booking-card__label">Session Duration</p>
                         <div class="duration-btns">
                             <div class="duration-btn" data-min="15" onclick="BookingWidget.setDuration(15)">15m</div>
                             <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30m</div>
@@ -236,7 +235,7 @@
                     </div>
 
                     <div class="booking-card">
-                        <p class="label-caps" style="margin-bottom:12px;">Session Details</p>
+                        <p class="label-caps booking-card__label">Session Details</p>
                         <div class="form-group">
                             <label class="form-label">Topic <span style="color:var(--error)">*</span></label>
                             <input type="text" name="title" class="form-input" id="booking-topic"
@@ -250,16 +249,15 @@
                     </div>
                 </div>
 
-                {{-- Right: Summary --}}
-                <div>
-                    <p class="label-caps" style="margin-bottom:12px;">Booking Summary</p>
+                <aside class="booking-modal__summary">
+                    <p class="label-caps booking-card__label">Booking Summary</p>
                     <div class="booking-summary">
                         <div class="booking-summary-row"><span>Mentor</span><strong id="bk-mentor">—</strong></div>
                         <div class="booking-summary-row"><span>Date</span><strong id="bk-date">—</strong></div>
                         <div class="booking-summary-row"><span>Time</span><strong id="bk-time">—</strong></div>
                         <div class="booking-summary-row"><span>Duration</span><strong id="bk-duration">30 min</strong></div>
                         <div class="booking-summary-row"><span>Rate</span><strong id="bk-rate">—</strong></div>
-                        <div class="booking-summary-row"><span>Total</span><strong id="bk-total" style="color:var(--brand);font-size:18px;">—</strong></div>
+                        <div class="booking-summary-row booking-summary-row--total"><span>Total</span><strong id="bk-total">—</strong></div>
                     </div>
 
                     <input type="hidden" name="booking_mentor_id" id="booking-mentor-id">
@@ -267,10 +265,10 @@
                     <input type="hidden" name="booking_time">
                     <input type="hidden" name="booking_duration">
                     <input type="hidden" name="booking_amount">
-                </div>
+                </aside>
             </div>
 
-            <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);display:flex;gap:12px;justify-content:flex-end;">
+            <div class="booking-modal__footer">
                 <button class="btn btn-ghost" onclick="closeModal('booking-modal')">Cancel</button>
                 <button class="btn btn-primary btn-lg" id="confirm-booking-btn" onclick="confirmBooking()">
                     ✓ Confirm & Book Session

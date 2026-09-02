@@ -515,6 +515,7 @@
            selectedSlotMax = null,
            ratePerMin = 0,
            mentorId = null,
+           mentorHasSchedule = null,
            dayAvailability = {},
            weeklySummary = [],
            viewYear = null,
@@ -555,6 +556,27 @@
            });
        }
 
+       function renderSlotsEmpty(kind) {
+           const grid = document.getElementById("timeGrid");
+           if (!grid) return;
+
+           const messages = {
+               no_schedule:
+                   "This mentor hasn't added availability yet. Please check back later or choose another mentor.",
+               no_slots:
+                   "No open slots on this date. Try another day from the calendar.",
+               no_duration:
+                   "No slots fit the selected session duration. Try 15 or 30 minutes, or pick another date.",
+               pick_date: "Select an available date to see time slots.",
+               loading: "Loading available times…",
+           };
+
+           grid.innerHTML = `<div class="booking-empty-state" data-empty="${kind || "no_slots"}">
+               <span class="booking-empty-state__icon">${kind === "no_schedule" ? "📅" : "⏰"}</span>
+               <p class="booking-empty-state__text">${messages[kind] || messages.no_slots}</p>
+           </div>`;
+       }
+
        function renderSlots(slots, options = []) {
            const grid = document.getElementById("timeGrid");
            if (!grid) return;
@@ -563,9 +585,12 @@
            (options || []).forEach((opt) => {
                if (opt && opt.start_time) byStart[opt.start_time] = opt;
            });
+           if (mentorHasSchedule === false) {
+               renderSlotsEmpty("no_schedule");
+               return;
+           }
            if (!slots || !slots.length) {
-               grid.innerHTML =
-                   '<div class="text-sm text-muted" style="grid-column:1/-1;text-align:center;padding:12px;">No available slots for this duration</div>';
+               renderSlotsEmpty(selectedDate ? "no_slots" : "pick_date");
                return;
            }
            slots.forEach((slot) => {
@@ -635,12 +660,21 @@
            });
        }
 
-       function renderWeeklySummary(summary) {
+       function renderWeeklySummary(summary, hasSchedule) {
            weeklySummary = Array.isArray(summary) ? summary : [];
            const wrap = document.getElementById("availabilitySummary");
            if (!wrap) return;
+
+           if (hasSchedule === false) {
+               wrap.innerHTML = `<div class="booking-empty-state booking-empty-state--compact">
+                   <span class="booking-empty-state__icon">📅</span>
+                   <p class="booking-empty-state__text">Availability not set up yet. This mentor still needs to add their weekly schedule.</p>
+               </div>`;
+               return;
+           }
+
            if (!weeklySummary.length) {
-               wrap.innerHTML = "";
+               wrap.innerHTML = `<p class="avail-hint">Weekly schedule loading…</p>`;
                return;
            }
            const letters = ["M", "T", "W", "T", "F", "S", "S"];
@@ -701,8 +735,7 @@
 
            const grid = document.getElementById("timeGrid");
            if (grid) {
-               grid.innerHTML =
-                   '<div class="text-sm text-muted" style="grid-column:1/-1;text-align:center;padding:12px;">Loading times…</div>';
+               renderSlotsEmpty("loading");
            }
            loadSlots(selectedDate);
        }
@@ -725,8 +758,11 @@
                .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
                .then(({ ok, data }) => {
                    if (!ok) {
-                       renderSlots([]);
+                       renderSlotsEmpty("no_slots");
                        return;
+                   }
+                   if (typeof data.has_schedule === "boolean") {
+                       mentorHasSchedule = data.has_schedule;
                    }
                    dayAvailability[date] = {
                        ...(dayAvailability[date] || {}),
@@ -739,13 +775,17 @@
                    selectedTime = null;
                    selectedSlotMax = null;
                    constrainDurationButtons();
-                   renderSlots(
-                       Array.isArray(data.slots) ? data.slots : [],
-                       Array.isArray(data.slot_options) ? data.slot_options : []
-                   );
+                   if (mentorHasSchedule === false) {
+                       renderSlotsEmpty("no_schedule");
+                   } else {
+                       renderSlots(
+                           Array.isArray(data.slots) ? data.slots : [],
+                           Array.isArray(data.slot_options) ? data.slot_options : []
+                       );
+                   }
                    updateSummary();
                })
-               .catch(() => renderSlots([]));
+               .catch(() => renderSlotsEmpty("no_slots"));
        }
 
        function renderMonthCalendar() {
@@ -834,11 +874,22 @@
                .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
                .then(({ ok, data }) => {
                    if (!ok || !data) return;
+                   if (typeof data.has_schedule === "boolean") {
+                       mentorHasSchedule = data.has_schedule;
+                   }
                    (data.days || []).forEach((d) => {
                        dayAvailability[d.date] = d;
                    });
-                   if (data.weekly_summary) renderWeeklySummary(data.weekly_summary);
+                   renderWeeklySummary(data.weekly_summary, mentorHasSchedule);
                    markDateButtons();
+
+                   if (mentorHasSchedule === false) {
+                       selectedDate = null;
+                       selectedTime = null;
+                       renderSlotsEmpty("no_schedule");
+                       updateSummary();
+                       return;
+                   }
 
                    if (!selectedDate) {
                        const firstOpen = document.querySelector("#dateGrid .cal-day.has-slots:not(.disabled)");
@@ -892,6 +943,7 @@
                selectedTime = null;
                selectedDuration = 30;
                selectedSlotMax = null;
+               mentorHasSchedule = null;
                dayAvailability = {};
                const now = new Date();
                viewYear = now.getFullYear();
@@ -903,8 +955,7 @@
 
                const timeGrid = document.getElementById("timeGrid");
                if (timeGrid) {
-                   timeGrid.innerHTML =
-                       '<div class="text-sm text-muted" style="grid-column:1/-1;text-align:center;padding:12px;">Pick an available date</div>';
+                   renderSlotsEmpty("pick_date");
                }
                const summary = document.getElementById("availabilitySummary");
                if (summary) summary.innerHTML = '<p class="avail-hint">Loading…</p>';
@@ -932,6 +983,10 @@
            },
 
            getBookingData() {
+               if (mentorHasSchedule === false) {
+                   showToast("error", "This mentor has not set availability yet.");
+                   return null;
+               }
                if (!selectedDate) {
                    showToast("error", "Please select an available date.");
                    return null;

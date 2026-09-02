@@ -35,7 +35,7 @@
     <div class="dash-content">
 
         {{-- Header --}}
-        <div class="dash-header dash-header--actions flex-between mentor-dash__header">
+        <div class="dash-header mentor-dash__header">
             <div class="dash-header__main">
                 <div class="dash-title">{{ $greeting }}, {{ $firstName }} 👋</div>
                 <div class="dash-subtitle mentor-dash__subtitle">
@@ -52,9 +52,6 @@
                         <span class="badge badge-muted">Offline</span>
                     @endif
                 </div>
-            </div>
-            <div class="dash-header__actions">
-                <a href="{{ route('mentor.profile.edit') }}" class="btn btn-primary btn-sm">✏️ Edit Profile</a>
             </div>
         </div>
 

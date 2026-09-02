@@ -9,8 +9,6 @@ use Carbon\Carbon;
 
 class MentorAvailabilityService
 {
-    private const DEFAULT_SLOTS = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
-
     private const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
     /**
@@ -32,11 +30,11 @@ class MentorAvailabilityService
             $dayKey = strtolower($date->format('l'));
             $slots = $this->openSlotsForDate($mentor, $date->toDateString(), $schedule);
             $meta = $schedule['days'][$dayKey] ?? null;
-            $enabled = $meta['enabled'] ?? (! $hasSchedule);
+            $enabled = $meta['enabled'] ?? false;
             $label = null;
-            if ($enabled) {
+            if ($enabled && count($slots)) {
                 $label = $meta['label'] ?? null;
-                if (! $label && count($slots)) {
+                if (! $label) {
                     $label = $slots[0].'–'.end($slots);
                 }
             }
@@ -62,17 +60,6 @@ class MentorAvailabilityService
                 'ranges'  => $row['ranges'] ?? [],
                 'windows' => $row['label'] ?? null,
             ];
-        }
-
-        if (! $hasSchedule) {
-            foreach ($summary as &$row) {
-                $row['enabled'] = true;
-                $row['from'] = '09:00';
-                $row['to'] = '19:00';
-                $row['ranges'] = [['from' => '09:00', 'to' => '19:00']];
-                $row['windows'] = '09:00–19:00';
-            }
-            unset($row);
         }
 
         return [
@@ -129,6 +116,7 @@ class MentorAvailabilityService
             'slot_options' => $options,
             'booked'       => $booked,
             'available'    => count($starts) > 0,
+            'has_schedule' => (bool) $schedule['has_schedule'],
             'label'        => ($meta['enabled'] ?? false) ? ($meta['label'] ?? null) : null,
             'ranges'       => ($meta['enabled'] ?? false) ? ($meta['ranges'] ?? []) : [],
         ];
@@ -430,16 +418,8 @@ class MentorAvailabilityService
             return $options;
         }
 
-        // No schedule configured → default hourly starts as 60-min windows
-        return array_map(function ($time) {
-            $end = Carbon::createFromFormat('H:i', $time, 'Asia/Kolkata')->addMinutes(60)->format('H:i');
-
-            return [
-                'start_time' => $time,
-                'end_time'   => $end,
-                'duration'   => 60,
-            ];
-        }, self::DEFAULT_SLOTS);
+        // No schedule configured — mentor must set availability before booking.
+        return [];
     }
 
     /**
