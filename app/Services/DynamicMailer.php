@@ -51,17 +51,40 @@ class DynamicMailer
      * Send a Mailable using DB SMTP config.
      *
      * @param  \Illuminate\Mail\Mailable $mailable
-     * @param  string|array             $to        email or [email => name]
+     * @param  string|array|null         $to        recipient email, or legacy [email => name]
+     * @param  string|null               $toName    display name when $to is an email string
      */
-    public static function send(\Illuminate\Mail\Mailable $mailable, string|array $to = null): void
+    public static function send(\Illuminate\Mail\Mailable $mailable, string|array $to = null, ?string $toName = null): void
     {
         static::configure();
 
         if ($to) {
-            Mail::to($to)->send($mailable);
+            [$email, $name] = static::resolveRecipient($to, $toName);
+            Mail::to($email, $name)->send($mailable);
         } else {
             Mail::send($mailable);
         }
+    }
+
+    /**
+     * @return array{0: string, 1: string|null}
+     */
+    private static function resolveRecipient(string|array $to, ?string $toName = null): array
+    {
+        if (is_string($to)) {
+            return [$to, $toName];
+        }
+
+        // Legacy [email => name] — do not pass this directly to Mail::to();
+        // Laravel iterates array values and treats them as addresses.
+        $email = array_key_first($to);
+        $name = is_string($email) ? ($to[$email] ?? null) : null;
+
+        if (! is_string($email) || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            throw new \InvalidArgumentException('Invalid recipient email address.');
+        }
+
+        return [$email, is_string($name) ? $name : null];
     }
 
     /**

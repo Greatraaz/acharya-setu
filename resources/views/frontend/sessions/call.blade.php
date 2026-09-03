@@ -467,7 +467,7 @@
             if (client && joined) await client.leave();
         } catch (e) {}
         try {
-            await fetch(endUrl, {
+            const res = await fetch(endUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -477,6 +477,13 @@
                 },
                 body: JSON.stringify({ reason: reason || 'normal' }),
             });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.can_rejoin) {
+                if (window.showToast) {
+                    showToast('info', data.message || 'You can rejoin from the session page.');
+                }
+                await new Promise((resolve) => setTimeout(resolve, 900));
+            }
         } catch (e) {}
         window.location.href = backUrl;
     }

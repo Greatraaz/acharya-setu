@@ -459,7 +459,8 @@ class MentorAvailabilityService
                 return false;
             }
 
-            return $slotAt->greaterThan($cutoff);
+            // Allow booking up to exactly 5 minutes before the slot starts.
+            return $slotAt->greaterThanOrEqualTo($cutoff);
         }));
     }
 

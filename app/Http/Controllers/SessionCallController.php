@@ -21,9 +21,13 @@ class SessionCallController extends Controller
         $this->agora->assertParticipant($user, $session);
 
         if (! $session->canJoinCall()) {
+            $message = $session->callWindowEnded()
+                ? 'This session time has ended. You can no longer join the call.'
+                : 'This session is not available to join.';
+
             return redirect()
                 ->to($this->sessionUrl($user->role, $session->id))
-                ->with('error', 'This session is not available to join.');
+                ->with('error', $message);
         }
 
         $peer = (int) $session->mentor_id === (int) $user->id ? $session->mentee : $session->mentor;
@@ -64,7 +68,14 @@ class SessionCallController extends Controller
 
         $this->agora->endCall($user, $session, $request->input('reason', 'normal'));
 
-        return response()->json(['message' => 'Left the call.']);
+        $session->refresh();
+
+        return response()->json([
+            'message'    => $session->canJoinCall()
+                ? 'Left the call. You can rejoin until the session time ends.'
+                : 'Session ended.',
+            'can_rejoin' => $session->canJoinCall(),
+        ]);
     }
 
     /**

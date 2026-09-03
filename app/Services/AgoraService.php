@@ -119,11 +119,11 @@ class AgoraService
 
         if ($shouldEndLog) {
             $log->markEnded($reason);
-            $this->maybeCompleteSession($session->fresh(), $log->fresh());
+            $this->maybeCompleteSession($session->fresh(), $log->fresh(), $reason);
         }
     }
 
-    private function maybeCompleteSession(ConsultationSession $session, VideoCallLog $log): void
+    private function maybeCompleteSession(ConsultationSession $session, VideoCallLog $log, string $reason = 'normal'): void
     {
         if ($session->status !== ConsultationSession::STATUS_UPCOMING) {
             return;
@@ -131,11 +131,18 @@ class AgoraService
 
         if ($log->duration_seconds) {
             $session->update([
-                'actual_duration_seconds' => $log->duration_seconds,
+                'actual_duration_seconds' => max(
+                    (int) ($session->actual_duration_seconds ?? 0),
+                    (int) $log->duration_seconds
+                ),
             ]);
         }
 
-        $session->complete();
+        // Keep session bookable/rejoinable until the scheduled window ends.
+        // Only mark completed when time is explicitly up or the window has passed.
+        if ($reason === 'time_up' || $session->callWindowEnded()) {
+            $session->complete();
+        }
     }
 
     public function assertParticipant(User $user, ConsultationSession $session): void
@@ -147,8 +154,12 @@ class AgoraService
 
     public function assertJoinable(ConsultationSession $session): void
     {
-        if ($session->status !== ConsultationSession::STATUS_UPCOMING) {
-            throw new HttpException(403, 'This session cannot be joined right now.');
+        if (! $session->canJoinCall()) {
+            $message = $session->status !== ConsultationSession::STATUS_UPCOMING
+                ? 'This session cannot be joined right now.'
+                : 'This session time has ended. You can no longer rejoin the call.';
+
+            throw new HttpException(403, $message);
         }
     }
 

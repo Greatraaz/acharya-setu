@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\AppSetting;
 use App\Models\ConsultationSession;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -39,7 +40,10 @@ class SessionNotificationMail extends Mailable
         $subject = $subjects[$this->event][$this->recipientRole]
             ?? 'Session update — Vedrix';
 
-        return $this->subject($subject)
+        $mail = AppSetting::mail();
+
+        return $this->from($mail['from_address'], $mail['from_name'])
+            ->subject($subject)
             ->view('emails.session-notification')
             ->with([
                 'session'        => $this->session,

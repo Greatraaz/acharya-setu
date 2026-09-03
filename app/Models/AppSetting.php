@@ -68,15 +68,21 @@ class AppSetting extends Model
     public static function mail(): array
     {
         $s = static::allCached();
+
+        $fromAddress = trim((string) ($s['mail_from_address'] ?? ''));
+        if ($fromAddress === '' || filter_var($fromAddress, FILTER_VALIDATE_EMAIL) === false) {
+            $fromAddress = 'hello@vedrix.com';
+        }
+
         return [
-            'driver'     => $s['mail_driver']     ?? $s['mail_mailer']  ?? 'smtp',
-            'host'       => $s['smtp_host']        ?? '',
-            'port'       => (int) ($s['smtp_port'] ?? 587),
-            'encryption' => $s['smtp_encryption']  ?? 'tls',
-            'username'   => $s['smtp_username']    ?? '',
-            'password'   => $s['smtp_password']    ?? '',
-            'from_address' => $s['mail_from_address'] ?? 'hello@vedrix.com',
-            'from_name'    => $s['mail_from_name']    ?? ($s['app_name'] ?? 'Vedrix'),
+            'driver'       => $s['mail_driver'] ?? $s['mail_mailer'] ?? 'smtp',
+            'host'         => $s['mail_host'] ?? $s['smtp_host'] ?? '',
+            'port'         => (int) ($s['mail_port'] ?? $s['smtp_port'] ?? 587),
+            'encryption'   => $s['mail_encryption'] ?? $s['smtp_encryption'] ?? 'tls',
+            'username'     => $s['mail_username'] ?? $s['smtp_username'] ?? '',
+            'password'     => $s['mail_password'] ?? $s['smtp_password'] ?? '',
+            'from_address' => $fromAddress,
+            'from_name'    => $s['mail_from_name'] ?? ($s['app_name'] ?? 'Vedrix'),
         ];
     }
  

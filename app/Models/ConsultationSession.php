@@ -402,7 +402,27 @@ class ConsultationSession extends Model
 
     public function canJoinCall(): bool
     {
-        return $this->status === self::STATUS_UPCOMING;
+        return $this->status === self::STATUS_UPCOMING
+            && $this->isWithinCallWindow();
+    }
+
+    /**
+     * True while the booked session window has not ended (mentor/mentee may (re)join).
+     */
+    public function isWithinCallWindow(): bool
+    {
+        if (! $this->scheduled_at) {
+            return true;
+        }
+
+        $now = now()->timezone(self::SCHEDULE_TIMEZONE);
+
+        return $now->lessThan($this->scheduled_end);
+    }
+
+    public function callWindowEnded(): bool
+    {
+        return ! $this->isWithinCallWindow();
     }
 
     /** @deprecated Confirm is removed; sessions are upcoming once paid. */

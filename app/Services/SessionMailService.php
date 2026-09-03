@@ -66,7 +66,8 @@ class SessionMailService
         try {
             DynamicMailer::send(
                 new SessionNotificationMail($session, $event, $role, $recipient),
-                [$recipient->email => $recipient->name]
+                $recipient->email,
+                $recipient->name
             );
         } catch (\Throwable $e) {
             Log::warning('Session notification email failed.', [

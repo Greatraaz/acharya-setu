@@ -518,6 +518,7 @@
            mentorHasSchedule = null,
            dayAvailability = {},
            weeklySummary = [],
+           lastSlotPayload = null,
            viewYear = null,
            viewMonth = null; // 0-indexed
 
@@ -577,6 +578,11 @@
            </div>`;
        }
 
+       function slotFitsDuration(opt, duration) {
+           if (!opt || !opt.duration) return true;
+           return Number(duration) <= Number(opt.duration);
+       }
+
        function renderSlots(slots, options = []) {
            const grid = document.getElementById("timeGrid");
            if (!grid) return;
@@ -593,7 +599,32 @@
                renderSlotsEmpty(selectedDate ? "no_slots" : "pick_date");
                return;
            }
-           slots.forEach((slot) => {
+
+           const fitting = slots.filter((slot) => {
+               const start = typeof slot === "string" ? slot : slot.start_time;
+               const opt = byStart[start] || (typeof slot === "object" ? slot : null);
+               return slotFitsDuration(opt, selectedDuration);
+           });
+
+           if (!fitting.length) {
+               const maxDur = Math.max(
+                   ...slots.map((slot) => {
+                       const start = typeof slot === "string" ? slot : slot.start_time;
+                       const opt = byStart[start] || (typeof slot === "object" ? slot : null);
+                       return Number(opt?.duration) || 0;
+                   })
+               );
+               renderSlotsEmpty("no_duration");
+               if (maxDur > 0) {
+                   const hint = grid.querySelector(".booking-empty-state__text");
+                   if (hint) {
+                       hint.textContent = `Slots on this day are up to ${maxDur} minutes. Choose ${maxDur}m duration to book.`;
+                   }
+               }
+               return;
+           }
+
+           fitting.forEach((slot) => {
                const start = typeof slot === "string" ? slot : slot.start_time;
                const opt = byStart[start] || (typeof slot === "object" ? slot : null);
                const div = document.createElement("button");
@@ -746,7 +777,6 @@
 
            const qs = new URLSearchParams({
                date,
-               duration: String(selectedDuration || 30),
            });
 
            fetch(`/api/mentors/${id}/availability?${qs.toString()}`, {
@@ -764,11 +794,17 @@
                    if (typeof data.has_schedule === "boolean") {
                        mentorHasSchedule = data.has_schedule;
                    }
+                   lastSlotPayload = {
+                       date,
+                       slots: Array.isArray(data.slots) ? data.slots : [],
+                       slot_options: Array.isArray(data.slot_options) ? data.slot_options : [],
+                   };
+                   const openCount = lastSlotPayload.slots.length;
                    dayAvailability[date] = {
                        ...(dayAvailability[date] || {}),
                        date,
-                       available: !!data.available && (data.slots || []).length > 0,
-                       slot_count: (data.slots || []).length,
+                       available: openCount > 0,
+                       slot_count: openCount,
                        label: data.label || dayAvailability[date]?.label,
                    };
                    markDateButtons();
@@ -778,10 +814,7 @@
                    if (mentorHasSchedule === false) {
                        renderSlotsEmpty("no_schedule");
                    } else {
-                       renderSlots(
-                           Array.isArray(data.slots) ? data.slots : [],
-                           Array.isArray(data.slot_options) ? data.slot_options : []
-                       );
+                       renderSlots(lastSlotPayload.slots, lastSlotPayload.slot_options);
                    }
                    updateSummary();
                })
@@ -944,6 +977,7 @@
                selectedDuration = 30;
                selectedSlotMax = null;
                mentorHasSchedule = null;
+               lastSlotPayload = null;
                dayAvailability = {};
                const now = new Date();
                viewYear = now.getFullYear();
@@ -979,7 +1013,11 @@
                document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
                document.querySelector(`.duration-btn[data-min="${selectedDuration}"]`)?.classList.add("selected");
                updateSummary();
-               if (selectedDate) loadSlots(selectedDate);
+               if (selectedDate && lastSlotPayload && lastSlotPayload.date === selectedDate) {
+                   renderSlots(lastSlotPayload.slots, lastSlotPayload.slot_options);
+               } else if (selectedDate) {
+                   loadSlots(selectedDate);
+               }
            },
 
            getBookingData() {
