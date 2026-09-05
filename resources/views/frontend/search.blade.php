@@ -218,19 +218,19 @@
                     </div>
 
                     <div class="booking-card">
-                        <p class="label-caps booking-card__label" id="slots-heading">Available Slots</p>
-                        <div id="timeGrid" class="time-grid">
-                            <div class="text-sm text-muted booking-slot-placeholder">Pick an available date</div>
-                        </div>
-                    </div>
-
-                    <div class="booking-card">
                         <p class="label-caps booking-card__label">Session Duration</p>
                         <div class="duration-btns">
                             <div class="duration-btn" data-min="15" onclick="BookingWidget.setDuration(15)">15m</div>
                             <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30m</div>
                             <div class="duration-btn" data-min="60" onclick="BookingWidget.setDuration(60)">60m</div>
                             <div class="duration-btn" data-min="90" onclick="BookingWidget.setDuration(90)">90m</div>
+                        </div>
+                    </div>
+
+                    <div class="booking-card">
+                        <p class="label-caps booking-card__label" id="slots-heading">Available Slots</p>
+                        <div id="timeGrid" class="time-grid">
+                            <div class="text-sm text-muted booking-slot-placeholder">Pick an available date</div>
                         </div>
                     </div>
 

@@ -580,54 +580,7 @@
            selectedSlotMax = null;
        }
 
-       function timeToMinutes(hhmm) {
-           if (!hhmm) return null;
-           const parts = String(hhmm).slice(0, 5).split(":").map(Number);
-           if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) return null;
-           return parts[0] * 60 + parts[1];
-       }
-
-       function minutesToTime(mins) {
-           const h = Math.floor(mins / 60);
-           const m = mins % 60;
-           return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-       }
-
-       function addMinutesToTime(hhmm, mins) {
-           const base = timeToMinutes(hhmm);
-           if (base == null) return null;
-           return minutesToTime(base + Number(mins));
-       }
-
-       function rangesForDuration(ranges, duration) {
-           return (ranges || [])
-               .map((r) => {
-                   const from = timeToMinutes(r.from);
-                   const to = timeToMinutes(r.to);
-                   if (from == null || to == null || to - from < duration) return null;
-                   return { from: r.from, to: r.to, latestStart: minutesToTime(to - duration) };
-               })
-               .filter(Boolean);
-       }
-
-       function isStartAllowed(time, duration, ranges, bookedIntervals) {
-           const start = timeToMinutes(time);
-           if (start == null) return false;
-           const end = start + Number(duration);
-           const inWindow = (ranges || []).some((r) => {
-               const from = timeToMinutes(r.from);
-               const to = timeToMinutes(r.to);
-               return from != null && to != null && start >= from && end <= to;
-           });
-           if (!inWindow) return false;
-           return !(bookedIntervals || []).some((b) => {
-               const b0 = timeToMinutes(b.start);
-               const b1 = timeToMinutes(b.end);
-               return b0 != null && b1 != null && start < b1 && end > b0;
-           });
-       }
-
-       function renderSlots(slots, options = [], ranges = [], bookedIntervals = []) {
+       function renderSlots(slots, options = []) {
            const grid = document.getElementById("timeGrid");
            if (!grid) return;
            grid.innerHTML = "";
@@ -640,71 +593,50 @@
                renderSlotsEmpty("pick_date");
                return;
            }
-
-           const usable = rangesForDuration(ranges, selectedDuration);
-           if (!usable.length) {
+           if (!slots || !slots.length) {
                renderSlotsEmpty("no_duration");
                return;
            }
 
-           const windowsLabel = usable
-               .map((r) => `${formatDisplayTime(r.from)} – ${formatDisplayTime(r.to)}`)
-               .join(", ");
-           const defaultTime =
-               selectedTime && isStartAllowed(selectedTime, selectedDuration, ranges, bookedIntervals)
-                   ? selectedTime
-                   : usable[0].from;
-           const latestHint = usable.map((r) => formatDisplayTime(r.latestStart)).join(" / ");
+           const byStart = {};
+           (options || []).forEach((opt) => {
+               if (opt && opt.start_time) byStart[String(opt.start_time).slice(0, 5)] = opt;
+           });
 
-           selectedSlotMax = selectedDuration;
-           selectedTime = defaultTime;
-
-           grid.innerHTML = `
-               <div class="booking-time-picker" style="grid-column:1/-1;display:flex;flex-direction:column;gap:10px;">
-                   <p class="avail-hint" style="margin:0;">Available window${usable.length > 1 ? "s" : ""}: <strong>${windowsLabel}</strong></p>
-                   <label class="form-label" style="margin:0;">Start time (any minute inside the window)</label>
-                   <input type="time" id="booking-time-input" class="form-input" step="60" value="${defaultTime}">
-                   <p class="avail-hint" id="booking-time-hint" style="margin:0;">
-                       ${selectedDuration} min session must finish by the window end. Latest start: <strong>${latestHint}</strong>
-                   </p>
-                   <p class="avail-hint" id="booking-time-error" style="margin:0;color:var(--error);display:none;"></p>
-               </div>
-           `;
-
-           const input = document.getElementById("booking-time-input");
-           const err = document.getElementById("booking-time-error");
-           const applyTime = (raw) => {
-               const time = String(raw || "").slice(0, 5);
-               if (!isStartAllowed(time, selectedDuration, ranges, bookedIntervals)) {
-                   selectedTime = null;
-                   if (err) {
-                       err.style.display = "block";
-                       err.textContent =
-                           "Choose a start time so the session ends inside the mentor's available window (and does not overlap another booking).";
+           slots.forEach((slot) => {
+               const start = typeof slot === "string" ? String(slot).slice(0, 5) : String(slot.start_time || "").slice(0, 5);
+               if (!start) return;
+               const opt = byStart[start] || (typeof slot === "object" ? slot : null);
+               const btn = document.createElement("button");
+               btn.type = "button";
+               btn.className = "time-slot";
+               btn.dataset.time = start;
+               if (opt && opt.duration) btn.dataset.maxDuration = String(opt.duration);
+               btn.textContent = formatDisplayTime(start);
+               btn.addEventListener("click", (e) => {
+                   e.preventDefault();
+                   e.stopPropagation();
+                   grid.querySelectorAll(".time-slot").forEach((s) => s.classList.remove("selected"));
+                   btn.classList.add("selected");
+                   selectedTime = start;
+                   selectedSlotMax = opt && opt.duration ? Number(opt.duration) : null;
+                   constrainDurationButtons();
+                   if (selectedSlotMax && selectedDuration > selectedSlotMax) {
+                       const allowed = [15, 30, 60, 90].filter((m) => m <= selectedSlotMax);
+                       selectedDuration = allowed.length ? allowed[allowed.length - 1] : 15;
+                       document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
+                       document.querySelector(`.duration-btn[data-min="${selectedDuration}"]`)?.classList.add("selected");
                    }
                    updateSummary();
-                   return;
-               }
-               selectedTime = time;
-               selectedSlotMax = selectedDuration;
-               if (err) err.style.display = "none";
-               updateSummary();
-           };
-
-           if (input) {
-               input.addEventListener("change", () => applyTime(input.value));
-               input.addEventListener("input", () => applyTime(input.value));
-               applyTime(defaultTime);
-           }
+               });
+               grid.appendChild(btn);
+           });
        }
 
        function constrainDurationButtons() {
-           const ranges = lastSlotPayload?.ranges || [];
            document.querySelectorAll(".duration-btn").forEach((btn) => {
                const min = Number(btn.dataset.min);
-               const tooLong = ranges.length
-                   ? rangesForDuration(ranges, min).length === 0
-                   : false;
+               const tooLong = selectedSlotMax != null && min > selectedSlotMax;
                btn.classList.toggle("is-disabled", tooLong);
                btn.style.opacity = tooLong ? "0.35" : "";
                btn.style.pointerEvents = tooLong ? "none" : "";
@@ -825,6 +757,7 @@
 
            const qs = new URLSearchParams({
                date,
+               duration: String(selectedDuration || 30),
            });
 
            fetch(`/api/mentors/${id}/availability?${qs.toString()}`, {
@@ -844,14 +777,16 @@
                    }
                    lastSlotPayload = {
                        date,
+                       duration: selectedDuration,
                        slots: Array.isArray(data.slots) ? data.slots : [],
                        slot_options: Array.isArray(data.slot_options) ? data.slot_options : [],
                        ranges: Array.isArray(data.ranges) ? data.ranges : [],
                        booked_intervals: Array.isArray(data.booked_intervals) ? data.booked_intervals : [],
                        available: !!data.available,
+                       free_start: !!data.free_start,
                    };
                    const openCount = lastSlotPayload.available
-                       ? Math.max(1, lastSlotPayload.slots.length || lastSlotPayload.ranges.length || 1)
+                       ? Math.max(1, lastSlotPayload.slots.length || 0)
                        : 0;
                    dayAvailability[date] = {
                        ...(dayAvailability[date] || {}),
@@ -866,15 +801,10 @@
                    constrainDurationButtons();
                    if (mentorHasSchedule === false) {
                        renderSlotsEmpty("no_schedule");
-                   } else if (!lastSlotPayload.available) {
-                       renderSlotsEmpty("no_slots");
+                   } else if (!lastSlotPayload.available || !lastSlotPayload.slots.length) {
+                       renderSlotsEmpty(selectedDuration ? "no_duration" : "no_slots");
                    } else {
-                       renderSlots(
-                           lastSlotPayload.slots,
-                           lastSlotPayload.slot_options,
-                           lastSlotPayload.ranges,
-                           lastSlotPayload.booked_intervals
-                       );
+                       renderSlots(lastSlotPayload.slots, lastSlotPayload.slot_options);
                    }
                    updateSummary();
                })
@@ -1064,25 +994,17 @@
            loadSlots,
            setDuration(min) {
                const next = Number(min) || 30;
-               const ranges = lastSlotPayload?.ranges || [];
-               if (ranges.length && rangesForDuration(ranges, next).length === 0) {
-                   showToast("error", `No availability window is long enough for a ${next}-minute session.`);
+               if (selectedSlotMax != null && next > selectedSlotMax) {
+                   showToast("error", `This slot is only ${selectedSlotMax} minutes. Choose a shorter duration.`);
                    return;
                }
                selectedDuration = next;
                selectedTime = null;
-               selectedSlotMax = next;
                document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
                document.querySelector(`.duration-btn[data-min="${selectedDuration}"]`)?.classList.add("selected");
                updateSummary();
-               if (selectedDate && lastSlotPayload && lastSlotPayload.date === selectedDate) {
-                   renderSlots(
-                       lastSlotPayload.slots,
-                       lastSlotPayload.slot_options,
-                       lastSlotPayload.ranges,
-                       lastSlotPayload.booked_intervals
-                   );
-               } else if (selectedDate) {
+               if (selectedDate) {
+                   renderSlotsEmpty("loading");
                    loadSlots(selectedDate);
                }
            },
@@ -1097,16 +1019,11 @@
                    return null;
                }
                if (!selectedTime) {
-                   showToast("error", "Please choose a valid start time inside the available window.");
+                   showToast("error", "Please select an available time slot.");
                    return null;
                }
-               const ranges = lastSlotPayload?.ranges || [];
-               const booked = lastSlotPayload?.booked_intervals || [];
-               if (!isStartAllowed(selectedTime, selectedDuration, ranges, booked)) {
-                   showToast(
-                       "error",
-                       "That start time does not fit inside the mentor's window for the selected duration."
-                   );
+               if (selectedSlotMax != null && selectedDuration > selectedSlotMax) {
+                   showToast("error", `This slot is only ${selectedSlotMax} minutes long.`);
                    return null;
                }
                return {

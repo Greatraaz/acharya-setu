@@ -72,11 +72,17 @@ class BookingController extends Controller
 
     public function reviewForm(int $id)
     {
-        $session = ConsultationSession::where('mentee_id', auth()->id())
+        $session = ConsultationSession::with('mentor')
+            ->where('mentee_id', auth()->id())
             ->where('status', 'completed')
             ->findOrFail($id);
 
-        return view('mentee.session-review', compact('session'));
+        if ($session->reviews()->where('reviewer_id', auth()->id())->exists()) {
+            return redirect()->route('mentee.sessions.show', $session->id)
+                ->with('info', 'You have already submitted a review for this session.');
+        }
+
+        return view('frontend.mentee.session-review', compact('session'));
     }
 
     public function submitReview(int $id, Request $request)
@@ -88,23 +94,33 @@ class BookingController extends Controller
             'punctuality_rating'   => 'nullable|integer|between:1,5',
             'helpfulness_rating'   => 'nullable|integer|between:1,5',
             'review_text'          => 'nullable|string|max:1000',
-            'would_recommend'      => 'boolean',
+            'would_recommend'      => 'nullable|boolean',
         ]);
 
-        $session = ConsultationSession::where('mentee_id', auth()->id())
+        $session = ConsultationSession::with('mentor')
+            ->where('mentee_id', auth()->id())
             ->where('status', 'completed')
             ->findOrFail($id);
 
+        if ($session->reviews()->where('reviewer_id', auth()->id())->exists()) {
+            if ($request->ajax()) {
+                return response()->json(['message' => 'You have already reviewed this session.'], 422);
+            }
+
+            return redirect()->route('mentee.sessions.show', $session->id)
+                ->with('error', 'You have already reviewed this session.');
+        }
+
         $session->reviews()->create(array_merge($data, [
-            'reviewer_id'   => auth()->id(),
-            'reviewee_id'   => $session->mentor_id,
-            'reviewer_role' => 'mentee',
-            'is_public'     => true,
-            'submitted_at'  => now(),
+            'reviewer_id'     => auth()->id(),
+            'reviewee_id'     => $session->mentor_id,
+            'reviewer_role'   => 'mentee',
+            'would_recommend' => $request->boolean('would_recommend', true),
+            'is_public'       => true,
+            'submitted_at'    => now(),
         ]));
 
-        $avg = $session->mentor->reviewsReceived()->avg('overall_rating');
-        $session->mentor->update(['rating' => round($avg, 2)]);
+        $session->mentor?->recalculateRating();
 
         if ($request->ajax()) {
             return response()->json(['message' => 'Review submitted. Thank you!']);

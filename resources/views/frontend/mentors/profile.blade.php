@@ -165,17 +165,17 @@
                     </div>
                     <div id="dateGrid" class="calendar-grid calendar-grid--month"></div>
 
-                    <p class="label-caps" style="margin:16px 0 10px;" id="slots-heading">Available Slots</p>
-                    <div id="timeGrid" class="time-grid">
-                        <div style="grid-column:1/-1;text-align:center;padding:12px;font-size:12px;color:var(--text-3);">Select an available date</div>
-                    </div>
-
                     <p class="label-caps" style="margin:16px 0 10px;">Session Duration</p>
                     <div class="duration-btns">
                         <div class="duration-btn" data-min="15" onclick="BookingWidget.setDuration(15)">15m</div>
                         <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30m</div>
                         <div class="duration-btn" data-min="60" onclick="BookingWidget.setDuration(60)">60m</div>
                         <div class="duration-btn" data-min="90" onclick="BookingWidget.setDuration(90)">90m</div>
+                    </div>
+
+                    <p class="label-caps" style="margin:16px 0 10px;" id="slots-heading">Available Slots</p>
+                    <div id="timeGrid" class="time-grid">
+                        <div style="grid-column:1/-1;text-align:center;padding:12px;font-size:12px;color:var(--text-3);">Select an available date</div>
                     </div>
 
                     <p class="label-caps" style="margin:16px 0 10px;">Session Details</p>
@@ -214,7 +214,7 @@
 
 @push('scripts')
 <script>
-BookingWidget.init({{ $mentor->rate_per_minute ?? 10 }});
+BookingWidget.init({{ $mentor->rate_per_minute ?? 10 }}, {{ (int) $mentor->id }});
 
 function scrollToBook() {
     document.getElementById('book-section')?.scrollIntoView({ behavior:'smooth', block:'start' });
