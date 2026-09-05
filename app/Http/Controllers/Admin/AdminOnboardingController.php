@@ -227,7 +227,7 @@ class AdminOnboardingController extends Controller
 
         $streams = $this->educationStreamOptions($onboarding);
         $tracks = old('tracks', $onboarding->menteeTracks($mentee->id));
-        $preferences = $mentee->preferences ?? [];
+        $preferences = $onboarding->preferencesForForm($mentee->preferences ?? []);
 
         return view('admin.mentees.edit', compact('mentee', 'mentors', 'streams', 'tracks', 'preferences'));
     }

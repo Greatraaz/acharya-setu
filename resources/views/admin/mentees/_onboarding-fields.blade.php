@@ -1,13 +1,13 @@
 @php
     $m = optional($mentee);
-    $selectedSessionModes = old('session_modes', $preferences['session_modes'] ?? null);
-    if ($selectedSessionModes === null && ! empty($preferences['mentoring_format'] ?? null)) {
-        $selectedSessionModes = match ($preferences['mentoring_format']) {
-            'hybrid' => ['in_person'],
-            default  => [$preferences['mentoring_format']],
-        };
+    $selectedSessionModes = old('session_modes', $preferences['session_modes'] ?? []);
+    if (! is_array($selectedSessionModes)) {
+        $selectedSessionModes = [];
     }
-    $selectedSessionModes = $selectedSessionModes ?? ['video'];
+    $selectedSessionModes = array_values(array_intersect(
+        $selectedSessionModes,
+        ['video', 'audio', 'chat', 'in_person']
+    ));
 @endphp
 
 {{-- Account --}}

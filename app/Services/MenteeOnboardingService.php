@@ -29,12 +29,124 @@ class MenteeOnboardingService
 
     public function menteeTracks(int $menteeId): array
     {
-        return EducationStream::query()
-            ->where('mentee_id', $menteeId)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->pluck('name')
-            ->all();
+        $user = User::find($menteeId);
+        $goals = $user?->career_goals;
+
+        if (is_array($goals) && $goals !== []) {
+            return array_values(array_filter(array_map(
+                fn ($g) => trim((string) $g),
+                $goals
+            )));
+        }
+
+        return [];
+    }
+
+    /**
+     * Normalize stored preference values so admin/frontend selects match legacy DB strings.
+     */
+    public function preferencesForForm(array $preferences): array
+    {
+        if (! empty($preferences['weekly_time_commitment'])) {
+            $preferences['weekly_time_commitment'] = $this->normalizeWeeklyTimeCommitment(
+                (string) $preferences['weekly_time_commitment']
+            );
+        }
+
+        if (! empty($preferences['monthly_budget'])) {
+            $preferences['monthly_budget'] = $this->normalizeMonthlyBudget(
+                (string) $preferences['monthly_budget']
+            );
+        }
+
+        $modes = $preferences['session_modes'] ?? null;
+        if (! is_array($modes) || $modes === []) {
+            $modes = $this->sessionModesFromMentoringFormat($preferences['mentoring_format'] ?? null);
+        } else {
+            $modes = array_values(array_intersect(
+                $modes,
+                ['video', 'audio', 'chat', 'in_person']
+            ));
+            if ($modes === []) {
+                $modes = $this->sessionModesFromMentoringFormat($preferences['mentoring_format'] ?? null);
+            }
+        }
+        $preferences['session_modes'] = $modes;
+
+        return $preferences;
+    }
+
+    public function normalizeWeeklyTimeCommitment(string $value): string
+    {
+        $v = mb_strtolower(trim($value));
+        $v = str_replace(['–', '—', '−'], '-', $v);
+        $v = preg_replace('/\s+/', ' ', $v) ?? $v;
+
+        foreach ([
+            '1-3 hours' => ['1-3 hours', '1-3 hours per week', '1-3 hours/week'],
+            '3-5 hours' => ['3-5 hours', '3-5 hours per week', '3-5 hours/week'],
+            '5-10 hours' => ['5-10 hours', '5-10 hours per week', '5-10 hours/week'],
+            '10+ hours' => ['10+ hours', '10+ hours per week', '10+ hours/week'],
+        ] as $canonical => $aliases) {
+            if (in_array($v, $aliases, true)) {
+                return $canonical;
+            }
+        }
+
+        if (preg_match('/\b1\s*-\s*3\b/', $v)) {
+            return '1-3 hours';
+        }
+        if (preg_match('/\b3\s*-\s*5\b/', $v)) {
+            return '3-5 hours';
+        }
+        if (preg_match('/\b5\s*-\s*10\b/', $v)) {
+            return '5-10 hours';
+        }
+        if (preg_match('/\b10\s*\+/', $v)) {
+            return '10+ hours';
+        }
+
+        return $value;
+    }
+
+    public function normalizeMonthlyBudget(string $value): string
+    {
+        $v = mb_strtolower(trim($value));
+        $v = str_replace(['–', '—', '−'], '-', $v);
+        $v = preg_replace('/\s+/', ' ', $v) ?? $v;
+        $v = str_replace([',', '₹', 'rs.', 'rs'], '', $v);
+
+        if (str_contains($v, 'under') || preg_match('/^<?\s*500$/', $v)) {
+            return 'under_500';
+        }
+        if (preg_match('/500\s*-\s*1000/', $v) || $v === '500-1000') {
+            return '500-1000';
+        }
+        if (preg_match('/1000\s*-\s*2500/', $v) || preg_match('/1000\s*-\s*3000/', $v) || $v === '1000-2500') {
+            return '1000-2500';
+        }
+        if (str_contains($v, '2500+') || str_contains($v, '2500 +') || str_contains($v, '3000+')) {
+            return '2500+';
+        }
+
+        return in_array($value, ['under_500', '500-1000', '1000-2500', '2500+'], true)
+            ? $value
+            : $value;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function sessionModesFromMentoringFormat(?string $format): array
+    {
+        return match ($format) {
+            'video' => ['video'],
+            'audio' => ['audio'],
+            'chat' => ['chat'],
+            'hybrid', 'in_person' => ['in_person'],
+            'one_on_one', 'group' => ['video'],
+            default => [],
+        };
     }
 
     /**
@@ -87,11 +199,23 @@ class MenteeOnboardingService
     public function mergePreferences(User $user, array $data): array
     {
         $sessionModes = array_values(array_filter($data['session_modes'] ?? []));
-        $mentoringFormat = $data['mentoring_format'] ?? $this->mentoringFormatFromSessionModes($sessionModes);
+        $mentoringFormat = $data['mentoring_format']
+            ?? $this->mentoringFormatFromSessionModes($sessionModes)
+            ?? ($user->preferences['mentoring_format'] ?? null);
+
+        $weekly = $data['weekly_time_commitment'] ?? null;
+        if (is_string($weekly) && $weekly !== '') {
+            $weekly = $this->normalizeWeeklyTimeCommitment($weekly);
+        }
+
+        $budget = $data['monthly_budget'] ?? null;
+        if (is_string($budget) && $budget !== '') {
+            $budget = $this->normalizeMonthlyBudget($budget);
+        }
 
         return array_merge($user->preferences ?? [], array_filter([
-            'weekly_time_commitment' => $data['weekly_time_commitment'] ?? null,
-            'monthly_budget'         => $data['monthly_budget'] ?? null,
+            'weekly_time_commitment' => $weekly,
+            'monthly_budget'         => $budget,
             'preferred_language'     => $data['preferred_language'] ?? null,
             'mentoring_format'       => $mentoringFormat,
             'session_modes'          => $sessionModes ?: null,

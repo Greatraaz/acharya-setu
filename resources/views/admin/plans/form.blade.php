@@ -256,31 +256,7 @@
                 </div>
             </div>
 
-            {{-- Payment Gateway IDs --}}
-            <div class="bg-white border border-gray-200 rounded-2xl p-6">
-                <h3 class="text-sm font-semibold text-gray-800 pb-3 border-b border-gray-100">Payment Gateway IDs</h3>
-                <p class="text-xs text-gray-400 mt-3 mb-4">Link this plan to your payment gateway plan/price IDs for subscriptions.</p>
-
-                <div class="grid grid-cols-2 gap-4">
-                    @foreach([
-                        ['stripe_monthly_price_id',  'Stripe Monthly Price ID',  'price_xxxxxxxxxxxxxxxx'],
-                        ['stripe_yearly_price_id',   'Stripe Yearly Price ID',   'price_xxxxxxxxxxxxxxxx'],
-                        ['razorpay_monthly_plan_id', 'Razorpay Monthly Plan ID', 'plan_xxxxxxxxxxxxxxxx'],
-                        ['razorpay_yearly_plan_id',  'Razorpay Yearly Plan ID',  'plan_xxxxxxxxxxxxxxxx'],
-                    ] as [$field, $label, $ph])
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ $label }}</label>
-                        <input
-                            type="text"
-                            name="{{ $field }}"
-                            value="{{ old($field, $plan->$field) }}"
-                            placeholder="{{ $ph }}"
-                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 font-mono"
-                        >
-                    </div>
-                    @endforeach
-                </div>
-            </div>
+          
 
         </div>{{-- /col-span-2 --}}
 
