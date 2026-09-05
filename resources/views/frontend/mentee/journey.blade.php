@@ -21,64 +21,49 @@
         </div>
         @endunless
 
-        @if(!$enrollment)
+        @if($personalTracks->isEmpty())
             <div class="empty-state" style="padding:56px 20px;">
                 <div style="font-size:48px;margin-bottom:12px;">🗺️</div>
-                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No active journey yet</div>
+                <div style="font-size:18px;font-weight:700;margin-bottom:8px;">No curriculum tracks yet</div>
                 @if($assignedMentor)
                 <p style="font-size:13px;color:var(--text-2);max-width:420px;margin:0 auto 18px;">
                     You’re connected with <strong>{{ $assignedMentor->name }}</strong>.
-                    Your personalized curriculum will appear here once your mentor or admin publishes your learning track.
+                    Your personalized curriculum will appear here once your mentor or admin creates a learning track for you.
                 </p>
                 <a href="{{ route('mentee.mentor.change') }}" class="btn btn-primary">View my mentor</a>
                 @else
                 <p style="font-size:13px;color:var(--text-2);max-width:420px;margin:0 auto 18px;">
-                    Connect with a mentor to get a personalized curriculum — your months, weeks, and tasks will appear here once you’re enrolled in a track.
+                    Connect with a mentor to get a personalized curriculum — tracks are created manually by your mentor or an admin.
                 </p>
                 <a href="{{ route('mentors.search') }}" class="btn btn-primary">Find a Mentor</a>
                 @endif
             </div>
-
-            @if($personalTracks->isNotEmpty())
-            <div class="card" style="margin-top:20px;">
-                <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Your assigned tracks</h3>
-                <div style="display:grid;gap:10px;">
-                    @foreach($personalTracks as $track)
-                    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
-                        <div>
-                            <div style="font-weight:600;font-size:14px;">{{ $track->name }}</div>
-                            <div style="font-size:12px;color:var(--text-2);">{{ Str::limit($track->description ?? 'Personalized curriculum track', 90) }}</div>
-                        </div>
-                        @if($track->months_count > 0)
-                        <span class="tag" style="background:var(--brand-soft);color:var(--brand);">Setting up</span>
-                        @else
-                        <span class="tag">Awaiting content</span>
-                        @endif
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-            @elseif($catalogStreams->isNotEmpty())
-            <div class="card" style="margin-top:20px;">
-                <h3 style="font-size:14px;font-weight:700;margin-bottom:6px;">Learning areas</h3>
-                <p style="font-size:12px;color:var(--text-2);margin-bottom:12px;">Topics you can explore once matched with a mentor.</p>
-                <div style="display:grid;gap:10px;">
-                    @foreach($catalogStreams as $stream)
-                    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
-                        <div>
-                            <div style="font-weight:600;font-size:14px;">{{ $stream->name }}</div>
-                            <div style="font-size:12px;color:var(--text-2);">{{ Str::limit($stream->description ?? 'Curriculum track', 90) }}</div>
-                        </div>
-                        <span class="tag">Browse only</span>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-            @endif
         @else
+            {{-- Track switcher: show every journey assigned to this mentee --}}
+            <div class="card" style="margin-bottom:20px;padding:14px 16px;">
+                <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;">
+                    Your tracks ({{ $personalTracks->count() }})
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                    @foreach($personalTracks as $track)
+                        @php
+                            $isSelected = $selectedTrack && (int) $selectedTrack->id === (int) $track->id;
+                        @endphp
+                        <a href="{{ route('mentee.journey.index', ['track' => $track->id]) }}"
+                           class="btn {{ $isSelected ? 'btn-primary' : 'btn-ghost' }} btn-sm"
+                           style="{{ $isSelected ? '' : 'border:1px solid var(--border);' }}">
+                            {{ $track->name }}
+                            @if((int) $track->months_count === 0)
+                                <span style="opacity:.7;font-size:11px;">· setup</span>
+                            @endif
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+
             @php
                 $percent = (int) ($progress['percent'] ?? $progress['percentage'] ?? 0);
-                $streamName = $enrollment->stream->name ?? 'Your track';
+                $streamName = $selectedTrack->name ?? ($enrollment->stream->name ?? 'Your track');
             @endphp
 
             <div style="display:grid;grid-template-columns:{{ ($canViewProgress ?? false) ? '2fr 1fr' : '1fr' }};gap:16px;margin-bottom:24px;">
@@ -87,8 +72,13 @@
                         <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Current Track</div>
                         <div style="font-size:28px;font-weight:800;font-family:var(--font-head);color:#fff;margin-bottom:6px;">{{ $streamName }}</div>
                         <div style="font-size:13px;color:rgba(255,255,255,.8);">
-                            Month {{ $enrollment->current_month }} · Week {{ $enrollment->current_week }}
-                            · {{ ucfirst($enrollment->status) }}
+                            @if($enrollment)
+                                Month {{ $enrollment->current_month }} · Week {{ $enrollment->current_week }}
+                                · {{ ucfirst($enrollment->status) }}
+                            @else
+                                {{ (int) ($selectedTrack->months_count ?? 0) }} month(s)
+                                · {{ ($selectedTrack->is_active ?? false) ? 'Active' : 'Inactive' }}
+                            @endif
                         </div>
                         @if($canViewProgress ?? false)
                         <div style="margin-top:16px;">
@@ -150,7 +140,7 @@
                 @empty
                 <div class="empty-state" style="padding:32px 0;">
                     <div style="font-size:14px;font-weight:700;margin-bottom:6px;">Curriculum not ready</div>
-                    <div style="font-size:13px;color:var(--text-2);">Your mentor hasn’t published months for this track yet.</div>
+                    <div style="font-size:13px;color:var(--text-2);">Your mentor hasn’t published months for this track yet. Switch tracks above if you have others.</div>
                 </div>
                 @endforelse
             </div>

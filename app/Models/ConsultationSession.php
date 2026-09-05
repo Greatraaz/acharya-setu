@@ -190,12 +190,19 @@ class ConsultationSession extends Model
         return 'session_slot_holds_day:'.$mentorId.':'.$date;
     }
 
-    public static function putSlotHold(int $mentorId, int $menteeId, Carbon $scheduledAt, string $orderId): void
-    {
+    public static function putSlotHold(
+        int $mentorId,
+        int $menteeId,
+        Carbon $scheduledAt,
+        string $orderId,
+        int $durationMinutes = 30
+    ): void {
         $scheduledAt = $scheduledAt->copy()->timezone(self::SCHEDULE_TIMEZONE);
+        $durationMinutes = max(15, $durationMinutes);
         $payload = [
-            'mentee_id' => $menteeId,
-            'order_id'  => $orderId,
+            'mentee_id'         => $menteeId,
+            'order_id'          => $orderId,
+            'duration_minutes' => $durationMinutes,
         ];
         Cache::put(self::slotHoldCacheKey($mentorId, $scheduledAt), $payload, now()->addMinutes(self::PAYMENT_HOLD_MINUTES));
 
@@ -223,9 +230,41 @@ class ConsultationSession extends Model
     /** @return list<string> HH:MM times held by unpaid checkouts */
     public static function heldTimesForDate(int $mentorId, string $date): array
     {
+        return array_keys(self::heldDayMap($mentorId, $date));
+    }
+
+    /**
+     * @return list<array{start:string,end:string,mentee_id:?int,duration:int}>
+     */
+    public static function heldIntervalsForDate(int $mentorId, string $date): array
+    {
+        $intervals = [];
+        foreach (self::heldDayMap($mentorId, $date) as $start => $payload) {
+            $duration = max(15, (int) ($payload['duration_minutes'] ?? 30));
+            try {
+                $end = Carbon::createFromFormat('H:i', substr((string) $start, 0, 5), self::SCHEDULE_TIMEZONE)
+                    ->addMinutes($duration)
+                    ->format('H:i');
+            } catch (\Throwable) {
+                continue;
+            }
+            $intervals[] = [
+                'start'     => substr((string) $start, 0, 5),
+                'end'       => $end,
+                'mentee_id' => isset($payload['mentee_id']) ? (int) $payload['mentee_id'] : null,
+                'duration'  => $duration,
+            ];
+        }
+
+        return $intervals;
+    }
+
+    /** @return array<string, array> */
+    private static function heldDayMap(int $mentorId, string $date): array
+    {
         $day = Cache::get(self::slotHoldDayKey($mentorId, $date), []);
 
-        return array_keys(is_array($day) ? $day : []);
+        return is_array($day) ? $day : [];
     }
 
     /** No-op compatibility: unpaid holds are cache-only now. */

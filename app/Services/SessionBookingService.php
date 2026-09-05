@@ -56,16 +56,8 @@ class SessionBookingService
 
         ConsultationSession::releaseOwnUnpaidHold($mentee->id, $mentor->id, $scheduledAt);
 
-        $alreadyBooked = ConsultationSession::where('mentor_id', $mentor->id)
-            ->where('scheduled_at', $scheduledAt)
-            ->occupyingSlot()
-            ->exists();
-
-        $hold = Cache::get(ConsultationSession::slotHoldCacheKey($mentor->id, $scheduledAt));
-        $heldByOther = $hold && (int) ($hold['mentee_id'] ?? 0) !== (int) $mentee->id;
-
-        if ($alreadyBooked || $heldByOther) {
-            return $this->fail('This mentor already has an appointment at the selected date and time.', 422);
+        if ($this->availability->overlapsExisting($mentor->id, (string) $data['date'], $time, $duration, $mentee->id)) {
+            return $this->fail('This mentor already has an appointment that overlaps the selected time.', 422);
         }
 
         $channel = Str::random(10);
@@ -506,7 +498,13 @@ class SessionBookingService
             $draft,
             now()->addMinutes(max(30, ConsultationSession::PAYMENT_HOLD_MINUTES))
         );
-        ConsultationSession::putSlotHold($mentor->id, $mentee->id, $scheduledAt, $orderId);
+        ConsultationSession::putSlotHold(
+            $mentor->id,
+            $mentee->id,
+            $scheduledAt,
+            $orderId,
+            (int) $data['duration']
+        );
 
         return $this->ok(
             $method === 'hybrid'

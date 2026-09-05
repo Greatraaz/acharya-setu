@@ -28,22 +28,25 @@ class MentorAvailabilityService
         for ($i = 0; $i < $days; $i++) {
             $date = $start->copy()->addDays($i);
             $dayKey = strtolower($date->format('l'));
-            $slots = $this->openSlotsForDate($mentor, $date->toDateString(), $schedule);
+            $payload = $this->slotsForDate($mentor, $date->toDateString());
+            $slots = $payload['slots'];
             $meta = $schedule['days'][$dayKey] ?? null;
             $enabled = $meta['enabled'] ?? false;
             $label = null;
-            if ($enabled && count($slots)) {
+            if ($enabled && ($payload['available'] ?? false)) {
                 $label = $meta['label'] ?? null;
-                if (! $label) {
-                    $label = $slots[0].'–'.end($slots);
+                if (! $label && ($payload['ranges'][0]['from'] ?? null)) {
+                    $first = $payload['ranges'][0]['from'];
+                    $last = $payload['ranges'][count($payload['ranges']) - 1]['to'] ?? $first;
+                    $label = $first.'–'.$last;
                 }
             }
 
             $daysOut[] = [
                 'date'       => $date->toDateString(),
                 'day'        => $dayKey,
-                'available'  => count($slots) > 0,
-                'slot_count' => count($slots),
+                'available'  => (bool) ($payload['available'] ?? false),
+                'slot_count' => (int) ($payload['available'] ? max(1, count($slots)) : 0),
                 'label'      => $label,
             ];
         }
@@ -85,59 +88,217 @@ class MentorAvailabilityService
     {
         $schedule = $this->resolvedSchedule($mentor);
         $dayKey = strtolower(Carbon::parse($date, 'Asia/Kolkata')->format('l'));
-        $booked = $this->bookedTimes($mentor->id, $date);
+        $occupied = $this->occupiedIntervals($mentor->id, $date);
         $meta = $schedule['days'][$dayKey] ?? null;
+        $ranges = ($meta['enabled'] ?? false) ? ($meta['ranges'] ?? []) : [];
 
-        $options = $this->slotOptionsForDate($mentor, $date, $schedule);
-        // Mentee may book any duration that fits inside the mentor window
-        // e.g. 09:00–09:30 (30m) allows 15 or 30, but not 60.
-        if ($duration !== null && $duration > 0) {
-            $options = array_values(array_filter(
-                $options,
-                fn ($opt) => (int) $opt['duration'] >= (int) $duration
-            ));
+        if (in_array($date, $schedule['blocked_dates'] ?? [], true)) {
+            $ranges = [];
         }
 
-        $options = array_values(array_filter(
-            $options,
-            fn ($opt) => ! in_array($opt['start_time'], $booked, true)
-        ));
-        $starts = array_column($options, 'start_time');
-        $starts = $this->excludePastSlots($date, $starts);
-        $options = array_values(array_filter(
-            $options,
-            fn ($opt) => in_array($opt['start_time'], $starts, true)
-        ));
+        $duration = ($duration !== null && $duration > 0) ? (int) $duration : null;
+
+        // Optional discrete list (1-min grid) when a duration is requested — useful for clients
+        // that still render chips. Booking itself accepts ANY HH:MM via isSlotOpen().
+        $options = [];
+        if ($duration !== null) {
+            $options = $this->expandWindowStarts($ranges, $duration, 1);
+            $options = array_values(array_filter(
+                $options,
+                fn (array $opt) => ! $this->overlapsAny(
+                    $opt['start_time'],
+                    $opt['end_time'],
+                    $occupied
+                )
+            ));
+            $starts = $this->excludePastSlots($date, array_column($options, 'start_time'));
+            $options = array_values(array_filter(
+                $options,
+                fn ($opt) => in_array($opt['start_time'], $starts, true)
+            ));
+        } else {
+            $starts = [];
+            foreach ($ranges as $range) {
+                $from = substr((string) ($range['from'] ?? ''), 0, 5);
+                if ($from !== '') {
+                    $starts[] = $from;
+                }
+            }
+            $starts = $this->excludePastSlots($date, $starts);
+        }
+
+        $available = $this->dayHasBookableMoment($date, $ranges, $occupied, $duration);
 
         return [
-            'date'         => $date,
-            'day'          => $dayKey,
-            'slots'        => array_values(array_unique($starts)),
-            'slot_options' => $options,
-            'booked'       => $booked,
-            'available'    => count($starts) > 0,
-            'has_schedule' => (bool) $schedule['has_schedule'],
-            'label'        => ($meta['enabled'] ?? false) ? ($meta['label'] ?? null) : null,
-            'ranges'       => ($meta['enabled'] ?? false) ? ($meta['ranges'] ?? []) : [],
+            'date'             => $date,
+            'day'              => $dayKey,
+            'slots'            => array_values(array_unique(array_column($options, 'start_time') ?: $starts)),
+            'slot_options'     => $options,
+            'booked'           => array_values(array_unique(array_column($occupied, 'start'))),
+            'booked_intervals' => array_map(fn ($b) => [
+                'start' => $b['start'],
+                'end'   => $b['end'],
+            ], $occupied),
+            'available'        => $available,
+            'has_schedule'     => (bool) $schedule['has_schedule'],
+            'label'            => ($meta['enabled'] ?? false) ? ($meta['label'] ?? null) : null,
+            'ranges'           => $ranges,
+            'free_start'       => true,
         ];
     }
 
     public function isSlotOpen(User $mentor, string $date, string $time, ?int $duration = null): bool
     {
-        $time = substr($time, 0, 5);
-        $payload = $this->slotsForDate($mentor, $date, $duration);
-
-        if ($duration !== null && $duration > 0) {
-            foreach ($payload['slot_options'] as $opt) {
-                if ($opt['start_time'] === $time && (int) $opt['duration'] >= (int) $duration) {
-                    return true;
-                }
-            }
-
+        $time = substr(trim($time), 0, 5);
+        if (! preg_match('/^\d{2}:\d{2}$/', $time)) {
             return false;
         }
 
-        return in_array($time, $payload['slots'], true);
+        $duration = ($duration !== null && $duration > 0) ? (int) $duration : null;
+        if ($duration === null) {
+            return false;
+        }
+        if (! in_array($duration, ConsultationSession::BOOKING_DURATIONS, true)) {
+            return false;
+        }
+
+        if ($this->excludePastSlots($date, [$time]) === []) {
+            return false;
+        }
+
+        $schedule = $this->resolvedSchedule($mentor);
+        if (! $this->fitsInsideWindows($schedule, $date, $time, $duration)) {
+            return false;
+        }
+
+        $end = $this->addMinutes($time, $duration);
+
+        return ! $this->overlapsAny($time, $end, $this->occupiedIntervals($mentor->id, $date));
+    }
+
+    /**
+     * True when [time, time+duration) overlaps an existing booking/hold.
+     */
+    public function overlapsExisting(
+        int $mentorId,
+        string $date,
+        string $time,
+        int $duration,
+        ?int $exceptMenteeId = null
+    ): bool {
+        $time = substr($time, 0, 5);
+        $end = $this->addMinutes($time, $duration);
+
+        return $this->overlapsAny($time, $end, $this->occupiedIntervals($mentorId, $date, $exceptMenteeId));
+    }
+
+    /**
+     * Start + duration must fall entirely inside one mentor availability window.
+     *
+     * @param  array{has_schedule:bool,days:array,blocked_dates?:array}  $schedule
+     */
+    private function fitsInsideWindows(array $schedule, string $date, string $time, int $duration): bool
+    {
+        if (! ($schedule['has_schedule'] ?? false)) {
+            return false;
+        }
+        if (in_array($date, $schedule['blocked_dates'] ?? [], true)) {
+            return false;
+        }
+
+        $dayKey = strtolower(Carbon::parse($date, 'Asia/Kolkata')->format('l'));
+        $day = $schedule['days'][$dayKey] ?? null;
+        if (! ($day['enabled'] ?? false)) {
+            return false;
+        }
+
+        $end = $this->addMinutes($time, $duration);
+        $startMin = $this->timeToMinutes($time);
+        $endMin = $this->timeToMinutes($end);
+        if ($endMin <= $startMin) {
+            return false;
+        }
+
+        foreach ($day['ranges'] ?? [] as $range) {
+            $from = substr((string) ($range['from'] ?? ''), 0, 5);
+            $to = substr((string) ($range['to'] ?? ''), 0, 5);
+            if (! $from || ! $to) {
+                continue;
+            }
+            $fromMin = $this->timeToMinutes($from);
+            $toMin = $this->timeToMinutes($to);
+            // Must start on/after window start and finish on/before window end.
+            if ($startMin >= $fromMin && $endMin <= $toMin) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<array{from:string,to:string,duration?:int}>  $ranges
+     * @param  list<array{start:string,end:string}>  $occupied
+     */
+    private function dayHasBookableMoment(
+        string $date,
+        array $ranges,
+        array $occupied,
+        ?int $duration = null
+    ): bool {
+        $need = $duration ?? min(ConsultationSession::BOOKING_DURATIONS);
+        foreach ($this->expandWindowStarts($ranges, $need, 1) as $opt) {
+            if ($this->excludePastSlots($date, [$opt['start_time']]) === []) {
+                continue;
+            }
+            if (! $this->overlapsAny($opt['start_time'], $opt['end_time'], $occupied)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<array{from:string,to:string,duration?:int}>  $ranges
+     * @return list<array{start_time:string,end_time:string,duration:int}>
+     */
+    private function expandWindowStarts(array $ranges, int $duration, int $stepMinutes = 1): array
+    {
+        $options = [];
+        $stepMinutes = max(1, $stepMinutes);
+
+        foreach ($ranges as $range) {
+            $from = substr((string) ($range['from'] ?? ''), 0, 5);
+            $to = substr((string) ($range['to'] ?? ''), 0, 5);
+            if (! $from || ! $to || $from >= $to) {
+                continue;
+            }
+
+            try {
+                $cursor = Carbon::createFromFormat('H:i', $from, 'Asia/Kolkata');
+                $windowEnd = Carbon::createFromFormat('H:i', $to, 'Asia/Kolkata');
+            } catch (\Throwable) {
+                continue;
+            }
+
+            $latestStart = $windowEnd->copy()->subMinutes($duration);
+            if ($latestStart->lt($cursor)) {
+                continue;
+            }
+
+            while ($cursor->lte($latestStart)) {
+                $end = $cursor->copy()->addMinutes($duration);
+                $options[] = [
+                    'start_time' => $cursor->format('H:i'),
+                    'end_time'   => $end->format('H:i'),
+                    'duration'   => $duration,
+                ];
+                $cursor->addMinutes($stepMinutes);
+            }
+        }
+
+        return $options;
     }
 
     /**
@@ -385,57 +546,6 @@ class MentorAvailabilityService
     }
 
     /**
-     * @param  array{has_schedule:bool,days:array,blocked_dates?:array}  $schedule
-     * @return list<array{start_time:string,end_time:string,duration:int}>
-     */
-    private function slotOptionsForDate(User $mentor, string $date, array $schedule): array
-    {
-        if (in_array($date, $schedule['blocked_dates'] ?? [], true)) {
-            return [];
-        }
-
-        $dayKey = strtolower(Carbon::parse($date, 'Asia/Kolkata')->format('l'));
-        $day = $schedule['days'][$dayKey] ?? null;
-
-        if ($schedule['has_schedule']) {
-            if (! ($day['enabled'] ?? false)) {
-                return [];
-            }
-
-            $options = [];
-            foreach ($day['ranges'] ?? [] as $range) {
-                $duration = (int) ($range['duration'] ?? $this->minutesBetween($range['from'], $range['to']));
-                if ($duration < 15) {
-                    continue;
-                }
-                $options[] = [
-                    'start_time' => $range['from'],
-                    'end_time'   => $range['to'],
-                    'duration'   => $duration,
-                ];
-            }
-
-            return $options;
-        }
-
-        // No schedule configured — mentor must set availability before booking.
-        return [];
-    }
-
-    /**
-     * @param  array{has_schedule:bool,days:array,blocked_dates?:array}  $schedule
-     * @return list<string>
-     */
-    private function openSlotsForDate(User $mentor, string $date, array $schedule): array
-    {
-        $options = $this->slotOptionsForDate($mentor, $date, $schedule);
-        $open = array_column($options, 'start_time');
-        $booked = $this->bookedTimes($mentor->id, $date);
-
-        return $this->excludePastSlots($date, array_values(array_diff($open, $booked)));
-    }
-
-    /**
      * @param  list<string>  $slots
      * @return list<string>
      */
@@ -465,22 +575,93 @@ class MentorAvailabilityService
     }
 
     /**
+     * Occupied [start, end) intervals for a mentor on a date (bookings + payment holds).
+     *
+     * @return list<array{start:string,end:string,mentee_id:?int}>
+     */
+    private function occupiedIntervals(int $mentorId, string $date, ?int $exceptMenteeId = null): array
+    {
+        $intervals = [];
+
+        $sessions = ConsultationSession::where('mentor_id', $mentorId)
+            ->whereDate('scheduled_at', $date)
+            ->occupyingSlot()
+            ->get(['scheduled_at', 'duration_minutes', 'mentee_id']);
+
+        foreach ($sessions as $session) {
+            $start = Carbon::parse($session->scheduled_at)->timezone('Asia/Kolkata');
+            $mins = max(15, (int) ($session->duration_minutes ?: 15));
+            $intervals[] = [
+                'start'     => $start->format('H:i'),
+                'end'       => $start->copy()->addMinutes($mins)->format('H:i'),
+                'mentee_id' => (int) $session->mentee_id,
+            ];
+        }
+
+        foreach (ConsultationSession::heldIntervalsForDate($mentorId, $date) as $hold) {
+            if ($exceptMenteeId !== null && (int) ($hold['mentee_id'] ?? 0) === (int) $exceptMenteeId) {
+                continue;
+            }
+            $intervals[] = [
+                'start'     => $hold['start'],
+                'end'       => $hold['end'],
+                'mentee_id' => isset($hold['mentee_id']) ? (int) $hold['mentee_id'] : null,
+            ];
+        }
+
+        return $intervals;
+    }
+
+    /**
+     * @param  list<array{start:string,end:string}>  $occupied
+     */
+    private function overlapsAny(string $start, string $end, array $occupied): bool
+    {
+        $a0 = $this->timeToMinutes($start);
+        $a1 = $this->timeToMinutes($end);
+        if ($a1 <= $a0) {
+            return true;
+        }
+
+        foreach ($occupied as $block) {
+            $b0 = $this->timeToMinutes($block['start']);
+            $b1 = $this->timeToMinutes($block['end']);
+            // Half-open intervals: [start, end)
+            if ($a0 < $b1 && $a1 > $b0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function timeToMinutes(string $time): int
+    {
+        $parts = explode(':', substr($time, 0, 5));
+
+        return ((int) ($parts[0] ?? 0) * 60) + (int) ($parts[1] ?? 0);
+    }
+
+    private function addMinutes(string $time, int $minutes): string
+    {
+        try {
+            return Carbon::createFromFormat('H:i', substr($time, 0, 5), 'Asia/Kolkata')
+                ->addMinutes($minutes)
+                ->format('H:i');
+        } catch (\Throwable) {
+            return $time;
+        }
+    }
+
+    /**
+     * @deprecated Prefer occupiedIntervals(); kept for any legacy callers.
      * @return list<string>
      */
     private function bookedTimes(int $mentorId, string $date): array
     {
-        $times = ConsultationSession::where('mentor_id', $mentorId)
-            ->whereDate('scheduled_at', $date)
-            ->occupyingSlot()
-            ->pluck('scheduled_at')
-            ->map(fn ($dt) => Carbon::parse($dt)->format('H:i'))
-            ->unique()
-            ->values()
-            ->all();
-
-        return array_values(array_unique(array_merge(
-            $times,
-            ConsultationSession::heldTimesForDate($mentorId, $date)
+        return array_values(array_unique(array_column(
+            $this->occupiedIntervals($mentorId, $date),
+            'start'
         )));
     }
 
@@ -560,7 +741,7 @@ class MentorAvailabilityService
     }
 
     /**
-     * Each window is one bookable start (duration = window length).
+     * All 15-min start times inside each window that still fit a minimum booking.
      *
      * @param  list<array{from:string,to:string,duration?:int}>  $ranges
      * @return list<string>
@@ -568,10 +749,29 @@ class MentorAvailabilityService
     private function startsFromRanges(array $ranges): array
     {
         $slots = [];
+        $step = min(ConsultationSession::BOOKING_DURATIONS);
+
         foreach ($ranges as $range) {
-            $duration = (int) ($range['duration'] ?? $this->minutesBetween($range['from'], $range['to']));
-            if ($duration >= 15) {
-                $slots[] = $range['from'];
+            $from = substr((string) ($range['from'] ?? ''), 0, 5);
+            $to = substr((string) ($range['to'] ?? ''), 0, 5);
+            if (! $from || ! $to || $from >= $to) {
+                continue;
+            }
+
+            try {
+                $cursor = Carbon::createFromFormat('H:i', $from, 'Asia/Kolkata');
+                $windowEnd = Carbon::createFromFormat('H:i', $to, 'Asia/Kolkata');
+            } catch (\Throwable) {
+                continue;
+            }
+
+            while ($cursor->lt($windowEnd)) {
+                $remaining = $cursor->diffInMinutes($windowEnd);
+                if ($remaining < $step) {
+                    break;
+                }
+                $slots[] = $cursor->format('H:i');
+                $cursor->addMinutes($step);
             }
         }
 

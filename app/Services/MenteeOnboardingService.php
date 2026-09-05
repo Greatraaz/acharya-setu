@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\EducationStream;
-use App\Models\MenteeEnrollment;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -39,8 +38,8 @@ class MenteeOnboardingService
     }
 
     /**
-     * Copy a global catalog stream onto this mentee (name/icon only) and enroll them.
-     * Does not copy months/weeks/tasks — the plan is built later on the mentee row.
+     * Persist career interests only. Does NOT create curriculum tracks —
+     * mentors/admins must create EducationStream rows manually for each mentee.
      */
     public function assignCatalogStream(User $user, ?string $streamName): ?EducationStream
     {
@@ -49,71 +48,17 @@ class MenteeOnboardingService
             return null;
         }
 
-        $catalog = EducationStream::query()
-            ->where('is_active', true)
-            ->whereNull('mentee_id')
-            ->whereRaw('LOWER(name) = ?', [Str::lower($streamName)])
-            ->first();
-
-        if (! $catalog) {
-            return null;
+        // Store the preferred learning area on the user profile only.
+        if ($user->education_stream !== $streamName) {
+            $user->update(['education_stream' => $streamName]);
         }
 
-        $slug = $this->menteeTrackSlug($catalog->name, $user->id);
-
-        $copy = EducationStream::query()
-            ->where('mentee_id', $user->id)
-            ->where(function ($q) use ($catalog, $slug) {
-                $q->where('slug', $slug)
-                    ->orWhereRaw('LOWER(name) = ?', [Str::lower($catalog->name)]);
-            })
-            ->first();
-
-        if (! $copy) {
-            $copy = EducationStream::create([
-                'mentee_id'   => $user->id,
-                'mentor_id'   => $user->assigned_mentor_id,
-                'name'        => $catalog->name,
-                'slug'        => $slug,
-                'icon'        => $catalog->icon,
-                'color'       => $catalog->color,
-                'description' => $catalog->description,
-                'is_active'   => true,
-                'sort_order'  => $catalog->sort_order ?? 0,
-            ]);
-        } else {
-            $copy->update([
-                'icon'        => $catalog->icon,
-                'color'       => $catalog->color,
-                'description' => $catalog->description,
-                'is_active'   => true,
-                'mentor_id'   => $copy->mentor_id ?: $user->assigned_mentor_id,
-            ]);
-        }
-
-        MenteeEnrollment::where('mentee_id', $user->id)
-            ->where('status', 'active')
-            ->where('stream_id', '!=', $copy->id)
-            ->update(['status' => 'paused']);
-
-        MenteeEnrollment::updateOrCreate(
-            [
-                'mentee_id' => $user->id,
-                'stream_id' => $copy->id,
-            ],
-            [
-                'mentor_id'         => $user->assigned_mentor_id ?? $copy->mentor_id,
-                'start_date'        => now()->toDateString(),
-                'expected_end_date' => now()->addMonths(6)->toDateString(),
-                'status'            => 'active',
-                'current_month'     => 1,
-                'current_week'      => 1,
-            ]
-        );
-
-        return $copy;
+        return null;
     }
 
+    /**
+     * Save mentee career goals / interests. Never creates curriculum tracks.
+     */
     public function syncMenteeTracks(int $menteeId, array $trackNames): void
     {
         $tracks = collect($trackNames)
@@ -126,73 +71,12 @@ class MenteeOnboardingService
             return;
         }
 
-        // Keep career goals on the user (used by mentor matching / web onboarding).
         User::where('id', $menteeId)->update([
             'career_goals' => $tracks->all(),
         ]);
-
-        $selectedSlugs = $tracks
-            ->map(fn ($name) => $this->menteeTrackSlug($name, $menteeId))
-            ->filter()
-            ->values()
-            ->all();
-
-        // Also recognize legacy rows that used the bare goal slug.
-        $legacySlugs = $tracks
-            ->map(fn ($name) => Str::slug($name))
-            ->filter()
-            ->values()
-            ->all();
-
-        EducationStream::where('mentee_id', $menteeId)
-            ->whereNull('mentor_id')
-            ->where(function ($q) use ($selectedSlugs, $legacySlugs) {
-                $q->whereNotIn('slug', $selectedSlugs)
-                    ->whereNotIn('slug', $legacySlugs);
-            })
-            ->update(['is_active' => false]);
-
-        foreach ($tracks as $index => $name) {
-            $baseSlug = Str::slug($name);
-            if ($baseSlug === '') {
-                continue;
-            }
-
-            $slug = $this->menteeTrackSlug($name, $menteeId);
-
-            $existing = EducationStream::where('mentee_id', $menteeId)
-                ->whereNull('mentor_id')
-                ->where(function ($q) use ($slug, $baseSlug, $name) {
-                    $q->where('slug', $slug)
-                        ->orWhere('slug', $baseSlug)
-                        ->orWhereRaw('LOWER(name) = ?', [Str::lower($name)]);
-                })
-                ->first();
-
-            if ($existing) {
-                // Move legacy bare slugs onto a mentee-scoped unique slug.
-                $existing->update([
-                    'name'       => $name,
-                    'slug'       => $slug,
-                    'mentor_id'  => null,
-                    'is_active'  => true,
-                    'sort_order' => $index,
-                ]);
-                continue;
-            }
-
-            EducationStream::create([
-                'mentee_id'  => $menteeId,
-                'slug'       => $slug,
-                'name'       => $name,
-                'mentor_id'  => null,
-                'is_active'  => true,
-                'sort_order' => $index,
-            ]);
-        }
     }
 
-    /** Globally unique slug for mentee goal/track rows (slug column is unique). */
+    /** @deprecated Slug helper retained for any legacy callers. */
     private function menteeTrackSlug(string $name, int $menteeId): string
     {
         $base = Str::slug($name) ?: 'track';
@@ -248,10 +132,7 @@ class MenteeOnboardingService
             $missing[] = 'mentoring_format';
         }
 
-        $hasTracks = ! empty($user->career_goals)
-            || EducationStream::where('mentee_id', $user->id)
-                ->where('is_active', true)
-                ->exists();
+        $hasTracks = ! empty($user->career_goals);
 
         if (! $hasTracks) {
             $missing[] = 'tracks';

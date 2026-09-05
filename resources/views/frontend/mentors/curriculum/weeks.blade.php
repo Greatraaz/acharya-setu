@@ -152,8 +152,8 @@
                 {{-- Materials --}}
                 <div id="panel-materials-{{ $week->id }}" class="week-panel" style="padding:16px;display:none;">
                     @forelse($week->supportingMaterials as $material)
-                    <div style="display:flex;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;">
-                        <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;">
+                        <div style="min-width:0;">
                             <strong style="font-size:13px;">{{ $material->title ?: ($material->file_name ?: 'Material') }}</strong>
                             <div style="font-size:11px;color:var(--text-3);margin-top:2px;">
                                 {{ \App\Models\TaskSupportingMaterial::TYPES[$material->type] ?? $material->type }}
@@ -162,11 +162,11 @@
                             </div>
                             @if($material->description)<p style="font-size:12px;color:var(--text-2);margin:4px 0 0;">{{ Str::limit($material->description, 100) }}</p>@endif
                         </div>
-                        <div style="display:flex;gap:6px;">
-                            <button type="button" class="btn btn-outline btn-sm" onclick='openEditMaterial(@json($material))'>Edit</button>
-                            <form method="POST" action="{{ route('mentor.curriculum.materials.destroy', $material) }}" onsubmit="return confirm('Delete material?')">
+                        <div class="curr-task-actions">
+                            <button type="button" class="curr-btn-edit" onclick='openEditMaterial(@json($material))'>Edit</button>
+                            <form method="POST" action="{{ route('mentor.curriculum.materials.destroy', $material) }}" onsubmit="return confirm('Delete material?')" style="margin:0;">
                                 @csrf @method('DELETE')
-                                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--error);">Del</button>
+                                <button type="submit" class="curr-btn-del">Del</button>
                             </form>
                         </div>
                     </div>

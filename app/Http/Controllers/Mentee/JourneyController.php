@@ -16,45 +16,73 @@ use Illuminate\Http\Request;
 
 class JourneyController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $mentee = auth()->user();
         $canViewProgress = $mentee->canAccessProgressReport();
 
         EducationStream::syncEnrollmentsForMentee($mentee->id);
 
-        $enrollment = MenteeEnrollment::where('mentee_id', $mentee->id)
-            ->where('status', 'active')
-            ->with('stream')
-            ->first();
-
         $personalTracks = EducationStream::query()
             ->where('mentee_id', $mentee->id)
             ->where('is_active', true)
             ->withCount('months')
             ->orderBy('sort_order')
+            ->orderBy('name')
             ->get();
 
-        $catalogStreams = collect();
-        if (! $enrollment && ! $mentee->assigned_mentor_id) {
-            $catalogStreams = EducationStream::query()
-                ->whereNull('mentee_id')
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->get();
+        $requestedTrackId = (int) $request->query('track', 0);
+        $selectedTrack = $requestedTrackId > 0
+            ? $personalTracks->firstWhere('id', $requestedTrackId)
+            : null;
+
+        // Prefer a track that already has months; otherwise first personal track.
+        if (! $selectedTrack) {
+            $selectedTrack = $personalTracks->first(fn ($t) => (int) $t->months_count > 0)
+                ?? $personalTracks->first();
         }
 
+        $enrollment = null;
+        if ($selectedTrack) {
+            $enrollment = MenteeEnrollment::where('mentee_id', $mentee->id)
+                ->where('stream_id', $selectedTrack->id)
+                ->with('stream')
+                ->first();
+
+            // Ensure an active enrollment exists so month/week links work.
+            if (! $enrollment && ($selectedTrack->mentor_id || $mentee->assigned_mentor_id)) {
+                $enrollment = MenteeEnrollment::updateOrCreate(
+                    [
+                        'mentee_id' => $mentee->id,
+                        'stream_id' => $selectedTrack->id,
+                    ],
+                    [
+                        'mentor_id'         => $selectedTrack->mentor_id ?? $mentee->assigned_mentor_id,
+                        'start_date'        => now()->toDateString(),
+                        'expected_end_date' => now()->addMonths(6)->toDateString(),
+                        'status'            => 'active',
+                        'current_month'     => 1,
+                        'current_week'      => 1,
+                    ]
+                );
+                $enrollment->load('stream');
+            } elseif ($enrollment && $enrollment->status !== 'active') {
+                $enrollment->update(['status' => 'active']);
+            }
+        }
+
+        $catalogStreams = collect();
         $assignedMentor = $mentee->assignedMentor;
 
         $months = collect();
         $progress = ['percent' => 0, 'completed' => 0, 'total' => 0];
         $monthProgress = collect();
 
-        if ($enrollment?->stream) {
-            $months = $enrollment->stream->months()->with('weeks')->orderBy('month_number')->get();
+        if ($selectedTrack) {
+            $months = $selectedTrack->months()->with('weeks')->orderBy('month_number')->get();
 
             if ($canViewProgress) {
-                $progress = StudentCurriculumProgress::getOverallProgress($mentee->id, $enrollment->stream_id);
+                $progress = StudentCurriculumProgress::getOverallProgress($mentee->id, $selectedTrack->id);
                 $monthProgress = $months->map(fn ($m) => array_merge(
                     ['month' => $m],
                     $m->getProgressForUser($mentee->id)
@@ -71,6 +99,7 @@ class JourneyController extends Controller
 
         return view('frontend.mentee.journey', compact(
             'enrollment',
+            'selectedTrack',
             'personalTracks',
             'catalogStreams',
             'assignedMentor',
@@ -276,7 +305,17 @@ class JourneyController extends Controller
             ->where('status', 'active')
             ->exists();
 
-        if (! $enrolled) {
+        if ($enrolled) {
+            return;
+        }
+
+        // Allow access when the track belongs to this mentee even if enrollment sync lagged.
+        $ownsTrack = EducationStream::where('id', $streamId)
+            ->where('mentee_id', auth()->id())
+            ->where('is_active', true)
+            ->exists();
+
+        if (! $ownsTrack) {
             abort(403, 'You are not enrolled in this journey.');
         }
     }
