@@ -312,7 +312,7 @@ main button.inline-flex.items-center[class*="bg-orange"] {
 
     @include('admin.layouts.sidebar')
 
-    <div class="flex-1 lg:ml-72 flex flex-col min-h-screen min-w-0 w-full">
+    <div class="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 w-full">
 
         @include('admin.layouts.header')
 

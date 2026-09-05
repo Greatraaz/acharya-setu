@@ -3,92 +3,121 @@
 
 @push('styles')
 <style>
-.call-room { padding-top: var(--nav-h); min-height: 100vh; background: #0b0f14; color: #fff; }
-.call-room__stage { position: relative; height: calc(100vh - var(--nav-h)); overflow: hidden; }
-.call-room__remote { width: 100%; height: 100%; background: #111827; transition: margin-right .25s ease; }
-.call-room__remote.is-notes-open { margin-right: 340px; }
+.call-room {
+    padding-top: var(--nav-h);
+    min-height: 100vh;
+    width: 100%;
+    max-width: 100vw;
+    background: #0b0f14;
+    color: #fff;
+    box-sizing: border-box;
+}
+.call-room__stage {
+    display: flex;
+    width: 100%;
+    height: calc(100vh - var(--nav-h));
+    max-height: calc(100dvh - var(--nav-h));
+    overflow: hidden;
+}
+.call-room__main {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    background: #111827;
+}
+.call-room__remote { width: 100%; height: 100%; background: #111827; }
 .call-room__remote video { width: 100%; height: 100%; object-fit: cover; }
 .call-room__empty {
-    position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px;
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px;
+    text-align: center; padding: 24px;
+    pointer-events: none;
 }
 .call-room__avatar {
     width: 96px; height: 96px; border-radius: 50%; background: #1f2937;
-    display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 800;
-    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; font-weight: 800; overflow: hidden;
 }
 .call-room__avatar img { width: 100%; height: 100%; object-fit: cover; }
 .call-room__local {
     position: absolute; right: 16px; top: 16px; width: 180px; height: 128px;
-    border-radius: 14px; overflow: hidden; background: #1f2937; border: 1px solid rgba(255,255,255,.12);
-    z-index: 3; transition: right .25s ease;
+    border-radius: 14px; overflow: hidden; background: #1f2937;
+    border: 1px solid rgba(255,255,255,.12); z-index: 3;
 }
-.call-room.is-notes-open .call-room__local { right: 356px; }
 .call-room__local video { width: 100%; height: 100%; object-fit: cover; }
 .call-room__bar {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
     display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
     padding: 16px 20px calc(20px + env(safe-area-inset-bottom));
     background: linear-gradient(transparent, rgba(0,0,0,.72));
-    transition: right .25s ease;
 }
-.call-room.is-notes-open .call-room__bar { right: 340px; }
 .call-room__meta { min-width: 0; }
 .call-room__title { font-weight: 800; font-size: 16px; }
 .call-room__sub { font-size: 12px; color: #cbd5e1; margin-top: 2px; }
-.call-room__controls { display: flex; gap: 10px; flex-wrap: wrap; }
+.call-room__controls { display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; }
 .call-room__btn {
     width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
     background: rgba(255,255,255,.12); color: #fff; font-size: 18px;
 }
 .call-room__btn.is-active { background: rgba(59,130,246,.45); }
 .call-room__btn.is-off { background: #ef4444; }
-.call-room__btn--end { width: auto; padding: 0 18px; border-radius: 999px; background: #dc2626; font-size: 14px; font-weight: 700; }
+.call-room__btn--end {
+    width: auto; padding: 0 18px; border-radius: 999px;
+    background: #dc2626; font-size: 14px; font-weight: 700;
+}
 .call-room__status {
     position: absolute; left: 16px; top: 16px; z-index: 3;
     background: rgba(0,0,0,.55); border-radius: 999px; padding: 6px 12px; font-size: 12px;
 }
 .call-room__notes {
-    position: absolute; top: 0; right: 0; bottom: 0; width: 340px; max-width: 100%;
-    background: #111827; border-left: 1px solid rgba(255,255,255,.1);
-    z-index: 5; display: flex; flex-direction: column;
-    transform: translateX(100%); transition: transform .25s ease;
+    flex: 0 0 0;
+    width: 0;
+    max-width: 100%;
+    height: 100%;
+    background: #111827;
+    border-left: 0 solid rgba(255,255,255,.1);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    opacity: 0;
+    transition: flex-basis .25s ease, width .25s ease, opacity .2s ease, border-left-width .25s ease;
 }
-.call-room.is-notes-open .call-room__notes { transform: translateX(0); }
+.call-room.is-notes-open .call-room__notes {
+    flex-basis: min(340px, 100%);
+    width: min(340px, 100%);
+    border-left-width: 1px;
+    opacity: 1;
+}
 .call-room__notes-head {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     padding: 16px 16px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
+    flex-shrink: 0;
 }
-.call-room__notes-title { font-size: 15px; font-weight: 800; }
+.call-room__notes-title { font-size: 15px; font-weight: 800; white-space: nowrap; }
 .call-room__notes-hint { font-size: 11px; color: #94a3b8; margin-top: 2px; }
 .call-room__notes-close {
     width: 32px; height: 32px; border-radius: 8px; border: 0; cursor: pointer;
-    background: rgba(255,255,255,.08); color: #fff; font-size: 16px;
+    background: rgba(255,255,255,.08); color: #fff; font-size: 16px; flex-shrink: 0;
 }
-.call-room__notes-body { flex: 1; display: flex; flex-direction: column; padding: 12px 16px 16px; min-height: 0; }
+.call-room__notes-body {
+    flex: 1; display: flex; flex-direction: column;
+    padding: 12px 16px 16px; min-height: 0; min-width: 260px;
+}
 .call-room__notes-textarea {
-    flex: 1; width: 100%; min-height: 200px; resize: none; border: 1px solid rgba(255,255,255,.12);
-    border-radius: 12px; background: #0b1220; color: #e2e8f0; padding: 12px 14px;
+    flex: 1; width: 100%; min-height: 200px; resize: none;
+    border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
+    background: #0b1220; color: #e2e8f0; padding: 12px 14px;
     font-size: 14px; line-height: 1.6; font-family: inherit;
 }
 .call-room__notes-textarea:focus { outline: none; border-color: rgba(59,130,246,.6); }
 .call-room__notes-foot {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    margin-top: 10px; font-size: 12px; color: #94a3b8;
+    margin-top: 10px; font-size: 12px; color: #94a3b8; flex-shrink: 0;
 }
 .call-room__notes-status.is-saving { color: #fbbf24; }
 .call-room__notes-status.is-saved { color: #34d399; }
 .call-room__notes-status.is-error { color: #f87171; }
-@media (max-width: 768px) {
-    .call-room__remote.is-notes-open { margin-right: 0; }
-    .call-room.is-notes-open .call-room__local { right: 16px; top: auto; bottom: 96px; }
-    .call-room.is-notes-open .call-room__bar { right: 0; }
-    .call-room__notes { width: 100%; }
-}
-@media (max-width: 640px) {
-    .call-room__local { width: 120px; height: 90px; right: 10px; top: 10px; }
-    .app-bottom-nav { display: none !important; }
-}
 .call-extend {
     position: absolute; inset: 0; z-index: 20;
     display: none; align-items: center; justify-content: center;
@@ -115,6 +144,26 @@
     border-radius: 12px; padding: 8px 14px; font-size: 12px; color: #e2e8f0; text-align: center;
 }
 .call-extend-banner.is-visible { display: block; }
+
+/* Full-bleed call page: hide site chrome that steals space */
+body:has(.call-room) .footer,
+body:has(.call-room) .app-bottom-nav { display: none !important; }
+body:has(.call-room) { overflow: hidden; }
+
+@media (max-width: 768px) {
+    .call-room__stage { flex-direction: column; }
+    .call-room.is-notes-open .call-room__notes {
+        position: absolute; inset: 0; z-index: 8;
+        flex-basis: auto; width: 100%; opacity: 1;
+    }
+    .call-room.is-notes-open .call-room__local { right: 16px; top: auto; bottom: 96px; }
+}
+@media (max-width: 640px) {
+    .call-room__local { width: 120px; height: 90px; right: 10px; top: 10px; }
+    .call-room__controls { width: 100%; justify-content: center; margin-left: 0; }
+    .call-room__meta { width: 100%; text-align: center; }
+    .call-room__bar { justify-content: center; }
+}
 </style>
 @endpush
 
@@ -129,31 +178,46 @@
      data-server-now="{{ $serverNowTs ?? '' }}"
      data-duration="{{ (int) ($session->duration_minutes ?? 30) }}">
     <div class="call-room__stage">
-        <div id="remote-player" class="call-room__remote"></div>
-        <div id="waiting" class="call-room__empty">
-            <div class="call-room__avatar">
-                @if($peer?->avatar_url)
-                    <img src="{{ $peer->avatar_url }}" alt="">
-                @else
-                    {{ strtoupper(substr($peer->name ?? '?', 0, 1)) }}
-                @endif
-            </div>
-            <div style="font-weight:800;font-size:18px;">{{ $peer->name ?? 'Participant' }}</div>
-            <div id="call-status-text" style="font-size:13px;color:#94a3b8;">Connecting…</div>
-        </div>
-        <div id="local-player" class="call-room__local"></div>
-        <div class="call-room__status" id="call-timer">00:00</div>
-        <div class="call-extend-banner" id="extend-banner"></div>
-
-        <div class="call-extend" id="extend-modal" role="dialog" aria-modal="true" aria-labelledby="extend-title">
-            <div class="call-extend__card">
-                <div class="call-extend__title" id="extend-title">Continue this session?</div>
-                <div class="call-extend__body" id="extend-body">
-                    This session is about to end. Would you like 10 more minutes? There is no extra charge.
+        <div class="call-room__main">
+            <div id="remote-player" class="call-room__remote"></div>
+            <div id="waiting" class="call-room__empty">
+                <div class="call-room__avatar">
+                    @if($peer?->avatar_url)
+                        <img src="{{ $peer->avatar_url }}" alt="">
+                    @else
+                        {{ strtoupper(substr($peer->name ?? '?', 0, 1)) }}
+                    @endif
                 </div>
-                <div class="call-extend__actions">
-                    <button type="button" class="call-extend__btn call-extend__btn--yes" id="extend-yes">Yes, continue</button>
-                    <button type="button" class="call-extend__btn call-extend__btn--no" id="extend-no">No, end on time</button>
+                <div style="font-weight:800;font-size:18px;">{{ $peer->name ?? 'Participant' }}</div>
+                <div id="call-status-text" style="font-size:13px;color:#94a3b8;">Connecting…</div>
+            </div>
+            <div id="local-player" class="call-room__local"></div>
+            <div class="call-room__status" id="call-timer">00:00</div>
+            <div class="call-extend-banner" id="extend-banner"></div>
+
+            <div class="call-extend" id="extend-modal" role="dialog" aria-modal="true" aria-labelledby="extend-title">
+                <div class="call-extend__card">
+                    <div class="call-extend__title" id="extend-title">Continue this session?</div>
+                    <div class="call-extend__body" id="extend-body">
+                        This session is about to end. Would you like 10 more minutes? There is no extra charge.
+                    </div>
+                    <div class="call-extend__actions">
+                        <button type="button" class="call-extend__btn call-extend__btn--yes" id="extend-yes">Yes, continue</button>
+                        <button type="button" class="call-extend__btn call-extend__btn--no" id="extend-no">No, end on time</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="call-room__bar">
+                <div class="call-room__meta">
+                    <div class="call-room__title">{{ $session->title ?: 'Mentoring Session' }}</div>
+                    <div class="call-room__sub">with {{ $peer->name ?? 'Participant' }} · {{ $session->duration_minutes ?? 30 }} min</div>
+                </div>
+                <div class="call-room__controls">
+                    <button type="button" class="call-room__btn" id="btn-notes" title="Session notes">📝</button>
+                    <button type="button" class="call-room__btn" id="btn-mic" title="Mute">🎤</button>
+                    <button type="button" class="call-room__btn" id="btn-cam" title="Camera">📷</button>
+                    <button type="button" class="call-room__btn call-room__btn--end" id="btn-end">End call</button>
                 </div>
             </div>
         </div>
@@ -175,19 +239,6 @@
                 </div>
             </div>
         </aside>
-
-        <div class="call-room__bar">
-            <div class="call-room__meta">
-                <div class="call-room__title">{{ $session->title ?: 'Mentoring Session' }}</div>
-                <div class="call-room__sub">with {{ $peer->name ?? 'Participant' }} · {{ $session->duration_minutes ?? 30 }} min</div>
-            </div>
-            <div class="call-room__controls">
-                <button type="button" class="call-room__btn" id="btn-notes" title="Session notes">📝</button>
-                <button type="button" class="call-room__btn" id="btn-mic" title="Mute">🎤</button>
-                <button type="button" class="call-room__btn" id="btn-cam" title="Camera">📷</button>
-                <button type="button" class="call-room__btn call-room__btn--end" id="btn-end">End call</button>
-            </div>
-        </div>
     </div>
 </div>
 @endsection
@@ -398,7 +449,6 @@
     function toggleNotes(open) {
         notesOpen = open ?? !notesOpen;
         root.classList.toggle('is-notes-open', notesOpen);
-        remotePlayer?.classList.toggle('is-notes-open', notesOpen);
         document.getElementById('notes-panel')?.setAttribute('aria-hidden', notesOpen ? 'false' : 'true');
         document.getElementById('btn-notes')?.classList.toggle('is-active', notesOpen);
         if (notesOpen) {
@@ -486,7 +536,7 @@
             }
         } catch (e) {}
         window.location.href = backUrl;
-    }
+    }   
 
     notesTextarea?.addEventListener('input', () => {
         notesDirty = true;
