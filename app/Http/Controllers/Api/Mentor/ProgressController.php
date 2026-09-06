@@ -13,10 +13,15 @@ use App\Models\{
     TaskSupportingMaterial,
     User,
 };
+use App\Services\CurriculumSubmissionReviewService;
 use Illuminate\Http\{JsonResponse, Request};
 
 class ProgressController extends Controller
 {
+    public function __construct(
+        private readonly CurriculumSubmissionReviewService $reviews
+    ) {}
+
     // ─────────────────────────────────────────────
     //  GET /mentor/mentees/{mentee}/curriculum
     //  Same shape as GET /mentee/curriculum, for this mentee.
@@ -94,6 +99,75 @@ class ProgressController extends Controller
             'track_summaries' => $trackSummaries,
             'tracks'          => $tracks,
             'total'           => $tracks->count(),
+        ]);
+    }
+
+    /**
+     * GET /mentor/submissions?mentee_id=&per_page=
+     * Pending task + MCQ submissions awaiting mentor review.
+     */
+    public function pendingSubmissions(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'mentee_id' => 'nullable|integer|exists:users,id',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $mentorId = $request->user()->id;
+        $menteeId = isset($data['mentee_id']) ? (int) $data['mentee_id'] : null;
+
+        $paginator = $this->reviews->pendingForMentor(
+            $mentorId,
+            $menteeId,
+            (int) ($data['per_page'] ?? 20)
+        );
+
+        $items = collect($paginator->items())->map(
+            fn (StudentCurriculumProgress $p) => $this->reviews->toApiArray($p)
+        );
+
+        return response()->json([
+            'status'      => true,
+            'statuscode'  => 200,
+            'mentee_id'   => $menteeId,
+            'pending'     => $this->reviews->pendingCountForMentor($mentorId, $menteeId),
+            'pending_total' => $this->reviews->pendingCountForMentor($mentorId),
+            'submissions' => $items,
+            'meta'        => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * PATCH /mentor/submissions/{progress}/review
+     * Body: submission_status=approved|rejected, mentor_feedback?
+     */
+    public function reviewSubmission(Request $request, int $progress): JsonResponse
+    {
+        $data = $request->validate([
+            'submission_status' => 'required|in:approved,rejected',
+            'mentor_feedback'   => 'nullable|string|max:2000',
+        ]);
+
+        $record = StudentCurriculumProgress::findOrFail($progress);
+        $this->reviews->assertMentorOwnsProgress($request->user(), $record);
+        $updated = $this->reviews->review(
+            $record,
+            $data['submission_status'],
+            $data['mentor_feedback'] ?? null
+        );
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => $data['submission_status'] === 'approved'
+                ? 'Submission approved. Progress updated.'
+                : 'Submission rejected. Mentee can revise and resubmit.',
+            'submission' => $this->reviews->toApiArray($updated->load('user:id,name,email,avatar_url')),
         ]);
     }
 
@@ -240,22 +314,36 @@ class ProgressController extends Controller
             'order_index' => $topic->order_index,
             'is_active'   => $topic->is_active,
             'mcqs'        => $topic->mcqs->map(function (CurriculumMcq $mcq) use ($menteeId) {
-                $completed = $mcq->isAnsweredCorrectlyByUser($menteeId);
-                $attempt   = $mcq->getAttemptForUser($menteeId);
+                $progress = StudentCurriculumProgress::where('user_id', $menteeId)
+                    ->where('item_type', 'mcq')
+                    ->where('item_id', $mcq->id)
+                    ->first();
+                $attempt = $mcq->getAttemptForUser($menteeId);
+                $status = 'pending';
+                if ($progress?->is_completed || $progress?->submission_status === 'approved') {
+                    $status = 'completed';
+                } elseif (in_array($progress?->submission_status, ['submitted', 'rejected'], true) || $attempt) {
+                    $status = 'in_progress';
+                }
 
                 return [
-                    'id'           => $mcq->id,
-                    'question'     => $mcq->question,
-                    'options'      => $mcq->options,
-                    'difficulty'   => $mcq->difficulty,
-                    'points'       => $mcq->points,
-                    'order_index'  => $mcq->order_index,
-                    'is_completed' => $completed,
-                    'status'       => $completed ? 'completed' : ($attempt ? 'in_progress' : 'pending'),
-                    'last_attempt' => $attempt ? [
-                        'is_correct'    => $attempt->is_correct,
-                        'points_earned' => $attempt->points_earned,
-                        'attempted_at'  => $attempt->attempted_at,
+                    'id'                => $mcq->id,
+                    'question'          => $mcq->question,
+                    'options'           => $mcq->options,
+                    'difficulty'        => $mcq->difficulty,
+                    'points'            => $mcq->points,
+                    'order_index'       => $mcq->order_index,
+                    'is_completed'      => $status === 'completed',
+                    'status'            => $status,
+                    'submission_status' => $progress?->submission_status ?? 'none',
+                    'progress_id'       => $progress?->id,
+                    'mentor_feedback'   => $progress?->mentor_feedback,
+                    'reviewed_at'       => $progress?->reviewed_at,
+                    'last_attempt'      => $attempt ? [
+                        'is_correct'     => $attempt->is_correct,
+                        'selected_index' => $attempt->selected_index,
+                        'points_earned'  => $attempt->points_earned,
+                        'attempted_at'   => $attempt->attempted_at,
                     ] : null,
                 ];
             })->values(),

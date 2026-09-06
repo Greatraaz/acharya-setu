@@ -29,13 +29,14 @@ class StudentCurriculumProgress extends Model
      */
     public static function markComplete(int $userId, string $type, int $itemId, array $extra = []): static
     {
-        $isCompleted = $extra['is_completed'] ?? true;
+        $isCompleted = array_key_exists('is_completed', $extra)
+            ? (bool) $extra['is_completed']
+            : true;
 
-        $payload = array_merge(
-            ['is_completed' => $isCompleted],
-            $isCompleted ? ['completed_at' => now()] : [],
-            $extra
-        );
+        $payload = array_merge($extra, [
+            'is_completed' => $isCompleted,
+            'completed_at' => $isCompleted ? ($extra['completed_at'] ?? now()) : null,
+        ]);
 
         return static::updateOrCreate(
             ['user_id' => $userId, 'item_type' => $type, 'item_id' => $itemId],
@@ -149,9 +150,15 @@ class StudentCurriculumProgress extends Model
         $overallCompleted = $tasksCompleted + $mcqsCompleted + $materialsCompleted + $videosWatched;
 
         $pendingSubmissions = static::where('user_id', $menteeId)
-            ->where('item_type', 'task')
+            ->whereIn('item_type', ['task', 'mcq'])
             ->where('submission_status', 'submitted')
-            ->whereIn('item_id', $taskIds)
+            ->where(function ($q) use ($taskIds, $mcqIds) {
+                $q->where(function ($inner) use ($taskIds) {
+                    $inner->where('item_type', 'task')->whereIn('item_id', $taskIds);
+                })->orWhere(function ($inner) use ($mcqIds) {
+                    $inner->where('item_type', 'mcq')->whereIn('item_id', $mcqIds);
+                });
+            })
             ->count();
 
         return [

@@ -360,6 +360,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/{mentee}', [MentorMentee::class, 'show'])->name('show')->whereNumber('mentee');
         });
 
+        // Curriculum submission reviews (tasks + MCQs)
+        Route::get('/submissions', [MentorProgress::class, 'pendingSubmissions'])->name('submissions.index');
+        Route::patch('/submissions/{progress}/review', [MentorProgress::class, 'reviewSubmission'])->name('submissions.review')->whereNumber('progress');
+        Route::post('/submissions/{progress}/review', [MentorProgress::class, 'reviewSubmission'])->whereNumber('progress');
+
         // ── Mentor Requests (accept / reject) ─────────────────────────
         Route::prefix('mentor-requests')->name('mentor-requests.')->group(function () {
             Route::get('/',              [MentorMentorRequest::class, 'index'])->name('index');

@@ -35,6 +35,14 @@
     <a href="{{ route('mentor.journey') }}" class="sidebar-item @if(request()->routeIs('mentor.journey*')) active @endif">
         <span class="si-icon">📈</span> Progress Tracker
     </a>
+    <a href="{{ route('mentor.submissions') }}" class="sidebar-item @if(request()->routeIs('mentor.submissions*')) active @endif">
+        <span class="si-icon">✅</span> Reviews
+        @php
+            $submissionReviewCount = $submissionReviewCount
+                ?? app(\App\Services\CurriculumSubmissionReviewService::class)->pendingCountForMentor(auth()->id());
+        @endphp
+        @if($submissionReviewCount > 0)<span class="si-badge">{{ $submissionReviewCount }}</span>@endif
+    </a>
 
     <div class="sidebar-section-label">Content</div>
     <a href="{{ route('mentor.community') }}" class="sidebar-item @if(request()->routeIs('mentor.community*')) active @endif">

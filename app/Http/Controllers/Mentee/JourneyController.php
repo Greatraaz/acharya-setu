@@ -159,6 +159,22 @@ class JourneyController extends Controller
                 ->all()
             : [];
 
+        $taskProgressById = $canViewProgress
+            ? StudentCurriculumProgress::where('user_id', auth()->id())
+                ->where('item_type', 'task')
+                ->whereIn('item_id', $weekRecord->tasks->pluck('id'))
+                ->get()
+                ->keyBy('item_id')
+            : collect();
+
+        $mcqProgressById = $canViewProgress
+            ? StudentCurriculumProgress::where('user_id', auth()->id())
+                ->where('item_type', 'mcq')
+                ->whereIn('item_id', $weekRecord->mcqs->pluck('id'))
+                ->get()
+                ->keyBy('item_id')
+            : collect();
+
         $mcqAttempts = $canViewProgress
             ? McqAttempt::where('user_id', auth()->id())
                 ->whereIn('mcq_id', $weekRecord->mcqs->pluck('id'))
@@ -178,6 +194,8 @@ class JourneyController extends Controller
             'week' => $weekRecord,
             'progress' => $progress,
             'completedTaskIds' => $completedTaskIds,
+            'taskProgressById' => $taskProgressById,
+            'mcqProgressById' => $mcqProgressById,
             'mcqAttempts' => $mcqAttempts,
             'checkin' => $checkin,
             'canViewProgress' => $canViewProgress,
@@ -189,36 +207,47 @@ class JourneyController extends Controller
         $task = CurriculumTask::with('week.month')->findOrFail($taskId);
         $this->assertEnrolledInStream($task->week?->month?->stream_id);
 
-        $request->validate([
-            'submission_text' => 'nullable|string|max:5000',
-            'submission_url' => 'nullable|url',
-        ]);
-
         $extra = [];
+        $complete = true;
+
         if ($task->submission_type && $task->submission_type !== 'none') {
+            $request->validate([
+                'submission_text' => 'nullable|string|max:5000',
+                'submission_url'  => 'nullable|url|max:2000',
+                'submission_file' => 'nullable|file|max:'.\App\Models\CurriculumTask::ATTACHMENT_MAX_KB,
+            ]);
+
             $extra['submission_status'] = 'submitted';
-            if ($request->submission_text) {
+            $complete = false;
+
+            if ($request->hasFile('submission_file')) {
+                $path = $request->file('submission_file')->store('submissions/'.auth()->id(), 'public');
+                $extra['submission_url'] = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+            }
+            if ($request->filled('submission_text')) {
                 $extra['submission_text'] = $request->submission_text;
             }
-            if ($request->submission_url) {
+            if ($request->filled('submission_url')) {
                 $extra['submission_url'] = $request->submission_url;
             }
         }
 
-        StudentCurriculumProgress::markComplete(
+        $progress = StudentCurriculumProgress::markComplete(
             auth()->id(),
             'task',
             $task->id,
-            array_merge($extra, ['is_completed' => true])
+            array_merge($extra, ['is_completed' => $complete])
         );
 
         $canViewProgress = auth()->user()->canAccessProgressReport();
 
         return response()->json([
-            'message' => $canViewProgress
-                ? 'Task completed!'
-                : 'Task submitted. Upgrade your plan to view scores and progress.',
-            'completed' => $canViewProgress,
+            'message' => $complete
+                ? ($canViewProgress ? 'Task completed!' : 'Task submitted.')
+                : 'Submission received. Awaiting mentor review.',
+            'completed' => $complete,
+            'awaiting_review' => ! $complete,
+            'submission_status' => $progress->submission_status ?? ($complete ? 'approved' : 'submitted'),
             'progress_report_enabled' => $canViewProgress,
         ]);
     }
@@ -231,8 +260,17 @@ class JourneyController extends Controller
 
         $request->validate(['selected_index' => 'required|integer|min:0']);
 
-        if ($canViewProgress && $mcq->isAnsweredCorrectlyByUser(auth()->id())) {
-            return response()->json(['message' => 'Already answered correctly.'], 422);
+        $existingProgress = StudentCurriculumProgress::where('user_id', auth()->id())
+            ->where('item_type', 'mcq')
+            ->where('item_id', $mcq->id)
+            ->first();
+
+        if ($canViewProgress && $existingProgress?->is_completed) {
+            return response()->json(['message' => 'Already approved by your mentor.'], 422);
+        }
+
+        if ($canViewProgress && $existingProgress?->submission_status === 'submitted') {
+            return response()->json(['message' => 'Already submitted. Waiting for mentor approval.'], 422);
         }
 
         $isCorrect = (int) $request->selected_index === (int) $mcq->correct_index;
@@ -248,7 +286,15 @@ class JourneyController extends Controller
         ]);
 
         if ($isCorrect) {
-            StudentCurriculumProgress::markComplete(auth()->id(), 'mcq', $mcq->id);
+            StudentCurriculumProgress::markComplete(auth()->id(), 'mcq', $mcq->id, [
+                'submission_status' => 'submitted',
+                'is_completed' => false,
+            ]);
+        } else {
+            StudentCurriculumProgress::where('user_id', auth()->id())
+                ->where('item_type', 'mcq')
+                ->where('item_id', $mcq->id)
+                ->delete();
         }
 
         if (! $canViewProgress) {
@@ -263,6 +309,11 @@ class JourneyController extends Controller
             'correct_index' => (int) $mcq->correct_index,
             'explanation' => $mcq->explanation,
             'points_earned' => $points,
+            'awaiting_review' => $isCorrect,
+            'submission_status' => $isCorrect ? 'submitted' : 'none',
+            'message' => $isCorrect
+                ? 'Correct! Awaiting mentor approval.'
+                : 'Incorrect — try again.',
             'progress_report_enabled' => true,
         ]);
     }

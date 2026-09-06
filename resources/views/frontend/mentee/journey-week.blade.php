@@ -41,14 +41,23 @@
         <div class="card journey-page__section">
             <h3 class="journey-page__section-title">Tasks</h3>
             @forelse($week->tasks as $task)
-            @php $done = ($canViewProgress ?? false) && in_array($task->id, $completedTaskIds ?? [], true); @endphp
+            @php
+                $taskProgress = ($canViewProgress ?? false) ? ($taskProgressById[$task->id] ?? null) : null;
+                $done = ($canViewProgress ?? false) && (($taskProgress?->is_completed) || in_array($task->id, $completedTaskIds ?? [], true));
+                $awaiting = ($canViewProgress ?? false) && $taskProgress && $taskProgress->submission_status === 'submitted' && ! $taskProgress->is_completed;
+                $rejected = ($canViewProgress ?? false) && $taskProgress && $taskProgress->submission_status === 'rejected';
+                $needsSubmission = $task->submission_type && $task->submission_type !== 'none';
+            @endphp
             <div class="journey-page__item-card" id="task-{{ $task->id }}">
                 <div class="journey-page__item-row">
                     <div class="journey-page__item-body">
                         <div class="journey-page__item-head">
                             <span class="journey-page__item-icon">{{ \App\Models\CurriculumTask::TYPE_ICONS[$task->type] ?? '✅' }}</span>
                             <h4 class="journey-page__item-title">{{ $task->title }}</h4>
-                            @if($done)<span class="session-status completed">Done</span>@endif
+                            @if($done)<span class="session-status completed">Approved</span>
+                            @elseif($awaiting)<span class="session-status pending">Under review</span>
+                            @elseif($rejected)<span class="session-status cancelled">Needs revision</span>
+                            @endif
                         </div>
                         @if($task->description)
                         <p class="journey-page__item-desc">{{ $task->description }}</p>
@@ -57,14 +66,46 @@
                             {{ ucfirst($task->type ?? 'task') }}
                             @if($task->estimated_minutes) · {{ $task->estimated_minutes }} min @endif
                             @if($task->is_required) · Required @endif
+                            @if($needsSubmission) · Submit {{ $task->submission_type }} @endif
                         </div>
+                        @if($canViewProgress && $taskProgress?->mentor_feedback)
+                        <div class="journey-page__mentor-reply" style="margin-top:10px;">
+                            <strong>Mentor feedback:</strong>
+                            <p>{{ $taskProgress->mentor_feedback }}</p>
+                        </div>
+                        @endif
                     </div>
-                    @unless($done)
-                    <button type="button" class="btn btn-primary btn-sm journey-page__item-action" onclick="completeTask({{ $task->id }}, this)">
-                        {{ ($canViewProgress ?? false) ? 'Mark done' : 'Submit' }}
-                    </button>
-                    @endunless
                 </div>
+
+                @unless($done || $awaiting)
+                    @if($needsSubmission)
+                    <div class="journey-page__task-submit" style="margin-top:12px;display:grid;gap:10px;">
+                        @if(in_array($task->submission_type, ['text', 'reflection'], true))
+                            <textarea id="task-text-{{ $task->id }}" class="form-input" rows="3" placeholder="Write your submission…">{{ $taskProgress->submission_text ?? '' }}</textarea>
+                        @elseif(in_array($task->submission_type, ['link', 'url'], true))
+                            <input type="url" id="task-url-{{ $task->id }}" class="form-input" placeholder="https://…" value="{{ $taskProgress->submission_url ?? '' }}">
+                        @elseif(in_array($task->submission_type, ['file', 'pdf'], true))
+                            <input type="file" id="task-file-{{ $task->id }}" class="form-input">
+                            @if($taskProgress?->submission_url)
+                                <a href="{{ $taskProgress->submission_url }}" target="_blank" rel="noopener" style="font-size:12px;color:var(--brand);">Previous file</a>
+                            @endif
+                        @else
+                            <textarea id="task-text-{{ $task->id }}" class="form-input" rows="3" placeholder="Notes / response…">{{ $taskProgress->submission_text ?? '' }}</textarea>
+                            <input type="url" id="task-url-{{ $task->id }}" class="form-input" placeholder="Optional link https://…" value="{{ $taskProgress->submission_url ?? '' }}">
+                            <input type="file" id="task-file-{{ $task->id }}" class="form-input">
+                        @endif
+                        <button type="button" class="btn btn-primary btn-sm journey-page__item-action" onclick="submitTask({{ $task->id }}, '{{ $task->submission_type }}', this)">
+                            {{ $rejected ? 'Resubmit for review' : 'Submit for review' }}
+                        </button>
+                    </div>
+                    @else
+                    <div style="margin-top:12px;">
+                        <button type="button" class="btn btn-primary btn-sm journey-page__item-action" onclick="completeTask({{ $task->id }}, this)">
+                            {{ ($canViewProgress ?? false) ? 'Mark done' : 'Submit' }}
+                        </button>
+                    </div>
+                    @endif
+                @endunless
             </div>
             @empty
             <p class="journey-page__empty">No tasks for this week.</p>
@@ -76,16 +117,26 @@
             @forelse($week->mcqs as $mcq)
             @php
                 $attempt = ($canViewProgress ?? false) ? ($mcqAttempts[$mcq->id] ?? null) : null;
+                $mcqProgress = ($canViewProgress ?? false) ? ($mcqProgressById[$mcq->id] ?? null) : null;
+                $mcqApproved = $mcqProgress?->is_completed || $mcqProgress?->submission_status === 'approved';
+                $mcqAwaiting = $mcqProgress?->submission_status === 'submitted' && ! $mcqProgress?->is_completed;
+                $mcqRejected = $mcqProgress?->submission_status === 'rejected';
                 $options = is_array($mcq->options) ? $mcq->options : [];
             @endphp
             <div class="journey-page__item-card" id="mcq-{{ $mcq->id }}">
-                <p class="journey-page__mcq-question">{{ $mcq->question }}</p>
+                <div class="journey-page__item-head" style="margin-bottom:8px;">
+                    <p class="journey-page__mcq-question" style="margin:0;flex:1;">{{ $mcq->question }}</p>
+                    @if($mcqApproved)<span class="session-status completed">Approved</span>
+                    @elseif($mcqAwaiting)<span class="session-status pending">Under review</span>
+                    @elseif($mcqRejected)<span class="session-status cancelled">Needs revision</span>
+                    @endif
+                </div>
                 <div class="journey-page__mcq-options" data-mcq-options="{{ $mcq->id }}">
                     @foreach($options as $idx => $option)
                     <button type="button"
                         class="btn btn-ghost journey-page__mcq-option"
                         @if($attempt && (int)$attempt->selected_index === (int)$idx) style="border-color:var(--brand);" @endif
-                        @if($attempt && $attempt->is_correct) disabled @endif
+                        @if($mcqApproved || $mcqAwaiting) disabled @endif
                         onclick="answerMcq({{ $mcq->id }}, {{ (int)$idx }}, this)">
                         <span class="journey-page__mcq-option-label">{{ chr(65 + (int)$idx) }}.</span>
                         <span class="journey-page__mcq-option-text">{{ is_array($option) ? ($option['text'] ?? json_encode($option)) : $option }}</span>
@@ -93,7 +144,11 @@
                     @endforeach
                 </div>
                 <div class="journey-page__mcq-result" data-mcq-result="{{ $mcq->id }}">
-                    @if($attempt)
+                    @if($mcqAwaiting)
+                        <span class="journey-page__mcq-result--correct">Correct — awaiting mentor approval</span>
+                    @elseif($mcqApproved)
+                        <span class="journey-page__mcq-result--correct">Approved by mentor</span>
+                    @elseif($attempt)
                         @if($attempt->is_correct)
                             <span class="journey-page__mcq-result--correct">Correct · +{{ $attempt->points_earned }} pts</span>
                         @else
@@ -102,6 +157,12 @@
                         @if($mcq->explanation)
                         <p class="journey-page__mcq-explanation">{{ $mcq->explanation }}</p>
                         @endif
+                    @endif
+                    @if($canViewProgress && $mcqProgress?->mentor_feedback)
+                    <div class="journey-page__mentor-reply" style="margin-top:8px;">
+                        <strong>Mentor feedback:</strong>
+                        <p>{{ $mcqProgress->mentor_feedback }}</p>
+                    </div>
                     @endif
                 </div>
             </div>
@@ -171,6 +232,38 @@ function completeTask(taskId, btn) {
     });
 }
 
+function submitTask(taskId, submissionType, btn) {
+    const fd = new FormData();
+    const textEl = document.getElementById(`task-text-${taskId}`);
+    const urlEl = document.getElementById(`task-url-${taskId}`);
+    const fileEl = document.getElementById(`task-file-${taskId}`);
+    if (textEl?.value?.trim()) fd.append('submission_text', textEl.value.trim());
+    if (urlEl?.value?.trim()) fd.append('submission_url', urlEl.value.trim());
+    if (fileEl?.files?.[0]) fd.append('submission_file', fileEl.files[0]);
+
+    if (['text'].includes(submissionType) && !fd.has('submission_text')) {
+        showToast('error', 'Please write your submission.');
+        return;
+    }
+    if (['link', 'url'].includes(submissionType) && !fd.has('submission_url')) {
+        showToast('error', 'Please add a submission link.');
+        return;
+    }
+    if (['file', 'pdf'].includes(submissionType) && !fd.has('submission_file') && !fd.has('submission_url')) {
+        showToast('error', 'Please upload a file.');
+        return;
+    }
+
+    AjaxPost(`{{ url('/mentee/journey/tasks') }}/${taskId}/complete`, fd, {
+        btn, loader: true,
+        onSuccess: (data) => {
+            showToast('success', data.message || 'Submitted for mentor review.');
+            setTimeout(() => location.reload(), 700);
+        },
+        onError: (err) => showToast('error', err.message || 'Could not submit task.'),
+    });
+}
+
 function answerMcq(mcqId, selectedIndex, btn) {
     AjaxPost(`{{ url('/mentee/journey/mcqs') }}/${mcqId}/answer`, { selected_index: selectedIndex }, {
         btn, loader: true,
@@ -184,14 +277,18 @@ function answerMcq(mcqId, selectedIndex, btn) {
                 return;
             }
             if (box) {
-                box.innerHTML = data.correct
-                    ? `<span class="journey-page__mcq-result--correct">Correct · +${data.points_earned || 0} pts</span>`
-                    : `<span class="journey-page__mcq-result--wrong">Incorrect — try again</span>`;
+                if (data.correct && data.awaiting_review) {
+                    box.innerHTML = `<span class="journey-page__mcq-result--correct">Correct — awaiting mentor approval</span>`;
+                } else {
+                    box.innerHTML = data.correct
+                        ? `<span class="journey-page__mcq-result--correct">Correct · +${data.points_earned || 0} pts</span>`
+                        : `<span class="journey-page__mcq-result--wrong">Incorrect — try again</span>`;
+                }
                 if (data.explanation) {
                     box.innerHTML += `<p class="journey-page__mcq-explanation">${data.explanation}</p>`;
                 }
             }
-            showToast(data.correct ? 'success' : 'error', data.correct ? 'Correct!' : 'Not quite — try again.');
+            showToast(data.correct ? 'success' : 'error', data.message || (data.correct ? 'Correct!' : 'Not quite — try again.'));
             if (data.correct) setTimeout(() => location.reload(), 900);
         },
         onError: (err) => showToast('error', err.message || 'Could not submit answer.'),

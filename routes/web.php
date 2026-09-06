@@ -306,6 +306,8 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::get('/mentees/{id}',                   [MentorPortalController::class, 'menteeShow'])->name('mentees.show');
     Route::get('/journey',                        [MentorPortalController::class, 'journey'])->name('journey');
     Route::get('/journey/{mentee}',               [MentorPortalController::class, 'journeyShow'])->name('journey.show');
+    Route::get('/submissions',                    [MentorPortalController::class, 'submissions'])->name('submissions');
+    Route::post('/submissions/{progress}/review', [MentorPortalController::class, 'reviewSubmission'])->name('submissions.review')->whereNumber('progress');
     Route::get('/community',                                          [MentorPortalController::class, 'community'])->name('community');
     Route::get('/community/create',                                   [ChannelController::class, 'create'])->name('community.create');
     Route::post('/community',                                         [ChannelController::class, 'store'])->name('community.store');

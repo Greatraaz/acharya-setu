@@ -11,12 +11,16 @@ use App\Models\MenteeEnrollment;
 use App\Models\SessionNote;
 use App\Models\StudentCurriculumProgress;
 use App\Models\User;
+use App\Services\CurriculumSubmissionReviewService;
 use App\Support\ChannelIndexQuery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class PortalController extends Controller
 {
+    public function __construct(
+        private readonly CurriculumSubmissionReviewService $reviews
+    ) {}
     public function notes(Request $request)
     {
         $mentorId = auth()->id();
@@ -115,8 +119,11 @@ class PortalController extends Controller
             ->latest()
             ->paginate(15)
             ->withQueryString()
-            ->through(function (MenteeEnrollment $enrollment) {
+            ->through(function (MenteeEnrollment $enrollment) use ($mentorId) {
                 $enrollment->progress_data = $enrollment->progress;
+                $enrollment->pending_reviews = $enrollment->mentee_id
+                    ? $this->reviews->pendingCountForMentee($mentorId, (int) $enrollment->mentee_id)
+                    : 0;
 
                 return $enrollment;
             });
@@ -152,26 +159,111 @@ class PortalController extends Controller
 
         $this->syncEnrollmentsFromTracks($mentorId, $mentee->id);
 
+        $summary = StudentCurriculumProgress::getMenteeProgressSummary($mentee->id, $mentorId);
+        $pendingSubmissions = $this->reviews->pendingCollectionForMentor($mentorId, $mentee->id);
+
+        $taskProgressMap = StudentCurriculumProgress::where('user_id', $mentee->id)
+            ->where('item_type', 'task')
+            ->get()
+            ->keyBy('item_id');
+
+        $mcqProgressMap = StudentCurriculumProgress::where('user_id', $mentee->id)
+            ->where('item_type', 'mcq')
+            ->get()
+            ->keyBy('item_id');
+
+        $tracks = EducationStream::where('mentor_id', $mentorId)
+            ->where('mentee_id', $mentee->id)
+            ->where('is_active', true)
+            ->with([
+                'months' => fn ($q) => $q->where('mentee_id', $mentee->id)->where('is_active', true)->orderBy('month_number'),
+                'months.weeks' => fn ($q) => $q->where('mentee_id', $mentee->id)->where('is_active', true)->orderBy('week_number'),
+                'months.weeks.tasks' => fn ($q) => $q->where('mentee_id', $mentee->id)->where('is_active', true)->orderBy('order_index'),
+                'months.weeks.mcqs' => fn ($q) => $q->where('mentee_id', $mentee->id)->where('is_active', true)->orderBy('order_index'),
+            ])
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function (EducationStream $track) use ($mentee, $taskProgressMap, $mcqProgressMap) {
+                $track->progress_data = StudentCurriculumProgress::getOverallProgress($mentee->id, $track->id);
+                $track->months->each(function ($month) use ($mentee, $taskProgressMap, $mcqProgressMap) {
+                    $month->weeks->each(function ($week) use ($mentee, $taskProgressMap, $mcqProgressMap) {
+                        $week->progress_data = $week->getProgressForUser($mentee->id);
+                        $week->tasks->each(function ($task) use ($taskProgressMap) {
+                            $task->progress_record = $taskProgressMap->get($task->id);
+                        });
+                        $week->mcqs->each(function ($mcq) use ($mcqProgressMap, $mentee) {
+                            $mcq->progress_record = $mcqProgressMap->get($mcq->id);
+                            $mcq->latest_attempt = $mcq->getAttemptForUser($mentee->id);
+                        });
+                    });
+                });
+
+                return $track;
+            });
+
         $enrollments = MenteeEnrollment::where('mentor_id', $mentorId)
             ->where('mentee_id', $mentee->id)
             ->with('stream')
             ->get()
             ->map(function (MenteeEnrollment $enrollment) {
                 $enrollment->progress_data = $enrollment->progress;
+
                 return $enrollment;
             });
 
-        // Fallback: show tracks even if enrollment sync somehow missed them.
-        $tracks = EducationStream::where('mentor_id', $mentorId)
-            ->where('mentee_id', $mentee->id)
-            ->orderBy('sort_order')
-            ->get()
-            ->map(function (EducationStream $track) use ($mentee) {
-                $track->progress_data = StudentCurriculumProgress::getOverallProgress($mentee->id, $track->id);
-                return $track;
-            });
+        return view('frontend.mentors.journey-show', compact(
+            'mentee',
+            'enrollments',
+            'tracks',
+            'summary',
+            'pendingSubmissions'
+        ));
+    }
 
-        return view('frontend.mentors.journey-show', compact('mentee', 'enrollments', 'tracks'));
+    public function submissions(Request $request)
+    {
+        $mentorId = auth()->id();
+        $menteeId = $request->filled('mentee_id') ? (int) $request->input('mentee_id') : null;
+
+        if ($menteeId) {
+            $this->findMentorMentee($menteeId);
+        }
+
+        $paginator = $this->reviews->pendingForMentor($mentorId, $menteeId, 20);
+        $submissions = collect($paginator->items())->map(function (StudentCurriculumProgress $progress) {
+            return $this->reviews->decorate($progress);
+        });
+
+        $pendingCount = $this->reviews->pendingCountForMentor($mentorId);
+
+        return view('frontend.mentors.submissions', [
+            'paginator' => $paginator,
+            'submissions' => $submissions,
+            'pendingCount' => $pendingCount,
+            'menteeId' => $menteeId,
+        ]);
+    }
+
+    public function reviewSubmission(Request $request, int $progress)
+    {
+        $data = $request->validate([
+            'submission_status' => 'required|in:approved,rejected',
+            'mentor_feedback'   => 'nullable|string|max:2000',
+        ]);
+
+        $record = StudentCurriculumProgress::findOrFail($progress);
+        $this->reviews->assertMentorOwnsProgress(auth()->user(), $record);
+        $this->reviews->review($record, $data['submission_status'], $data['mentor_feedback'] ?? null);
+
+        $message = $data['submission_status'] === 'approved'
+            ? 'Submission approved.'
+            : 'Submission rejected. Mentee can revise.';
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['message' => $message]);
+        }
+
+        return back()->with('success', $message);
     }
 
     public function community(Request $request)

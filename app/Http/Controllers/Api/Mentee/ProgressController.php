@@ -191,6 +191,29 @@ class ProgressController extends Controller
                 continue;
             }
 
+            $existingProgress = StudentCurriculumProgress::where('user_id', $menteeId)
+                ->where('item_type', 'mcq')
+                ->where('item_id', $mcqModel->id)
+                ->first();
+
+            if ($existingProgress?->is_completed || $existingProgress?->submission_status === 'approved') {
+                $results[] = [
+                    'mcq_id'  => $mcqId,
+                    'status'  => false,
+                    'message' => 'Already approved by your mentor.',
+                ];
+                continue;
+            }
+
+            if ($existingProgress?->submission_status === 'submitted') {
+                $results[] = [
+                    'mcq_id'  => $mcqId,
+                    'status'  => false,
+                    'message' => 'Already submitted. Waiting for mentor approval.',
+                ];
+                continue;
+            }
+
             $selectedIndex = isset($row['selected_index'])
                 ? (int) $row['selected_index']
                 : (int) $row['selected_option'] - 1;
@@ -219,7 +242,10 @@ class ProgressController extends Controller
             ]);
 
             if ($correct) {
-                StudentCurriculumProgress::markComplete($menteeId, 'mcq', $mcqModel->id);
+                StudentCurriculumProgress::markComplete($menteeId, 'mcq', $mcqModel->id, [
+                    'submission_status' => 'submitted',
+                    'is_completed'      => false,
+                ]);
             } else {
                 StudentCurriculumProgress::where('user_id', $menteeId)
                     ->where('item_type', 'mcq')
@@ -229,14 +255,19 @@ class ProgressController extends Controller
 
             if ($canViewProgress) {
                 $results[] = [
-                    'mcq_id'         => $mcqModel->id,
-                    'status'         => true,
-                    'correct'        => $correct,
-                    'selected_index' => $selectedIndex,
-                    'correct_index'  => (int) $mcqModel->correct_index,
-                    'correct_answer' => $options[(int) $mcqModel->correct_index] ?? null,
-                    'points_earned'  => $points,
-                    'explanation'    => $mcqModel->explanation,
+                    'mcq_id'            => $mcqModel->id,
+                    'status'            => true,
+                    'correct'           => $correct,
+                    'selected_index'    => $selectedIndex,
+                    'correct_index'     => (int) $mcqModel->correct_index,
+                    'correct_answer'    => $options[(int) $mcqModel->correct_index] ?? null,
+                    'points_earned'     => $points,
+                    'explanation'       => $mcqModel->explanation,
+                    'submission_status' => $correct ? 'submitted' : 'none',
+                    'awaiting_review'   => $correct,
+                    'message'           => $correct
+                        ? 'Correct! Awaiting mentor approval.'
+                        : 'Incorrect — try again.',
                 ];
             } else {
                 $results[] = [
