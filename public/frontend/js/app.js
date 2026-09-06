@@ -1046,10 +1046,25 @@
            return key;
        }
    
+       function selectedField() {
+           return document.querySelector("[data-field-chip].selected")?.dataset?.fieldChip?.trim() || "";
+       }
+
+       function setSelectedField(field) {
+           document.querySelectorAll("[data-field-chip]").forEach((chip) => {
+               const active = field !== "" && chip.dataset.fieldChip === field;
+               chip.classList.toggle("selected", active);
+               chip.setAttribute("aria-pressed", active ? "true" : "false");
+           });
+       }
+
        function buildQuery(page) {
            const params = new URLSearchParams();
            const q = document.querySelector("#mentor-search-input")?.value?.trim();
            if (q) params.set("q", q);
+
+           const field = selectedField();
+           if (field) params.set("field", field);
    
            document.querySelectorAll("[data-filter]").forEach((el) => {
                const key = filterKey(el);
@@ -1077,6 +1092,8 @@
            const params = new URLSearchParams(window.location.search);
            const input = document.getElementById("mentor-search-input");
            if (input && params.has("q")) input.value = params.get("q") || "";
+
+           setSelectedField(params.get("field") || "");
    
            const sortSel = document.querySelector("[data-sort-select]");
            if (sortSel && params.get("sort")) sortSel.value = params.get("sort");
@@ -1260,6 +1277,14 @@
                document.querySelectorAll("[data-filter]").forEach((el) => {
                    el.addEventListener("change", () => doSearch());
                });
+               document.querySelectorAll("[data-field-chip]").forEach((chip) => {
+                   chip.addEventListener("click", () => {
+                       const value = chip.dataset.fieldChip || "";
+                       const next = chip.classList.contains("selected") ? "" : value;
+                       setSelectedField(next);
+                       doSearch();
+                   });
+               });
                const sortSel = document.querySelector("[data-sort-select]");
                if (sortSel) sortSel.addEventListener("change", () => doSearch());
    
@@ -1305,16 +1330,24 @@
    };
    
    /* ── Confirmation Dialog ─────────────────────────────────── */
+   const nativeConfirm = window.confirm.bind(window);
    window.confirm = function (message, onConfirm, options = {}) {
+       // Native-style: confirm("msg") must return a boolean for if (!confirm()) / onsubmit.
+       if (typeof onConfirm !== "function") {
+           return nativeConfirm(String(message ?? ""));
+       }
+
        const { title = "Are you sure?", confirmText = "Yes, proceed", cancelText = "Cancel", danger = false } = options;
        openModal("confirm-modal");
        const modal = document.getElementById("confirm-modal");
        if (!modal) {
-           if (window.confirm(message)) onConfirm();
+           if (nativeConfirm(String(message ?? ""))) onConfirm();
            return;
        }
        modal.querySelector(".confirm-title").textContent = title;
        modal.querySelector(".confirm-msg").textContent = message;
+       const cancelBtn = modal.querySelector("[onclick*=\"confirm-modal\"], .confirm-cancel");
+       if (cancelBtn && cancelText) cancelBtn.textContent = cancelText;
        const confirmBtn = modal.querySelector(".confirm-ok");
        if (confirmBtn) {
            confirmBtn.textContent = confirmText;

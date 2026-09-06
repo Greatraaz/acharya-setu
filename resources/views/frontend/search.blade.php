@@ -36,10 +36,13 @@
                 </div>
             </div>
 
-            {{-- Quick chips --}}
-            <div class="chip-wrap" style="margin-top:14px;">
-                @foreach(['Product Manager','DSA & Algorithms','FAANG Prep','MBA','UX Design','Finance','Data Science','Marketing'] as $chip)
-                <div class="chip" onclick="document.getElementById('mentor-search-input').value='{{ $chip }}'; MentorSearch.submit();">{{ $chip }}</div>
+            {{-- Quick chips from mentor fields in DB --}}
+            <div class="chip-wrap" id="mentor-field-chips" style="margin-top:14px;">
+                @foreach($mentorFields ?? [] as $chip)
+                <button type="button"
+                        class="chip {{ request('field') === $chip ? 'selected' : '' }}"
+                        data-field-chip="{{ $chip }}"
+                        aria-pressed="{{ request('field') === $chip ? 'true' : 'false' }}">{{ $chip }}</button>
                 @endforeach
             </div>
         </div>
@@ -291,6 +294,10 @@ function clearAllFilters() {
         else if (el.tagName === 'SELECT') el.selectedIndex = 0;
     });
     document.getElementById('mentor-search-input').value = '';
+    document.querySelectorAll('[data-field-chip]').forEach((chip) => {
+        chip.classList.remove('selected');
+        chip.setAttribute('aria-pressed', 'false');
+    });
     MentorSearch.submit();
 }
 

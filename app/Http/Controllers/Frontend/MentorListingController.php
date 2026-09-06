@@ -55,7 +55,17 @@ class MentorListingController extends Controller
             ]);
         }
 
-        return view('frontend.search', compact('mentors'));
+        $mentorFields = User::query()
+            ->where('role', 'mentor')
+            ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
+            ->where('is_active', true)
+            ->whereNotNull('field')
+            ->where('field', '!=', '')
+            ->distinct()
+            ->orderBy('field')
+            ->pluck('field');
+
+        return view('frontend.search', compact('mentors', 'mentorFields'));
     }
 
     // ── Public mentor profile ─────────────────────────────────
@@ -140,6 +150,11 @@ class MentorListingController extends Controller
                    ->orWhere('company', 'like', "%{$q}%")
                    ->orWhere('expertise', 'like', "%{$q}%");
             });
+        }
+
+        $field = trim((string) $request->input('field', ''));
+        if ($field !== '') {
+            $query->where('field', $field);
         }
 
         $domains = array_filter((array) $request->input('domain', []));

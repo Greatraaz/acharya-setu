@@ -174,20 +174,22 @@
 @push('scripts')
 <script>
 function declineSession(id) {
-    if (!confirm('Cancel this session?')) return;
-    AjaxPost(`/mentor/sessions/${id}/cancel`, { reason: 'Cancelled by mentor' }, {
-        loader: true,
-        onSuccess: () => { showToast('info', 'Session cancelled.'); location.reload(); },
-        onError: e => showToast('error', e.message || 'Could not cancel session.')
-    });
+    confirm('Cancel this session?', () => {
+        AjaxPost(`/mentor/sessions/${id}/cancel`, { reason: 'Cancelled by mentor' }, {
+            loader: true,
+            onSuccess: () => { showToast('info', 'Session cancelled.'); location.reload(); },
+            onError: e => showToast('error', e.message || 'Could not cancel session.')
+        });
+    }, { title: 'Cancel session?', confirmText: 'Yes, cancel', danger: true });
 }
 function completeSession(id) {
-    if (!confirm('Mark this session as completed?')) return;
-    AjaxPost(`/mentor/sessions/${id}/complete`, {}, {
-        loader: true,
-        onSuccess: (d) => { showToast('success', d.message || 'Completed.'); location.reload(); },
-        onError: e => showToast('error', e.message || 'Could not complete session.')
-    });
+    confirm('Mark this session as completed?', () => {
+        AjaxPost(`/mentor/sessions/${id}/complete`, {}, {
+            loader: true,
+            onSuccess: (d) => { showToast('success', d.message || 'Completed.'); location.reload(); },
+            onError: e => showToast('error', e.message || 'Could not complete session.')
+        });
+    }, { title: 'Complete session?', confirmText: 'Mark complete' });
 }
 window.addMeetingLink = function (id, currentLink) {
     const form = document.getElementById('link-form');

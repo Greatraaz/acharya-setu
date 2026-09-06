@@ -217,26 +217,28 @@ function acceptSession(id) {
     });
 }
 function declineSession(id) {
-    if (!confirm('Decline this session?')) return;
-    AjaxPost(`/mentor/sessions/${id}/cancel`, {}, {
-        loader: true,
-        onSuccess: () => { showToast('info', 'Session declined.'); location.href = '{{ route("mentor.sessions") }}'; },
-        onError: () => showToast('error', 'Could not decline.')
-    });
+    confirm('Decline this session?', () => {
+        AjaxPost(`/mentor/sessions/${id}/cancel`, {}, {
+            loader: true,
+            onSuccess: () => { showToast('info', 'Session declined.'); location.href = '{{ route("mentor.sessions") }}'; },
+            onError: () => showToast('error', 'Could not decline.')
+        });
+    }, { title: 'Decline session?', confirmText: 'Yes, decline', danger: true });
 }
 function openMeetingLinkModal() {
     openModal('meeting-link-modal');
 }
 function completeSession(id) {
-    if (!confirm('Mark this session as complete? Earnings will be credited if payment is confirmed.')) return;
-    AjaxPost(`/mentor/sessions/${id}/complete`, {}, {
-        loader: true,
-        onSuccess: (data) => {
-            showToast('success', data.message || 'Session marked complete.');
-            location.reload();
-        },
-        onError: () => showToast('error', 'Could not complete session.'),
-    });
+    confirm('Mark this session as complete? Earnings will be credited if payment is confirmed.', () => {
+        AjaxPost(`/mentor/sessions/${id}/complete`, {}, {
+            loader: true,
+            onSuccess: (data) => {
+                showToast('success', data.message || 'Session marked complete.');
+                location.reload();
+            },
+            onError: () => showToast('error', 'Could not complete session.'),
+        });
+    }, { title: 'Complete session?', confirmText: 'Mark complete' });
 }
 document.getElementById('meeting-link-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();
