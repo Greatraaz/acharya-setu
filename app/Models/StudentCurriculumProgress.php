@@ -23,6 +23,21 @@ class StudentCurriculumProgress extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    /** Absolute URL for opening a submitted file/link in browser. */
+    public function submissionLink(): ?string
+    {
+        $url = trim((string) ($this->submission_url ?? ''));
+        if ($url === '') {
+            return null;
+        }
+
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        return url($url);
+    }
  
     /**
      * Upsert a progress record for a user.

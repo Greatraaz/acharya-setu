@@ -199,6 +199,44 @@ class CurriculumSubmissionReviewService
             return $progress;
         }
 
+        // MCQs: points + completion only when the mentee's answer is correct and mentor approves.
+        if ($status === 'approved' && $progress->item_type === 'mcq') {
+            $mcq = CurriculumMcq::find($progress->item_id);
+            $attempt = $mcq?->getAttemptForUser((int) $progress->user_id);
+            $isCorrect = (bool) ($attempt?->is_correct);
+
+            if (! $isCorrect) {
+                $progress->update([
+                    'submission_status' => 'rejected',
+                    'mentor_feedback'   => $feedback ?: 'Answer was incorrect. Please try again.',
+                    'reviewed_at'       => now(),
+                    'is_completed'      => false,
+                    'completed_at'      => null,
+                ]);
+
+                if ($attempt) {
+                    $attempt->update(['points_earned' => 0]);
+                }
+
+                return $progress->fresh();
+            }
+
+            if ($attempt && $mcq) {
+                $attempt->update([
+                    'points_earned' => (int) $mcq->points,
+                    'is_correct'    => true,
+                ]);
+            }
+        }
+
+        if ($status === 'rejected' && $progress->item_type === 'mcq') {
+            $mcq = CurriculumMcq::find($progress->item_id);
+            $attempt = $mcq?->getAttemptForUser((int) $progress->user_id);
+            if ($attempt) {
+                $attempt->update(['points_earned' => 0]);
+            }
+        }
+
         $progress->update([
             'submission_status' => $status,
             'mentor_feedback'   => $feedback,
@@ -251,6 +289,87 @@ class CurriculumSubmissionReviewService
                 'explanation'      => $context['explanation'] ?? null,
             ] : null,
         ];
+    }
+
+    /**
+     * Flatten tasks + group same-week MCQs for mentor list UI.
+     *
+     * Accepts progress models, decorate() rows, or already-shaped API arrays.
+     *
+     * @param  Collection<int, StudentCurriculumProgress|array>  $progressRows
+     * @return Collection<int, array>
+     */
+    public function groupForApi(Collection $progressRows): Collection
+    {
+        $items = $progressRows->map(function ($row) {
+            if ($row instanceof StudentCurriculumProgress) {
+                return $this->toApiArray($row);
+            }
+
+            if (is_array($row) && ($row['progress'] ?? null) instanceof StudentCurriculumProgress) {
+                return $this->toApiArray($row['progress']);
+            }
+
+            if (is_array($row) && isset($row['item_type'])) {
+                return $row;
+            }
+
+            throw new \InvalidArgumentException('Invalid pending submission row for API grouping.');
+        });
+
+        $tasks = $items->where('item_type', 'task')->values();
+        $mcqGroups = $items
+            ->where('item_type', 'mcq')
+            ->groupBy(fn (array $row) => ($row['mentee_id'] ?? 0).':'.($row['week_id'] ?? 0))
+            ->map(function (Collection $mcqs) {
+                $first = $mcqs->first();
+                $sorted = $mcqs->sortByDesc(fn (array $row) => (string) ($row['submitted_at'] ?? ''))->values();
+                $weekNumber = $first['week_number'] ?? null;
+
+                return [
+                    'id'                => null,
+                    'item_type'         => 'mcq_week',
+                    'item_id'           => null,
+                    'mentee_id'         => $first['mentee_id'] ?? null,
+                    'mentee'            => $first['mentee'] ?? null,
+                    'title'             => $weekNumber
+                        ? 'Week '.$weekNumber.' MCQs'
+                        : 'Week MCQs',
+                    'track_name'        => $first['track_name'] ?? null,
+                    'month_number'      => $first['month_number'] ?? null,
+                    'week_number'       => $weekNumber,
+                    'week_id'           => $first['week_id'] ?? null,
+                    'submission_type'   => null,
+                    'submission_status' => 'submitted',
+                    'submission_text'   => null,
+                    'submission_url'    => null,
+                    'mentor_feedback'   => null,
+                    'is_completed'      => false,
+                    'reviewed_at'       => null,
+                    'submitted_at'      => $sorted->first()['submitted_at'] ?? null,
+                    'created_at'        => $sorted->last()['created_at'] ?? null,
+                    'pending_count'     => $sorted->count(),
+                    'mcq'               => null,
+                    'mcqs'              => $sorted->map(fn (array $row) => [
+                        'id'                => $row['id'],
+                        'item_id'           => $row['item_id'],
+                        'title'             => $row['title'],
+                        'submission_status' => $row['submission_status'],
+                        'is_completed'      => $row['is_completed'],
+                        'reviewed_at'       => $row['reviewed_at'],
+                        'submitted_at'      => $row['submitted_at'],
+                        'created_at'        => $row['created_at'],
+                        'mentor_feedback'   => $row['mentor_feedback'],
+                        'mcq'               => $row['mcq'],
+                    ])->values()->all(),
+                ];
+            })
+            ->values();
+
+        return $tasks
+            ->concat($mcqGroups)
+            ->sortByDesc(fn (array $row) => (string) ($row['submitted_at'] ?? ''))
+            ->values();
     }
 
     private function optionLabel(mixed $option): ?string

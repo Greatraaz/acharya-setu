@@ -84,7 +84,23 @@
                                     <span>{{ \App\Models\CurriculumTask::SUBMISSION_TYPES[$task->submission_type] ?? $task->submission_type }}</span>
                                     @if($task->plan)<span>· Plan: {{ $task->plan->name ?? $task->plan->plan_name }}</span>@endif
                                     @if($task->estimated_minutes)<span>· ⏱ {{ $task->estimated_minutes }} min</span>@endif
+                                    @if(!empty($task->attachments))
+                                        <span>· {{ count($task->attachments) }} attachment{{ count($task->attachments) === 1 ? '' : 's' }}</span>
+                                    @endif
                                 </div>
+                                @if(!empty($task->attachments))
+                                <div class="curr-task-attachments" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
+                                    @foreach($task->attachments as $attachment)
+                                        @php
+                                            $attName = $attachment['name'] ?? 'File';
+                                            $attUrl = $attachment['url'] ?? '#';
+                                        @endphp
+                                        <a href="{{ $attUrl }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="font-size:11px;">
+                                            📎 {{ \Illuminate\Support\Str::limit($attName, 28) }}
+                                        </a>
+                                    @endforeach
+                                </div>
+                                @endif
                             </div>
                             <div class="curr-task-actions">
                                 <button type="button" class="curr-btn-edit" onclick='openEditTask(@json($task))'>Edit</button>
@@ -308,8 +324,13 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Attachments</label>
+                    <div id="task-existing-attachments" style="display:none;margin-bottom:10px;"></div>
                     <input type="file" name="attachments[]" class="form-input" multiple>
-                    <div class="form-hint">Images, docs, or video · max 10MB each</div>
+                    <div class="form-hint">Images, docs, or video · max 10MB each. New files are added to existing ones unless you replace them.</div>
+                    <label id="task-replace-attachments-wrap" style="display:none;margin-top:8px;font-size:12px;color:var(--text-2);cursor:pointer;align-items:center;gap:8px;">
+                        <input type="checkbox" name="replace_attachments" value="1">
+                        Replace existing attachments with these files
+                    </label>
                 </div>
                 <div style="display:flex;gap:16px;">
                     <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
@@ -562,6 +583,7 @@ function openAddTask(weekId, menteeId) {
     document.getElementById('task-mentee-id').value = menteeId;
     document.querySelector('#task-form [name=is_required][type=checkbox]').checked = true;
     document.querySelector('#task-form [name=is_active][type=checkbox]').checked = true;
+    renderTaskAttachments([]);
     openModal('task-modal');
 }
 
@@ -578,7 +600,35 @@ function openEditTask(task) {
     document.getElementById('task-mentee-id').value = task.mentee_id || '';
     form.querySelector('[name=is_required][type=checkbox]').checked = !!task.is_required;
     form.querySelector('[name=is_active][type=checkbox]').checked = !!task.is_active;
+    const replaceCb = form.querySelector('[name=replace_attachments]');
+    if (replaceCb) replaceCb.checked = false;
+    renderTaskAttachments(task.attachments || []);
     openModal('task-modal');
+}
+
+function renderTaskAttachments(attachments) {
+    const wrap = document.getElementById('task-existing-attachments');
+    const replaceWrap = document.getElementById('task-replace-attachments-wrap');
+    const list = Array.isArray(attachments) ? attachments : [];
+    if (!wrap) return;
+
+    if (!list.length) {
+        wrap.style.display = 'none';
+        wrap.innerHTML = '';
+        if (replaceWrap) replaceWrap.style.display = 'none';
+        return;
+    }
+
+    wrap.style.display = 'grid';
+    wrap.style.gap = '6px';
+    wrap.innerHTML = list.map((att) => {
+        const name = (att && att.name) ? att.name : 'File';
+        const url = (att && att.url) ? att.url : '#';
+        const safeName = String(name).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const safeUrl = String(url).replace(/"/g, '&quot;');
+        return `<a href="${safeUrl}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="justify-content:flex-start;font-size:12px;">📎 ${safeName}</a>`;
+    }).join('');
+    if (replaceWrap) replaceWrap.style.display = 'flex';
 }
 
 let mcqIndex = 0;

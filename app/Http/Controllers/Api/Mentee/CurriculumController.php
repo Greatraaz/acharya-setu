@@ -303,7 +303,7 @@ $canViewProgress = $request->user()->canAccessProgressReport();
 
 $data = $request->validate([
     'search'          => 'nullable|string|max:100',
-    'status'          => 'nullable|in:pending,in_progress,completed',
+    'status'          => 'nullable|in:pending,in_progress,completed,awaiting_review,rejected',
     'week_id'         => 'nullable|integer',
     'track_id'        => 'nullable|integer',
     'attempted_from'  => 'nullable|date',
@@ -326,8 +326,10 @@ $allMcqsFormatted = $baseTopics
 
 $summaryTotal = $allMcqsFormatted->count();
 $summaryCompleted = $canViewProgress ? $allMcqsFormatted->where('status', 'completed')->count() : null;
-$summaryInProgress = $canViewProgress ? $allMcqsFormatted->where('status', 'in_progress')->count() : null;
+$summaryInProgress = $canViewProgress ? $allMcqsFormatted->whereIn('status', ['in_progress', 'awaiting_review', 'rejected'])->count() : null;
 $summaryPending = $canViewProgress ? $allMcqsFormatted->where('status', 'pending')->count() : null;
+$summaryAwaitingReview = $canViewProgress ? $allMcqsFormatted->where('status', 'awaiting_review')->count() : null;
+$summaryRejected = $canViewProgress ? $allMcqsFormatted->where('status', 'rejected')->count() : null;
 
 $query = CurriculumMcqTopic::where('mentee_id', $menteeId)
     ->where('is_active', true)
@@ -383,11 +385,13 @@ return response()->json([
     'statuscode' => 200,
     'mentee_id'  => $menteeId,
     'summary'    => $canViewProgress ? [
-        'total'       => $summaryTotal,
-        'completed'   => $summaryCompleted,
-        'in_progress' => $summaryInProgress,
-        'pending'     => $summaryPending,
-        'percent'     => $summaryTotal ? (int) round($summaryCompleted / $summaryTotal * 100) : 0,
+        'total'           => $summaryTotal,
+        'completed'       => $summaryCompleted,
+        'in_progress'     => $summaryInProgress,
+        'pending'         => $summaryPending,
+        'awaiting_review' => $summaryAwaitingReview,
+        'rejected'        => $summaryRejected,
+        'percent'         => $summaryTotal ? (int) round($summaryCompleted / $summaryTotal * 100) : 0,
     ] : null,
     'mcq_topics' => $formattedTopics,
     'meta'       => [
@@ -709,23 +713,54 @@ if (! $includeProgress) {
     return $payload;
 }
 
-$completed = $mcq->isAnsweredCorrectlyByUser($menteeId);
-$attempt   = $mcq->getAttemptForUser($menteeId);
+$attempt = $mcq->getAttemptForUser($menteeId);
+$progress = StudentCurriculumProgress::where('user_id', $menteeId)
+    ->where('item_type', 'mcq')
+    ->where('item_id', $mcq->id)
+    ->first();
+
+$submissionStatus = $progress?->submission_status;
+$isApproved = (bool) ($progress?->is_completed || $submissionStatus === 'approved');
+$isAwaiting = $submissionStatus === 'submitted' && ! $isApproved;
+$isRejected = $submissionStatus === 'rejected';
+
+if ($isApproved) {
+    $status = 'completed';
+} elseif ($isAwaiting) {
+    $status = 'awaiting_review';
+} elseif ($isRejected) {
+    $status = 'rejected';
+} elseif ($attempt) {
+    $status = 'in_progress';
+} else {
+    $status = 'pending';
+}
+
 $correctIndex = $mcq->correct_index;
+$revealAnswer = $isApproved || $isRejected;
 
 return array_merge($payload, [
-    'correct_index'  => $correctIndex,
-    'correct_answer' => is_numeric($correctIndex) && array_key_exists((int) $correctIndex, $options)
+    'correct_index'  => $revealAnswer ? $correctIndex : null,
+    'correct_answer' => $revealAnswer && is_numeric($correctIndex) && array_key_exists((int) $correctIndex, $options)
         ? $options[(int) $correctIndex]
         : null,
-    'explanation'    => $mcq->explanation,
+    'explanation'    => $revealAnswer ? $mcq->explanation : null,
     'points'         => $mcq->points,
-    'is_completed'   => $completed,
-    'status'         => $completed ? 'completed' : ($attempt ? 'in_progress' : 'pending'),
+    'is_completed'   => $isApproved,
+    'status'         => $status,
+    'submission_status' => $submissionStatus,
     'last_attempt'   => $attempt ? [
-        'is_correct'    => $attempt->is_correct,
-        'points_earned' => $attempt->points_earned,
-        'attempted_at'  => $attempt->attempted_at,
+        'selected_index' => $attempt->selected_index,
+        'is_correct'     => $revealAnswer ? (bool) $attempt->is_correct : null,
+        'points_earned'  => $isApproved ? (int) $attempt->points_earned : 0,
+        'attempted_at'   => $attempt->attempted_at,
+    ] : null,
+    'mentor_review'  => $progress && in_array($submissionStatus, ['approved', 'rejected', 'submitted'], true) ? [
+        'submission_status' => $submissionStatus,
+        'mentor_feedback'   => $progress->mentor_feedback,
+        'reviewed_at'       => $progress->reviewed_at,
+        'is_completed'      => (bool) $progress->is_completed,
+        'submitted_at'      => $progress->updated_at,
     ] : null,
 ]);
 }

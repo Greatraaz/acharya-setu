@@ -105,20 +105,28 @@ class CurriculumTask extends Model
             return [];
         }
 
-        return array_map(function ($attachment) {
+        return array_values(array_map(function ($attachment) {
             if (! is_array($attachment)) {
                 return $attachment;
             }
 
-            $url = $attachment['url'] ?? '';
-            $path = is_string($url) ? self::resolveAttachmentPathFromUrl($url) : null;
+            $path = $attachment['path'] ?? null;
+            if (! is_string($path) || $path === '') {
+                $url = $attachment['url'] ?? '';
+                $path = is_string($url) ? self::resolveAttachmentPathFromUrl($url) : null;
+            }
 
-            if ($path) {
+            if (is_string($path) && $path !== '') {
+                $attachment['path'] = $path;
                 $attachment['url'] = self::buildAttachmentUrl($path);
             }
 
+            if (empty($attachment['name']) && is_string($path)) {
+                $attachment['name'] = basename($path);
+            }
+
             return $attachment;
-        }, $attachments);
+        }, $attachments));
     }
  
     public function getProgressForUser(int $userId): ?StudentCurriculumProgress

@@ -111,44 +111,69 @@ class PortalController extends Controller
 
         $search = trim((string) $request->input('search', $request->input('q', '')));
         $status = $request->input('status');
+        $menteeFilter = $request->filled('mentee_id') ? (int) $request->input('mentee_id') : null;
 
-        $enrollments = MenteeEnrollment::where('mentor_id', $mentorId)
-            ->with(['mentee', 'stream'])
-            ->when($search !== '', fn ($q) => $q->whereHas('mentee', fn ($m) => $m->where('name', 'like', '%'.$search.'%')))
-            ->when(in_array($status, ['active', 'completed', 'paused'], true), fn ($q) => $q->where('status', $status))
-            ->latest()
-            ->paginate(15)
-            ->withQueryString()
-            ->through(function (MenteeEnrollment $enrollment) use ($mentorId) {
-                $enrollment->progress_data = $enrollment->progress;
-                $enrollment->pending_reviews = $enrollment->mentee_id
-                    ? $this->reviews->pendingCountForMentee($mentorId, (int) $enrollment->mentee_id)
-                    : 0;
+        $pendingCount = $this->reviews->pendingCountForMentor($mentorId);
+        $tab = $request->input('tab');
+        if (! in_array($tab, ['reviews', 'progress'], true)) {
+            $tab = $pendingCount > 0 ? 'reviews' : 'progress';
+        }
 
-                return $enrollment;
-            });
+        $pendingSubmissions = collect();
+        $reviewPaginator = null;
+        if ($tab === 'reviews') {
+            $reviewPaginator = $this->reviews->pendingForMentor($mentorId, $menteeFilter, 20);
+            $pendingSubmissions = collect($reviewPaginator->items())->map(
+                fn (StudentCurriculumProgress $progress) => $this->reviews->decorate($progress)
+            );
+        }
 
-        $assignedMenteeIds = EducationStream::where('mentor_id', $mentorId)
-            ->whereNotNull('mentee_id')
-            ->pluck('mentee_id')
-            ->merge(
-                MenteeEnrollment::where('mentor_id', $mentorId)->pluck('mentee_id')
-            )
-            ->unique()
-            ->filter()
-            ->values();
+        $enrollments = null;
+        $menteesWithoutEnrollment = collect();
+        if ($tab === 'progress') {
+            $enrollments = MenteeEnrollment::where('mentor_id', $mentorId)
+                ->with(['mentee', 'stream'])
+                ->when($search !== '', fn ($q) => $q->whereHas('mentee', fn ($m) => $m->where('name', 'like', '%'.$search.'%')))
+                ->when(in_array($status, ['active', 'completed', 'paused'], true), fn ($q) => $q->where('status', $status))
+                ->latest()
+                ->paginate(15)
+                ->withQueryString()
+                ->through(function (MenteeEnrollment $enrollment) use ($mentorId) {
+                    $enrollment->progress_data = $enrollment->progress;
+                    $enrollment->pending_reviews = $enrollment->mentee_id
+                        ? $this->reviews->pendingCountForMentee($mentorId, (int) $enrollment->mentee_id)
+                        : 0;
 
-        $menteesWithoutEnrollment = $this->mentorMenteesQuery()
-            ->whereNotIn('id', $assignedMenteeIds)
-            ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
-            ->limit(10)
-            ->get();
+                    return $enrollment;
+                });
+
+            $assignedMenteeIds = EducationStream::where('mentor_id', $mentorId)
+                ->whereNotNull('mentee_id')
+                ->pluck('mentee_id')
+                ->merge(
+                    MenteeEnrollment::where('mentor_id', $mentorId)->pluck('mentee_id')
+                )
+                ->unique()
+                ->filter()
+                ->values();
+
+            $menteesWithoutEnrollment = $this->mentorMenteesQuery()
+                ->whereNotIn('id', $assignedMenteeIds)
+                ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
+                ->limit(10)
+                ->get();
+        }
 
         return view('frontend.mentors.journey', compact(
             'enrollments',
             'menteesWithoutEnrollment',
             'search',
-            'status'
+            'status',
+            'tab',
+            'pendingCount',
+            'pendingSubmissions',
+            'reviewPaginator',
+            'menteeFilter'
         ));
     }
 
@@ -222,26 +247,13 @@ class PortalController extends Controller
 
     public function submissions(Request $request)
     {
-        $mentorId = auth()->id();
-        $menteeId = $request->filled('mentee_id') ? (int) $request->input('mentee_id') : null;
+        $params = array_filter([
+            'tab' => 'reviews',
+            'mentee_id' => $request->input('mentee_id'),
+            'page' => $request->input('page'),
+        ], fn ($v) => $v !== null && $v !== '');
 
-        if ($menteeId) {
-            $this->findMentorMentee($menteeId);
-        }
-
-        $paginator = $this->reviews->pendingForMentor($mentorId, $menteeId, 20);
-        $submissions = collect($paginator->items())->map(function (StudentCurriculumProgress $progress) {
-            return $this->reviews->decorate($progress);
-        });
-
-        $pendingCount = $this->reviews->pendingCountForMentor($mentorId);
-
-        return view('frontend.mentors.submissions', [
-            'paginator' => $paginator,
-            'submissions' => $submissions,
-            'pendingCount' => $pendingCount,
-            'menteeId' => $menteeId,
-        ]);
+        return redirect()->route('mentor.journey', $params);
     }
 
     public function reviewSubmission(Request $request, int $progress)
@@ -253,17 +265,28 @@ class PortalController extends Controller
 
         $record = StudentCurriculumProgress::findOrFail($progress);
         $this->reviews->assertMentorOwnsProgress(auth()->user(), $record);
-        $this->reviews->review($record, $data['submission_status'], $data['mentor_feedback'] ?? null);
+        $updated = $this->reviews->review($record, $data['submission_status'], $data['mentor_feedback'] ?? null);
 
-        $message = $data['submission_status'] === 'approved'
-            ? 'Submission approved.'
-            : 'Submission rejected. Mentee can revise.';
+        if ($data['submission_status'] === 'approved' && $updated->submission_status === 'rejected') {
+            $message = 'Answer was incorrect — changes requested so the mentee can retry. No points awarded.';
+        } elseif ($updated->submission_status === 'approved') {
+            $message = 'Submission approved.';
+        } else {
+            $message = 'Changes requested. Mentee can revise.';
+        }
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json(['message' => $message]);
         }
 
-        return back()->with('success', $message);
+        $fallback = route('mentor.journey', array_filter([
+            'tab' => 'reviews',
+            'mentee_id' => $record->user_id,
+        ]));
+
+        return redirect()
+            ->back(302, [], $fallback)
+            ->with('success', $message);
     }
 
     public function community(Request $request)

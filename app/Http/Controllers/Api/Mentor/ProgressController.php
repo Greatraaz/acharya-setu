@@ -105,39 +105,41 @@ class ProgressController extends Controller
     /**
      * GET /mentor/submissions?mentee_id=&per_page=
      * Pending task + MCQ submissions awaiting mentor review.
+     * Same-week MCQs are grouped into one `mcq_week` object for easier frontend rendering.
      */
     public function pendingSubmissions(Request $request): JsonResponse
     {
         $data = $request->validate([
             'mentee_id' => 'nullable|integer|exists:users,id',
             'per_page'  => 'nullable|integer|min:1|max:100',
+            'page'      => 'nullable|integer|min:1',
         ]);
 
         $mentorId = $request->user()->id;
         $menteeId = isset($data['mentee_id']) ? (int) $data['mentee_id'] : null;
+        $perPage = (int) ($data['per_page'] ?? 20);
+        $page = (int) ($data['page'] ?? max(1, (int) $request->input('page', 1)));
 
-        $paginator = $this->reviews->pendingForMentor(
-            $mentorId,
-            $menteeId,
-            (int) ($data['per_page'] ?? 20)
-        );
+        $pendingItems = $this->reviews->pendingCollectionForMentor($mentorId, $menteeId);
+        $grouped = $this->reviews->groupForApi($pendingItems);
 
-        $items = collect($paginator->items())->map(
-            fn (StudentCurriculumProgress $p) => $this->reviews->toApiArray($p)
-        );
+        $totalGroups = $grouped->count();
+        $lastPage = max(1, (int) ceil($totalGroups / $perPage));
+        $page = min($page, $lastPage);
+        $submissions = $grouped->forPage($page, $perPage)->values();
 
         return response()->json([
-            'status'      => true,
-            'statuscode'  => 200,
-            'mentee_id'   => $menteeId,
-            'pending'     => $this->reviews->pendingCountForMentor($mentorId, $menteeId),
+            'status'        => true,
+            'statuscode'    => 200,
+            'mentee_id'     => $menteeId,
+            'pending'       => $this->reviews->pendingCountForMentor($mentorId, $menteeId),
             'pending_total' => $this->reviews->pendingCountForMentor($mentorId),
-            'submissions' => $items,
-            'meta'        => [
-                'current_page' => $paginator->currentPage(),
-                'last_page'    => $paginator->lastPage(),
-                'per_page'     => $paginator->perPage(),
-                'total'        => $paginator->total(),
+            'submissions'   => $submissions,
+            'meta'          => [
+                'current_page' => $page,
+                'last_page'    => $lastPage,
+                'per_page'     => $perPage,
+                'total'        => $totalGroups,
             ],
         ]);
     }
@@ -164,9 +166,11 @@ class ProgressController extends Controller
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
-            'message'    => $data['submission_status'] === 'approved'
-                ? 'Submission approved. Progress updated.'
-                : 'Submission rejected. Mentee can revise and resubmit.',
+            'message'    => ($data['submission_status'] === 'approved' && $updated->submission_status === 'rejected')
+                ? 'Answer was incorrect — changes requested so the mentee can retry. No points awarded.'
+                : ($updated->submission_status === 'approved'
+                    ? 'Submission approved. Progress updated.'
+                    : 'Submission rejected. Mentee can revise and resubmit.'),
             'submission' => $this->reviews->toApiArray($updated->load('user:id,name,email,avatar_url')),
         ]);
     }

@@ -27,15 +27,23 @@
     .mentor-progress-stat__label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
     .mentor-progress-stat__value { font-size: 22px; font-weight: 800; margin-top: 6px; }
     .mentor-progress-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1.4fr) minmax(280px, .9fr);
-        gap: 20px;
-        align-items: start;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
     }
     .mentor-progress-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-    .mentor-progress-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-    .mentor-progress-side-sticky { position: sticky; top: calc(var(--nav-h, 64px) + 16px); display: flex; flex-direction: column; gap: 16px; }
-    .mentor-review-card { border: 1px solid rgba(245, 158, 11, .35); background: color-mix(in srgb, var(--brand) 6%, var(--bg-2)); }
+    .mentor-review-card { border: 1px solid rgba(245, 158, 11, .35); background: color-mix(in srgb, var(--brand) 6%, var(--bg-2)); margin-bottom: 12px; }
+    .mentor-review-card__head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .mentor-review-card__eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 4px; }
+    .mentor-review-card__title { font-size: 14px; font-weight: 700; }
+    .mentor-review-card__meta { font-size: 13px; color: var(--text-2); margin-top: 4px; }
+    .mentor-review-card__body {
+        padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+        margin-bottom: 12px; font-size: 13px; color: var(--text-2); white-space: pre-wrap; background: var(--bg);
+    }
+    .mentor-review-card__hint { font-size: 13px; color: var(--text-2); margin: 0 0 12px; }
+    .mentor-review-card__form { display: grid; gap: 10px; }
+    .mentor-review-card__actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .mentor-mcq-options { display: grid; gap: 8px; margin: 12px 0; }
     .mentor-mcq-option {
         padding: 10px 12px;
@@ -44,9 +52,15 @@
         font-size: 13px;
         color: var(--text-2);
         background: var(--bg);
+        display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
     }
     .mentor-mcq-option.is-selected { border-color: var(--brand); color: var(--text); background: var(--brand-muted); }
     .mentor-mcq-option.is-correct { border-color: var(--success); }
+    .mentor-mcq-tag {
+        font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+        padding: 2px 6px; border-radius: 999px; background: var(--bg-3); color: var(--text-2);
+    }
+    .mentor-mcq-tag--ok { background: color-mix(in srgb, var(--success) 18%, transparent); color: var(--success); }
     .mentor-week-block { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; background: var(--bg); }
     .mentor-week-block:last-child { margin-bottom: 0; }
     .mentor-item-row {
@@ -71,8 +85,6 @@
     }
     .mentor-track-card details > summary::-webkit-details-marker { display: none; }
     @media (max-width: 1024px) {
-        .mentor-progress-layout { grid-template-columns: 1fr; }
-        .mentor-progress-side-sticky { position: static; }
         .mentor-progress-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 640px) {
@@ -86,20 +98,23 @@
 
     <div class="dash-content">
         <div class="session-detail-breadcrumb" style="margin-bottom:12px;">
-            <a href="{{ route('mentor.journey') }}" style="color:var(--brand);">← Progress Tracker</a>
+            <a href="{{ route('mentor.journey', ['tab' => 'progress']) }}" style="color:var(--brand);">← Progress</a>
             <span>/</span>
             <span>{{ $mentee->name }}</span>
         </div>
 
         <div class="dash-header dash-header--actions flex-between">
             <div class="dash-header__main">
-                <div class="dash-title">{{ $mentee->name }}’s Progress</div>
-                <div class="dash-subtitle">Review submitted tasks & MCQs, then track week-by-week completion.</div>
+                <div class="dash-title">{{ $mentee->name }}’s journey</div>
+                <div class="dash-subtitle">Review pending work first, then check week-by-week progress.</div>
             </div>
             <div class="dash-header__actions">
-                <a href="{{ route('mentor.submissions', ['mentee_id' => $mentee->id]) }}" class="btn btn-primary btn-sm">
-                    Reviews @if(($pendingSubmissions ?? collect())->isNotEmpty()) ({{ $pendingSubmissions->count() }}) @endif
+                @if(($pendingSubmissions ?? collect())->isNotEmpty())
+                <a href="#review-list" class="btn btn-primary btn-sm">
+                    Review now ({{ $pendingSubmissions->count() }})
                 </a>
+                @endif
+                <a href="{{ route('mentor.journey', ['tab' => 'reviews', 'mentee_id' => $mentee->id]) }}" class="btn btn-outline btn-sm">All reviews</a>
                 <a href="{{ route('mentor.mentees.show', $mentee->id) }}" class="btn btn-outline btn-sm">View mentee</a>
                 <a href="{{ route('mentor.curriculum.tracks', ['mentee_id' => $mentee->id]) }}" class="btn btn-ghost btn-sm">Edit curriculum</a>
             </div>
@@ -135,69 +150,15 @@
             <div class="mentor-progress-stack">
                 <div class="card" id="review-list">
                     <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
-                        <h3 style="font-size:15px;font-weight:700;margin:0;">Awaiting your review</h3>
+                        <div>
+                            <h3 style="font-size:15px;font-weight:700;margin:0;">Needs your review</h3>
+                            <p style="font-size:12px;color:var(--text-2);margin:4px 0 0;">Approve to count toward progress, or request changes.</p>
+                        </div>
                         <span class="session-status pending">{{ ($pendingSubmissions ?? collect())->count() }} pending</span>
                     </div>
 
                     @forelse($pendingSubmissions ?? [] as $row)
-                    @php
-                        $progress = $row['progress'];
-                        $context = $row['context'] ?? [];
-                    @endphp
-                    <div class="card mentor-review-card" style="margin-bottom:12px;" id="review-{{ $progress->id }}">
-                        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-                            <div>
-                                <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);">
-                                    {{ strtoupper($progress->item_type) }}
-                                    @if(!empty($context['track_name'])) · {{ $context['track_name'] }}@endif
-                                    @if(!empty($context['month_number'])) · M{{ $context['month_number'] }}@endif
-                                    @if(!empty($context['week_number'])) · W{{ $context['week_number'] }}@endif
-                                </div>
-                                <div style="font-size:14px;font-weight:700;margin-top:4px;">{{ $context['title'] ?? ('Item #'.$progress->item_id) }}</div>
-                            </div>
-                            <span class="session-status pending">Under review</span>
-                        </div>
-
-                        @if($progress->item_type === 'mcq')
-                            <div class="mentor-mcq-options">
-                                @foreach(($context['options'] ?? []) as $idx => $option)
-                                @php
-                                    $isSelected = isset($context['selected_index']) && (int) $context['selected_index'] === (int) $idx;
-                                    $isCorrect = isset($context['correct_index']) && (int) $context['correct_index'] === (int) $idx;
-                                @endphp
-                                <div class="mentor-mcq-option {{ $isSelected ? 'is-selected' : '' }} {{ $isCorrect ? 'is-correct' : '' }}">
-                                    <strong>{{ chr(65 + (int) $idx) }}.</strong> {{ $optionText($option) }}
-                                    @if($isSelected) · mentee answer @endif
-                                    @if($isCorrect) · correct @endif
-                                </div>
-                                @endforeach
-                            </div>
-                            @if(!empty($context['is_correct']))
-                            <div style="font-size:13px;color:var(--success);margin-bottom:10px;">Correct answer submitted — confirm to count toward progress.</div>
-                            @endif
-                        @else
-                            @if($progress->submission_text)
-                            <div style="padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:10px;font-size:13px;white-space:pre-wrap;color:var(--text-2);">{{ $progress->submission_text }}</div>
-                            @endif
-                            @if($progress->submission_url)
-                            <div style="margin-bottom:10px;">
-                                <a href="{{ $progress->submission_url }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Open submission</a>
-                            </div>
-                            @endif
-                            @if(! $progress->submission_text && ! $progress->submission_url)
-                            <div style="font-size:13px;color:var(--text-3);margin-bottom:10px;">No written submission attached.</div>
-                            @endif
-                        @endif
-
-                        <form method="POST" action="{{ route('mentor.submissions.review', $progress->id) }}" style="display:grid;gap:10px;">
-                            @csrf
-                            <textarea name="mentor_feedback" class="form-input" rows="2" placeholder="Optional feedback for mentee…"></textarea>
-                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                <button type="submit" name="submission_status" value="approved" class="btn btn-primary btn-sm">Approve</button>
-                                <button type="submit" name="submission_status" value="rejected" class="btn btn-outline btn-sm" style="color:var(--error);">Reject</button>
-                            </div>
-                        </form>
-                    </div>
+                        @include('frontend.mentors.partials.review-card', ['row' => $row, 'showMentee' => false])
                     @empty
                     <div class="empty-state" style="padding:28px 0;">
                         <div style="font-size:14px;color:var(--text-2);">No pending submissions from this mentee right now.</div>
@@ -248,10 +209,24 @@
                                         elseif ($tp?->submission_status === 'rejected') { $status = 'Needs revision'; $badge = 'cancelled'; }
                                     @endphp
                                     <div class="mentor-item-row">
-                                        <div>
+                                        <div style="min-width:0;flex:1;">
                                             <div style="font-weight:600;">{{ $task->title }}</div>
                                             @if($tp?->submission_text)
-                                            <div style="font-size:12px;color:var(--text-3);margin-top:2px;">{{ \Illuminate\Support\Str::limit($tp->submission_text, 90) }}</div>
+                                            <div style="font-size:12px;color:var(--text-2);margin-top:6px;white-space:pre-wrap;">{{ $tp->submission_text }}</div>
+                                            @endif
+                                            @if($tp?->submission_url)
+                                            <div style="margin-top:8px;">
+                                                <a href="{{ $tp->submissionLink() }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="font-size:11px;">
+                                                    📎 Open mentee submission
+                                                </a>
+                                            </div>
+                                            @elseif($tp && in_array($tp->submission_status, ['submitted', 'approved', 'rejected'], true))
+                                            <div style="font-size:12px;color:var(--text-3);margin-top:4px;">No file/link attached to this submission.</div>
+                                            @endif
+                                            @if($tp?->mentor_feedback)
+                                            <div style="font-size:12px;color:var(--text-3);margin-top:6px;">
+                                                Feedback: {{ $tp->mentor_feedback }}
+                                            </div>
                                             @endif
                                         </div>
                                         <span class="session-status {{ $badge }}">{{ $status }}</span>
@@ -308,51 +283,6 @@
                     <a href="{{ route('mentor.curriculum.tracks', ['mentee_id' => $mentee->id]) }}" class="btn btn-primary">Create curriculum track</a>
                 </div>
                 @endforelse
-            </div>
-
-            <div class="mentor-progress-side">
-                <div class="mentor-progress-side-sticky">
-                    <div class="card">
-                        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Mentee</h3>
-                        <div class="session-detail-person">
-                            <div class="session-detail-person__avatar mentor-avatar-lg" style="width:48px;height:48px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--brand-muted);font-weight:700;">
-                                @if($mentee->avatar_url)
-                                    <img src="{{ $mentee->avatar_url }}" alt="" style="width:100%;height:100%;object-fit:cover;">
-                                @else
-                                    {{ strtoupper(substr($mentee->name ?? '?', 0, 1)) }}
-                                @endif
-                            </div>
-                            <div class="session-detail-person__info">
-                                <div class="session-detail-person__name">{{ $mentee->name }}</div>
-                                <div class="session-detail-person__email">{{ $mentee->email }}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Enrollment</h3>
-                        @forelse($enrollments as $enrollment)
-                        @php $ep = $enrollment->progress_data ?? []; @endphp
-                        <div style="padding:10px 0;border-bottom:1px solid var(--border);">
-                            <div style="font-weight:700;font-size:13px;">{{ $enrollment->stream->name ?? 'Track' }}</div>
-                            <div style="font-size:12px;color:var(--text-3);margin-top:2px;">
-                                {{ ucfirst($enrollment->status) }} · Month {{ $enrollment->current_month }} · Week {{ $enrollment->current_week }}
-                            </div>
-                            <div style="font-size:12px;margin-top:6px;">{{ (int) ($ep['percent'] ?? $ep['percentage'] ?? 0) }}% complete</div>
-                        </div>
-                        @empty
-                        <div style="font-size:13px;color:var(--text-3);">No enrollment rows yet — tracks below still sync progress.</div>
-                        @endforelse
-                    </div>
-
-                    <div class="card">
-                        <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;">Quick actions</h3>
-                        <div style="display:grid;gap:8px;">
-                            <a href="{{ route('mentor.submissions', ['mentee_id' => $mentee->id]) }}" class="btn btn-primary btn-sm" style="justify-content:center;">Open all reviews</a>
-                            <a href="{{ route('mentor.curriculum.tracks', ['mentee_id' => $mentee->id]) }}" class="btn btn-outline btn-sm" style="justify-content:center;">Edit curriculum content</a>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

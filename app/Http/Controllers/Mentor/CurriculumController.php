@@ -402,6 +402,7 @@ class CurriculumController extends Controller
             'is_active'           => 'nullable',
             'submission_type'     => ['nullable', Rule::in(array_keys(CurriculumTask::SUBMISSION_TYPES))],
             'replace_attachments' => 'nullable',
+            'clear_attachments'   => 'nullable',
         ];
 
         if (! $request->hasFile('attachments')) {
@@ -416,7 +417,7 @@ class CurriculumController extends Controller
         ])->filter(fn ($v) => $v !== null)->all();
 
         if ($request->hasFile('attachments')) {
-            $replace = $request->boolean('replace_attachments', true);
+            $replace = $request->boolean('replace_attachments', false);
             $existing = $replace ? [] : ($task->attachments ?? []);
 
             if ($replace) {
@@ -424,6 +425,9 @@ class CurriculumController extends Controller
             }
 
             $taskFields['attachments'] = $this->processUploadedAttachments($request, $existing);
+        } elseif ($request->boolean('clear_attachments')) {
+            $this->deleteStoredAttachments($task->attachments ?? []);
+            $taskFields['attachments'] = [];
         }
 
         if ($request->has('is_required')) {
@@ -865,6 +869,7 @@ class CurriculumController extends Controller
             $path = $file->store('curriculum-tasks', 'public');
             $attachments[] = [
                 'name' => $file->getClientOriginalName(),
+                'path' => $path,
                 'url'  => CurriculumTask::buildAttachmentUrl($path),
                 'mime' => $file->getMimeType(),
                 'size' => $file->getSize(),
@@ -877,13 +882,13 @@ class CurriculumController extends Controller
     private function deleteStoredAttachments(array $attachments): void
     {
         foreach ($attachments as $attachment) {
-            $url = $attachment['url'] ?? '';
-            if ($url === '') {
-                continue;
+            $path = $attachment['path'] ?? null;
+            if (! is_string($path) || $path === '') {
+                $url = $attachment['url'] ?? '';
+                $path = $url !== '' ? CurriculumTask::resolveAttachmentPathFromUrl($url) : null;
             }
 
-            $path = CurriculumTask::resolveAttachmentPathFromUrl($url) ?? '';
-            if ($path !== '') {
+            if (is_string($path) && $path !== '') {
                 Storage::disk('public')->delete($path);
             }
         }

@@ -1,7 +1,9 @@
 @php
     $isDash = request()->routeIs('mentor.dashboard');
     $isSessions = request()->routeIs('mentor.sessions*');
-    $isTasks = request()->routeIs('mentor.curriculum*') || request()->routeIs('mentor.journey*');
+    $isTasks = request()->routeIs('mentor.curriculum*')
+        || request()->routeIs('mentor.journey*')
+        || request()->routeIs('mentor.submissions*');
     $isCommunity = request()->routeIs('mentor.community*');
     $isProfile = request()->routeIs('mentor.profile.*') || request()->routeIs('account*');
 @endphp

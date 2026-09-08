@@ -208,7 +208,7 @@
             <div class="card">
                 <div class="mentor-dash__card-head">
                     <h3 class="mentor-dash__card-title">Mentee progress</h3>
-                    <a href="{{ route('mentor.journey') }}" class="mentor-dash__card-link">Progress tracker →</a>
+                    <a href="{{ route('mentor.journey') }}" class="mentor-dash__card-link">Progress →</a>
                 </div>
                 @forelse($menteeProgress ?? [] as $enrollment)
                 @php $progress = $enrollment->progress_data ?? ['percent' => 0]; @endphp

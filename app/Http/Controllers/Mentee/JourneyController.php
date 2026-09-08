@@ -222,7 +222,7 @@ class JourneyController extends Controller
 
             if ($request->hasFile('submission_file')) {
                 $path = $request->file('submission_file')->store('submissions/'.auth()->id(), 'public');
-                $extra['submission_url'] = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+                $extra['submission_url'] = asset('storage/'.$path);
             }
             if ($request->filled('submission_text')) {
                 $extra['submission_text'] = $request->submission_text;
@@ -274,28 +274,23 @@ class JourneyController extends Controller
         }
 
         $isCorrect = (int) $request->selected_index === (int) $mcq->correct_index;
-        $points = $isCorrect ? (int) $mcq->points : 0;
 
         McqAttempt::create([
             'user_id' => auth()->id(),
             'mcq_id' => $mcq->id,
             'selected_index' => $request->selected_index,
             'is_correct' => $isCorrect,
-            'points_earned' => $points,
+            'points_earned' => 0,
             'attempted_at' => now(),
         ]);
 
-        if ($isCorrect) {
-            StudentCurriculumProgress::markComplete(auth()->id(), 'mcq', $mcq->id, [
-                'submission_status' => 'submitted',
-                'is_completed' => false,
-            ]);
-        } else {
-            StudentCurriculumProgress::where('user_id', auth()->id())
-                ->where('item_type', 'mcq')
-                ->where('item_id', $mcq->id)
-                ->delete();
-        }
+        // Always send to mentor review — do not reveal correctness to the mentee yet.
+        StudentCurriculumProgress::markComplete(auth()->id(), 'mcq', $mcq->id, [
+            'submission_status' => 'submitted',
+            'is_completed' => false,
+            'mentor_feedback' => null,
+            'reviewed_at' => null,
+        ]);
 
         if (! $canViewProgress) {
             return response()->json([
@@ -305,16 +300,14 @@ class JourneyController extends Controller
         }
 
         return response()->json([
-            'correct' => $isCorrect,
-            'correct_index' => (int) $mcq->correct_index,
-            'explanation' => $mcq->explanation,
-            'points_earned' => $points,
-            'awaiting_review' => $isCorrect,
-            'submission_status' => $isCorrect ? 'submitted' : 'none',
-            'message' => $isCorrect
-                ? 'Correct! Awaiting mentor approval.'
-                : 'Incorrect — try again.',
+            'awaiting_review' => true,
+            'submission_status' => 'submitted',
+            'points_earned' => 0,
+            'message' => 'Answer submitted. Waiting for mentor review.',
             'progress_report_enabled' => true,
+            'explanation' => null,
+            'correct_index' => null,
+            'correct' => null,
         ]);
     }
 
