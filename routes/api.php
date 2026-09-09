@@ -249,6 +249,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/channels/{channelId}/members/{userId}', [CommunityController::class, 'removeMember'])->name('channels.members.remove');
             Route::get('/channels/{channelId}/messages',          [CommunityController::class, 'messages'])->name('messages');
             Route::post('/channels/{channelId}/messages',         [CommunityController::class, 'postMessage'])->name('postMessage');
+            Route::get('/messages/{msgId}/locate',                [CommunityController::class, 'locateMessage'])->name('messages.locate');
             Route::post('/messages/{msgId}/like',                 [CommunityController::class, 'likeMessage'])->name('likeMessage');
             Route::post('/messages/{msgId}/report',              [CommunityController::class, 'reportMessage'])->name('messages.report');
             Route::delete('/messages/{msgId}',                    [CommunityController::class, 'deleteMessage'])->name('messages.delete');
@@ -476,6 +477,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/channels/{channelId}/members/{userId}', [CommunityController::class, 'removeMember'])->name('channels.members.remove');
             Route::get('/channels/{channelId}/messages',          [CommunityController::class, 'messages'])->name('channels.messages');
             Route::post('/channels/{channelId}/messages',         [CommunityController::class, 'postMessage'])->name('channels.messages.post');
+            Route::get('/messages/{msgId}/locate',                [CommunityController::class, 'locateMessage'])->name('messages.locate');
             Route::post('/messages/{msgId}/like',                 [CommunityController::class, 'likeMessage'])->name('messages.like');
             Route::delete('/messages/{msgId}',                    [CommunityController::class, 'deleteMessage'])->name('messages.delete');
             Route::get('/invitations',                           [CommunityController::class, 'myInvitations'])->name('invitations');

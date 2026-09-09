@@ -45,6 +45,55 @@ class MessageController extends Controller
         return redirect()->route($this->communityShowRoute(), $channel->slug);
     }
 
+    public function older(Request $request, Channel $channel)
+    {
+        $user = Auth::user();
+        abort_unless($channel->canAccess($user), 403);
+
+        $data = $request->validate([
+            'before_id' => 'required|integer|exists:messages,id',
+            'per_page'  => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $anchor = Message::query()
+            ->where('channel_id', $channel->id)
+            ->whereKey($data['before_id'])
+            ->firstOrFail();
+
+        $perPage = $data['per_page'] ?? 30;
+        $chunk = $channel->olderMessagesForUser($user, $anchor, $perPage);
+        $messages = $chunk['messages'];
+
+        $html = '';
+        if ($messages->isNotEmpty()) {
+            $html = view('partials.community-messages-chunk', [
+                'messages'    => $messages,
+                'channel'     => $channel,
+                'routePrefix' => $this->communityRoutePrefix(),
+            ])->render();
+        }
+
+        return response()->json([
+            'html'      => $html,
+            'has_more'  => $chunk['has_more'],
+            'oldest_id' => $messages->first()?->id,
+            'count'     => $messages->count(),
+        ]);
+    }
+
+    private function communityRoutePrefix(): string
+    {
+        if (request()->is('admin/*') || request()->is('admin')) {
+            return 'admin.community';
+        }
+
+        if (request()->is('mentor/*')) {
+            return 'mentor.community';
+        }
+
+        return 'mentee.community';
+    }
+
     private function communityShowRoute(): string
     {
         if (request()->is('admin/*') || request()->is('admin')) {

@@ -32,6 +32,9 @@ class Message extends Model
     protected $casts = [
         'liked_by'    => 'array',
         'likes_count' => 'integer',
+        'channel_id'  => 'integer',
+        'user_id'     => 'integer',
+        'parent_id'   => 'integer',
     ];
 
     protected $appends = ['image_url', 'video_url'];
@@ -114,7 +117,8 @@ class Message extends Model
         }
 
         $parentId = $data['parent_id'] ?? $request->input('parent_id');
-        if ($parentId) {
+        if ($parentId !== null && $parentId !== '') {
+            $parentId = (int) $parentId;
             $parent = self::query()
                 ->where('id', $parentId)
                 ->where('channel_id', $channel->id)
@@ -125,13 +129,15 @@ class Message extends Model
                     'parent_id' => ['Invalid reply target for this channel.'],
                 ]);
             }
+        } else {
+            $parentId = null;
         }
 
         return [
             'body'       => $body,
             'image_path' => $hasImage ? self::storeUploadedImage($request->file('image'), $channel->id) : null,
             'video_path' => $hasVideo ? self::storeUploadedVideo($request->file('video'), $channel->id) : null,
-            'parent_id'  => $parentId ?: null,
+            'parent_id'  => $parentId,
         ];
     }
 
@@ -232,14 +238,15 @@ class Message extends Model
             'image_url'     => $imageUrl,
             'video_path'    => $videoUrl,
             'video_url'     => $videoUrl,
-            'parent_id'     => $this->parent_id,
+            'parent_id'     => $this->parent_id !== null ? (int) $this->parent_id : null,
             'parent'        => $this->relationLoaded('parent') && $this->parent
                 ? [
-                    'id'      => $this->parent->id,
-                    'user_id' => $this->parent->user_id,
+                    'id'      => (int) $this->parent->id,
+                    'user_id' => (int) $this->parent->user_id,
                     'body'    => $this->parent->body,
+                    'message' => $this->parent->body,
                     'user'    => $this->parent->relationLoaded('user')
-                        ? $this->parent->user?->only(['id', 'name'])
+                        ? $this->parent->user?->only(['id', 'name', 'avatar_url', 'role'])
                         : null,
                 ]
                 : null,

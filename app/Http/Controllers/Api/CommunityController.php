@@ -754,6 +754,59 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
     }
 
     /**
+     * Locate any message (main or reply) in the channel feed.
+     * Returns the page number, index within that page, the message payload,
+     * and the same page of messages as GET .../messages so the client can jump to it.
+     *
+     * Query: per_page=30 (must match the list endpoint the app uses)
+     */
+    public function locateMessage(Request $request, int $msgId): JsonResponse
+    {
+        $user = $request->user();
+        $message = Message::query()->findOrFail($msgId);
+        $channel = Channel::findOrFail($message->channel_id);
+
+        abort_unless($channel->canAccess($user), 403);
+
+        $data = $request->validate([
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $perPage = $data['per_page'] ?? 30;
+
+        $location = $channel->locateMessageForUser($user, $message, $perPage);
+
+        if ($location === null) {
+            return response()->json([
+                'message' => 'Message not found in this channel feed.',
+            ], 404);
+        }
+
+        $paginator = $channel->paginateMessagesForUser($user, $perPage, $location['page']);
+
+        $message->load([
+            'user:id,name,avatar_url,role',
+            'parent.user:id,name,avatar_url,role',
+        ]);
+        $message->loadCount('replies');
+
+        return response()->json([
+            'channel'       => $channel->toApiArray($user),
+            'message'       => $message->toApiArray($user->id),
+            'index_in_page' => $location['index_in_page'],
+            'messages'      => collect($paginator->items())->map(
+                fn (Message $m) => $m->toApiArray($user->id)
+            ),
+            'meta'          => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
      * Paginated top-level messages with replies.
      *
      * Query:
@@ -801,7 +854,7 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
     /**
      * Post a message or thread reply.
      * Accepts JSON or multipart form-data with optional `image` and/or `video`.
-     * Fields: body|message (text), parent_id (reply),
+     * Fields: body|message (text), parent_id (reply to a main message or another reply),
      * image (jpeg/png/webp/gif, max 5MB), video (mp4/mov/avi/webm/mpeg, max 10MB).
      * At least one of body, image, or video is required.
      */
@@ -827,13 +880,6 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
             ], 422);
         }
 
-        if (! empty($attrs['parent_id'])) {
-            $parent = Message::where('channel_id', $channel->id)->findOrFail($attrs['parent_id']);
-            if ($parent->parent_id) {
-                return response()->json(['message' => 'Cannot reply to a reply. Reply to the parent message.'], 422);
-            }
-        }
-
         if (! $channel->isMember($user) && $channel->canSelfJoin($user)) {
             $channel->addMember($user);
         }
@@ -851,7 +897,10 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
         $channel->markRead($user);
 
         return response()->json([
-            'message' => $message->load('user:id,name,avatar_url,role')->toApiArray($user->id),
+            'message' => $message->load([
+                'user:id,name,avatar_url,role',
+                'parent.user:id,name,avatar_url,role',
+            ])->toApiArray($user->id),
         ], 201);
     }
 

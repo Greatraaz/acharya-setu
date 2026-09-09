@@ -19,7 +19,7 @@ class CommunityController extends Controller
         return view('frontend.mentee.community', compact('channels'));
     }
 
-    public function show(Channel $channel)
+    public function show(Request $request, Channel $channel)
     {
         $user = Auth::user();
         abort_unless($channel->canAccess($user), 403);

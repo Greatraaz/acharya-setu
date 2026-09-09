@@ -297,7 +297,7 @@ class PortalController extends Controller
         return view('frontend.mentors.community', compact('channels'));
     }
 
-    public function communityShow(Channel $channel)
+    public function communityShow(Request $request, Channel $channel)
     {
         $user = auth()->user();
         abort_unless($channel->canAccess($user), 403);

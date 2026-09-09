@@ -147,20 +147,136 @@ class Channel extends Model
                 'user',
                 'parent' => fn ($q) => $q->with('user'),
             ])
-            ->oldest();
+            ->oldest('created_at')
+            ->orderBy('messages.id');
     }
 
     /** Paginate messages oldest→newest; defaults to the last page so latest appear at the bottom. */
-    public function paginateMessagesForUser(User $user, int $perPage = 30)
+    public function paginateMessagesForUser(User $user, int $perPage = 30, ?int $page = null)
     {
         $query = $this->messagesForUser($user);
 
         $total = (clone $query)->toBase()->getCountForPagination();
         $lastPage = max(1, (int) ceil($total / $perPage));
-        $page = (int) request()->input('page', $lastPage);
+        $page = $page ?? (int) request()->input('page', $lastPage);
         $page = max(1, min($page, $lastPage));
 
         return $query->paginate($perPage, ['*'], 'page', $page)->withQueryString();
+    }
+
+    /**
+     * Locate a message in the user's paginated feed (same order as messages list).
+     *
+     * @return array{page: int, index_in_page: int, per_page: int, total: int, last_page: int}|null
+     */
+    public function locateMessageForUser(User $user, Message $message, int $perPage = 30): ?array
+    {
+        if ((int) $message->channel_id !== (int) $this->id) {
+            return null;
+        }
+
+        $base = $this->allMessages()->visibleToUser($user);
+
+        if (! (clone $base)->where('messages.id', $message->id)->exists()) {
+            return null;
+        }
+
+        $beforeCount = (clone $base)
+            ->where(function ($q) use ($message) {
+                $q->where('messages.created_at', '<', $message->created_at)
+                    ->orWhere(function ($q2) use ($message) {
+                        $q2->where('messages.created_at', '=', $message->created_at)
+                            ->where('messages.id', '<', $message->id);
+                    });
+            })
+            ->count();
+
+        $total = (clone $base)->toBase()->getCountForPagination();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = (int) floor($beforeCount / $perPage) + 1;
+        $page = max(1, min($page, $lastPage));
+
+        return [
+            'page'          => $page,
+            'index_in_page' => $beforeCount % $perPage,
+            'per_page'      => $perPage,
+            'total'         => $total,
+            'last_page'     => $lastPage,
+        ];
+    }
+
+    /**
+     * Page number for ?message= deep-links (same feed order as the web/API list).
+     */
+    public function pageForMessageParam(User $user, ?int $messageId, int $perPage = 30): ?int
+    {
+        if (! $messageId) {
+            return null;
+        }
+
+        $message = Message::query()
+            ->where('channel_id', $this->id)
+            ->whereKey($messageId)
+            ->first();
+
+        if (! $message) {
+            return null;
+        }
+
+        $location = $this->locateMessageForUser($user, $message, $perPage);
+
+        return $location['page'] ?? null;
+    }
+
+    public function olderMessagesForUser(User $user, Message $anchor, int $perPage = 30): array
+    {
+        if ((int) $anchor->channel_id !== (int) $this->id) {
+            return ['messages' => collect(), 'has_more' => false];
+        }
+
+        $olderQuery = $this->allMessages()
+            ->visibleToUser($user)
+            ->where(function ($q) use ($anchor) {
+                $q->where('messages.created_at', '<', $anchor->created_at)
+                    ->orWhere(function ($q2) use ($anchor) {
+                        $q2->where('messages.created_at', '=', $anchor->created_at)
+                            ->where('messages.id', '<', $anchor->id);
+                    });
+            });
+
+        $ids = (clone $olderQuery)
+            ->orderByDesc('messages.created_at')
+            ->orderByDesc('messages.id')
+            ->limit($perPage)
+            ->pluck('messages.id');
+
+        if ($ids->isEmpty()) {
+            return ['messages' => collect(), 'has_more' => false];
+        }
+
+        $messages = $this->messagesForUser($user)
+            ->whereIn('messages.id', $ids)
+            ->get();
+
+        $oldest = $messages->first();
+        $hasMore = false;
+        if ($oldest) {
+            $hasMore = $this->allMessages()
+                ->visibleToUser($user)
+                ->where(function ($q) use ($oldest) {
+                    $q->where('messages.created_at', '<', $oldest->created_at)
+                        ->orWhere(function ($q2) use ($oldest) {
+                            $q2->where('messages.created_at', '=', $oldest->created_at)
+                                ->where('messages.id', '<', $oldest->id);
+                        });
+                })
+                ->exists();
+        }
+
+        return [
+            'messages' => $messages,
+            'has_more' => $hasMore,
+        ];
     }
 
     public static function storeValidationRules(): array

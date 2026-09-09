@@ -118,25 +118,28 @@
         @include('partials.community-content-warning')
 
         {{-- Messages --}}
-        <div class="community-thread__messages" id="messages-container">
-            @if($messages->hasPages() && $messages->currentPage() > 1)
-            <div class="community-thread__load-older">
-                @if(request()->routeIs('admin.*'))
-                    <a href="{{ $messages->previousPageUrl() }}" class="community-btn community-btn--ghost community-btn--sm">↑ Load older messages</a>
-                @else
-                    <a href="{{ $messages->previousPageUrl() }}" class="btn btn-ghost btn-sm">↑ Load older messages</a>
-                @endif
-                <span class="community-thread__load-older-meta">Page {{ $messages->currentPage() }} of {{ $messages->lastPage() }}</span>
+        <div class="community-thread__messages"
+             id="messages-container"
+             data-older-url="{{ route($r.'.messages.older', $channel->slug) }}"
+             data-has-more="{{ ($messages->hasPages() && $messages->currentPage() > 1) ? '1' : '0' }}"
+             data-loading="0">
+            <div class="community-thread__load-older" id="load-older-wrap" @if(!($messages->hasPages() && $messages->currentPage() > 1)) hidden @endif>
+                <button type="button"
+                        id="load-older-btn"
+                        class="{{ request()->routeIs('admin.*') ? 'community-btn community-btn--ghost community-btn--sm' : 'btn btn-ghost btn-sm' }}">
+                    ↑ Load older messages
+                </button>
+                <span class="community-thread__load-older-status" id="load-older-status" hidden>Loading…</span>
             </div>
-            @endif
 
+            <div id="messages-list">
             @forelse($messages as $message)
             @php
                 $msgDate = $message->created_at->toDateString();
             @endphp
 
             @if($msgDate !== $prevDate)
-            <div class="community-thread__date-divider">
+            <div class="community-thread__date-divider" data-date="{{ $msgDate }}">
                 <span>
                     @if($message->created_at->isToday()) Today
                     @elseif($message->created_at->isYesterday()) Yesterday
@@ -159,6 +162,7 @@
                 <p class="community-thread__empty-sub">Be the first to say something in #{{ $channel->name }}</p>
             </div>
             @endforelse
+            </div>
         </div>
 
         @if($channel->canPost(Auth::user()))
@@ -264,6 +268,144 @@
 @once
 @push('scripts')
 <script>
+window.CommunityFeed = {
+    container: null,
+    list: null,
+    loading: false,
+    hasMore: false,
+    olderUrl: '',
+
+    init() {
+        this.container = document.getElementById('messages-container');
+        this.list = document.getElementById('messages-list');
+        if (!this.container || !this.list) return;
+
+        this.olderUrl = this.container.dataset.olderUrl || '';
+        this.hasMore = this.container.dataset.hasMore === '1';
+
+        document.getElementById('load-older-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.loadOlder();
+        });
+
+        this.container.addEventListener('scroll', () => {
+            if (this.container.scrollTop <= 48) {
+                this.loadOlder({ silent: true });
+            }
+        }, { passive: true });
+    },
+
+    oldestMessageId() {
+        const first = this.list?.querySelector('.community-chat-row[data-message-id]');
+        return first ? first.getAttribute('data-message-id') : null;
+    },
+
+    setLoading(on, opts = {}) {
+        this.loading = on;
+        this.container?.setAttribute('data-loading', on ? '1' : '0');
+        const btn = document.getElementById('load-older-btn');
+        const status = document.getElementById('load-older-status');
+        if (btn) btn.disabled = on;
+        if (status) {
+            if (on && !opts.silent) {
+                status.hidden = false;
+            } else if (!on) {
+                status.hidden = true;
+            }
+        }
+        if (btn && !opts.silent) {
+            btn.textContent = on ? 'Loading…' : '↑ Load older messages';
+        }
+    },
+
+    updateHasMore(hasMore) {
+        this.hasMore = !!hasMore;
+        this.container?.setAttribute('data-has-more', this.hasMore ? '1' : '0');
+        const wrap = document.getElementById('load-older-wrap');
+        if (wrap) wrap.hidden = !this.hasMore;
+    },
+
+    dedupeDateDividers() {
+        let prevDate = null;
+        this.list.querySelectorAll('.community-thread__date-divider').forEach((el) => {
+            const date = el.getAttribute('data-date') || el.textContent.trim();
+            if (prevDate !== null && date === prevDate) {
+                el.remove();
+            } else {
+                prevDate = date;
+            }
+        });
+    },
+
+    async loadOlder(opts = {}) {
+        if (this.loading || !this.hasMore || !this.olderUrl) {
+            return false;
+        }
+
+        const beforeId = this.oldestMessageId();
+        if (!beforeId) return false;
+
+        this.setLoading(true, opts);
+        const prevHeight = this.container.scrollHeight;
+        const prevTop = this.container.scrollTop;
+
+        try {
+            const url = new URL(this.olderUrl, window.location.origin);
+            url.searchParams.set('before_id', beforeId);
+
+            const res = await fetch(url.toString(), {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+
+            if (!res.ok) throw new Error('Failed to load older messages');
+            const data = await res.json();
+
+            if (data.html) {
+                const empty = this.list.querySelector('.community-thread__empty');
+                empty?.remove();
+
+                const wrap = document.createElement('div');
+                wrap.innerHTML = data.html;
+                while (wrap.firstChild) {
+                    this.list.insertBefore(wrap.firstChild, this.list.firstChild);
+                }
+                this.dedupeDateDividers();
+
+                // Keep viewport anchored (WhatsApp-style)
+                const newHeight = this.container.scrollHeight;
+                this.container.scrollTop = prevTop + (newHeight - prevHeight);
+            }
+
+            this.updateHasMore(!!data.has_more);
+            return (data.count || 0) > 0;
+        } catch (err) {
+            console.error(err);
+            return false;
+        } finally {
+            this.setLoading(false, opts);
+        }
+    },
+
+    async ensureMessageVisible(id) {
+        const existing = document.getElementById('msg-' + id);
+        if (existing) return existing;
+
+        // Load older chunks until the message appears (keep newer messages below).
+        let guard = 40;
+        while (this.hasMore && guard-- > 0) {
+            const loaded = await this.loadOlder({ silent: false });
+            const el = document.getElementById('msg-' + id);
+            if (el) return el;
+            if (!loaded) break;
+        }
+        return document.getElementById('msg-' + id);
+    }
+};
+
 window.CommunityMsgMenu = {
     closeAll() {
         document.querySelectorAll('.community-msg-menu').forEach(menu => {
@@ -336,16 +478,20 @@ window.CommunityMsgMenu = {
         toggleReply(id);
     },
 
-    scrollToMessage(id) {
+    async scrollToMessage(id) {
         this.closeAll();
-        const el = document.getElementById('msg-' + id);
-        if (!el) {
-            window.alert('Original message is not in the current view. Try loading older messages.');
-            return;
-        }
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.add('community-chat-row--highlight');
-        window.setTimeout(() => el.classList.remove('community-chat-row--highlight'), 1800);
+        const el = await window.CommunityFeed.ensureMessageVisible(id);
+        if (!el) return;
+        this.highlightMessage(el);
+    },
+
+    highlightMessage(el) {
+        if (!el) return;
+        requestAnimationFrame(() => {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('community-chat-row--highlight');
+            window.setTimeout(() => el.classList.remove('community-chat-row--highlight'), 1800);
+        });
     }
 };
 
@@ -390,13 +536,28 @@ function scrollMessagesToBottom() {
     c.scrollTop = c.scrollHeight;
 }
 
+async function focusMessageFromQuery() {
+    const id = new URLSearchParams(window.location.search).get('message');
+    if (!id || !window.CommunityMsgMenu) return false;
+    const el = await window.CommunityFeed.ensureMessageVisible(id);
+    if (!el) return true;
+    window.CommunityMsgMenu.highlightMessage(el);
+    return true;
+}
+
 document.addEventListener('click', () => CommunityMsgMenu.closeAll());
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') CommunityMsgMenu.closeAll();
 });
 window.addEventListener('resize', () => CommunityMsgMenu.closeAll());
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    window.CommunityFeed.init();
+
+    if (await focusMessageFromQuery()) {
+        return;
+    }
+
     scrollMessagesToBottom();
     requestAnimationFrame(scrollMessagesToBottom);
     setTimeout(scrollMessagesToBottom, 100);

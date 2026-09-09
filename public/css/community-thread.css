@@ -328,6 +328,12 @@
     background: var(--ct-bg);
 }
 
+#messages-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 /* Chat rows: other users left, logged-in user right */
 .community-chat-row {
     display: grid;
@@ -636,9 +642,19 @@
     flex-wrap: wrap;
 }
 
+.community-thread__load-older[hidden] {
+    display: none !important;
+}
+
+.community-thread__load-older-status,
 .community-thread__load-older-meta {
     font-size: 11px;
     color: var(--ct-text-faint);
+}
+
+.community-thread__load-older #load-older-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
 }
 
 .community-thread__msg-author {

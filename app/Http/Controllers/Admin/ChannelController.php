@@ -94,7 +94,7 @@ class ChannelController extends Controller
             ->with('success', 'Channel created!');
     }
 
-    public function show(Channel $channel)
+    public function show(Request $request, Channel $channel)
     {
         $user = Auth::user();
         abort_unless($channel->canAccess($user), 403);

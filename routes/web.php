@@ -317,6 +317,7 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::post('/community/{channel:slug}/invite',                   [ChannelController::class, 'invite'])->name('community.invite');
     Route::delete('/community/{channel:slug}/members/{user}',         [ChannelController::class, 'removeMember'])->name('community.members.remove');
     Route::delete('/community/{channel:slug}',                        [ChannelController::class, 'destroy'])->name('community.destroy');
+    Route::get('/community/{channel:slug}/messages/older',            [MessageController::class, 'older'])->name('community.messages.older');
     Route::post('/community/{channel:slug}/messages',                 [MessageController::class, 'store'])->name('community.messages.store');
     Route::post('/community/messages/{message}/like',                 [MessageController::class, 'like'])->name('community.messages.like');
     Route::post('/community/messages/{message}/report',               [MessageController::class, 'report'])->name('community.messages.report');
@@ -448,6 +449,7 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::post('/community/{channel:slug}/invite',  [ChannelController::class, 'invite'])->name('community.invite');
     Route::delete('/community/{channel:slug}/members/{user}', [ChannelController::class, 'removeMember'])->name('community.members.remove');
     Route::delete('/community/{channel:slug}',   [ChannelController::class, 'destroy'])->name('community.destroy');
+    Route::get('/community/{channel:slug}/messages/older', [MessageController::class, 'older'])->name('community.messages.older');
     Route::post('/community/{channel:slug}/messages',[MessageController::class, 'store'])->name('community.messages.store');
 
     // Jobs
@@ -676,6 +678,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         Route::post('/{channel:slug}/invite',[ChannelController::class, 'invite'])->name('invite');
         Route::delete('/{channel:slug}/members/{user}', [ChannelController::class, 'removeMember'])->name('members.remove');
         Route::delete('/{channel:slug}',     [ChannelController::class, 'destroy'])->name('destroy');
+        Route::get('/{channel:slug}/messages/older', [MessageController::class, 'older'])->name('messages.older');
         Route::post('/{channel:slug}/messages', [MessageController::class, 'store'])  ->name('messages.store');
     });
 
