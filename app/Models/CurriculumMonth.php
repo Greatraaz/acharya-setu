@@ -56,11 +56,12 @@ class CurriculumMonth extends Model
         }
  
         $done = StudentCurriculumProgress::where('user_id', $userId)
-            ->where('is_completed', true)
             ->where(function ($q) use ($taskIds, $mcqIds) {
-                $q->where(fn($q) => $q->where('item_type', 'task')->whereIn('item_id', $taskIds))
-                  ->orWhere(fn($q) => $q->where('item_type', 'mcq')->whereIn('item_id', $mcqIds));
-            })->count();
+                $q->where(fn ($q) => $q->where('item_type', 'task')->whereIn('item_id', $taskIds))
+                  ->orWhere(fn ($q) => $q->where('item_type', 'mcq')->whereIn('item_id', $mcqIds));
+            })
+            ->taskOrMcqCountsTowardProgress()
+            ->count();
  
         return ['percent' => (int) round($done / $total * 100), 'completed' => $done, 'total' => $total];
     }

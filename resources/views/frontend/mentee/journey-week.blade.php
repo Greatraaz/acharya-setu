@@ -159,16 +159,18 @@
                     @php
                         $isSelected = $attempt && (int) $attempt->selected_index === (int) $idx;
                         $isCorrectOption = $mcqApproved && (int) $mcq->correct_index === (int) $idx;
+                        $showSelected = $isSelected && ($mcqAwaiting || $mcqRejected || $mcqApproved);
                     @endphp
                     <button type="button"
-                        class="btn btn-ghost journey-page__mcq-option {{ $isCorrectOption ? 'is-correct' : '' }} {{ $isSelected && ! $isCorrectOption && $mcqApproved ? 'is-selected' : '' }}"
-                        @if($isSelected && ! $mcqApproved) style="border-color:var(--brand);" @endif
+                        class="btn btn-ghost journey-page__mcq-option {{ $isCorrectOption ? 'is-correct' : '' }} {{ $showSelected && ! $isCorrectOption ? 'is-selected' : '' }}"
                         @if($mcqApproved || $mcqAwaiting) disabled @endif
                         onclick="answerMcq({{ $mcq->id }}, {{ (int)$idx }}, this)">
                         <span class="journey-page__mcq-option-label">{{ chr(65 + (int)$idx) }}.</span>
                         <span class="journey-page__mcq-option-text">{{ is_array($option) ? ($option['text'] ?? json_encode($option)) : $option }}</span>
                         @if($isCorrectOption)
                             <span class="journey-page__mcq-option-tag">Correct</span>
+                        @elseif($showSelected)
+                            <span class="journey-page__mcq-option-tag journey-page__mcq-option-tag--selected">Your answer</span>
                         @endif
                     </button>
                     @endforeach
@@ -176,6 +178,12 @@
                 <div class="journey-page__mcq-result" data-mcq-result="{{ $mcq->id }}">
                     @if($mcqAwaiting)
                         <span class="journey-page__mcq-result--neutral">Answer submitted — waiting for mentor review</span>
+                        @if($attempt)
+                        <p class="journey-page__mcq-explanation">
+                            You selected:
+                            <strong>{{ is_array($options[$attempt->selected_index] ?? null) ? ($options[$attempt->selected_index]['text'] ?? '') : ($options[$attempt->selected_index] ?? '—') }}</strong>
+                        </p>
+                        @endif
                     @elseif($mcqApproved)
                         <span class="journey-page__mcq-result--correct">
                             Approved by mentor
@@ -188,6 +196,12 @@
                         @endif
                     @elseif($mcqRejected)
                         <span class="journey-page__mcq-result--wrong">Mentor requested changes — pick an answer and resubmit</span>
+                        @if($attempt)
+                        <p class="journey-page__mcq-explanation">
+                            Previous answer:
+                            <strong>{{ is_array($options[$attempt->selected_index] ?? null) ? ($options[$attempt->selected_index]['text'] ?? '') : ($options[$attempt->selected_index] ?? '—') }}</strong>
+                        </p>
+                        @endif
                     @endif
                     @if($canViewProgress && $mcqProgress?->mentor_feedback)
                     <div class="journey-page__mentor-reply" style="margin-top:8px;">

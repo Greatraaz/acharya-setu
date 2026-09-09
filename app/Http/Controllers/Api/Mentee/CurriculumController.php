@@ -133,7 +133,7 @@ $canViewProgress = $request->user()->canAccessProgressReport();
 
 $data = $request->validate([
     'search'         => 'nullable|string|max:100',
-    'status'         => 'nullable|in:pending,in_progress,completed',
+    'status'         => 'nullable|in:pending,in_progress,completed,awaiting_review,rejected',
     'type'           => 'nullable|in:'.implode(',', array_keys(CurriculumTask::TYPES)),
     'week_id'        => 'nullable|integer',
     'track_id'       => 'nullable|integer',
@@ -220,6 +220,28 @@ $query = CurriculumTask::where('mentee_id', $menteeId)
                         ->orWhereNotNull('scp.submission_text')
                         ->orWhereNotNull('scp.submission_url');
                 });
+        });
+    })
+    ->when($status === 'awaiting_review', function ($q) use ($menteeId) {
+        $q->whereExists(function ($sub) use ($menteeId) {
+            $sub->selectRaw('1')
+                ->from('student_curriculum_progress as scp')
+                ->whereColumn('scp.item_id', 'curriculum_tasks.id')
+                ->where('scp.user_id', $menteeId)
+                ->where('scp.item_type', 'task')
+                ->where('scp.is_completed', 0)
+                ->where('scp.submission_status', 'submitted');
+        });
+    })
+    ->when($status === 'rejected', function ($q) use ($menteeId) {
+        $q->whereExists(function ($sub) use ($menteeId) {
+            $sub->selectRaw('1')
+                ->from('student_curriculum_progress as scp')
+                ->whereColumn('scp.item_id', 'curriculum_tasks.id')
+                ->where('scp.user_id', $menteeId)
+                ->where('scp.item_type', 'task')
+                ->where('scp.is_completed', 0)
+                ->where('scp.submission_status', 'rejected');
         });
     })
     ->when($status === 'pending', function ($q) use ($menteeId) {
@@ -626,8 +648,22 @@ if ($includeProgress) {
     $payload['status'] = $status;
     $payload['is_completed'] = $status === 'completed';
     $payload['submission_status'] = $progress?->submission_status ?? 'none';
+    $payload['submission_text'] = $progress?->submission_text;
+    $payload['submission_url'] = $progress?->submissionLink();
     $payload['completed_at'] = $progress?->completed_at;
+    $payload['reviewed_at'] = $progress?->reviewed_at;
     $payload['mentor_feedback'] = $progress?->mentor_feedback;
+    $payload['mentor_review'] = $progress && in_array($progress->submission_status, ['submitted', 'approved', 'rejected'], true)
+        ? [
+            'submission_status' => $progress->submission_status,
+            'mentor_feedback'   => $progress->mentor_feedback,
+            'reviewed_at'       => $progress->reviewed_at,
+            'is_completed'      => (bool) $progress->is_completed,
+            'submitted_at'      => $progress->updated_at,
+            'submission_text'   => $progress->submission_text,
+            'submission_url'    => $progress->submissionLink(),
+        ]
+        : null;
 }
 
 return $payload;
@@ -639,12 +675,20 @@ if (! $progress) {
     return 'pending';
 }
 
-if ($progress->is_completed) {
+if ($progress->is_completed || $progress->submission_status === 'approved') {
     return 'completed';
 }
 
+if ($progress->submission_status === 'submitted') {
+    return 'awaiting_review';
+}
+
+if ($progress->submission_status === 'rejected') {
+    return 'rejected';
+}
+
 if (
-    in_array($progress->submission_status, ['submitted', 'reviewed', 'rejected'], true)
+    in_array($progress->submission_status, ['reviewed'], true)
     || $progress->submission_text
     || $progress->submission_url
 ) {
@@ -738,6 +782,11 @@ if ($isApproved) {
 
 $correctIndex = $mcq->correct_index;
 $revealAnswer = $isApproved || $isRejected;
+$selectedOption = null;
+if ($attempt !== null && isset($options[(int) $attempt->selected_index])) {
+    $raw = $options[(int) $attempt->selected_index];
+    $selectedOption = is_array($raw) ? (string) ($raw['text'] ?? json_encode($raw)) : (string) $raw;
+}
 
 return array_merge($payload, [
     'correct_index'  => $revealAnswer ? $correctIndex : null,
@@ -750,10 +799,11 @@ return array_merge($payload, [
     'status'         => $status,
     'submission_status' => $submissionStatus,
     'last_attempt'   => $attempt ? [
-        'selected_index' => $attempt->selected_index,
-        'is_correct'     => $revealAnswer ? (bool) $attempt->is_correct : null,
-        'points_earned'  => $isApproved ? (int) $attempt->points_earned : 0,
-        'attempted_at'   => $attempt->attempted_at,
+        'selected_index'  => $attempt->selected_index,
+        'selected_option' => $selectedOption,
+        'is_correct'      => $revealAnswer ? (bool) $attempt->is_correct : null,
+        'points_earned'   => $isApproved ? (int) $attempt->points_earned : 0,
+        'attempted_at'    => $attempt->attempted_at,
     ] : null,
     'mentor_review'  => $progress && in_array($submissionStatus, ['approved', 'rejected', 'submitted'], true) ? [
         'submission_status' => $submissionStatus,

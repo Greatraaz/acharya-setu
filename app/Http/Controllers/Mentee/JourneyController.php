@@ -230,6 +230,8 @@ class JourneyController extends Controller
             if ($request->filled('submission_url')) {
                 $extra['submission_url'] = $request->submission_url;
             }
+            $extra['mentor_feedback'] = null;
+            $extra['reviewed_at'] = null;
         }
 
         $progress = StudentCurriculumProgress::markComplete(
@@ -240,6 +242,13 @@ class JourneyController extends Controller
         );
 
         $canViewProgress = auth()->user()->canAccessProgressReport();
+        $streamId = $task->week?->month?->stream_id;
+        $progressSummary = $canViewProgress
+            ? StudentCurriculumProgress::getMenteeProgressSummary(auth()->id())
+            : null;
+        $trackProgress = ($canViewProgress && $streamId)
+            ? StudentCurriculumProgress::getOverallProgress(auth()->id(), (int) $streamId)
+            : null;
 
         return response()->json([
             'message' => $complete
@@ -249,6 +258,8 @@ class JourneyController extends Controller
             'awaiting_review' => ! $complete,
             'submission_status' => $progress->submission_status ?? ($complete ? 'approved' : 'submitted'),
             'progress_report_enabled' => $canViewProgress,
+            'summary' => $progressSummary,
+            'track_progress' => $trackProgress,
         ]);
     }
 
@@ -299,6 +310,8 @@ class JourneyController extends Controller
             ]);
         }
 
+        $streamId = $mcq->week?->month?->stream_id;
+
         return response()->json([
             'awaiting_review' => true,
             'submission_status' => 'submitted',
@@ -308,6 +321,10 @@ class JourneyController extends Controller
             'explanation' => null,
             'correct_index' => null,
             'correct' => null,
+            'summary' => StudentCurriculumProgress::getMenteeProgressSummary(auth()->id()),
+            'track_progress' => $streamId
+                ? StudentCurriculumProgress::getOverallProgress(auth()->id(), (int) $streamId)
+                : null,
         ]);
     }
 

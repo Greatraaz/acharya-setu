@@ -1,10 +1,11 @@
 <?php
 
 namespace App\Models;
- 
+
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
- 
+
 class StudentCurriculumProgress extends Model
 {
     protected $fillable = [
@@ -12,13 +13,16 @@ class StudentCurriculumProgress extends Model
         'submission_url', 'submission_text', 'submission_status',
         'mentor_feedback', 'reviewed_at',
     ];
- 
+
     protected $casts = [
         'is_completed' => 'boolean',
         'completed_at' => 'datetime',
         'reviewed_at'  => 'datetime',
     ];
- 
+
+    /** Task/MCQ statuses that increase journey progress %. */
+    public const PROGRESS_COUNTED_STATUSES = ['submitted', 'approved'];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -38,7 +42,54 @@ class StudentCurriculumProgress extends Model
 
         return url($url);
     }
- 
+
+    /**
+     * Whether this row currently increases journey progress.
+     * Tasks/MCQs: submitted (awaiting review) or approved. Rejected does not count.
+     */
+    public function contributesToProgress(): bool
+    {
+        if (in_array($this->item_type, ['task', 'mcq'], true)) {
+            return $this->is_completed
+                || in_array((string) $this->submission_status, self::PROGRESS_COUNTED_STATUSES, true);
+        }
+
+        return (bool) $this->is_completed;
+    }
+
+    /**
+     * Scope: rows that currently count toward progress %.
+     * - task/mcq: is_completed OR submission_status in submitted|approved
+     * - other types: is_completed only
+     */
+    public function scopeCountsTowardProgress(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->where(function (Builder $inner) {
+                $inner->whereIn('item_type', ['task', 'mcq'])
+                    ->where(function (Builder $s) {
+                        $s->where('is_completed', true)
+                            ->orWhereIn('submission_status', self::PROGRESS_COUNTED_STATUSES);
+                    });
+            })->orWhere(function (Builder $inner) {
+                $inner->whereNotIn('item_type', ['task', 'mcq'])
+                    ->where('is_completed', true);
+            });
+        });
+    }
+
+    /**
+     * Scope for task/mcq items only that count toward progress.
+     */
+    public function scopeTaskOrMcqCountsTowardProgress(Builder $query): Builder
+    {
+        return $query->whereIn('item_type', ['task', 'mcq'])
+            ->where(function (Builder $s) {
+                $s->where('is_completed', true)
+                    ->orWhereIn('submission_status', self::PROGRESS_COUNTED_STATUSES);
+            });
+    }
+
     /**
      * Upsert a progress record for a user.
      */
@@ -58,7 +109,7 @@ class StudentCurriculumProgress extends Model
             $payload
         );
     }
- 
+
     /**
      * Calculate overall progress for a user across a full stream.
      */
@@ -67,7 +118,7 @@ class StudentCurriculumProgress extends Model
         $months = CurriculumMonth::where('stream_id', $streamId)->with('weeks')->get();
         $total  = 0;
         $done   = 0;
- 
+
         foreach ($months as $month) {
             foreach ($month->weeks as $week) {
                 $p      = $week->getProgressForUser($userId);
@@ -75,7 +126,7 @@ class StudentCurriculumProgress extends Model
                 $done  += $p['completed'];
             }
         }
- 
+
         return [
             'percent'   => $total ? (int) round($done / $total * 100) : 0,
             'completed' => $done,
@@ -86,6 +137,8 @@ class StudentCurriculumProgress extends Model
     /**
      * Full mentee progress summary: tasks, MCQs, materials, videos.
      * Pass $mentorId to scope to that mentor's curriculum / videos only.
+     *
+     * Task/MCQ "completed" here means counts toward progress (submitted or approved).
      */
     public static function getMenteeProgressSummary(int $menteeId, ?int $mentorId = null): array
     {
@@ -113,14 +166,14 @@ class StudentCurriculumProgress extends Model
 
         $tasksCompleted = static::where('user_id', $menteeId)
             ->where('item_type', 'task')
-            ->where('is_completed', true)
             ->whereIn('item_id', $taskIds)
+            ->taskOrMcqCountsTowardProgress()
             ->count();
 
         $mcqsCompleted = static::where('user_id', $menteeId)
             ->where('item_type', 'mcq')
-            ->where('is_completed', true)
             ->whereIn('item_id', $mcqIds)
+            ->taskOrMcqCountsTowardProgress()
             ->count();
 
         $materialsCompleted = static::where('user_id', $menteeId)

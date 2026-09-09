@@ -29,7 +29,7 @@
             </div>
             @endif
         </div>
-        <span class="session-status pending">Needs review</span>
+        <span class="mentor-review-badge">Needs review</span>
     </div>
 
     @if($progress->item_type === 'mcq')
@@ -46,11 +46,6 @@
             </div>
             @endforeach
         </div>
-        @if(!empty($context['is_correct']))
-        <p class="mentor-review-card__hint">Correct answer — approve to award points and count it toward progress, or request changes for a retry.</p>
-        @else
-        <p class="mentor-review-card__hint">Incorrect answer — request changes so the mentee can retry. Approving will not award points.</p>
-        @endif
     @else
         @if($progress->submission_text)
         <div class="mentor-review-card__body">{{ $progress->submission_text }}</div>

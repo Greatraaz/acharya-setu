@@ -7761,6 +7761,10 @@
        background: color-mix(in srgb, var(--success) 18%, transparent);
        color: var(--success);
    }
+   .journey-page__mcq-option-tag--selected {
+       background: var(--brand-muted);
+       color: var(--brand);
+   }
    .journey-page__mcq-option-label {
        flex-shrink: 0;
        font-weight: 700;

@@ -98,6 +98,9 @@ class ProgressController extends Controller
             if ($request->filled('submission_url')) {
                 $extra['submission_url'] = $request->submission_url;
             }
+
+            $extra['mentor_feedback'] = null;
+            $extra['reviewed_at'] = null;
         }
 
         $progress = StudentCurriculumProgress::markComplete(
