@@ -18,7 +18,12 @@ class AssessmentsController extends Controller
     public function index(Request $request): JsonResponse
     {
         $u = $request->user();
-        $list = Assessment::withCount('questions')->latest()->get()->map(function ($a) use ($u) {
+        $list = Assessment::query()
+            ->visibleToMentee($u)
+            ->withCount('questions')
+            ->latest()
+            ->get()
+            ->map(function ($a) use ($u) {
             $p = AssessmentProgress::where('user_id', $u->id)->where('assessment_id', $a->id)->first();
 
             return [
@@ -38,9 +43,10 @@ class AssessmentsController extends Controller
         return response()->json(['assessments' => $list]);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $a = Assessment::with(['questions.category', 'scoreBands', 'categories'])->findOrFail($id);
+        abort_unless($a->isVisibleToMentee($request->user()), 404);
 
         return response()->json([
             'assessment' => $this->assessments->formatForApi($a, true),
@@ -55,6 +61,7 @@ class AssessmentsController extends Controller
         ]);
 
         $a = Assessment::with(['questions', 'scoreBands'])->findOrFail($id);
+        abort_unless($a->isVisibleToMentee($request->user()), 404);
         $totalScore = collect($d['answers'])->sum(fn ($v) => (int) $v);
         $band = $a->scoreBands->first(fn ($b) => $totalScore >= $b->range_from && $totalScore <= $b->range_to);
 

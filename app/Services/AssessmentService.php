@@ -6,9 +6,11 @@ use App\Models\Assessment;
 use App\Models\AssessmentProgress;
 use App\Models\AssessmentQuestion;
 use App\Models\AssessmentScoreBand;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AssessmentService
@@ -87,8 +89,9 @@ class AssessmentService
         ?int $createdBy = null
     ): Assessment {
         $data = $request->all();
+        $assignToAll = $this->resolveAssignToAll($request);
 
-        $assessment = Assessment::create([
+        $payload = [
             'id'           => $this->nextId(),
             'title'        => $data['title'],
             'description'  => $data['description'] ?? null,
@@ -97,14 +100,22 @@ class AssessmentService
             'icon'         => $request->input('icon'),
             'status'       => $data['status'] ?? 'active',
             'created_by'   => $createdBy,
-        ]);
+        ];
+
+        if (Schema::hasColumn('assessments', 'assign_to_all')) {
+            $payload['assign_to_all'] = $assignToAll;
+        }
+
+        $assessment = Assessment::create($payload);
 
         $this->syncScoreBands(
             $assessment,
             $request->input('bands', [])
         );
 
-        return $assessment->fresh(['scoreBands']);
+        $this->syncAssignments($assessment, $request, $createdBy, $assignToAll);
+
+        return $assessment->fresh(['scoreBands', 'assignedMentees']);
     }
 
     public function updateFromRequest(
@@ -112,6 +123,7 @@ class AssessmentService
         Assessment $assessment
     ): Assessment {
         $data = $request->all();
+        $assignToAll = $this->resolveAssignToAll($request);
 
         $updateData = [
             'title'        => $data['title'],
@@ -119,6 +131,10 @@ class AssessmentService
             'instructions' => $data['instructions'] ?? null,
             'status'       => $data['status'] ?? $assessment->status ?? 'active',
         ];
+
+        if (Schema::hasColumn('assessments', 'assign_to_all')) {
+            $updateData['assign_to_all'] = $assignToAll;
+        }
 
         if ($request->filled('image')) {
             $updateData['image'] = $request->input('image');
@@ -135,13 +151,24 @@ class AssessmentService
             $request->input('bands', [])
         );
 
-        return $assessment->fresh(['scoreBands']);
+        $this->syncAssignments(
+            $assessment,
+            $request,
+            $assessment->created_by ? (int) $assessment->created_by : null,
+            $assignToAll
+        );
+
+        return $assessment->fresh(['scoreBands', 'assignedMentees']);
     }
 
     public function delete(Assessment $assessment): void
     {
         if (Schema::hasTable('assessment_progress')) {
             AssessmentProgress::where('assessment_id', $assessment->id)->delete();
+        }
+
+        if (Schema::hasTable('assessment_assignments')) {
+            $assessment->assignedMentees()->detach();
         }
 
         $assessment->questions()->delete();
@@ -153,7 +180,7 @@ class AssessmentService
         Assessment $assessment,
         bool $includeQuestions = false
     ): array {
-        $assessment->loadMissing(['scoreBands']);
+        $assessment->loadMissing(['scoreBands', 'assignedMentees:id,name,email,role']);
 
         $payload = [
             'id'               => $assessment->id,
@@ -163,6 +190,13 @@ class AssessmentService
             'image'            => $assessment->imageUrl(),
             'icon'             => $assessment->iconUrl(),
             'status'           => $assessment->status ?? 'active',
+            'assign_to_all'    => (bool) ($assessment->assign_to_all ?? true),
+            'mentee_ids'       => $assessment->relationLoaded('assignedMentees')
+                ? $assessment->assignedMentees->pluck('id')->map(fn ($id) => (int) $id)->values()->all()
+                : [],
+            'assigned_mentees' => $assessment->relationLoaded('assignedMentees')
+                ? $assessment->assignedMentees->map(fn (User $u) => $u->only(['id', 'name', 'email', 'role']))->values()->all()
+                : [],
             'question_count'   => $assessment->questions()->count(),
             'questionCount'    => $assessment->questions()->count(),
             'completion_count' => Schema::hasTable('assessment_progress')
@@ -205,8 +239,24 @@ class AssessmentService
 
     public function validatedAssessment(
         Request $request,
-        ?int $ignoreId = null
+        ?int $ignoreId = null,
+        ?User $actor = null
     ): array {
+        $actor = $actor ?? $request->user();
+        $allowedMenteeIds = $this->allowedMenteeIdsForActor($actor);
+        $allowedOptionValues = array_merge(['all'], array_map('strval', $allowedMenteeIds));
+
+        // Normalize single dropdown value ("all" or one mentee id).
+        $rawIds = $request->input('mentee_ids', []);
+        if (! is_array($rawIds)) {
+            $rawIds = [$rawIds];
+        }
+        $rawIds = array_values(array_filter($rawIds, fn ($id) => $id !== null && $id !== ''));
+        if ($rawIds === []) {
+            $rawIds = ['all'];
+        }
+        $request->merge(['mentee_ids' => $rawIds]);
+
         return $request->validate([
             'title'               => 'required|string|max:200',
             'description'         => 'nullable|string',
@@ -219,7 +269,106 @@ class AssessmentService
             'bands.*.to'          => 'required|integer|min:0',
             'bands.*.heading'     => 'required|string|max:200',
             'bands.*.description' => 'nullable|string',
+            'assignment_scope'    => 'nullable|in:all,selected',
+            'assign_to_all'       => 'nullable|boolean',
+            'mentee_ids'          => 'required|array|min:1',
+            'mentee_ids.*'        => ['required', Rule::in($allowedOptionValues)],
         ]);
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function allowedMenteeIdsForActor(?User $actor): array
+    {
+        if (! $actor) {
+            return [];
+        }
+
+        if ($actor->isAdmin()) {
+            return User::query()
+                ->where('role', 'mentee')
+                ->orderBy('name')
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        if ($actor->isMentor()) {
+            return User::menteeIdsLinkedToMentor((int) $actor->id)
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        return [];
+    }
+
+    public function assigneeOptionsForActor(?User $actor): Collection
+    {
+        $ids = $this->allowedMenteeIdsForActor($actor);
+
+        if ($ids === []) {
+            return collect();
+        }
+
+        return User::query()
+            ->where('role', 'mentee')
+            ->whereIn('id', $ids)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+    }
+
+    private function resolveAssignToAll(Request $request): bool
+    {
+        if ($request->filled('assignment_scope')) {
+            return $request->input('assignment_scope') === 'all';
+        }
+
+        if ($request->has('assign_to_all')) {
+            return $request->boolean('assign_to_all');
+        }
+
+        // Prefer explicit mentee_ids when provided without scope.
+        if ($request->filled('mentee_ids') && is_array($request->input('mentee_ids')) && count($request->input('mentee_ids')) > 0) {
+            $ids = array_filter($request->input('mentee_ids'), fn ($id) => (string) $id !== 'all');
+
+            return count($ids) === 0;
+        }
+
+        return true;
+    }
+
+    private function syncAssignments(
+        Assessment $assessment,
+        Request $request,
+        ?int $assignedBy,
+        bool $assignToAll
+    ): void {
+        if (! Schema::hasTable('assessment_assignments')) {
+            return;
+        }
+
+        if ($assignToAll) {
+            $assessment->assignedMentees()->detach();
+
+            return;
+        }
+
+        $ids = collect($request->input('mentee_ids', []))
+            ->filter(fn ($id) => (string) $id !== 'all')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $sync = [];
+        foreach ($ids as $menteeId) {
+            $sync[$menteeId] = [
+                'assigned_by' => $assignedBy,
+            ];
+        }
+
+        $assessment->assignedMentees()->sync($sync);
     }
 
     public function syncScoreBands(

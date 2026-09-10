@@ -19,21 +19,20 @@
     @endif
 
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div class="admin-table-toolbar px-4 sm:px-5 py-4 border-b border-gray-100">
-            <div></div>
+        <div class="admin-table-toolbar admin-table-toolbar--end px-4 sm:px-5 py-4 border-b border-gray-100">
             <form method="GET" action="{{ route('admin.assessment-questions.index') }}" class="admin-table-filters">
                 <input type="search" name="search" value="{{ request('search') }}"
                        placeholder="Search question text…"
-                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 w-full sm:min-w-[220px]">
-                <select name="assessment_id" class="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white">
+                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                <select name="assessment_id" class="border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white">
                     <option value="">All assessments</option>
                     @foreach($assessments as $assessment)
                     <option value="{{ $assessment->id }}" @selected((string) request('assessment_id') === (string) $assessment->id)>{{ $assessment->title }}</option>
                     @endforeach
                 </select>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Search</button>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition whitespace-nowrap">Search</button>
                 @if(request()->filled('search') || request()->filled('assessment_id'))
-                <a href="{{ route('admin.assessment-questions.index') }}" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Reset</a>
+                <a href="{{ route('admin.assessment-questions.index') }}" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition whitespace-nowrap">Reset</a>
                 @endif
             </form>
         </div>

@@ -27,6 +27,7 @@ class AssessmentController extends Controller
             }
 
             $assessments = Assessment::query()
+                ->visibleToMentee($user)
                 ->withCount('questions')
                 ->latest()
                 ->get()
@@ -85,6 +86,13 @@ class AssessmentController extends Controller
         ])->find($id);
 
         if (!$assessment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Assessment not found.',
+            ], 404);
+        }
+
+        if (! $assessment->isVisibleToMentee($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Assessment not found.',
@@ -175,6 +183,13 @@ class AssessmentController extends Controller
         ])->find($id);
 
         if (!$assessment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Assessment not found.',
+            ], 404);
+        }
+
+        if (! $assessment->isVisibleToMentee($user)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Assessment not found.',

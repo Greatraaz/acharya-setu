@@ -73,15 +73,46 @@ class AdminController extends Controller
     public function createAssessment(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'title'        => 'required|string',
-            'description'  => 'nullable|string',
-            'instructions' => 'nullable|string',
+            'title'             => 'required|string',
+            'description'       => 'nullable|string',
+            'instructions'      => 'nullable|string',
+            'assignment_scope'  => 'nullable|in:all,selected',
+            'assign_to_all'     => 'nullable|boolean',
+            'mentee_ids'        => 'nullable|array',
+            'mentee_ids.*'      => 'integer|exists:users,id',
         ]);
 
-        $maxId = (int) Assessment::max('id');
-        $data['id'] = $maxId + 1;
+        $assignToAll = true;
+        if (($data['assignment_scope'] ?? null) === 'selected') {
+            $assignToAll = false;
+        } elseif (array_key_exists('assign_to_all', $data)) {
+            $assignToAll = (bool) $data['assign_to_all'];
+        } elseif (! empty($data['mentee_ids'])) {
+            $assignToAll = false;
+        }
 
-        return response()->json(['assessment' => Assessment::create($data)], 201);
+        $maxId = (int) Assessment::max('id');
+        $assessment = Assessment::create([
+            'id'            => $maxId + 1,
+            'title'         => $data['title'],
+            'description'   => $data['description'] ?? null,
+            'instructions'  => $data['instructions'] ?? null,
+            'created_by'    => $request->user()->id,
+            'assign_to_all' => $assignToAll,
+            'status'        => 'active',
+        ]);
+
+        if (! $assignToAll && ! empty($data['mentee_ids'])) {
+            $sync = [];
+            foreach ($data['mentee_ids'] as $menteeId) {
+                $sync[(int) $menteeId] = ['assigned_by' => $request->user()->id];
+            }
+            $assessment->assignedMentees()->sync($sync);
+        }
+
+        return response()->json([
+            'assessment' => $assessment->load('assignedMentees:id,name,email'),
+        ], 201);
     }
 
     // Community channels

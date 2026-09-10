@@ -26,20 +26,19 @@
     </div>
     @else
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div class="admin-table-toolbar px-4 sm:px-5 py-4 border-b border-gray-100">
-            <div></div>
+        <div class="admin-table-toolbar admin-table-toolbar--end px-4 sm:px-5 py-4 border-b border-gray-100">
             <form method="GET" action="{{ route('admin.assessments.index') }}" class="admin-table-filters">
                 <input type="search" name="search" value="{{ $search ?? request('search') }}"
                        placeholder="Search title or description…"
-                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 w-full sm:min-w-[220px]">
-                <select name="status" class="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white">
+                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                <select name="status" class="border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white">
                     <option value="">All status</option>
                     <option value="active" @selected(($status ?? request('status')) === 'active')>Active</option>
                     <option value="inactive" @selected(($status ?? request('status')) === 'inactive')>Inactive</option>
                 </select>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Search</button>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition whitespace-nowrap">Search</button>
                 @if(request()->filled('search') || request()->filled('status'))
-                <a href="{{ route('admin.assessments.index') }}" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Reset</a>
+                <a href="{{ route('admin.assessments.index') }}" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition whitespace-nowrap">Reset</a>
                 @endif
             </form>
         </div>

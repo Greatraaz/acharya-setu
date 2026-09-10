@@ -23,6 +23,7 @@
         @include('frontend.mentors.partials.assessment-form', [
             'assessment' => $assessment,
             'bands' => $bands ?? [],
+            'assigneeMentees' => $assigneeMentees ?? collect(),
             'formAction' => route('mentor.assessments.store'),
         ])
     </div>

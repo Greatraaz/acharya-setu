@@ -227,6 +227,51 @@ class User extends Authenticatable
     {
         return $this->hasMany(User::class, 'assigned_mentor_id');
     }
+
+    /**
+     * Mentee IDs linked to a mentor via sessions, assignment, enrollment, or curriculum tracks.
+     */
+    public static function menteeIdsLinkedToMentor(int $mentorId): \Illuminate\Support\Collection
+    {
+        $sessionIds = ConsultationSession::where('mentor_id', $mentorId)->pluck('mentee_id');
+        $assignedIds = static::query()->where('assigned_mentor_id', $mentorId)->where('role', 'mentee')->pluck('id');
+        $enrolledIds = MenteeEnrollment::where('mentor_id', $mentorId)->pluck('mentee_id');
+        $trackIds = EducationStream::where('mentor_id', $mentorId)->pluck('mentee_id');
+
+        return $sessionIds->merge($assignedIds)->merge($enrolledIds)->merge($trackIds)
+            ->unique()
+            ->filter()
+            ->values();
+    }
+
+    /**
+     * Mentor IDs linked to a mentee (reverse of menteeIdsLinkedToMentor).
+     */
+    public static function mentorIdsLinkedToMentee(int $menteeId): \Illuminate\Support\Collection
+    {
+        $sessionIds = ConsultationSession::where('mentee_id', $menteeId)->pluck('mentor_id');
+        $assignedId = static::query()->where('id', $menteeId)->where('role', 'mentee')->value('assigned_mentor_id');
+        $enrolledIds = MenteeEnrollment::where('mentee_id', $menteeId)->pluck('mentor_id');
+        $trackIds = EducationStream::where('mentee_id', $menteeId)->pluck('mentor_id');
+
+        return $sessionIds
+            ->merge($enrolledIds)
+            ->merge($trackIds)
+            ->when($assignedId, fn ($c) => $c->push($assignedId))
+            ->unique()
+            ->filter()
+            ->values();
+    }
+
+    public static function menteesLinkedToMentorQuery(int $mentorId)
+    {
+        $ids = static::menteeIdsLinkedToMentor($mentorId);
+
+        return static::query()
+            ->where('role', 'mentee')
+            ->whereIn('id', $ids)
+            ->orderBy('name');
+    }
  
     public function approvedBy(): BelongsTo
     {

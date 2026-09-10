@@ -49,6 +49,37 @@
                 <textarea name="instructions" rows="6" placeholder="Enter instructions" class="form-textarea">{{ old('instructions', $assessment->instructions ?? '') }}</textarea>
             </div>
         </div>
+
+        @php
+            $oldMenteeIds = collect(old('mentee_ids', $assessment->exists ? ($assessment->assignedMentees->pluck('id')->all() ?? []) : []))
+                ->map(fn ($id) => (string) $id)
+                ->all();
+            $assignToAll = old('assignment_scope') === 'all'
+                || old('mentee_ids.0') === 'all'
+                || (! old('mentee_ids') && ($assessment->exists ? (bool) ($assessment->assign_to_all ?? true) : true));
+            if (old('assignment_scope') === 'selected') {
+                $assignToAll = false;
+            }
+            $selectedValue = $assignToAll
+                ? 'all'
+                : (string) ($oldMenteeIds[0] ?? 'all');
+        @endphp
+        <div class="form-group" style="margin-top:18px;" data-assessment-assign>
+            <label class="form-label" for="assessment-assignee">Assign to mentees *</label>
+            <select id="assessment-assignee"
+                    name="mentee_ids[]"
+                    required
+                    class="form-input form-select">
+                <option value="all" @selected($selectedValue === 'all')>All</option>
+                @foreach(($assigneeMentees ?? collect()) as $mentee)
+                    <option value="{{ $mentee->id }}" @selected($selectedValue === (string) $mentee->id)>
+                        {{ $mentee->name }}
+                    </option>
+                @endforeach
+            </select>
+            @error('mentee_ids')<p class="assess-error">{{ $message }}</p>@enderror
+            @error('mentee_ids.*')<p class="assess-error">{{ $message }}</p>@enderror
+        </div>
     </div>
 
     <div class="assess-band-grid">

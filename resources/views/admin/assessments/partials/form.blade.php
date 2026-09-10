@@ -54,6 +54,38 @@
                           class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-y">{{ old('instructions', $assessment->instructions ?? '') }}</textarea>
             </div>
         </div>
+
+        @php
+            $oldMenteeIds = collect(old('mentee_ids', $assessment->exists ? ($assessment->assignedMentees->pluck('id')->all() ?? []) : []))
+                ->map(fn ($id) => (string) $id)
+                ->all();
+            $assignToAll = old('assignment_scope') === 'all'
+                || old('mentee_ids.0') === 'all'
+                || (! old('mentee_ids') && ($assessment->exists ? (bool) ($assessment->assign_to_all ?? true) : true));
+            if (old('assignment_scope') === 'selected') {
+                $assignToAll = false;
+            }
+            $selectedValue = $assignToAll
+                ? 'all'
+                : (string) ($oldMenteeIds[0] ?? 'all');
+            $assigneeLabel = $assigneeLabel ?? 'Assign to mentees';
+        @endphp
+        <div class="mt-4 pt-4 border-t border-gray-100" data-assessment-assign>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5" for="assessment-assignee">{{ $assigneeLabel }} *</label>
+            <select id="assessment-assignee"
+                    name="mentee_ids[]"
+                    required
+                    class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <option value="all" @selected($selectedValue === 'all')>All</option>
+                @foreach(($assigneeMentees ?? collect()) as $mentee)
+                    <option value="{{ $mentee->id }}" @selected($selectedValue === (string) $mentee->id)>
+                        {{ $mentee->name }}
+                    </option>
+                @endforeach
+            </select>
+            @error('mentee_ids')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
+            @error('mentee_ids.*')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
+        </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

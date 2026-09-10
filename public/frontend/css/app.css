@@ -3086,21 +3086,24 @@
        white-space: nowrap;
    }
    .assess-toolbar {
-       align-items: flex-end;
+       align-items: center;
+       justify-content: space-between;
    }
    .assess-toolbar__grid {
-       display: grid;
-       grid-template-columns: minmax(0, 1fr) auto;
-       gap: 8px;
+       display: flex;
+       flex-wrap: nowrap;
        align-items: center;
-       flex: 1 1 280px;
-       min-width: 0;
-       width: 100%;
+       gap: 8px;
+       flex: 0 0 auto;
+       width: auto;
+       margin-left: auto;
    }
-   .assess-toolbar__search {
-       max-width: none;
-       width: 100%;
-       min-width: 0;
+   .assess-toolbar__search,
+   .assess-toolbar .session-search-field {
+       flex: 0 1 260px;
+       width: 260px;
+       max-width: 260px;
+       min-width: 180px;
    }
    .assess-toolbar__submit {
        white-space: nowrap;
@@ -3451,11 +3454,19 @@
        }
        .assess-toolbar {
            align-items: stretch;
+           flex-direction: column;
        }
        .assess-toolbar__grid {
            width: 100%;
+           margin-left: 0;
            flex: none;
-           grid-template-columns: minmax(0, 1fr) auto;
+       }
+       .assess-toolbar__search,
+       .assess-toolbar .session-search-field {
+           flex: 1 1 auto;
+           width: auto;
+           max-width: none;
+           min-width: 0;
        }
        .session-toolbar-controls,
        .mentor-change-toolbar__controls,

@@ -42,13 +42,14 @@ class AssessmentController extends Controller
     {
         $assessment = new Assessment();
         $bands = $this->emptyBands();
+        $assigneeMentees = $this->assessments->assigneeOptionsForActor(auth()->user());
 
-        return view('frontend.mentors.assessments-create', compact('assessment', 'bands'));
+        return view('frontend.mentors.assessments-create', compact('assessment', 'bands', 'assigneeMentees'));
     }
 
     public function store(Request $request)
     {
-        $this->assessments->validatedAssessment($request);
+        $this->assessments->validatedAssessment($request, null, auth()->user());
         $payload = $this->storeMedia($request);
         $request->merge($payload);
         $this->assessments->createFromRequest($request, auth()->id());
@@ -76,15 +77,16 @@ class AssessmentController extends Controller
 
     public function edit(Assessment $assessment)
     {
-        $assessment->load('scoreBands');
+        $assessment->load(['scoreBands', 'assignedMentees:id,name,email']);
         $bands = $this->bandsForForm($assessment);
+        $assigneeMentees = $this->assessments->assigneeOptionsForActor(auth()->user());
 
-        return view('frontend.mentors.assessments-edit', compact('assessment', 'bands'));
+        return view('frontend.mentors.assessments-edit', compact('assessment', 'bands', 'assigneeMentees'));
     }
 
     public function update(Request $request, Assessment $assessment)
     {
-        $this->assessments->validatedAssessment($request, $assessment->id);
+        $this->assessments->validatedAssessment($request, $assessment->id, auth()->user());
         $payload = $this->storeMedia($request, $assessment);
         $request->merge($payload);
         $this->assessments->updateFromRequest($request, $assessment);

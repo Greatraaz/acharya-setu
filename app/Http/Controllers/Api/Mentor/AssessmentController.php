@@ -38,6 +38,7 @@ class AssessmentController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->assessments->validatedAssessment($request, null, $request->user());
         $assessment = $this->assessments->createFromRequest($request, $request->user()->id);
 
         return response()->json([
@@ -50,7 +51,7 @@ class AssessmentController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $assessment = Assessment::findOrFail($id);
+        $assessment = Assessment::with('assignedMentees:id,name,email,role')->findOrFail($id);
 
         return response()->json([
             'status'     => true,
@@ -62,6 +63,7 @@ class AssessmentController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $assessment = Assessment::findOrFail($id);
+        $this->assessments->validatedAssessment($request, $assessment->id, $request->user());
         $assessment = $this->assessments->updateFromRequest($request, $assessment);
 
         return response()->json([

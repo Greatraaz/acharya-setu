@@ -21,6 +21,7 @@ class AssessmentController extends Controller
                 $userId = auth()->id();
 
                 $query = Assessment::query()
+                    ->visibleToMentee(auth()->user())
                     ->withCount('questions')
                     ->when($search !== '', function ($q) use ($search) {
                         $q->where(function ($inner) use ($search) {
@@ -62,6 +63,8 @@ class AssessmentController extends Controller
     public function show(int $id)
     {
         $assessment = Assessment::with(['questions.category', 'scoreBands'])->findOrFail($id);
+        abort_unless($assessment->isVisibleToMentee(auth()->user()), 403);
+
         $questions = $assessment->questions;
         $progress = Schema::hasTable('assessment_progress')
             ? AssessmentProgress::where('user_id', auth()->id())->where('assessment_id', $id)->first()
@@ -86,6 +89,7 @@ class AssessmentController extends Controller
         ]);
 
         $assessment = Assessment::with(['questions', 'scoreBands'])->findOrFail($id);
+        abort_unless($assessment->isVisibleToMentee(auth()->user()), 403);
         $totalScore = collect($data['answers'])->sum(fn ($v) => (int) $v);
         $band = $assessment->scoreBands->first(
             fn ($b) => $totalScore >= $b->range_from && $totalScore <= $b->range_to

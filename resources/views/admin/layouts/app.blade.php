@@ -109,12 +109,22 @@ span[class*="rounded-full"] {
     align-items: center;
     gap: 0.75rem;
 }
+.admin-table-toolbar--end {
+    justify-content: flex-end;
+}
+.admin-table-toolbar--end .admin-table-filters {
+    flex-wrap: nowrap;
+    margin-left: auto;
+}
 .admin-table-filters input[type="text"],
 .admin-table-filters input[type="search"] {
     min-width: 220px;
+    width: 260px;
+    max-width: 100%;
 }
 .admin-table-filters select {
     min-width: 140px;
+    flex-shrink: 0;
 }
 
 /* Universal admin filter/search forms */
@@ -198,6 +208,11 @@ main button.inline-flex.items-center[class*="bg-orange"] {
         align-items: stretch !important;
         width: 100%;
         gap: 0.75rem;
+    }
+    .admin-table-toolbar--end .admin-table-filters {
+        flex-wrap: wrap;
+        margin-left: 0;
+        width: 100%;
     }
     .admin-filter-form.grid,
     form.admin-filter-form[class*="grid-cols"] {
