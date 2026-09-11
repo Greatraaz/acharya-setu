@@ -20,7 +20,7 @@
     }), fn ($v) => $v !== null && $v !== '');
 @endphp
 
-<form method="GET" action="{{ route($routeName) }}" class="session-toolbar">
+<form method="GET" action="{{ route($routeName) }}" class="session-toolbar community-filters-toolbar">
     <div class="session-filter-tabs">
         @foreach(['all' => 'All', 'joined' => 'Joined', 'not_joined' => 'Not joined'] as $key => $label)
             <a href="{{ route($routeName, $tabParams($key)) }}"
@@ -30,37 +30,39 @@
         @endforeach
     </div>
 
-    <div class="session-toolbar-controls community-filters-toolbar__controls">
+    <div class="community-filters-toolbar__controls">
         @if($joinedKey === 'joined')
             <input type="hidden" name="joined" value="1">
         @elseif($joinedKey === 'not_joined')
             <input type="hidden" name="joined" value="0">
         @endif
 
-        <div class="session-search-field">
-            <span class="session-search-icon" aria-hidden="true">🔍</span>
-            <input type="search" name="search" class="form-input" value="{{ $search }}"
-                   placeholder="Search channels…" autocomplete="off">
+        <div class="community-filters-toolbar__row community-filters-toolbar__row--search">
+            <div class="session-search-field community-filters-toolbar__search">
+                <span class="session-search-icon" aria-hidden="true">🔍</span>
+                <input type="search" name="search" class="form-input" value="{{ $search }}"
+                       placeholder="Search channels…" autocomplete="off" aria-label="Search channels">
+            </div>
+            <button type="submit" class="btn btn-outline community-filters-toolbar__submit">Search</button>
+            @if($search !== '' || $type !== '' || $category !== '' || $joinedKey !== 'all')
+                <a href="{{ route($routeName) }}" class="btn btn-ghost community-filters-toolbar__clear">Clear</a>
+            @endif
         </div>
 
-        <select name="type" class="form-input form-select session-date-input" title="Channel type">
-            <option value="">All types</option>
-            <option value="public" @selected($type === 'public')>Public</option>
-            <option value="private" @selected($type === 'private')>Private</option>
-        </select>
+        <div class="community-filters-toolbar__row community-filters-toolbar__row--filters">
+            <select name="type" class="form-input form-select community-filters-toolbar__select" title="Channel type" aria-label="Channel type">
+                <option value="">All types</option>
+                <option value="public" @selected($type === 'public')>Public</option>
+                <option value="private" @selected($type === 'private')>Private</option>
+            </select>
 
-        <select name="category" class="form-input form-select session-date-input" title="Category">
-            <option value="">All categories</option>
-            @foreach(\App\Models\Channel::CATEGORIES as $key => $label)
-                <option value="{{ $key }}" @selected($category === $key)>{{ $label }}</option>
-            @endforeach
-        </select>
-
-        <button type="submit" class="btn btn-outline">Search</button>
-
-        @if($search !== '' || $type !== '' || $category !== '' || $joinedKey !== 'all')
-            <a href="{{ route($routeName) }}" class="btn btn-ghost">Clear</a>
-        @endif
+            <select name="category" class="form-input form-select community-filters-toolbar__select" title="Category" aria-label="Category">
+                <option value="">All categories</option>
+                @foreach(\App\Models\Channel::CATEGORIES as $key => $label)
+                    <option value="{{ $key }}" @selected($category === $key)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </div>
     </div>
 </form>
 

@@ -41,25 +41,22 @@
             <div class="curriculum-tracks-toolbar__grid">
                 <div class="curriculum-tracks-toolbar__field">
                     <label class="curriculum-tracks-toolbar__label" for="curriculum-mentee-filter">Mentee</label>
-                    <select id="curriculum-mentee-filter" name="mentee_id" class="form-input form-select" aria-label="Filter by mentee">
+                    <select id="curriculum-mentee-filter" name="mentee_id" class="form-input form-select curriculum-tracks-toolbar__select" aria-label="Filter by mentee">
                         <option value="">All mentees</option>
                         @foreach($mentees as $m)
                         <option value="{{ $m->id }}" @selected((string) request('mentee_id') === (string) $m->id)>{{ $m->name }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="curriculum-tracks-toolbar__field curriculum-tracks-toolbar__field--search">
-                    <label class="curriculum-tracks-toolbar__label" for="curriculum-track-search">Track</label>
-                    <div class="session-search-field">
+                <div class="curriculum-tracks-toolbar__search-row">
+                    <div class="session-search-field curriculum-tracks-toolbar__search">
                         <span class="session-search-icon" aria-hidden="true">🔍</span>
                         <input id="curriculum-track-search" type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
-                               placeholder="Search track name…" autocomplete="off">
+                               placeholder="Search track name…" autocomplete="off" aria-label="Search track name">
                     </div>
-                </div>
-                <div class="curriculum-tracks-toolbar__btns">
-                    <button type="submit" class="btn btn-outline">Search</button>
+                    <button type="submit" class="btn btn-outline curriculum-tracks-toolbar__submit">Search</button>
                     @if(request()->filled('mentee_id') || request()->filled('search'))
-                        <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-ghost">Clear</a>
+                        <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-ghost curriculum-tracks-toolbar__clear">Clear</a>
                     @endif
                 </div>
             </div>

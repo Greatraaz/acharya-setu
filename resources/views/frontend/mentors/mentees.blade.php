@@ -11,16 +11,16 @@
             <div class="dash-subtitle">People assigned to you or who have booked sessions with you.</div>
         </div>
 
-        <form method="GET" action="{{ route('mentor.mentees') }}" class="session-toolbar" style="margin-bottom:16px;">
-            <div class="session-toolbar-controls" style="width:100%;">
-                <div class="session-search-field" style="flex:1;">
+        <form method="GET" action="{{ route('mentor.mentees') }}" class="mentor-mentees-toolbar">
+            <div class="mentor-mentees-toolbar__row">
+                <div class="session-search-field mentor-mentees-toolbar__search">
                     <span class="session-search-icon" aria-hidden="true">🔍</span>
                     <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
-                           placeholder="Search by name, email, college, or field…" autocomplete="off">
+                           placeholder="Search by name, email, college, or field…" autocomplete="off" aria-label="Search mentees">
                 </div>
-                <button type="submit" class="btn btn-outline">Search</button>
+                <button type="submit" class="btn btn-outline mentor-mentees-toolbar__submit">Search</button>
                 @if(request()->filled('search'))
-                    <a href="{{ route('mentor.mentees') }}" class="btn btn-ghost">Clear</a>
+                    <a href="{{ route('mentor.mentees') }}" class="btn btn-ghost mentor-mentees-toolbar__clear">Clear</a>
                 @endif
             </div>
         </form>

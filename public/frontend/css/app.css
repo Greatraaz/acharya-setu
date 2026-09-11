@@ -2960,6 +2960,91 @@
        justify-content: flex-end;
        min-width: 0;
    }
+   .mentor-mentees-toolbar {
+       margin-bottom: 16px;
+   }
+   .mentor-mentees-toolbar__row {
+       display: flex;
+       flex-wrap: nowrap;
+       align-items: center;
+       gap: 8px;
+       width: 100%;
+       min-width: 0;
+   }
+   .mentor-mentees-toolbar__search,
+   .mentor-mentees-toolbar .session-search-field {
+       flex: 1 1 auto;
+       min-width: 0;
+       max-width: none;
+       width: auto;
+   }
+   .mentor-mentees-toolbar__submit,
+   .mentor-mentees-toolbar__clear {
+       flex-shrink: 0;
+       white-space: nowrap;
+   }
+   .mentor-requests-toolbar__search {
+       display: flex;
+       flex-wrap: nowrap;
+       align-items: center;
+       gap: 8px;
+       flex: 1 1 280px;
+       min-width: 0;
+       margin-left: auto;
+   }
+   .mentor-requests-toolbar__field,
+   .mentor-requests-toolbar .session-search-field {
+       flex: 1 1 auto;
+       min-width: 0;
+       max-width: 280px;
+       width: auto;
+   }
+   .mentor-requests-toolbar__submit,
+   .mentor-requests-toolbar__clear {
+       flex-shrink: 0;
+       white-space: nowrap;
+   }
+   .community-filters-toolbar__controls {
+       display: flex;
+       flex-direction: column;
+       align-items: stretch;
+       gap: 8px;
+       flex: 1 1 320px;
+       min-width: 0;
+       margin-left: auto;
+   }
+   .community-filters-toolbar__row {
+       display: flex;
+       flex-wrap: nowrap;
+       align-items: center;
+       gap: 8px;
+       min-width: 0;
+       width: 100%;
+   }
+   .community-filters-toolbar__row--search {
+       justify-content: flex-end;
+   }
+   .community-filters-toolbar__row--filters {
+       justify-content: flex-end;
+   }
+   .community-filters-toolbar__search,
+   .community-filters-toolbar .session-search-field {
+       flex: 1 1 200px;
+       min-width: 0;
+       max-width: 280px;
+       width: auto;
+   }
+   .community-filters-toolbar__select {
+       flex: 1 1 140px;
+       min-width: 0;
+       max-width: 180px;
+       width: auto;
+   }
+   .community-filters-toolbar__submit,
+   .community-filters-toolbar__clear {
+       flex-shrink: 0;
+       white-space: nowrap;
+   }
    .session-search-bar {
        display: flex;
        flex-wrap: nowrap;
@@ -2984,21 +3069,15 @@
        min-width: 0;
    }
    .curriculum-tracks-toolbar__grid {
-       display: grid;
-       grid-template-columns: 1fr;
-       gap: 8px;
-       align-items: end;
+       display: flex;
+       flex-direction: column;
+       gap: 10px;
        width: 100%;
        min-width: 0;
    }
    .curriculum-tracks-toolbar__field {
        min-width: 0;
        width: 100%;
-   }
-   .curriculum-tracks-toolbar__field--search .session-search-field {
-       max-width: none;
-       width: 100%;
-       min-width: 0;
    }
    .curriculum-tracks-toolbar__label {
        display: block;
@@ -3009,19 +3088,28 @@
        color: var(--text-3);
        margin-bottom: 6px;
    }
-   .curriculum-tracks-toolbar__btns {
-       display: grid;
-       grid-template-columns: 1fr 1fr;
+   .curriculum-tracks-toolbar__select {
+       width: 100%;
+   }
+   .curriculum-tracks-toolbar__search-row {
+       display: flex;
+       flex-wrap: nowrap;
+       align-items: center;
        gap: 8px;
        width: 100%;
+       min-width: 0;
    }
-   .curriculum-tracks-toolbar__btns .btn {
+   .curriculum-tracks-toolbar__search,
+   .curriculum-tracks-toolbar .session-search-field {
+       flex: 1 1 auto;
+       min-width: 0;
+       max-width: none;
+       width: auto;
+   }
+   .curriculum-tracks-toolbar__submit,
+   .curriculum-tracks-toolbar__clear {
+       flex-shrink: 0;
        white-space: nowrap;
-       width: 100%;
-       justify-content: center;
-   }
-   .curriculum-tracks-toolbar__btns .btn:only-child {
-       grid-column: 1 / -1;
    }
    .dash-header--actions {
        flex-wrap: wrap;
@@ -3154,9 +3242,6 @@
            flex: 1 1 calc(50% - 4px);
            justify-content: center;
        }
-   }
-   .curriculum-tracks-toolbar__select {
-       width: 100%;
    }
    .session-search-field {
        position: relative;
@@ -3440,9 +3525,23 @@
            max-width: none;
            min-width: 0;
        }
+       .mentor-requests-toolbar {
+           flex-direction: column;
+           align-items: stretch;
+       }
+       .mentor-requests-toolbar__search {
+           width: 100%;
+           margin-left: 0;
+           flex: none;
+       }
+       .mentor-requests-toolbar__field,
+       .mentor-requests-toolbar .session-search-field {
+           flex: 1 1 auto;
+           max-width: none;
+           min-width: 0;
+       }
        .session-toolbar-controls,
-       .mentor-change-toolbar__controls,
-       .community-filters-toolbar__controls {
+       .mentor-change-toolbar__controls {
            width: 100%;
            flex: 1 1 100%;
            flex-direction: column;
@@ -3451,34 +3550,57 @@
            gap: 10px;
        }
        .session-toolbar-controls > *,
-       .mentor-change-toolbar__controls > *,
-       .community-filters-toolbar__controls > * {
+       .mentor-change-toolbar__controls > * {
            width: 100% !important;
            max-width: none !important;
            min-width: 0 !important;
            flex: none !important;
        }
        .session-toolbar-controls .btn,
-       .mentor-change-toolbar__controls .btn,
-       .community-filters-toolbar__controls .btn {
+       .mentor-change-toolbar__controls .btn {
            justify-content: center;
+       }
+       .community-filters-toolbar {
+           flex-direction: column;
+           align-items: stretch;
+       }
+       .community-filters-toolbar__controls {
+           width: 100%;
+           margin-left: 0;
+           flex: none;
+       }
+       .community-filters-toolbar__row {
+           width: 100%;
+       }
+       .community-filters-toolbar__row--search,
+       .community-filters-toolbar__row--filters {
+           justify-content: stretch;
+       }
+       .community-filters-toolbar__search,
+       .community-filters-toolbar .session-search-field {
+           flex: 1 1 auto;
+           max-width: none;
+           min-width: 0;
+       }
+       .community-filters-toolbar__select {
+           flex: 1 1 0;
+           max-width: none;
+           min-width: 0;
+           width: 100%;
+       }
+       .community-filters-toolbar__submit {
+           flex-shrink: 0;
+       }
+       .community-filters-toolbar__clear {
+           flex-shrink: 0;
        }
        .curriculum-tracks-toolbar__grid {
-           grid-template-columns: 1fr;
-           gap: 8px;
+           display: flex;
+           flex-direction: column;
+           gap: 10px;
        }
-       .curriculum-tracks-toolbar__btns {
-           display: grid;
-           grid-template-columns: 1fr 1fr;
-           gap: 8px;
+       .curriculum-tracks-toolbar__search-row {
            width: 100%;
-       }
-       .curriculum-tracks-toolbar__btns .btn {
-           width: 100%;
-           justify-content: center;
-       }
-       .curriculum-tracks-toolbar__btns .btn:only-child {
-           grid-column: 1 / -1;
        }
        .dash-header__actions {
            display: grid;
@@ -3666,31 +3788,22 @@
            width: auto;
        }
        .curriculum-tracks-toolbar__grid {
-           grid-template-columns: minmax(160px, 200px) minmax(0, 1fr) auto;
+           display: grid;
+           grid-template-columns: minmax(160px, 200px) minmax(0, 1fr);
            gap: 10px;
+           align-items: end;
        }
-       .curriculum-tracks-toolbar__btns {
-           display: flex;
+       .curriculum-tracks-toolbar__field {
            width: auto;
-           gap: 8px;
        }
-       .curriculum-tracks-toolbar__btns .btn {
-           width: auto;
+       .curriculum-tracks-toolbar__search-row {
+           min-width: 0;
        }
    }
 
    @media (min-width: 769px) and (max-width: 960px) {
        .curriculum-tracks-toolbar__grid {
-           grid-template-columns: 1fr 1fr;
-       }
-       .curriculum-tracks-toolbar__field--search {
-           grid-column: 1 / -1;
-       }
-       .curriculum-tracks-toolbar__btns {
-           grid-column: 1 / -1;
-           display: flex;
-           width: 100%;
-           justify-content: flex-start;
+           grid-template-columns: 1fr;
        }
    }
 

@@ -26,7 +26,7 @@
             ]);
         @endphp
 
-        <form method="GET" action="{{ route('mentor.requests') }}" class="session-toolbar">
+        <form method="GET" action="{{ route('mentor.requests') }}" class="session-toolbar mentor-requests-toolbar">
             <div class="session-filter-tabs">
                 @foreach([
                     'pending' => 'Pending ('.((int) ($counts[\App\Models\MentorRequest::STATUS_PENDING] ?? 0)).')',
@@ -41,18 +41,18 @@
                 @endforeach
             </div>
 
-            <div class="session-toolbar-controls">
+            <div class="mentor-requests-toolbar__search">
                 @if($activeStatus !== 'all')
                     <input type="hidden" name="status" value="{{ $activeStatus }}">
                 @endif
-                <div class="session-search-field">
+                <div class="session-search-field mentor-requests-toolbar__field">
                     <span class="session-search-icon" aria-hidden="true">🔍</span>
                     <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
-                           placeholder="Search mentee name or email…" autocomplete="off">
+                           placeholder="Search mentee name or email…" autocomplete="off" aria-label="Search mentee requests">
                 </div>
-                <button type="submit" class="btn btn-outline">Search</button>
+                <button type="submit" class="btn btn-outline mentor-requests-toolbar__submit">Search</button>
                 @if(request()->filled('search'))
-                    <a href="{{ route('mentor.requests', array_filter(['status' => $activeStatus === 'all' ? null : $activeStatus])) }}" class="btn btn-ghost">Clear</a>
+                    <a href="{{ route('mentor.requests', array_filter(['status' => $activeStatus === 'all' ? null : $activeStatus])) }}" class="btn btn-ghost mentor-requests-toolbar__clear">Clear</a>
                 @endif
             </div>
         </form>
