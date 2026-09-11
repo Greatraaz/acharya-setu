@@ -9,7 +9,6 @@
         <div class="dash-header dash-header--actions">
             <div class="dash-header__main">
                 <div class="dash-title">Assessment Questions</div>
-                <div class="dash-subtitle">Questions use a fixed 0–3 scale. Option labels can be edited per question.</div>
             </div>
             <div class="dash-header__actions">
                 <a href="{{ route('mentor.assessment-questions.create') }}" class="btn btn-primary btn-sm">+ Add New</a>
@@ -22,32 +21,21 @@
 
         <form method="GET" action="{{ route('mentor.assessment-questions.index') }}" class="assess-questions-toolbar">
             <div class="assess-questions-toolbar__grid">
-                <div class="assess-questions-toolbar__field assess-questions-toolbar__field--question">
-                    <label class="assess-questions-toolbar__label" for="assess-question-search">Question</label>
-                    <div class="assess-questions-toolbar__search-row">
-                        <div class="session-search-field assess-questions-toolbar__search">
-                            <span class="session-search-icon" aria-hidden="true">🔍</span>
-                            <input id="assess-question-search" type="search" name="search" value="{{ request('search') }}"
-                                   placeholder="Question text…" class="form-input" autocomplete="off">
-                        </div>
-                        <button type="submit" class="btn btn-outline assess-questions-toolbar__submit assess-questions-toolbar__submit--inline">Search</button>
-                    </div>
+                <select id="assess-question-filter" name="assessment_id" class="form-input form-select assess-questions-toolbar__select" aria-label="Filter by assessment">
+                    <option value="">All assessments</option>
+                    @foreach($assessments as $a)
+                    <option value="{{ $a->id }}" @selected((string) request('assessment_id') === (string) $a->id)>{{ $a->title }}</option>
+                    @endforeach
+                </select>
+                <div class="session-search-field assess-questions-toolbar__search">
+                    <span class="session-search-icon" aria-hidden="true">🔍</span>
+                    <input id="assess-question-search" type="search" name="search" value="{{ request('search') }}"
+                           placeholder="Search questions…" class="form-input" autocomplete="off" aria-label="Search questions">
                 </div>
-                <div class="assess-questions-toolbar__field assess-questions-toolbar__field--assessment">
-                    <label class="assess-questions-toolbar__label" for="assess-question-filter">Assessment</label>
-                    <select id="assess-question-filter" name="assessment_id" class="form-input form-select" aria-label="Filter by assessment">
-                        <option value="">All assessments</option>
-                        @foreach($assessments as $a)
-                        <option value="{{ $a->id }}" @selected((string) request('assessment_id') === (string) $a->id)>{{ $a->title }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="assess-questions-toolbar__actions">
-                    <button type="submit" class="btn btn-outline assess-questions-toolbar__submit assess-questions-toolbar__submit--bar">Search</button>
-                    @if(request()->filled('search') || request()->filled('assessment_id'))
-                    <a href="{{ route('mentor.assessment-questions.index') }}" class="btn btn-ghost">Clear</a>
-                    @endif
-                </div>
+                <button type="submit" class="btn btn-outline assess-questions-toolbar__submit">Search</button>
+                @if(request()->filled('search') || request()->filled('assessment_id'))
+                <a href="{{ route('mentor.assessment-questions.index') }}" class="btn btn-ghost assess-questions-toolbar__clear">Clear</a>
+                @endif
             </div>
         </form>
 

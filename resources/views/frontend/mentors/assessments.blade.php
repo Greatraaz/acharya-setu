@@ -9,7 +9,6 @@
         <div class="dash-header dash-header--actions">
             <div class="dash-header__main">
                 <div class="dash-title">Assessments</div>
-                <div class="dash-subtitle">Manage assessment categories with score bands and status{{ isset($menteeCount) ? ' · '.$menteeCount.' mentee'.($menteeCount === 1 ? '' : 's') : '' }}.</div>
             </div>
             @unless($tableMissing ?? false)
             <div class="dash-header__actions">

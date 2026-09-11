@@ -10,7 +10,6 @@
         <div class="dash-header">
             <div>
                 <div class="dash-title">Create Assessment</div>
-                <div class="dash-subtitle">Add name, media, instructions, and four score bands.</div>
             </div>
         </div>
 

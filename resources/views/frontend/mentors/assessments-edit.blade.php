@@ -10,7 +10,6 @@
         <div class="dash-header">
             <div>
                 <div class="dash-title">Edit Assessment</div>
-                <div class="dash-subtitle">{{ $assessment->title }}</div>
             </div>
         </div>
 

@@ -71,9 +71,11 @@
             </div>
             @endforeach
 
-            <button type="submit" class="btn btn-primary btn-lg" id="assessment-submit-btn">
-                Submit Assessment →
-            </button>
+            <div class="mentee-assess-submit">
+                <button type="submit" class="btn btn-primary btn-lg mentee-assess-submit__btn" id="assessment-submit-btn">
+                    Submit Assessment →
+                </button>
+            </div>
         </form>
         @endif
     </div>
