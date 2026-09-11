@@ -410,8 +410,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/',              [MentorAssessment::class, 'index'])->name('index');
             Route::post('/',             [MentorAssessment::class, 'store'])->name('store');
             Route::get('/{id}',          [MentorAssessment::class, 'show'])->name('show')->whereNumber('id');
-            Route::put('/{id}',          [MentorAssessment::class, 'update'])->name('update')->whereNumber('id');
-            Route::patch('/{id}',        [MentorAssessment::class, 'update'])->name('patch')->whereNumber('id');
+            Route::match(['put', 'patch', 'post'], '/{id}', [MentorAssessment::class, 'update'])
+                ->name('update')
+                ->whereNumber('id');
             Route::delete('/{id}',       [MentorAssessment::class, 'destroy'])->name('destroy')->whereNumber('id');
         });
 

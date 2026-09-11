@@ -9,7 +9,14 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=202608041559">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=202608041559">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=202608041559">
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <meta name="theme-color" content="#f59e0b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vedrix">
     <link rel="stylesheet" href="{{ asset('frontend/css/app.css') }}?v={{ filemtime(public_path('frontend/css/app.css')) }}">
+    <link rel="stylesheet" href="{{ asset('frontend/css/a2hs.css') }}?v={{ filemtime(public_path('frontend/css/a2hs.css')) }}">
     {{-- Critical: only one theme logo visible (also works if app.css is cached/old on prod) --}}
     <style>
         .navbar-brand .logo-for-light,
@@ -180,6 +187,8 @@
 {{-- Page Content --}}
 @yield('content')
 
+@include('frontend.partials.install-app')
+
 {{-- Confirm Modal (global) --}}
 <div id="confirm-modal" class="modal-overlay">
     <div class="modal" style="max-width:380px">
@@ -248,6 +257,7 @@
 </footer>
 
 <script src="{{ asset('frontend/js/app.js') }}?v={{ filemtime(public_path('frontend/js/app.js')) }}"></script>
+<script src="{{ asset('frontend/js/a2hs.js') }}?v={{ filemtime(public_path('frontend/js/a2hs.js')) }}"></script>
 @stack('scripts')
 </body>
 </html>

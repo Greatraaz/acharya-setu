@@ -8,6 +8,12 @@
 <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=202608041559">
 <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=202608041559">
 <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=202608041559">
+<link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+<meta name="theme-color" content="#f59e0b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vedrix">
+<link rel="stylesheet" href="{{ asset('frontend/css/a2hs.css') }}?v={{ filemtime(public_path('frontend/css/a2hs.css')) }}">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 <script src="{{ asset('admin/js/jquery4.0.js') }}"></script>
@@ -75,11 +81,14 @@
     </div>
 </div>
 
+@include('frontend.partials.install-app')
+
     <script src="{{ asset('admin/js/admin.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <!-- Toastr JS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="{{ asset('frontend/js/a2hs.js') }}?v={{ filemtime(public_path('frontend/js/a2hs.js')) }}"></script>
 @stack('scripts')
 
 </body>

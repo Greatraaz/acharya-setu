@@ -91,13 +91,15 @@ class AssessmentService
         $data = $request->all();
         $assignToAll = $this->resolveAssignToAll($request);
 
+        $media = $this->resolveMediaPaths($request);
+
         $payload = [
             'id'           => $this->nextId(),
             'title'        => $data['title'],
             'description'  => $data['description'] ?? null,
             'instructions' => $data['instructions'] ?? null,
-            'image'        => $request->input('image'),
-            'icon'         => $request->input('icon'),
+            'image'        => $media['image'],
+            'icon'         => $media['icon'],
             'status'       => $data['status'] ?? 'active',
             'created_by'   => $createdBy,
         ];
@@ -136,13 +138,9 @@ class AssessmentService
             $updateData['assign_to_all'] = $assignToAll;
         }
 
-        if ($request->filled('image')) {
-            $updateData['image'] = $request->input('image');
-        }
-
-        if ($request->filled('icon')) {
-            $updateData['icon'] = $request->input('icon');
-        }
+        $media = $this->resolveMediaPaths($request, $assessment);
+        $updateData['image'] = $media['image'];
+        $updateData['icon']  = $media['icon'];
 
         $assessment->update($updateData);
 
@@ -264,6 +262,8 @@ class AssessmentService
             'status'              => 'nullable|in:active,inactive',
             'image'               => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'icon'                => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'image_file'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'icon_file'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'bands'               => 'required|array|size:4',
             'bands.*.from'        => 'required|integer|min:0',
             'bands.*.to'          => 'required|integer|min:0',
@@ -274,6 +274,44 @@ class AssessmentService
             'mentee_ids'          => 'required|array|min:1',
             'mentee_ids.*'        => ['required', Rule::in($allowedOptionValues)],
         ]);
+    }
+
+    /**
+     * Resolve image/icon paths from uploaded files (or keep existing on update).
+     * Accepts API fields `image` / `icon` or web fields `image_file` / `icon_file`.
+     *
+     * @return array{image: ?string, icon: ?string}
+     */
+    private function resolveMediaPaths(Request $request, ?Assessment $existing = null): array
+    {
+        $image = $existing?->image;
+        $icon  = $existing?->icon;
+
+        $imageFile = $request->file('image') ?? $request->file('image_file');
+        if ($imageFile) {
+            if ($existing?->image) {
+                PublicFileStorage::deleteByUrl($existing->image);
+            }
+            $image = PublicFileStorage::store($imageFile, 'assessments/images');
+        } elseif ($request->filled('image') && ! $request->hasFile('image') && ! $request->hasFile('image_file')) {
+            // Allow string path/URL only when not an upload.
+            $image = (string) $request->input('image');
+        }
+
+        $iconFile = $request->file('icon') ?? $request->file('icon_file');
+        if ($iconFile) {
+            if ($existing?->icon) {
+                PublicFileStorage::deleteByUrl($existing->icon);
+            }
+            $icon = PublicFileStorage::store($iconFile, 'assessments/icons');
+        } elseif ($request->filled('icon') && ! $request->hasFile('icon') && ! $request->hasFile('icon_file')) {
+            $icon = (string) $request->input('icon');
+        }
+
+        return [
+            'image' => $image,
+            'icon'  => $icon,
+        ];
     }
 
     /**
