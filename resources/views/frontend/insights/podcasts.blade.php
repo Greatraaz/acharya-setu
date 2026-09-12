@@ -1,4 +1,4 @@
-@extends('frontend.layouts.app')
+@extends('frontend.layouts.frontend')
 @section('title', 'Podcasts — Insights')
 @section('meta_description', 'Listen to Vedrix mentorship podcasts — career guidance, skill-building conversations, and expert insights for students and professionals.')
 
@@ -9,12 +9,17 @@
         <div class="insights-banner__overlay" aria-hidden="true"></div>
         <div class="container insights-banner__inner">
             <nav class="insights-breadcrumb">
-                <a href="{{ route('home') }}">Home</a>
-                <span>&gt;</span>
+                <a href="{{ route('home') }}"><i class="bi bi-house-door-fill me-1"></i> Home</a>
+                <span><i class="bi bi-chevron-right"></i></span>
+                <a href="{{ route('insights.index') }}">Insights</a>
+                <span><i class="bi bi-chevron-right"></i></span>
                 <span>Podcasts</span>
             </nav>
-            <div class="insights-banner__eyebrow">🎙️ Podcast Library</div>
+            <div class="insights-banner__eyebrow">
+                <i class="bi bi-mic-fill me-1"></i> Podcast Library
+            </div>
             <h1 class="insights-banner__title">Podcasts That Guide Real Career Decisions</h1>
+            <div class="lain"></div>
             <p class="insights-banner__sub">
                 Audio episodes and YouTube conversations with mentors and industry voices — practical guidance you can listen to or watch anytime.
             </p>
@@ -34,11 +39,17 @@
             <div class="session-filter-bar media-library-filters">
                 <div class="session-filter-tabs">
                     <a href="{{ route('insights.podcasts.index') }}"
-                       class="session-filter-tab {{ $type === '' ? 'is-active' : '' }}">📚 All Episodes</a>
+                       class="session-filter-tab {{ $type === '' ? 'is-active' : '' }}">
+                        <i class="bi bi-collection-play me-1"></i> All Episodes
+                    </a>
                     <a href="{{ route('insights.podcasts.index', ['type' => 'audio']) }}"
-                       class="session-filter-tab {{ $type === 'audio' ? 'is-active' : '' }}">🎧 Audio</a>
+                       class="session-filter-tab {{ $type === 'audio' ? 'is-active' : '' }}">
+                        <i class="bi bi-headphones me-1"></i> Audio
+                    </a>
                     <a href="{{ route('insights.podcasts.index', ['type' => 'youtube_url']) }}"
-                       class="session-filter-tab {{ $type === 'youtube_url' ? 'is-active' : '' }}">▶️ YouTube</a>
+                       class="session-filter-tab {{ $type === 'youtube_url' ? 'is-active' : '' }}">
+                        <i class="bi bi-youtube me-1"></i> YouTube
+                    </a>
                 </div>
                 <div class="session-filter-status">
                     Showing:
@@ -54,14 +65,14 @@
 
             @if($podcasts->isEmpty())
                 <div class="blog-empty">
-                    <div class="blog-empty__icon">🎙️</div>
+                    <div class="blog-empty__icon"><i class="bi bi-mic"></i></div>
                     <h3>No podcasts yet</h3>
                     <p>Check back soon — new episodes are on the way.</p>
                 </div>
             @else
                 <div class="media-library-grid">
                     @foreach($podcasts as $item)
-                        @include('frontend.insights.partials.media-library-card', [
+                        @include('frontend.insights.mediaLibraryCard', [
                             'mediaType' => $item->isAudio() ? 'audio' : 'youtube',
                             'title' => $item->title,
                             'excerpt' => $item->excerpt(26),
@@ -79,5 +90,5 @@
     </section>
 </div>
 
-@include('frontend.insights.partials.media-lightbox')
+@include('frontend.insights.mediaLightbox')
 @endsection
