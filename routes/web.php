@@ -1,14 +1,4 @@
 <?php
-
-/*
-|=============================================================
-|  Vedrix  —  routes/web.php  (FRONTEND)
-|  Covers: Public pages, Auth (email+OTP), Mentor onboarding,
-|  Mentee onboarding, Mentor dashboard, Mentee dashboard,
-|  Sessions, Wallet, Journey, Community, Jobs, Wellness, Quiz
-|=============================================================
-*/
-
 use Illuminate\Support\Facades\Route;
 
 // ── Controllers ─────────────────────────────────────────────
@@ -95,6 +85,8 @@ use App\Http\Controllers\Admin\DownloadCentreController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\NotificationController;
 
+use App\Http\Controllers\Frontend\InsightController;
+
 use App\Services\PublicFileStorage;
 use Illuminate\Support\Facades\Artisan;
 
@@ -140,38 +132,45 @@ Route::get('/terms',   fn() => view('frontend.terms'))  ->name('terms');
 
 // Insights (public content)
 Route::prefix('insights')->name('insights.')->group(function () {
-    Route::get('/blogs', [FrontendBlogController::class, 'index'])->name('blogs.index');
-    Route::get('/blogs/{slug}', [FrontendBlogController::class, 'show'])->name('blogs.show')->where('slug', '[A-Za-z0-9\-]+');
-    Route::get('/white-papers', [FrontendWhitePaperController::class, 'index'])->name('white-papers.index');
-    Route::get('/white-papers/{slug}/download', [FrontendWhitePaperController::class, 'download'])
-        ->name('white-papers.download')
-        ->where('slug', '[A-Za-z0-9\-]+');
-    Route::get('/case-studies', [FrontendCaseStudyController::class, 'index'])->name('case-studies.index');
-    Route::get('/case-studies/{slug}', [FrontendCaseStudyController::class, 'show'])
-        ->name('case-studies.show')
-        ->where('slug', '[A-Za-z0-9\-]+');
-    Route::get('/testimonials', [FrontendTestimonialController::class, 'index'])->name('testimonials.index');
-    Route::get('/podcasts', [FrontendPodcastController::class, 'index'])->name('podcasts.index');
-    Route::get('/videos', [FrontendInsightVideoController::class, 'index'])->name('videos.index');
-    Route::get('/webinars', [FrontendInsightEventController::class, 'webinarsIndex'])->name('webinars.index');
-    Route::get('/webinars/{slug}', [FrontendInsightEventController::class, 'webinarsShow'])
-        ->name('webinars.show')
-        ->where('slug', '[A-Za-z0-9\-]+');
-    Route::post('/webinars/{slug}/register', [FrontendInsightEventController::class, 'webinarsRegister'])
-        ->name('webinars.register')
-        ->where('slug', '[A-Za-z0-9\-]+');
-    Route::get('/download-centre', [FrontendDownloadCentreController::class, 'index'])->name('download-centre.index');
-    Route::get('/download-centre/{slug}/download', [FrontendDownloadCentreController::class, 'download'])
-        ->name('download-centre.download')
-        ->where('slug', '[A-Za-z0-9\-]+');
-    Route::get('/events', [FrontendInsightEventController::class, 'eventsIndex'])->name('events.index');
-    Route::get('/events/{slug}', [FrontendInsightEventController::class, 'eventsShow'])
-        ->name('events.show')
-        ->where('slug', '[A-Za-z0-9\-]+');
-    Route::post('/events/{slug}/register', [FrontendInsightEventController::class, 'eventsRegister'])
-        ->name('events.register')
-        ->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/', [InsightController::class, 'exploreAll'])->name('index');
+    Route::get('/explore-all', [InsightController::class, 'exploreAll'])->name('explore');
+    Route::get('/blogs', [InsightController::class, 'blogs'])->name('blogs.index');
+    Route::get('/blogs/{slug}', [InsightController::class, 'blogSingle'])->name('blogs.show')->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/white-papers', [InsightController::class, 'whitePapers'])->name('white-papers.index');
+    Route::get('/white-papers/{slug}/download', [InsightController::class, 'whitePaperDownload'])->name('white-papers.download')->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/case-studies', [InsightController::class, 'caseStudies'])->name('case-studies.index');
+    Route::get('/case-studies/{slug}', [InsightController::class, 'caseStudySingle'])->name('case-studies.show')->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/testimonials', [InsightController::class, 'testimonials'])->name('testimonials.index');
+    Route::get('/learner-success-stories', [InsightController::class, 'learnerSuccessStories'])->name('learner-success-stories');
+    Route::get('/podcasts', [InsightController::class, 'podcasts'])->name('podcasts.index');
+    Route::get('/videos', [InsightController::class, 'videos'])->name('videos.index');
+    Route::get('/webinars', [InsightController::class, 'webinars'])->name('webinars.index');
+    Route::get('/webinars/{slug}', [InsightController::class, 'webinarSingle'])->name('webinars.show')->where('slug', '[A-Za-z0-9\-]+');
+    Route::post('/webinars/{slug}/register', [InsightController::class, 'webinarRegister'])->name('webinars.register')->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/download-centre', [InsightController::class, 'downloadCentre'])->name('download-centre.index');
+    Route::get('/download-centre/{slug}/download', [InsightController::class, 'downloadCentreDownload'])->name('download-centre.download')->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/events', [InsightController::class, 'events'])->name('events.index');
+    Route::get('/events/{slug}', [InsightController::class, 'eventSingle'])->name('events.show')->where('slug', '[A-Za-z0-9\-]+');
+    Route::post('/events/{slug}/register', [InsightController::class, 'eventRegister'])->name('events.register')->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/career-guides', [InsightController::class, 'careerGuides'])->name('career-guides');
+    Route::get('/mentorship-guides', [InsightController::class, 'mentorshipGuides'])->name('mentorship-guides');
+    Route::get('/industry-reports', [InsightController::class, 'industryReports'])->name('industry-reports');
+    Route::get('/curated-essays-and-media', [InsightController::class, 'curatedEssaysAndMedia'])->name('curated-essays-and-media');
 });
+
+Route::get('/career-guides', [InsightController::class, 'careerGuides'])->name('career-guides');
+Route::get('/mentorship-guides', [InsightController::class, 'mentorshipGuides'])->name('mentorship-guides');
+Route::get('/industry-reports', [InsightController::class, 'industryReports'])->name('industry-reports');
+Route::get('/learner-success-stories', [InsightController::class, 'learnerSuccessStories'])->name('learner-success-stories');
+Route::get('/curated-essays-and-media', [InsightController::class, 'curatedEssaysAndMedia'])->name('curated-essays-and-media');
+Route::get('/explore-all-insights', [InsightController::class, 'exploreAll'])->name('explore-all-insights');
+Route::get('/webinars', [InsightController::class, 'webinars'])->name('webinars');
+Route::get('/podcasts', [InsightController::class, 'podcasts'])->name('podcasts');
+Route::get('/case-studies', [InsightController::class, 'caseStudies'])->name('case-studies');
+Route::get('/blogs', [InsightController::class, 'blogs'])->name('blogs');
+Route::get('/white-papers', [InsightController::class, 'whitePapers'])->name('white-papers');
+Route::get('/videos', [InsightController::class, 'videos'])->name('videos');
+Route::get('/download-centre', [InsightController::class, 'downloadCentre'])->name('download-centre');
 
 // Public job listings
 Route::get('/jobs',      [JobListingController::class, 'publicIndex'])->name('jobs.public');

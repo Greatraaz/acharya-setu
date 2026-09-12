@@ -1,4 +1,4 @@
-@extends('frontend.layouts.app')
+@extends('frontend.layouts.frontend')
 @section('title', 'Videos — Insights')
 @section('meta_description', 'Watch Vedrix mentorship videos — career guidance walkthroughs, skill-building demos, and expert conversations for students and professionals.')
 
@@ -9,12 +9,17 @@
         <div class="insights-banner__overlay" aria-hidden="true"></div>
         <div class="container insights-banner__inner">
             <nav class="insights-breadcrumb">
-                <a href="{{ route('home') }}">Home</a>
-                <span>&gt;</span>
+                <a href="{{ route('home') }}"><i class="bi bi-house-door-fill me-1"></i> Home</a>
+                <span><i class="bi bi-chevron-right"></i></span>
+                <a href="{{ route('insights.index') }}">Insights</a>
+                <span><i class="bi bi-chevron-right"></i></span>
                 <span>Videos</span>
             </nav>
-            <div class="insights-banner__eyebrow">🎬 Video Library</div>
+            <div class="insights-banner__eyebrow">
+                <i class="bi bi-play-circle-fill me-1"></i> Video Library
+            </div>
             <h1 class="insights-banner__title">Mentorship Videos & Career Demos</h1>
+            <div class="lain"></div>
             <p class="insights-banner__sub">
                 Watch practical walkthroughs, mentorship highlights, skill-building sessions, and expert conversations from the Vedrix community.
             </p>
@@ -33,14 +38,14 @@
 
             @if($videos->isEmpty())
                 <div class="blog-empty">
-                    <div class="blog-empty__icon">🎬</div>
+                    <div class="blog-empty__icon"><i class="bi bi-play-circle"></i></div>
                     <h3>No videos yet</h3>
                     <p>Check back soon — new video content is on the way.</p>
                 </div>
             @else
                 <div class="media-library-grid">
                     @foreach($videos as $item)
-                        @include('frontend.insights.partials.media-library-card', [
+                        @include('frontend.insights.mediaLibraryCard', [
                             'mediaType' => 'youtube',
                             'title' => $item->title,
                             'excerpt' => $item->excerpt(26),
@@ -57,5 +62,5 @@
     </section>
 </div>
 
-@include('frontend.insights.partials.media-lightbox')
+@include('frontend.insights.mediaLightbox')
 @endsection

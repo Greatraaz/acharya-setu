@@ -1,4 +1,4 @@
-@extends('frontend.layouts.app')
+@extends('frontend.layouts.frontend')
 @section('title', 'Case Studies — Insights')
 @section('meta_description', 'Real mentorship outcomes from Vedrix — how structured guidance helps students and early professionals find clarity and grow.')
 
@@ -9,12 +9,17 @@
         <div class="insights-banner__overlay" aria-hidden="true"></div>
         <div class="container insights-banner__inner">
             <nav class="insights-breadcrumb">
-                <a href="{{ route('home') }}">Home</a>
-                <span>&gt;</span>
+                <a href="{{ route('home') }}"><i class="bi bi-house-door-fill me-1"></i> Home</a>
+                <span><i class="bi bi-chevron-right"></i></span>
+                <a href="{{ route('insights.index') }}">Insights</a>
+                <span><i class="bi bi-chevron-right"></i></span>
                 <span>Case Studies</span>
             </nav>
-            <div class="insights-banner__eyebrow">🏆 Customer Proof</div>
+            <div class="insights-banner__eyebrow">
+                <i class="bi bi-trophy-fill me-1"></i> Customer Proof
+            </div>
             <h1 class="insights-banner__title">Mentorship Stories That Prove Direction Works</h1>
+            <div class="lain"></div>
             <p class="insights-banner__sub">
                 Real journeys from students and early professionals who found clarity, built skills, and moved forward with structured Vedrix mentorship.
             </p>
@@ -23,11 +28,23 @@
 
     <section class="section insights-body">
         <div class="container">
+            {{-- Section Heading --}}
+            <div class="insights-section-header text-center mb-4">
+                <span class="vj-eyebrow vj-eyebrow-mustard mb-2 d-inline-block">
+                    <i class="bi bi-trophy-fill me-1"></i> VERIFIED MENTEE OUTCOMES
+                </span>
+                <h2 class="vj-font-heading h3 mb-2">Real Career Transitions & Proven Results</h2>
+                <div class="lain center"></div>
+                <p class="text-muted small mb-0">
+                    Explore real stories of learners who transitioned into dream tech roles, secured promotions, and gained clarity through 1-on-1 mentorship.
+                </p>
+            </div>
+
             @if($industries->isNotEmpty())
-            <div class="blog-filters blog-filters--inline">
+            <div class="blog-filters blog-filters--inline justify-content-center">
                 <a href="{{ route('insights.case-studies.index') }}"
                    class="blog-filter-chip {{ ($industry ?? '') === '' ? 'is-active' : '' }}">
-                    All Industries
+                    <i class="bi bi-grid me-1"></i> All Industries
                 </a>
                 @foreach($industries as $ind)
                     <a href="{{ route('insights.case-studies.index', ['industry' => $ind]) }}"
@@ -39,7 +56,7 @@
             @endif
 
             @if(($industry ?? '') !== '')
-            <p class="blog-filters-meta">
+            <p class="blog-filters-meta text-center">
                 Showing {{ $caseStudies->total() }} {{ \Illuminate\Support\Str::plural('story', $caseStudies->total()) }}
                 in <strong>{{ $industry }}</strong>
             </p>
@@ -47,7 +64,7 @@
 
             @if($caseStudies->isEmpty())
                 <div class="blog-empty">
-                    <div class="blog-empty__icon">📁</div>
+                    <div class="blog-empty__icon"><i class="bi bi-trophy"></i></div>
                     <h3>No case studies yet</h3>
                     <p>Check back soon — new mentorship stories are on the way.</p>
                 </div>
@@ -57,9 +74,11 @@
                         <article class="blog-card case-study-card">
                             <div class="blog-card__media">
                                 @if($study->imageUrl())
-                                    <img src="{{ $study->imageUrl() }}" alt="{{ $study->title }}">
+                                    <img src="{{ $study->imageUrl() }}" alt="{{ $study->title }}" loading="lazy">
                                 @else
-                                    <div class="blog-card__placeholder">📁</div>
+                                    <div class="blog-card__placeholder">
+                                        <i class="bi bi-trophy text-muted"></i>
+                                    </div>
                                 @endif
                                 <span class="case-study-card__badge">{{ $study->industry }}</span>
                             </div>
@@ -68,7 +87,7 @@
                                 <p class="blog-card__excerpt">{{ $study->excerpt(28) }}</p>
                                 <a href="{{ route('insights.case-studies.show', $study->slug) }}"
                                    class="case-study-view-btn">
-                                    View Mentorship Story
+                                    View Mentorship Story <i class="bi bi-arrow-right ms-1"></i>
                                 </a>
                             </div>
                         </article>

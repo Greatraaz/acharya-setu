@@ -20,19 +20,21 @@
          @if(! empty($youtubeWatch)) data-youtube-watch="{{ $youtubeWatch }}" @endif>
     <button type="button" class="media-library-card__thumb" data-media-open>
         @if($thumb)
-            <img src="{{ $thumb }}" alt="{{ $cardTitle }}">
+            <img src="{{ $thumb }}" alt="{{ $cardTitle }}" loading="lazy">
         @else
-            <div class="media-library-card__placeholder">{{ $isAudio ? '🎧' : '🎬' }}</div>
+            <div class="media-library-card__placeholder">
+                <i class="bi {{ $isAudio ? 'bi-headphones' : 'bi-play-circle-fill' }} text-muted"></i>
+            </div>
         @endif
         <span class="media-library-card__badge {{ $badgeClass }}">
             @if($isAudio)
-                🎧 {{ $badgeLabel }}
+                <i class="bi bi-headphones me-1"></i> {{ $badgeLabel }}
             @else
-                ▶ {{ $badgeLabel }}
+                <i class="bi bi-youtube me-1"></i> {{ $badgeLabel }}
             @endif
         </span>
         <span class="media-library-card__play {{ $playClass }}" aria-hidden="true">
-            {{ $isAudio ? '🎧' : '▶' }}
+            <i class="bi {{ $isAudio ? 'bi-headphones' : 'bi-play-fill' }}"></i>
         </span>
     </button>
     <div class="media-library-card__body">
@@ -40,6 +42,6 @@
         @if($cardExcerpt !== '')
             <p class="media-library-card__excerpt">{{ $cardExcerpt }}</p>
         @endif
-        <span class="media-library-card__cta {{ $ctaClass }}">{{ $ctaLabel }} →</span>
+        <span class="media-library-card__cta {{ $ctaClass }}">{{ $ctaLabel }} <i class="bi bi-arrow-right ms-1"></i></span>
     </div>
 </article>

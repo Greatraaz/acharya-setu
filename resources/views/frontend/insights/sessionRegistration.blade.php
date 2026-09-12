@@ -1,13 +1,13 @@
 <div class="session-register-card">
     <div class="session-register-card__head">
-        <span>📝</span>
+        <span><i class="bi bi-pencil-square text-warning"></i></span>
         <h3>Reserve Your Spot</h3>
     </div>
     <p class="session-register-card__sub">Free access for students, early professionals & career builders.</p>
 
     @if(session('registration_success'))
         <div class="session-register-success">
-            Thank you! Your registration has been received. We will share session details on your email.
+            <i class="bi bi-check-circle-fill me-1 text-success"></i> Thank you! Your registration has been received. We will share session details on your email.
         </div>
     @else
         <form method="POST" action="{{ route($registerRoute, $session->slug) }}" class="session-register-form">
@@ -32,7 +32,7 @@
                 <input id="reg-phone" type="text" name="phone" value="{{ old('phone') }}" placeholder="+91">
                 @error('phone')<p class="session-register-error">{{ $message }}</p>@enderror
             </div>
-            <button type="submit" class="session-register-btn">Register Now →</button>
+            <button type="submit" class="session-register-btn">Register Now <i class="bi bi-arrow-right ms-1"></i></button>
         </form>
     @endif
 </div>

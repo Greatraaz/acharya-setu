@@ -5,7 +5,7 @@
         <h3 class="media-lightbox__title" id="media-lightbox-title"></h3>
         <div class="media-lightbox__player" id="media-lightbox-player"></div>
         <a class="media-lightbox__external is-hidden" id="media-lightbox-external" href="#" target="_blank" rel="noopener noreferrer">
-            Watch on YouTube
+            <i class="bi bi-youtube me-1"></i> Watch on YouTube
         </a>
     </div>
 </div>
