@@ -52,20 +52,15 @@
 
     <div class="bg-white border border-gray-200 rounded-2xl p-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="font-semibold text-gray-800">Categories & Questions</h2>
+            <h2 class="font-semibold text-gray-800">Questions</h2>
             <a href="{{ route('admin.assessment-questions.create') }}" class="text-sm text-orange-600 font-medium">+ Add Question</a>
         </div>
-        @forelse($assessment->categories as $category)
-        <div class="mb-5 last:mb-0">
-            <div class="text-sm font-semibold text-gray-800 mb-2">{{ $category->name }}</div>
-            @forelse($category->questions as $q)
-            <div class="text-sm text-gray-600 py-2 border-b border-gray-50">{{ $q->question }}</div>
-            @empty
-            <p class="text-xs text-gray-400">No questions in this category.</p>
-            @endforelse
+        @forelse($assessment->questions as $idx => $q)
+        <div class="text-sm text-gray-600 py-2 border-b border-gray-50">
+            <span class="font-medium text-gray-800">{{ $idx + 1 }}.</span> {{ $q->question }}
         </div>
         @empty
-        <p class="text-sm text-gray-500">No categories yet. Create a category, then add questions.</p>
+        <p class="text-sm text-gray-500">No questions yet. Add questions from Assessment Questions.</p>
         @endforelse
     </div>
 </div>

@@ -58,31 +58,22 @@
         </div>
 
         <div class="assess-form-card">
-            <div class="assess-section-title">Categories & Questions</div>
-            @forelse($assessment->categories as $category)
-            <div style="margin-bottom:18px;">
-                <div style="font-size:14px;font-weight:700;margin-bottom:6px;">{{ $category->name }}</div>
-                @forelse($category->questions as $q)
-                <div class="assess-question">{{ $q->question }}</div>
-                @empty
-                <p class="dash-subtitle">No questions in this category.</p>
-                @endforelse
+            <div class="assess-section-title">Questions</div>
+            @forelse($questions ?? [] as $idx => $q)
+            @php
+                $text = is_object($q) ? ($q->question ?? '') : (is_array($q) ? ($q['question'] ?? 'Question') : (string) $q);
+                $options = is_object($q) && method_exists($q, 'optionLabels')
+                    ? ($q->optionLabels() ?? [])
+                    : (is_array($q) ? ($q['options'] ?? []) : []);
+            @endphp
+            <div class="assess-question">
+                <strong>{{ $idx + 1 }}. {{ $text }}</strong>
+                @foreach($options as $optIdx => $option)
+                <div>{{ $optIdx }}. {{ is_array($option) ? ($option['text'] ?? json_encode($option)) : $option }}</div>
+                @endforeach
             </div>
             @empty
-                @forelse($questions ?? [] as $idx => $q)
-                @php
-                    $text = is_object($q) ? ($q->question ?? '') : (is_array($q) ? ($q['question'] ?? 'Question') : (string) $q);
-                    $options = is_object($q) ? ($q->optionLabels() ?? []) : (is_array($q) ? ($q['options'] ?? []) : []);
-                @endphp
-                <div class="assess-question">
-                    <strong>{{ $idx + 1 }}. {{ $text }}</strong>
-                    @foreach($options as $optIdx => $option)
-                    <div>{{ $optIdx }}. {{ is_array($option) ? ($option['text'] ?? json_encode($option)) : $option }}</div>
-                    @endforeach
-                </div>
-                @empty
-                <p class="dash-subtitle">No categories yet. Create a category, then add questions.</p>
-                @endforelse
+            <p class="dash-subtitle">No questions yet. Add questions from the Questions section.</p>
             @endforelse
         </div>
 

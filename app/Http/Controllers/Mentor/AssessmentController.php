@@ -61,7 +61,7 @@ class AssessmentController extends Controller
 
     public function show(Assessment $assessment)
     {
-        $assessment->load(['categories.questions', 'scoreBands', 'questions.category']);
+        $assessment->load(['scoreBands', 'questions']);
         $questions = $assessment->questions;
         $completions = Schema::hasTable('assessment_progress')
             ? AssessmentProgress::where('assessment_id', $assessment->id)

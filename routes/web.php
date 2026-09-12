@@ -62,6 +62,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\AppSettingsController;
 use App\Http\Controllers\Admin\WalletTransactionController;
+use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\WithdrawalRequestController;
 use App\Http\Controllers\Admin\VideoCallLogController;
 use App\Http\Controllers\Admin\UserController;
@@ -590,6 +591,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::resource('videos', InsightVideoController::class)->except(['show']);
     Route::resource('events-webinars', InsightEventController::class)->except(['show']);
     Route::resource('download-centres', DownloadCentreController::class)->except(['show']);
+
+    // ── Transactions (global ledger + invoices) ───────────────
+    Route::prefix('transactions')->name('transactions.')->group(function () {
+        Route::get('/',              [TransactionController::class, 'index'])->name('index');
+        Route::get('/export',        [TransactionController::class, 'export'])->name('export');
+        Route::get('/{transaction}', [TransactionController::class, 'show'])->name('show');
+    });
 
     // ── Wallet ────────────────────────────────────────────────
     Route::prefix('wallet')->name('wallet.')->group(function () {

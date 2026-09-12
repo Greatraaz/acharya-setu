@@ -40,18 +40,20 @@
                 @if(request('status'))
                     <input type="hidden" name="status" value="{{ request('status') }}">
                 @endif
-                <div class="session-search-field">
-                    <span class="session-search-icon" aria-hidden="true">🔍</span>
-                    <input type="search" name="q" class="form-input" value="{{ $search ?? request('q') }}"
-                           placeholder="Search by name, mentor, or ID…"
-                           autocomplete="off">
+                <div class="session-toolbar-controls__search-row">
+                    <div class="session-search-field">
+                        <span class="session-search-icon" aria-hidden="true">🔍</span>
+                        <input type="search" name="q" class="form-input" value="{{ $search ?? request('q') }}"
+                               placeholder="Search by name, mentor, or ID…"
+                               autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn btn-outline session-toolbar-controls__submit">Search</button>
+                    @if(request()->filled('q') || request()->filled('date'))
+                        <a href="{{ route('mentee.sessions', array_filter(['status' => request('status')])) }}" class="btn btn-ghost session-toolbar-controls__clear">Clear</a>
+                    @endif
                 </div>
                 <input type="date" name="date" class="form-input session-date-input"
                        value="{{ request('date') }}" title="Filter by date">
-                <button type="submit" class="btn btn-outline">Search</button>
-                @if(request()->filled('q') || request()->filled('date'))
-                    <a href="{{ route('mentee.sessions', array_filter(['status' => request('status')])) }}" class="btn btn-ghost">Clear</a>
-                @endif
             </div>
         </form>
 

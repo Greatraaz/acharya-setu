@@ -93,27 +93,49 @@
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     padding: 16px 16px 12px; border-bottom: 1px solid rgba(255,255,255,.08);
     flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #111827;
 }
+.call-room__notes-head-text { min-width: 0; flex: 1 1 auto; }
 .call-room__notes-title { font-size: 15px; font-weight: 800; white-space: nowrap; }
 .call-room__notes-hint { font-size: 11px; color: #94a3b8; margin-top: 2px; }
 .call-room__notes-close {
-    width: 32px; height: 32px; border-radius: 8px; border: 0; cursor: pointer;
-    background: rgba(255,255,255,.08); color: #fff; font-size: 16px; flex-shrink: 0;
+    width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(255,255,255,.18);
+    cursor: pointer; background: rgba(255,255,255,.12); color: #fff;
+    font-size: 18px; line-height: 1; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.call-room__notes-close:hover,
+.call-room__notes-close:focus-visible {
+    background: rgba(239,68,68,.35);
+    border-color: rgba(239,68,68,.5);
+    outline: none;
 }
 .call-room__notes-body {
     flex: 1; display: flex; flex-direction: column;
-    padding: 12px 16px 16px; min-height: 0; min-width: 260px;
+    padding: 12px 16px 16px; min-height: 0; min-width: 0;
+    overflow: hidden;
 }
 .call-room__notes-textarea {
-    flex: 1; width: 100%; min-height: 200px; resize: none;
+    flex: 1; width: 100%; min-height: 160px; resize: none;
     border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
     background: #0b1220; color: #e2e8f0; padding: 12px 14px;
-    font-size: 14px; line-height: 1.6; font-family: inherit;
+    font-size: 14px; line-height: 1.55; font-family: inherit;
+    box-sizing: border-box;
+}
+.call-room__notes-textarea::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+    white-space: normal;
+    line-height: 1.45;
 }
 .call-room__notes-textarea:focus { outline: none; border-color: rgba(59,130,246,.6); }
 .call-room__notes-foot {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
     margin-top: 10px; font-size: 12px; color: #94a3b8; flex-shrink: 0;
+    flex-wrap: wrap;
 }
 .call-room__notes-status.is-saving { color: #fbbf24; }
 .call-room__notes-status.is-saved { color: #34d399; }
@@ -151,10 +173,42 @@ body:has(.call-room) .app-bottom-nav { display: none !important; }
 body:has(.call-room) { overflow: hidden; }
 
 @media (max-width: 768px) {
-    .call-room__stage { flex-direction: column; }
+    .call-room__stage { flex-direction: column; position: relative; }
     .call-room.is-notes-open .call-room__notes {
-        position: absolute; inset: 0; z-index: 8;
-        flex-basis: auto; width: 100%; opacity: 1;
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        flex-basis: auto;
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        opacity: 1;
+        border-left-width: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    .call-room.is-notes-open .call-room__notes-head {
+        padding: 14px 14px 12px;
+        padding-top: max(14px, env(safe-area-inset-top));
+    }
+    .call-room.is-notes-open .call-room__notes-close {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        font-size: 20px;
+        background: rgba(255,255,255,.16);
+    }
+    .call-room.is-notes-open .call-room__notes-body {
+        padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+        min-width: 0;
+    }
+    .call-room.is-notes-open .call-room__notes-textarea {
+        min-height: 0;
+        font-size: 15px;
+    }
+    .call-room.is-notes-open .call-room__notes-foot {
+        font-size: 11px;
+        gap: 8px;
     }
     .call-room.is-notes-open .call-room__local { right: 16px; top: auto; bottom: 96px; }
 }
@@ -224,18 +278,19 @@ body:has(.call-room) { overflow: hidden; }
 
         <aside class="call-room__notes" id="notes-panel" aria-hidden="true">
             <div class="call-room__notes-head">
-                <div>
-                    <div class="call-room__notes-title">📝 My Notes</div>
+                <div class="call-room__notes-head-text">
+                    <div class="call-room__notes-title">My Notes</div>
                     <div class="call-room__notes-hint">Private — only you can see these</div>
                 </div>
-                <button type="button" class="call-room__notes-close" id="btn-notes-close" title="Close notes">✕</button>
+                <button type="button" class="call-room__notes-close" id="btn-notes-close" aria-label="Close notes" title="Close notes">✕</button>
             </div>
             <div class="call-room__notes-body">
                 <textarea id="session-notes" class="call-room__notes-textarea"
-                          placeholder="Jot down key points, questions, action items…"></textarea>
+                          placeholder="Write key points, questions, or next steps…"
+                          aria-label="Session notes"></textarea>
                 <div class="call-room__notes-foot">
                     <span id="notes-save-status" class="call-room__notes-status">Saved automatically</span>
-                    <span>Visible after the call ends</span>
+                    <span>Shown after the call ends</span>
                 </div>
             </div>
         </aside>

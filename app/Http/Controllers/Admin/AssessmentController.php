@@ -57,7 +57,7 @@ class AssessmentController extends Controller
 
     public function show(Assessment $assessment)
     {
-        $assessment->load(['categories.questions', 'scoreBands', 'questions.category']);
+        $assessment->load(['scoreBands', 'questions']);
         $completions = AssessmentProgress::where('assessment_id', $assessment->id)
             ->whereNotNull('completed_at')
             ->with('user:id,name,email')

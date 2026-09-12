@@ -45,7 +45,7 @@ class AssessmentsController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $a = Assessment::with(['questions.category', 'scoreBands', 'categories'])->findOrFail($id);
+        $a = Assessment::with(['questions', 'scoreBands'])->findOrFail($id);
         abort_unless($a->isVisibleToMentee($request->user()), 404);
 
         return response()->json([

@@ -19,6 +19,7 @@
             ],
             'Activity' => [
                 ['admin.sessions.index',     '📅', 'Sessions'],
+                ['admin.transactions.index', '🧾', 'Transactions'],
                 ['admin.wallet.index',       '💰', 'Wallet'],
                 ['admin.withdrawals.index',  '🏦', 'Withdrawals'],
                 ['admin.call-logs.index',  '📞', 'Call Records'],

@@ -108,4 +108,79 @@ class WalletTransaction extends Model
             default        => 'secondary',
         };
     }
+
+    /**
+     * Business category inferred from linked entity / description / reference.
+     */
+    public function getCategoryAttribute(): string
+    {
+        $type = (string) ($this->transactionable_type ?? '');
+        $desc = strtolower((string) ($this->description ?? ''));
+        $ref  = strtoupper((string) ($this->reference ?? ''));
+        $meta = is_array($this->meta) ? $this->meta : [];
+
+        if ($type !== '' && str_contains($type, 'ConsultationSession')) {
+            return 'session';
+        }
+        if ($type !== '' && (str_contains($type, 'UserSubscription') || str_contains($type, 'Plan'))) {
+            return 'plan';
+        }
+        if ($type !== '' && str_contains($type, 'WithdrawalRequest')) {
+            return 'withdrawal';
+        }
+
+        if (str_starts_with($ref, 'TRF-') || in_array($this->type, ['transfer_in', 'transfer_out'], true)) {
+            return 'transfer';
+        }
+        if (str_contains($desc, 'withdraw') || str_contains($desc, 'payout')) {
+            return 'withdrawal';
+        }
+        if (str_contains($desc, 'top-up') || str_contains($desc, 'topup') || str_contains($desc, 'top up')) {
+            return 'topup';
+        }
+        if (str_contains($desc, 'session') || str_contains($desc, 'consultation') || str_contains($desc, 'mentor payout') || str_contains($desc, 'booking')) {
+            return 'session';
+        }
+        if (str_contains($desc, 'plan') || str_contains($desc, 'subscription')) {
+            return 'plan';
+        }
+        if (str_contains($desc, 'welcome') || str_contains($desc, 'bonus')) {
+            return 'bonus';
+        }
+        if (($meta['source'] ?? null) === 'admin' || $this->performed_by) {
+            if (! str_starts_with($ref, 'TRF-')) {
+                return 'admin';
+            }
+        }
+
+        return 'other';
+    }
+
+    public function getCategoryLabelAttribute(): string
+    {
+        return match ($this->category) {
+            'session'    => 'Session',
+            'topup'      => 'Wallet Top-up',
+            'withdrawal' => 'Withdrawal',
+            'transfer'   => 'Transfer',
+            'plan'       => 'Plan / Subscription',
+            'admin'      => 'Admin Adjust',
+            'bonus'      => 'Bonus',
+            default      => 'Other',
+        };
+    }
+
+    public static function categoryOptions(): array
+    {
+        return [
+            'session'    => 'Session',
+            'topup'      => 'Wallet Top-up',
+            'withdrawal' => 'Withdrawal',
+            'transfer'   => 'Transfer',
+            'plan'       => 'Plan / Subscription',
+            'admin'      => 'Admin Adjust',
+            'bonus'      => 'Bonus',
+            'other'      => 'Other',
+        ];
+    }
 }

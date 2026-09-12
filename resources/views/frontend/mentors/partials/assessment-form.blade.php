@@ -120,19 +120,46 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3/tinymce.min.js"></script>
 <script>
 (function () {
-    const light = document.documentElement.getAttribute('data-theme') === 'light';
-    tinymce.init({
-        selector: 'textarea.tinymce-band',
-        height: 220,
-        menubar: 'file edit view insert format tools table',
-        plugins: 'lists link',
-        toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link',
-        branding: false,
-        promotion: false,
-        skin: light ? 'oxide' : 'oxide-dark',
-        content_css: light ? 'default' : 'dark',
-        content_style: 'body { font-family: Inter, system-ui, sans-serif; font-size: 14px; }'
-    });
+    function isLightTheme() {
+        return document.documentElement.getAttribute('data-theme') === 'light';
+    }
+
+    function bandEditorOptions() {
+        const light = isLightTheme();
+        return {
+            selector: 'textarea.tinymce-band',
+            height: 220,
+            menubar: 'file edit view insert format tools table',
+            plugins: 'lists link',
+            toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist | link',
+            branding: false,
+            promotion: false,
+            skin: light ? 'oxide' : 'oxide-dark',
+            content_css: light ? 'default' : 'dark',
+            content_style: light
+                ? 'body { font-family: Inter, system-ui, sans-serif; font-size: 14px; background-color: #ffffff !important; color: #111827 !important; }'
+                : 'body { font-family: Inter, system-ui, sans-serif; font-size: 14px; background-color: #0b1220 !important; color: #e2e8f0 !important; }'
+        };
+    }
+
+    function initBandEditors() {
+        if (!window.tinymce) return;
+        if (tinymce.editors && tinymce.editors.length) {
+            tinymce.triggerSave();
+            tinymce.remove('textarea.tinymce-band');
+        }
+        tinymce.init(bandEditorOptions());
+    }
+
+    initBandEditors();
+
+    const previousToggleTheme = window.toggleTheme;
+    window.toggleTheme = function () {
+        if (typeof previousToggleTheme === 'function') {
+            previousToggleTheme();
+        }
+        setTimeout(initBandEditors, 0);
+    };
 })();
 </script>
 @endpush

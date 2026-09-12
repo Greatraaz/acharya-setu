@@ -81,7 +81,7 @@ class AssessmentController extends Controller
         $user = $request->user();
 
         $assessment = Assessment::with([
-            'questions.category',
+            'questions',
             'scoreBands'
         ])->find($id);
 

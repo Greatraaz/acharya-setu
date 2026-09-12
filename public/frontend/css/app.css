@@ -2960,6 +2960,29 @@
        justify-content: flex-end;
        min-width: 0;
    }
+   .session-toolbar-controls__search-row {
+       display: flex;
+       flex-wrap: nowrap;
+       align-items: center;
+       gap: 8px;
+       flex: 1 1 220px;
+       min-width: 0;
+   }
+   .session-toolbar-controls__search-row .session-search-field {
+       flex: 1 1 auto;
+       min-width: 0;
+       max-width: none;
+   }
+   .session-toolbar-controls__submit,
+   .session-toolbar-controls__clear {
+       flex-shrink: 0;
+       white-space: nowrap;
+   }
+   .session-toolbar-controls .session-date-input {
+       flex: 0 1 160px;
+       min-width: 140px;
+       max-width: 180px;
+   }
    .mentor-mentees-toolbar {
        margin-bottom: 16px;
    }
@@ -3213,12 +3236,21 @@
        flex: 0 1 200px;
        min-width: 160px;
    }
+   .assess-questions-toolbar__search-row {
+       display: flex;
+       flex-wrap: nowrap;
+       align-items: center;
+       gap: 8px;
+       flex: 1 1 280px;
+       min-width: 0;
+       justify-content: flex-end;
+   }
    .assess-questions-toolbar__search,
    .assess-questions-toolbar .session-search-field {
-       flex: 0 1 260px;
-       width: 260px;
-       max-width: 100%;
-       min-width: 180px;
+       flex: 1 1 auto;
+       width: auto;
+       max-width: 320px;
+       min-width: 160px;
    }
    .assess-questions-toolbar__submit,
    .assess-questions-toolbar__clear {
@@ -3227,19 +3259,32 @@
    }
    @media (max-width: 640px) {
        .assess-questions-toolbar__grid {
+           flex-direction: column;
+           align-items: stretch;
            justify-content: stretch;
        }
-       .assess-questions-toolbar__select,
+       .assess-questions-toolbar__select {
+           flex: none;
+           width: 100%;
+           max-width: none;
+           min-width: 0;
+       }
+       .assess-questions-toolbar__search-row {
+           width: 100%;
+           flex: none;
+           justify-content: stretch;
+       }
        .assess-questions-toolbar__search,
        .assess-questions-toolbar .session-search-field {
-           flex: 1 1 100%;
-           width: 100%;
+           flex: 1 1 auto;
+           width: auto;
            max-width: none;
            min-width: 0;
        }
        .assess-questions-toolbar__submit,
        .assess-questions-toolbar__clear {
-           flex: 1 1 calc(50% - 4px);
+           flex: 0 0 auto;
+           width: auto;
            justify-content: center;
        }
    }
@@ -3549,7 +3594,22 @@
            justify-content: flex-start;
            gap: 10px;
        }
-       .session-toolbar-controls > *,
+       .session-toolbar-controls__search-row {
+           width: 100%;
+           flex: none;
+       }
+       .session-toolbar-controls__search-row .session-search-field {
+           flex: 1 1 auto;
+           width: auto;
+           max-width: none;
+           min-width: 0;
+       }
+       .session-toolbar-controls__submit,
+       .session-toolbar-controls__clear {
+           flex-shrink: 0;
+           width: auto !important;
+       }
+       .session-toolbar-controls > .session-date-input,
        .mentor-change-toolbar__controls > * {
            width: 100% !important;
            max-width: none !important;
@@ -4898,6 +4958,16 @@
        border-radius: 10px !important;
        border-color: var(--input-border) !important;
    }
+   html[data-theme="light"] .tox-tinymce,
+   html[data-theme="light"] .tox .tox-edit-area,
+   html[data-theme="light"] .tox .tox-edit-area__iframe {
+       background: #ffffff !important;
+   }
+   html:not([data-theme="light"]) .tox-tinymce,
+   html:not([data-theme="light"]) .tox .tox-edit-area,
+   html:not([data-theme="light"]) .tox .tox-edit-area__iframe {
+       background: #0b1220 !important;
+   }
 
    @media (max-width: 900px) {
        .assess-form-grid,
@@ -4930,30 +5000,32 @@
            padding: 0;
        }
 
-       /* Assessments list — card layout */
+       /* Assessments list — card layout (actions top-right, same as questions) */
        .assess-table--assessments tr {
            display: grid;
            grid-template-columns: 56px minmax(0, 1fr) auto;
            grid-template-areas:
-               "thumb title status"
+               "thumb title actions"
                "desc desc desc"
-               "actions actions actions";
-           gap: 10px 12px;
+               "status status status";
+           gap: 8px 10px;
            align-items: start;
        }
        .assess-table--assessments td.num { display: none; }
        .assess-table--assessments td[data-label="Image"] {
            grid-area: thumb;
+           align-self: start;
        }
        .assess-table--assessments td.assess-title-cell {
            grid-area: title;
            font-size: 15px;
            line-height: 1.35;
            align-self: center;
+           padding-right: 8px;
        }
        .assess-table--assessments td[data-label="Status"] {
            grid-area: status;
-           justify-self: end;
+           justify-self: start;
            align-self: center;
        }
        .assess-table--assessments td[data-label="Description"] {
@@ -4969,10 +5041,33 @@
        .assess-table--assessments td.actions {
            grid-area: actions;
            display: flex;
+           width: auto;
+           max-width: none;
            justify-content: flex-end;
-           padding-top: 10px;
-           margin-top: 2px;
-           border-top: 1px solid var(--border);
+           align-self: start;
+           padding: 0;
+           margin: 0;
+           border-top: none;
+           text-align: right;
+       }
+       .assess-table--assessments .assess-actions {
+           width: auto;
+           display: flex;
+           align-items: center;
+           justify-content: flex-end;
+           gap: 6px;
+       }
+       .assess-table--assessments .assess-actions > a,
+       .assess-table--assessments .assess-actions > form {
+           flex: none;
+           width: auto;
+           min-width: 0;
+           margin: 0;
+       }
+       .assess-table--assessments .assess-actions .assess-icon-btn {
+           width: 36px;
+           height: 36px;
+           border-radius: 10px;
        }
 
        /* Questions list — card with actions top-right */

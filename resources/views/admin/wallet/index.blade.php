@@ -7,7 +7,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
             <h6 class="text-lg font-semibold text-gray-800">Wallet Transactions</h6>
-            <p class="text-sm text-gray-500 mt-0.5">Manage and monitor all wallet activity</p>
+            <p class="text-sm text-gray-500 mt-0.5">Adjust balances and transfer funds. For the full ledger see <a href="{{ route('admin.transactions.index') }}" class="text-indigo-600 hover:underline">Transactions</a>.</p>
         </div>
         <nav class="flex items-center gap-2 text-sm">
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors">

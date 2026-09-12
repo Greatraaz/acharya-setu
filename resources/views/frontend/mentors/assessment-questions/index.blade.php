@@ -27,15 +27,17 @@
                     <option value="{{ $a->id }}" @selected((string) request('assessment_id') === (string) $a->id)>{{ $a->title }}</option>
                     @endforeach
                 </select>
-                <div class="session-search-field assess-questions-toolbar__search">
-                    <span class="session-search-icon" aria-hidden="true">🔍</span>
-                    <input id="assess-question-search" type="search" name="search" value="{{ request('search') }}"
-                           placeholder="Search questions…" class="form-input" autocomplete="off" aria-label="Search questions">
+                <div class="assess-questions-toolbar__search-row">
+                    <div class="session-search-field assess-questions-toolbar__search">
+                        <span class="session-search-icon" aria-hidden="true">🔍</span>
+                        <input id="assess-question-search" type="search" name="search" value="{{ request('search') }}"
+                               placeholder="Search questions…" class="form-input" autocomplete="off" aria-label="Search questions">
+                    </div>
+                    <button type="submit" class="btn btn-outline assess-questions-toolbar__submit">Search</button>
+                    @if(request()->filled('search') || request()->filled('assessment_id'))
+                    <a href="{{ route('mentor.assessment-questions.index') }}" class="btn btn-ghost assess-questions-toolbar__clear">Clear</a>
+                    @endif
                 </div>
-                <button type="submit" class="btn btn-outline assess-questions-toolbar__submit">Search</button>
-                @if(request()->filled('search') || request()->filled('assessment_id'))
-                <a href="{{ route('mentor.assessment-questions.index') }}" class="btn btn-ghost assess-questions-toolbar__clear">Clear</a>
-                @endif
             </div>
         </form>
 
