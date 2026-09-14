@@ -75,10 +75,13 @@
 
             <form method="GET" action="{{ route('mentee.mentor.change') }}" class="mentor-change-toolbar">
                 <div class="session-toolbar-controls mentor-change-toolbar__controls">
-                    <div class="session-search-field mentor-change-toolbar__search">
-                        <span class="session-search-icon" aria-hidden="true">🔍</span>
-                        <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
-                               placeholder="Search name, company, field…" autocomplete="off">
+                    <div class="session-toolbar-controls__search-row mentor-change-toolbar__search-row">
+                        <div class="session-search-field mentor-change-toolbar__search">
+                            <span class="session-search-icon" aria-hidden="true">🔍</span>
+                            <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
+                                   placeholder="Search name, company, field…" autocomplete="off" aria-label="Search mentors">
+                        </div>
+                        <button type="submit" class="btn btn-outline mentor-change-toolbar__submit">Search</button>
                     </div>
                     <select name="field" class="form-input form-select mentor-change-toolbar__field" aria-label="Filter by field">
                         <option value="">All fields</option>
@@ -86,9 +89,8 @@
                         <option value="{{ $fieldOption }}" @selected(($field ?? request('field')) === $fieldOption)>{{ $fieldOption }}</option>
                         @endforeach
                     </select>
-                    <button type="submit" class="btn btn-outline">Search</button>
                     @if(request()->filled('search') || request()->filled('field'))
-                        <a href="{{ route('mentee.mentor.change') }}" class="btn btn-ghost">Clear</a>
+                        <a href="{{ route('mentee.mentor.change') }}" class="btn btn-ghost mentor-change-toolbar__clear">Clear</a>
                     @endif
                 </div>
             </form>

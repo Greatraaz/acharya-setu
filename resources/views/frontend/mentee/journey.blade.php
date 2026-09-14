@@ -39,22 +39,36 @@
                 @endif
             </div>
         @else
-            {{-- Track switcher: show every journey assigned to this mentee --}}
-            <div class="card" style="margin-bottom:20px;padding:14px 16px;">
-                <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;">
+            {{-- Track switcher --}}
+            <div class="card mentee-tracks-switcher">
+                <div class="mentee-tracks-switcher__label">
                     Your tracks ({{ $personalTracks->count() }})
                 </div>
-                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <div class="mentee-tracks-switcher__list" role="list">
                     @foreach($personalTracks as $track)
                         @php
                             $isSelected = $selectedTrack && (int) $selectedTrack->id === (int) $track->id;
+                            $isSetup = (int) $track->months_count === 0;
                         @endphp
                         <a href="{{ route('mentee.journey.index', ['track' => $track->id]) }}"
-                           class="btn {{ $isSelected ? 'btn-primary' : 'btn-ghost' }} btn-sm"
-                           style="{{ $isSelected ? '' : 'border:1px solid var(--border);' }}">
-                            {{ $track->name }}
-                            @if((int) $track->months_count === 0)
-                                <span style="opacity:.7;font-size:11px;">· setup</span>
+                           class="mentee-tracks-switcher__item {{ $isSelected ? 'is-active' : '' }}"
+                           role="listitem"
+                           aria-current="{{ $isSelected ? 'true' : 'false' }}">
+                            <span class="mentee-tracks-switcher__icon" aria-hidden="true">{{ $isSelected ? '✓' : '📘' }}</span>
+                            <span class="mentee-tracks-switcher__body">
+                                <span class="mentee-tracks-switcher__name">{{ $track->name }}</span>
+                                <span class="mentee-tracks-switcher__meta">
+                                    @if($isSetup)
+                                        Setup in progress
+                                    @else
+                                        {{ (int) $track->months_count }} month{{ (int) $track->months_count === 1 ? '' : 's' }}
+                                    @endif
+                                </span>
+                            </span>
+                            @if($isSelected)
+                                <span class="mentee-tracks-switcher__badge">Current</span>
+                            @elseif($isSetup)
+                                <span class="mentee-tracks-switcher__badge mentee-tracks-switcher__badge--muted">Setup</span>
                             @endif
                         </a>
                     @endforeach
@@ -66,11 +80,11 @@
                 $streamName = $selectedTrack->name ?? ($enrollment->stream->name ?? 'Your track');
             @endphp
 
-            <div style="display:grid;grid-template-columns:{{ ($canViewProgress ?? false) ? '2fr 1fr' : '1fr' }};gap:16px;margin-bottom:24px;">
-                <div class="wallet-card">
+            <div class="mentee-journey-hero {{ ($canViewProgress ?? false) ? 'mentee-journey-hero--with-stat' : '' }}">
+                <div class="wallet-card mentee-journey-hero__track">
                     <div style="position:relative;z-index:1;">
                         <div style="font-size:11px;font-weight:600;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Current Track</div>
-                        <div style="font-size:28px;font-weight:800;font-family:var(--font-head);color:#fff;margin-bottom:6px;">{{ $streamName }}</div>
+                        <div class="mentee-journey-hero__title">{{ $streamName }}</div>
                         <div style="font-size:13px;color:rgba(255,255,255,.8);">
                             @if($enrollment)
                                 Month {{ $enrollment->current_month }} · Week {{ $enrollment->current_week }}
@@ -94,7 +108,7 @@
                     </div>
                 </div>
                 @if($canViewProgress ?? false)
-                <div class="card">
+                <div class="card mentee-journey-hero__stat">
                     <div class="stat-card-icon">✅</div>
                     <div class="stat-card-label">Completed</div>
                     <div class="stat-card-value">{{ (int) ($progress['completed'] ?? 0) }}</div>

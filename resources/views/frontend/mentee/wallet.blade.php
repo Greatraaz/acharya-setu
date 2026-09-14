@@ -52,15 +52,17 @@
                 <h3 style="font-size:15px;font-weight:700;">Transaction History</h3>
             </div>
             <div class="table-scroll">
-            <table class="data-table">
+            <table class="data-table mentee-wallet-table">
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Description</th>
+                        <th>Details</th>
+                        <th>Reference</th>
                         <th>Type</th>
                         <th>Amount</th>
-                        <th>Balance After</th>
+                        <th>Balance</th>
                         <th>Status</th>
+                        <th>Invoice</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -69,18 +71,74 @@
                         $isCredit = in_array($txn->type, ['credit', 'refund', 'transfer_in'], true);
                         $amountColor = $isCredit ? 'var(--success)' : 'var(--error)';
                         $amountPrefix = $isCredit ? '+' : '-';
+                        $session = $txn->transactionable instanceof \App\Models\ConsultationSession
+                            ? $txn->transactionable
+                            : null;
+                        $invoice = $txn->resolved_invoice
+                            ?? $session?->sessionInvoice;
+                        $meta = is_array($txn->meta) ? $txn->meta : [];
+                        $bookingRef = $meta['booking_ref']
+                            ?? $session?->booking_ref
+                            ?? $invoice?->booking_ref
+                            ?? (str_starts_with((string) $txn->reference, 'WAL-')
+                                ? substr((string) $txn->reference, 4)
+                                : null);
+                        $sessionTitle = $invoice
+                            ? $invoice->sessionTitle()
+                            : ($session?->title ?: null);
+                        $mentorName = $session?->mentor?->name;
+                        $category = $txn->category;
+                        $detailTitle = $txn->description ?: $txn->type_label;
+                        if ($sessionTitle) {
+                            $detailTitle = $sessionTitle;
+                        } elseif ($category === 'topup') {
+                            $detailTitle = 'Wallet top-up';
+                        } elseif ($category === 'bonus') {
+                            $detailTitle = $txn->description ?: 'Welcome bonus';
+                        }
+                        $referenceLabel = $invoice?->invoice_number
+                            ?? ($bookingRef ?: null)
+                            ?? ($txn->reference ?: '—');
+                        $referenceSub = null;
+                        if ($invoice?->invoice_number && $bookingRef) {
+                            $referenceSub = $bookingRef;
+                        } elseif ($category === 'topup' && $txn->reference) {
+                            $referenceSub = 'Payment ID';
+                        } elseif ($session) {
+                            $referenceSub = 'Session #'.$session->id;
+                        }
                     @endphp
                     <tr>
                         <td style="font-size:12px;white-space:nowrap;">{{ $txn->created_at?->format('d M Y, h:i A') ?? '—' }}</td>
-                        <td style="font-weight:600;">{{ $txn->description ?: $txn->type_label }}</td>
+                        <td style="min-width:160px;max-width:260px;">
+                            <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $detailTitle }}">{{ $detailTitle }}</div>
+                            @if($mentorName)
+                                <div style="font-size:12px;color:var(--text-2);margin-top:2px;">with {{ $mentorName }}</div>
+                            @elseif($txn->description && $detailTitle !== $txn->description)
+                                <div style="font-size:12px;color:var(--text-2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $txn->description }}</div>
+                            @endif
+                        </td>
+                        <td style="font-size:12px;">
+                            <div style="font-family:ui-monospace,monospace;white-space:nowrap;">{{ $referenceLabel }}</div>
+                            @if($referenceSub)
+                                <div style="font-size:11px;color:var(--text-3);margin-top:2px;white-space:nowrap;">{{ $referenceSub }}</div>
+                            @endif
+                        </td>
                         <td><span class="session-status {{ $txn->type_badge_color === 'success' ? 'completed' : ($txn->type_badge_color === 'danger' ? 'cancelled' : 'pending') }}">{{ $txn->type_label }}</span></td>
-                        <td style="font-weight:700;color:{{ $amountColor }};">{{ $amountPrefix }}₹{{ number_format((float) $txn->amount, 0) }}</td>
-                        <td>₹{{ number_format((float) ($txn->balance_after ?? 0), 0) }}</td>
+                        <td style="font-weight:700;color:{{ $amountColor }};white-space:nowrap;">{{ $amountPrefix }}₹{{ number_format((float) $txn->amount, 2) }}</td>
+                        <td style="white-space:nowrap;">₹{{ number_format((float) ($txn->balance_after ?? 0), 2) }}</td>
                         <td><span class="session-status {{ $txn->status }}">{{ ucfirst($txn->status ?? 'completed') }}</span></td>
+                        <td>
+                            @if($invoice)
+                                <a href="{{ route('mentee.session-invoices.download', $invoice) }}" class="btn btn-outline btn-sm" style="white-space:nowrap;">Download</a>
+                            @else
+                                <span style="font-size:12px;color:var(--text-3);">—</span>
+                            @endif
+                        </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" style="text-align:center;padding:40px 16px;">
+                        <td colspan="8" style="text-align:center;padding:40px 16px;">
                             <div style="font-size:15px;font-weight:700;margin-bottom:6px;">No transactions yet</div>
                             <div style="font-size:13px;color:var(--text-2);margin-bottom:14px;">Top up your wallet to book mentor sessions.</div>
                             <button type="button" class="btn btn-primary btn-sm" onclick="openModal('topup-modal')">Add Money</button>

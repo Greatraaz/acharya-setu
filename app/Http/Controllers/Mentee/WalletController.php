@@ -3,22 +3,93 @@
 namespace App\Http\Controllers\Mentee;
 
 use App\Http\Controllers\Controller;
+use App\Models\ConsultationSession;
+use App\Models\SessionInvoice;
 use App\Models\WalletTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class WalletController extends Controller
 {
     public function index()
     {
-        $user         = auth()->user();
-        $transactions = WalletTransaction::where('user_id', $user->id)->latest()->paginate(20);
-        $stats        = [
+        $user = auth()->user();
+
+        $transactions = WalletTransaction::where('user_id', $user->id)
+            ->with(['transactionable' => function ($morphTo) {
+                $morphTo->morphWith([
+                    ConsultationSession::class => [
+                        'mentor:id,name',
+                        'sessionInvoice:id,consultation_session_id,invoice_number,user_id,total_amount,duration_minutes,session_at,meta',
+                    ],
+                ]);
+            }])
+            ->latest()
+            ->paginate(20);
+
+        // Attach invoices for session rows that only have booking_ref / WAL- reference.
+        $this->attachFallbackInvoices($transactions, (int) $user->id);
+
+        $stats = [
             'balance'  => $user->wallet_balance,
-            'spent'    => WalletTransaction::where('user_id',$user->id)->where('type','debit')->sum('amount'),
-            'refunded' => WalletTransaction::where('user_id',$user->id)->where('type','refund')->sum('amount'),
+            'spent'    => WalletTransaction::where('user_id', $user->id)->where('type', 'debit')->sum('amount'),
+            'refunded' => WalletTransaction::where('user_id', $user->id)->where('type', 'refund')->sum('amount'),
         ];
-        return view('frontend.mentee.wallet', compact('transactions','stats'));
+
+        return view('frontend.mentee.wallet', compact('transactions', 'stats'));
+    }
+
+    /**
+     * @param  \Illuminate\Contracts\Pagination\LengthAwarePaginator|\Illuminate\Support\Collection  $transactions
+     */
+    private function attachFallbackInvoices($transactions, int $userId): void
+    {
+        if (! Schema::hasTable('session_invoices')) {
+            return;
+        }
+
+        $needsLookup = [];
+        foreach ($transactions as $txn) {
+            $session = $txn->transactionable instanceof ConsultationSession
+                ? $txn->transactionable
+                : null;
+
+            if ($session?->sessionInvoice) {
+                $txn->setAttribute('resolved_invoice', $session->sessionInvoice);
+                continue;
+            }
+
+            $meta = is_array($txn->meta) ? $txn->meta : [];
+            $bookingRef = $meta['booking_ref']
+                ?? (str_starts_with((string) $txn->reference, 'WAL-')
+                    ? substr((string) $txn->reference, 4)
+                    : null);
+
+            if ($bookingRef) {
+                $needsLookup[$txn->id] = $bookingRef;
+            }
+        }
+
+        if ($needsLookup === []) {
+            return;
+        }
+
+        $invoices = SessionInvoice::query()
+            ->where('user_id', $userId)
+            ->whereIn('booking_ref', array_values($needsLookup))
+            ->get()
+            ->keyBy('booking_ref');
+
+        foreach ($transactions as $txn) {
+            if ($txn->getAttribute('resolved_invoice')) {
+                continue;
+            }
+            $ref = $needsLookup[$txn->id] ?? null;
+            if ($ref && isset($invoices[$ref])) {
+                $txn->setAttribute('resolved_invoice', $invoices[$ref]);
+            }
+        }
     }
 
     /**
