@@ -114,6 +114,7 @@ Route::get('/storage-link', function () {
 
 // ── Home ────────────────────────────────────────────────────
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::redirect('/home', '/', 301);
 Route::post('/waitlist', [HomeController::class, 'waitlist'])->name('waitlist.store');
 
 // ── Mentor Listing & Profile ────────────────────────────────

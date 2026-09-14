@@ -26,24 +26,27 @@
         </form>
 
         @forelse($mentees as $mentee)
-        <div class="card" style="margin-bottom:12px;padding:16px 18px;">
-            <div style="display:flex;gap:14px;align-items:center;">
-                <div class="mentor-avatar-lg" style="width:48px;height:48px;font-size:18px;">
+        <div class="card mentor-mentee-card">
+            <div class="mentor-mentee-card__row">
+                <div class="mentor-avatar-lg mentor-mentee-card__avatar">
                     @if($mentee->avatar_url)
                         <img src="{{ $mentee->avatar_url }}" alt="">
                     @else
                         {{ strtoupper(substr($mentee->name, 0, 1)) }}
                     @endif
                 </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:15px;font-weight:700;">{{ $mentee->name }}</div>
-                    <div style="font-size:12px;color:var(--text-2);">
-                        {{ $mentee->email }}
-                        @if($mentee->college) · {{ $mentee->college }} @endif
-                        @if($mentee->field) · {{ $mentee->field }} @endif
+                <div class="mentor-mentee-card__body">
+                    <div class="mentor-mentee-card__name">{{ $mentee->name }}</div>
+                    <div class="mentor-mentee-card__email" title="{{ $mentee->email }}">{{ $mentee->email }}</div>
+                    @if($mentee->college || $mentee->field)
+                    <div class="mentor-mentee-card__meta">
+                        @if($mentee->college)<span>{{ $mentee->college }}</span>@endif
+                        @if($mentee->college && $mentee->field)<span aria-hidden="true"> · </span>@endif
+                        @if($mentee->field)<span>{{ $mentee->field }}</span>@endif
                     </div>
+                    @endif
                 </div>
-                <div style="display:flex;gap:8px;flex-shrink:0;">
+                <div class="mentor-mentee-card__actions">
                     <a href="{{ route('mentor.journey.show', $mentee->id) }}" class="btn btn-outline btn-sm">Journey</a>
                     <a href="{{ route('mentor.mentees.show', $mentee->id) }}" class="btn btn-primary btn-sm">View</a>
                 </div>

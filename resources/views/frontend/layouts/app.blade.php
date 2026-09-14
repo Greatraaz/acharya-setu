@@ -16,7 +16,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Vedrix">
     <link rel="stylesheet" href="{{ asset('frontend/css/app.css') }}?v={{ filemtime(public_path('frontend/css/app.css')) }}">
-    <link rel="stylesheet" href="{{ asset('frontend/css/a2hs.css') }}?v={{ filemtime(public_path('frontend/css/a2hs.css')) }}">
     {{-- Critical: only one theme logo visible (also works if app.css is cached/old on prod) --}}
     <style>
         .navbar-brand .logo-for-light,
@@ -187,8 +186,6 @@
 {{-- Page Content --}}
 @yield('content')
 
-@include('frontend.partials.install-app')
-
 {{-- Confirm Modal (global) --}}
 <div id="confirm-modal" class="modal-overlay">
     <div class="modal" style="max-width:380px">
@@ -257,7 +254,6 @@
 </footer>
 
 <script src="{{ asset('frontend/js/app.js') }}?v={{ filemtime(public_path('frontend/js/app.js')) }}"></script>
-<script src="{{ asset('frontend/js/a2hs.js') }}?v={{ filemtime(public_path('frontend/js/a2hs.js')) }}"></script>
 @stack('scripts')
 </body>
 </html>

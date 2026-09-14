@@ -6,13 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
 use App\Models\WalletTransaction;
 use App\Models\WithdrawalRequest;
+use App\Support\SessionPayoutBreakdown;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class WalletController extends Controller
 {
-    private const PLATFORM_FEE_RATE = 0.20;
-
     public function index()
     {
         $user = auth()->user();
@@ -32,7 +31,10 @@ class WalletController extends Controller
         $transactions = (clone $earningsQuery)
             ->with(['transactionable' => function ($morphTo) {
                 $morphTo->morphWith([
-                    ConsultationSession::class => ['mentee:id,name'],
+                    ConsultationSession::class => [
+                        'mentee:id,name',
+                        'sessionInvoice:id,consultation_session_id,invoice_number,total_amount,duration_minutes,session_at,meta',
+                    ],
                 ]);
             }])
             ->latest()
@@ -63,7 +65,7 @@ class WalletController extends Controller
             ->latest()
             ->paginate(10, ['*'], 'withdrawals_page');
 
-        $platformFeeRate = self::PLATFORM_FEE_RATE;
+        $platformFeeRate = SessionPayoutBreakdown::FEE_RATE;
 
         return view('frontend.mentors.wallet', compact('transactions', 'stats', 'platformFeeRate', 'withdrawals'));
     }

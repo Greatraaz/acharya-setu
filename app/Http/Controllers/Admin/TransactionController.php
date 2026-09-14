@@ -7,6 +7,7 @@ use App\Models\PlanInvoice;
 use App\Models\SessionInvoice;
 use App\Models\WalletTransaction;
 use App\Services\WalletService;
+use App\Support\SessionPayoutBreakdown;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -82,18 +83,28 @@ class TransactionController extends Controller
             $out = fopen('php://output', 'w');
 
             if ($tab === 'sessions') {
-                fputcsv($out, ['Invoice #', 'Date', 'Mentee', 'Mentor', 'Method', 'Wallet', 'Razorpay', 'Total', 'Reference', 'Status']);
-                $this->sessionInvoiceQuery($request)->orderByDesc('id')->chunk(200, function ($rows) use ($out) {
+                fputcsv($out, [
+                    'Invoice #', 'Session', 'Date', 'Mentee', 'Mentor', 'Method', 'Duration (min)',
+                    'Gross', 'Admin Commission', 'Mentor Earned', 'Reference', 'Status',
+                ]);
+                $this->sessionInvoiceQuery($request)->with([
+                    'user:id,name',
+                    'mentor:id,name',
+                    'session:id,title',
+                ])->orderByDesc('id')->chunk(200, function ($rows) use ($out) {
                     foreach ($rows as $inv) {
+                        $bd = $inv->payoutBreakdown();
                         fputcsv($out, [
                             $inv->invoice_number,
-                            optional($inv->invoice_date)->format('Y-m-d'),
+                            $inv->sessionTitle(),
+                            optional($inv->session_at ?? $inv->invoice_date)->format('Y-m-d'),
                             $inv->user?->name,
                             $inv->mentor?->name,
                             $inv->payment_method,
-                            $inv->wallet_amount,
-                            $inv->razorpay_amount,
-                            $inv->total_amount,
+                            $inv->duration_minutes,
+                            $bd['gross'],
+                            $bd['platform_fee'],
+                            $bd['net'],
                             $inv->payment_reference,
                             $inv->status,
                         ]);
@@ -153,7 +164,10 @@ class TransactionController extends Controller
     private function sessionInvoiceListing(Request $request): array
     {
         if (! Schema::hasTable('session_invoices')) {
-            return [collect(), ['count' => 0, 'total' => 0, 'wallet' => 0, 'razorpay' => 0]];
+            return [collect(), [
+                'count' => 0, 'total' => 0, 'wallet' => 0, 'razorpay' => 0,
+                'commission' => 0, 'mentor_net' => 0,
+            ]];
         }
 
         $query = $this->sessionInvoiceQuery($request);
@@ -161,14 +175,23 @@ class TransactionController extends Controller
             ->selectRaw('COUNT(*) as c, COALESCE(SUM(total_amount),0) as total, COALESCE(SUM(wallet_amount),0) as wallet, COALESCE(SUM(razorpay_amount),0) as razorpay')
             ->first();
 
+        $grossTotal = (float) ($summaryRow->total ?? 0);
+        $breakdown = SessionPayoutBreakdown::fromGross($grossTotal);
+
         $summary = [
-            'count'    => (int) ($summaryRow->c ?? 0),
-            'total'    => (float) ($summaryRow->total ?? 0),
-            'wallet'   => (float) ($summaryRow->wallet ?? 0),
-            'razorpay' => (float) ($summaryRow->razorpay ?? 0),
+            'count'      => (int) ($summaryRow->c ?? 0),
+            'total'      => $grossTotal,
+            'wallet'     => (float) ($summaryRow->wallet ?? 0),
+            'razorpay'   => (float) ($summaryRow->razorpay ?? 0),
+            'commission' => $breakdown['platform_fee'],
+            'mentor_net' => $breakdown['net'],
         ];
 
-        $invoices = $query->with(['user:id,name,email', 'mentor:id,name,email'])
+        $invoices = $query->with([
+            'user:id,name,email',
+            'mentor:id,name,email',
+            'session:id,title,booking_ref,amount,duration_minutes',
+        ])
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
@@ -187,7 +210,10 @@ class TransactionController extends Controller
                     ->orWhere('payment_reference', 'like', "%{$term}%")
                     ->orWhere('booking_ref', 'like', "%{$term}%")
                     ->orWhere('billing_name', 'like', "%{$term}%")
-                    ->orWhere('billing_email', 'like', "%{$term}%");
+                    ->orWhere('billing_email', 'like', "%{$term}%")
+                    ->orWhere('description', 'like', "%{$term}%")
+                    ->orWhere('meta->title', 'like', "%{$term}%")
+                    ->orWhereHas('session', fn ($sq) => $sq->where('title', 'like', "%{$term}%"));
             });
         }
 

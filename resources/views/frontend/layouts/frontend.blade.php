@@ -47,7 +47,7 @@
                     <ul class="vj-nav-menu">
                         <!-- Home -->
                         <li class="vj-nav-item {{ request()->is('/') || request()->is('home') ? 'active' : '' }}">
-                            <a href="{{ url('home') }}" class="vj-nav-link">Home</a>
+                            <a href="{{ route('home') }}" class="vj-nav-link">Home</a>
                         </li>
 
                         <!-- =========================================================================
@@ -808,11 +808,11 @@
                 <a href="{{ route('register') }}?role=mentor" class="vj-btn vj-btn-secondary justify-content-center">Become a Mentor</a>
             </div>
             <ul class="list-unstyled">
-                <li class="py-2 border-bottom border-secondary"><a href="{{ url('home') }}" class="text-white text-decoration-none fw-bold">Home</a></li>
+                <li class="py-2 border-bottom border-secondary"><a href="{{ route('home') }}" class="text-white text-decoration-none fw-bold">Home</a></li>
                 <li class="py-2 border-bottom border-secondary"><a href="{{ url('about') }}" class="text-white text-decoration-none fw-bold">Discover Vedrix</a></li>
-                <li class="py-2 border-bottom border-secondary"><a href="{{ url('home') }}#journeys" class="text-white text-decoration-none fw-bold">Your Journey</a></li>
+                <li class="py-2 border-bottom border-secondary"><a href="{{ route('home') }}#journeys" class="text-white text-decoration-none fw-bold">Your Journey</a></li>
                 <li class="py-2 border-bottom border-secondary"><a href="{{ route('mentors.search') }}" class="text-white text-decoration-none fw-bold">Mentors</a></li>
-                <li class="py-2 border-bottom border-secondary"><a href="{{ url('home') }}#organisations" class="text-white text-decoration-none fw-bold">For Organisations</a></li>
+                <li class="py-2 border-bottom border-secondary"><a href="{{ route('home') }}#organisations" class="text-white text-decoration-none fw-bold">For Organisations</a></li>
                 <li class="py-2 border-bottom border-secondary"><a href="{{ route('insights.blogs.index') }}" class="text-white text-decoration-none fw-bold">Insights</a></li>
                 <li class="py-2 border-bottom border-secondary"><a href="{{ url('contact') }}" class="text-white text-decoration-none fw-bold">Contact</a></li>
                 @guest
@@ -869,14 +869,14 @@
                 <div class="col-lg-2 col-md-6 col-6">
                     <h4>Your Journey</h4>
                     <ul>
-                        <li><a href="{{ url('home') }}#assessments">Assessments</a></li>
-                        <li><a href="{{ url('home') }}#paths">Career Paths</a></li>
-                        <li><a href="{{ url('home') }}#journeys">Mentorship Journeys</a></li>
-                        <li><a href="{{ url('home') }}#studio">Career Readiness</a></li>
-                        <li><a href="{{ url('home') }}#studio">Interview Gym</a></li>
-                        <li><a href="{{ url('home') }}#studio">Resume Studio</a></li>
-                        <li><a href="{{ url('home') }}#studio">LinkedIn Studio</a></li>
-                        <li><a href="{{ url('home') }}#studio">Project Vault</a></li>
+                        <li><a href="{{ route('home') }}#assessments">Assessments</a></li>
+                        <li><a href="{{ route('home') }}#paths">Career Paths</a></li>
+                        <li><a href="{{ route('home') }}#journeys">Mentorship Journeys</a></li>
+                        <li><a href="{{ route('home') }}#studio">Career Readiness</a></li>
+                        <li><a href="{{ route('home') }}#studio">Interview Gym</a></li>
+                        <li><a href="{{ route('home') }}#studio">Resume Studio</a></li>
+                        <li><a href="{{ route('home') }}#studio">LinkedIn Studio</a></li>
+                        <li><a href="{{ route('home') }}#studio">Project Vault</a></li>
                     </ul>
                 </div>
 
@@ -886,17 +886,17 @@
                     <ul class="mb-4">
                         <li><a href="{{ route('mentors.search') }}">Find a Mentor</a></li>
                         <li><a href="{{ route('mentors.search') }}">Mentor Categories</a></li>
-                        <li><a href="{{ url('home') }}#experiences">Office Hours</a></li>
+                        <li><a href="{{ route('home') }}#experiences">Office Hours</a></li>
                         <li><a href="{{ route('register') }}?role=mentor">Become a Mentor</a></li>
-                        <li><a href="{{ url('home') }}#mentors">Mentor Resources</a></li>
+                        <li><a href="{{ route('home') }}#mentors">Mentor Resources</a></li>
                     </ul>
 
                     <h4>Organisations</h4>
                     <ul>
-                        <li><a href="{{ url('home') }}#organisations">Colleges & Universities</a></li>
-                        <li><a href="{{ url('home') }}#organisations">Placement Cells</a></li>
-                        <li><a href="{{ url('home') }}#organisations">Employers</a></li>
-                        <li><a href="{{ url('home') }}#organisations">Partnerships</a></li>
+                        <li><a href="{{ route('home') }}#organisations">Colleges & Universities</a></li>
+                        <li><a href="{{ route('home') }}#organisations">Placement Cells</a></li>
+                        <li><a href="{{ route('home') }}#organisations">Employers</a></li>
+                        <li><a href="{{ route('home') }}#organisations">Partnerships</a></li>
                     </ul>
                 </div>
 

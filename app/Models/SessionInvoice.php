@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SessionPayoutBreakdown;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -74,6 +75,32 @@ class SessionInvoice extends Model
             'hybrid' => 'Wallet + Razorpay',
             default => ucfirst((string) $this->payment_method) ?: '—',
         };
+    }
+
+    public function sessionTitle(): string
+    {
+        $metaTitle = is_array($this->meta) ? ($this->meta['title'] ?? null) : null;
+
+        return (string) ($metaTitle
+            ?: $this->session?->title
+            ?: $this->description
+            ?: 'Mentorship session');
+    }
+
+    /**
+     * Same split as mentor wallet earnings (gross − admin commission = mentor net).
+     *
+     * @return array{gross: float, platform_fee: float, net: float, fee_rate: float}
+     */
+    public function payoutBreakdown(): array
+    {
+        $gross = (float) ($this->total_amount ?: $this->base_amount ?: 0);
+
+        if ($gross <= 0 && $this->relationLoaded('session') && $this->session) {
+            $gross = (float) $this->session->amount;
+        }
+
+        return SessionPayoutBreakdown::fromGross($gross);
     }
 
     public function toPublicArray(): array

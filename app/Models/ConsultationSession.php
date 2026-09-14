@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\SessionPayoutBreakdown;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -553,9 +554,10 @@ class ConsultationSession extends Model
             return null;
         }
 
-        $feeRate = 0.20;
-        $fee = round($gross * $feeRate, 2);
-        $net = round($gross - $fee, 2);
+        $breakdown = SessionPayoutBreakdown::fromGross($gross);
+        $feeRate = $breakdown['fee_rate'];
+        $fee = $breakdown['platform_fee'];
+        $net = $breakdown['net'];
 
         if ($net <= 0) {
             return null;
@@ -566,7 +568,7 @@ class ConsultationSession extends Model
             $durationMinutes = (int) max(1, ceil($this->actual_duration_seconds / 60));
         }
 
-        $this->loadMissing('mentee:id,name');
+        $this->loadMissing(['mentee:id,name', 'sessionInvoice:id,consultation_session_id,invoice_number']);
 
         return $mentor->creditWallet(
             $net,
@@ -579,10 +581,12 @@ class ConsultationSession extends Model
                     'source'           => 'session_mentor_payout',
                     'booking_ref'      => $this->booking_ref,
                     'session_id'       => $this->id,
+                    'invoice_number'   => $this->sessionInvoice?->invoice_number,
                     'mentee_id'        => $this->mentee_id,
                     'mentee_name'      => $this->mentee?->name,
                     'duration_minutes' => $durationMinutes,
-                    'gross_amount'     => $gross,
+                    'session_title'    => $this->title,
+                    'gross_amount'     => $breakdown['gross'],
                     'platform_fee'     => $fee,
                     'platform_fee_rate'=> $feeRate,
                     'net_amount'       => $net,

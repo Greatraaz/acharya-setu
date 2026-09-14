@@ -3,7 +3,23 @@
 
 @section('content')
 <style>
-    .mentor-hub-tabs { margin-bottom: 18px; }
+    .mentor-hub-tabs {
+        display: flex;
+        flex-wrap: nowrap;
+        width: 100%;
+        max-width: 100%;
+        gap: 8px;
+        margin-bottom: 18px;
+    }
+    .mentor-hub-tabs .session-filter-tab {
+        flex: 1 1 0;
+        min-width: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        white-space: nowrap;
+    }
     .mentor-journey-list { display: grid; gap: 12px; }
     .mentor-journey-card {
         display: grid;

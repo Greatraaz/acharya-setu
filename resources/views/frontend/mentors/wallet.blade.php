@@ -124,7 +124,8 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Description</th>
+                        <th>Invoice</th>
+                        <th>Session</th>
                         <th>Mentee</th>
                         <th>Date</th>
                         <th>Duration</th>
@@ -140,36 +141,50 @@
                         $session = $txn->transactionable instanceof \App\Models\ConsultationSession
                             ? $txn->transactionable
                             : null;
+                        $invoice = $session?->sessionInvoice;
                         $meta = is_array($txn->meta) ? $txn->meta : [];
-                        $net = (float) ($meta['net_amount'] ?? $txn->amount);
-                        $gross = isset($meta['gross_amount'])
-                            ? (float) $meta['gross_amount']
-                            : ($netRate > 0 ? round($net / $netRate, 2) : $net);
-                        $fee = isset($meta['platform_fee'])
-                            ? (float) $meta['platform_fee']
-                            : round($gross - $net, 2);
+                        $breakdown = \App\Support\SessionPayoutBreakdown::fromMeta(
+                            $meta,
+                            $invoice?->total_amount !== null ? (float) $invoice->total_amount : ($session?->amount !== null ? (float) $session->amount : null),
+                            (float) $txn->amount
+                        );
                         $duration = $meta['duration_minutes']
+                            ?? $invoice?->duration_minutes
                             ?? $session?->duration_minutes
                             ?? (isset($session?->actual_duration_seconds) ? (int) ceil($session->actual_duration_seconds / 60) : null);
-                        $title = $session?->title
+                        $title = $meta['session_title']
+                            ?? $invoice?->sessionTitle()
+                            ?? $session?->title
                             ?? $txn->description
                             ?? $txn->type_label;
+                        $invoiceNumber = $meta['invoice_number']
+                            ?? $invoice?->invoice_number
+                            ?? '—';
                         $menteeName = $session?->mentee?->name
                             ?? ($meta['mentee_name'] ?? '—');
+                        $earnedDate = $invoice?->session_at
+                            ?? $session?->scheduled_at
+                            ?? $txn->created_at;
                     @endphp
                     <tr>
-                        <td style="font-weight:600;">{{ $title }}</td>
+                        <td style="font-size:12px;font-family:ui-monospace,monospace;white-space:nowrap;">{{ $invoiceNumber }}</td>
+                        <td style="font-weight:600;max-width:220px;">
+                            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $title }}">{{ $title }}</div>
+                            @if(!empty($meta['booking_ref']) || $session?->booking_ref)
+                            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">{{ $meta['booking_ref'] ?? $session?->booking_ref }}</div>
+                            @endif
+                        </td>
                         <td>{{ $menteeName }}</td>
-                        <td style="font-size:12px;white-space:nowrap;">{{ $txn->created_at?->format('d M Y') ?? '—' }}</td>
+                        <td style="font-size:12px;white-space:nowrap;">{{ $earnedDate?->format('d M Y') ?? '—' }}</td>
                         <td>{{ $duration ? $duration.' min' : '—' }}</td>
-                        <td>₹{{ number_format($gross, 0) }}</td>
-                        <td style="color:var(--text-3);">-₹{{ number_format($fee, 0) }}</td>
-                        <td style="color:var(--success);font-weight:700;">₹{{ number_format($net, 0) }}</td>
+                        <td>₹{{ number_format($breakdown['gross'], 2) }}</td>
+                        <td style="color:var(--text-3);">-₹{{ number_format($breakdown['platform_fee'], 2) }}</td>
+                        <td style="color:var(--success);font-weight:700;">₹{{ number_format($breakdown['net'], 2) }}</td>
                         <td><span class="session-status {{ $txn->status }}">{{ ucfirst($txn->status) }}</span></td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" style="text-align:center;padding:40px 16px;">
+                        <td colspan="9" style="text-align:center;padding:40px 16px;">
                             <div style="font-size:15px;font-weight:700;margin-bottom:6px;">No earnings yet</div>
                             <div style="font-size:13px;color:var(--text-2);">Completed session payouts will appear here.</div>
                         </td>
