@@ -158,8 +158,12 @@
                             <span class="text-sm font-semibold text-gray-700">{{ $session->duration_minutes }}m</span>
                         </td>
                         <td class="px-4 py-4">
-                            @if($session->amount > 0)
-                            <div class="text-sm font-semibold text-gray-800">₹{{ number_format($session->amount, 0) }}</div>
+                            @php $listAmt = round((float) $session->amount + (float) ($session->coupon_discount ?? 0), 2); @endphp
+                            @if($listAmt > 0)
+                            <div class="text-sm font-semibold text-gray-800">₹{{ number_format($listAmt, 0) }}</div>
+                            @if((float) ($session->coupon_discount ?? 0) > 0)
+                            <div class="text-[11px] text-amber-600">Paid ₹{{ number_format((float) $session->amount, 0) }} · coupon −₹{{ number_format((float) $session->coupon_discount, 0) }}</div>
+                            @endif
                             <div class="text-xs mt-0.5 {{ $session->payment_status === 'paid' ? 'text-green-600' : 'text-amber-500' }}">
                                 {{ ucfirst($session->payment_status) }}
                             </div>

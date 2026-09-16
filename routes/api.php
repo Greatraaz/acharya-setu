@@ -30,6 +30,7 @@ use App\Http\Controllers\Api\Mentee\MentorRequestController as MenteeMentorReque
 use App\Http\Controllers\Api\Mentee\ProgressController as MenteeProgress;
 use App\Http\Controllers\Api\Mentee\InvoiceController as MenteeInvoice;
 use App\Http\Controllers\Api\Mentee\SessionInvoiceController as MenteeSessionInvoice;
+use App\Http\Controllers\Api\Mentee\CouponController as MenteeCoupon;
 use App\Http\Controllers\Api\Mentee\AssessmentController;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
 use App\Http\Controllers\Api\Mentor\CurriculumController as MentorCurriculum;
@@ -296,6 +297,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('session-invoices', [MenteeSessionInvoice::class, 'index']);
         Route::get('session-invoices/{invoice}', [MenteeSessionInvoice::class, 'show'])->whereNumber('invoice');
         Route::get('session-invoices/{invoice}/download', [MenteeSessionInvoice::class, 'download'])->whereNumber('invoice');
+
+        // Coupons / offers (selected mentees)
+        Route::get('coupons', [MenteeCoupon::class, 'index']);
+        Route::post('coupons/validate', [MenteeCoupon::class, 'validateCoupon']);
 
         Route::get('/assessments', [AssessmentController::class, 'index'])->name('api.mentee.assessments.index');
         Route::get('/assessments/{id}', [AssessmentController::class, 'show'])

@@ -173,13 +173,30 @@
         </tr>
     </thead>
     <tbody>
+        @php
+            $meta = is_array($invoice->meta ?? null) ? $invoice->meta : [];
+            $listAmount = (float) ($meta['list_amount'] ?? 0);
+            $couponDiscount = (float) ($meta['coupon_discount'] ?? 0);
+            if ($listAmount <= 0) {
+                $listAmount = round((float) $invoice->total_amount + $couponDiscount, 2);
+            }
+        @endphp
         <tr>
             <td>
                 <strong>{{ $invoice->description ?: 'Mentorship session' }}</strong><br>
                 <span class="muted">Paid via {{ $invoice->paymentMethodLabel() }} · GST not applicable</span>
             </td>
-            <td class="right">{{ number_format((float) $invoice->total_amount, 2) }}</td>
+            <td class="right">{{ number_format($listAmount, 2) }}</td>
         </tr>
+        @if($couponDiscount > 0)
+        <tr>
+            <td>
+                Coupon discount<br>
+                <span class="muted">Promotional discount (platform-funded)</span>
+            </td>
+            <td class="right">−{{ number_format($couponDiscount, 2) }}</td>
+        </tr>
+        @endif
     </tbody>
 </table>
 
@@ -197,7 +214,7 @@
     </tr>
     @endif
     <tr class="grand">
-        <td>Total</td>
+        <td>Total paid</td>
         <td class="right">₹ {{ number_format((float) $invoice->total_amount, 2) }}</td>
     </tr>
 </table>

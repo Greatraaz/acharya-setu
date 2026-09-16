@@ -18,6 +18,7 @@ class BookingController extends Controller
             'duration'       => 'required|integer|in:'.implode(',', ConsultationSession::BOOKING_DURATIONS),
             'title'          => 'required|string|max:255',
             'agenda'         => 'nullable|string|max:1000',
+            'coupon_code'    => 'nullable|string|max:40',
             'payment_method' => 'nullable|in:wallet,razorpay,hybrid',
         ]);
 

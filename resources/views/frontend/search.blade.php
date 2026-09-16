@@ -249,6 +249,22 @@
                             <textarea name="agenda" class="form-input" rows="3" id="booking-agenda"
                                       placeholder="Any additional context..."></textarea>
                         </div>
+                        @auth
+                        @php $availableCoupons = app(\App\Services\OfferService::class)->availableCouponsFor(auth()->user()); @endphp
+                        @if($availableCoupons->isNotEmpty())
+                        <div class="form-group" style="margin-top:14px;margin-bottom:0;">
+                            <label class="form-label">Coupon (optional)</label>
+                            <select class="form-input" id="booking-coupon">
+                                <option value="">No coupon</option>
+                                @foreach($availableCoupons as $coupon)
+                                <option value="{{ $coupon->coupon_code }}">
+                                    {{ $coupon->title }} — ₹{{ number_format((float) $coupon->amount, 0) }} off (min ₹{{ number_format((float) $coupon->min_session_amount, 0) }})
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        @endif
+                        @endauth
                     </div>
                 </div>
 
@@ -324,6 +340,10 @@ function confirmBooking(paymentMethod) {
     data.mentor_id = document.getElementById('booking-mentor-id').value;
     data.title     = document.getElementById('booking-topic')?.value?.trim() || '';
     data.agenda    = document.getElementById('booking-agenda')?.value || '';
+    const couponEl = document.getElementById('booking-coupon');
+    if (couponEl && couponEl.value) {
+        data.coupon_code = couponEl.value;
+    }
     if (!data.title) {
         showToast('error', 'Please enter a topic for the session.');
         return;
@@ -377,12 +397,15 @@ function openPaymentChoice(info, fromError) {
     }
     box.classList.add('open');
     const amount = info.amount ?? info.required_amount ?? 0;
+    const base = info.base_amount ?? amount;
+    const discount = info.coupon_discount ?? 0;
     const bal = info.wallet_balance ?? 0;
     const shortfall = info.shortfall ?? Math.max(0, amount - bal);
     const opts = info.payment_options || ['wallet','razorpay'];
     const body = document.getElementById('payment-choice-body');
     body.innerHTML = `
       <p style="font-size:13px;color:var(--text-2);margin-bottom:12px;">
+        ${discount > 0 ? `Original fee: <strong>₹${Number(base).toLocaleString()}</strong><br>Coupon discount: <strong>-₹${Number(discount).toLocaleString()}</strong><br>` : ''}
         Session fee: <strong>₹${Number(amount).toLocaleString()}</strong><br>
         Wallet balance: <strong>₹${Number(bal).toLocaleString()}</strong>
         ${shortfall > 0 ? `<br>Shortfall: <strong>₹${Number(shortfall).toLocaleString()}</strong>` : ''}

@@ -34,6 +34,8 @@ class SessionInvoiceService
             $seller = AppSetting::billing();
             $user = $locked->mentee;
             $total = (float) $locked->amount;
+            $couponDiscount = round((float) ($locked->coupon_discount ?? 0), 2);
+            $listAmount = round($total + $couponDiscount, 2);
             $wallet = (float) ($locked->wallet_amount ?? 0);
             $razor = (float) ($locked->razorpay_amount ?? 0);
 
@@ -47,6 +49,8 @@ class SessionInvoiceService
                 $wallet = 0;
                 $razor = 0;
                 $total = 0;
+                $listAmount = 0;
+                $couponDiscount = 0;
             }
 
             return SessionInvoice::create([
@@ -85,6 +89,11 @@ class SessionInvoiceService
                     'cgst_amount' => 0,
                     'sgst_amount' => 0,
                     'tax_total' => 0,
+                    // Mentor earnings use list_amount; coupon is platform-borne.
+                    'list_amount' => $listAmount,
+                    'coupon_discount' => $couponDiscount,
+                    'mentee_paid' => $total,
+                    'offer_id' => $locked->offer_id,
                 ],
             ]);
         });

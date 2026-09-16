@@ -299,6 +299,7 @@ class OnboardingController extends Controller
         $user->refresh();
         $assignment = app(MentorMatcherService::class)->assignBestMentor($user);
         $assignedMentor = $assignment['mentor'];
+        $welcomeCredit = app(\App\Services\OfferService::class)->creditNewJoineeIfEligible($user->fresh());
 
         return response()->json([
             'status'               => true,
@@ -307,6 +308,7 @@ class OnboardingController extends Controller
                 ? 'Onboarding complete! A mentor has been assigned to you.'
                 : 'Onboarding complete!',
             'onboarding_completed' => true,
+            'welcome_wallet_credit'=> $welcomeCredit,
             'assigned_mentor'      => $assignedMentor ? $assignedMentor->only([
                 'id', 'name', 'field', 'expertise', 'bio', 'avatar_url',
                 'rating', 'experience_years', 'company', 'designation',

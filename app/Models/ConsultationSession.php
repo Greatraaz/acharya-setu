@@ -24,6 +24,7 @@ class ConsultationSession extends Model
         'title', 'agenda', 'mentor_notes', 'meeting_link', 'meeting_provider', 'meeting_channel',
         'status', 'cancellation_reason', 'cancelled_by', 'cancelled_at', 'started_at', 'ended_at',
         'actual_duration_seconds', 'amount', 'currency', 'payment_status', 'payment_method',
+        'offer_id', 'coupon_discount',
         'wallet_amount', 'razorpay_amount', 'payment_reference',
         'razorpay_order_id', 'razorpay_payment_id',
     ];
@@ -33,6 +34,7 @@ class ConsultationSession extends Model
         'started_at'      => 'datetime',
         'ended_at'        => 'datetime',
         'amount'          => 'decimal:2',
+        'coupon_discount' => 'decimal:2',
         'wallet_amount'   => 'decimal:2',
         'razorpay_amount' => 'decimal:2',
     ];
@@ -518,6 +520,38 @@ class ConsultationSession extends Model
         return self::expireMissedSessions($mentorId, $menteeId);
     }
 
+    /**
+     * Full session price before coupon (mentee paid + discount absorbed by platform).
+     */
+    public function listAmount(): float
+    {
+        return round((float) $this->amount + (float) ($this->coupon_discount ?? 0), 2);
+    }
+
+    /**
+     * Mentor wallet credit for this session (80% of list price).
+     *
+     * @return array{
+     *   gross: float,
+     *   platform_fee: float,
+     *   net: float,
+     *   fee_rate: float,
+     *   list_amount: float,
+     *   mentee_paid: float,
+     *   coupon_discount: float,
+     *   platform_subsidy: float
+     * }
+     */
+    public function payoutBreakdown(): array
+    {
+        return SessionPayoutBreakdown::fromSession($this);
+    }
+
+    public function getMentorEarningAttribute(): float
+    {
+        return $this->payoutBreakdown()['net'];
+    }
+
     public function settleMentorPayout(): ?WalletTransaction
     {
         $this->refresh();
@@ -530,7 +564,8 @@ class ConsultationSession extends Model
             return null;
         }
 
-        $gross = round((float) $this->amount, 2);
+        $breakdown = SessionPayoutBreakdown::fromSession($this);
+        $gross = $breakdown['list_amount'];
         if ($gross <= 0) {
             return null;
         }
@@ -554,7 +589,6 @@ class ConsultationSession extends Model
             return null;
         }
 
-        $breakdown = SessionPayoutBreakdown::fromGross($gross);
         $feeRate = $breakdown['fee_rate'];
         $fee = $breakdown['platform_fee'];
         $net = $breakdown['net'];
@@ -578,18 +612,22 @@ class ConsultationSession extends Model
                 'transactionable_type' => self::class,
                 'transactionable_id'   => $this->id,
                 'meta'                 => [
-                    'source'           => 'session_mentor_payout',
-                    'booking_ref'      => $this->booking_ref,
-                    'session_id'       => $this->id,
-                    'invoice_number'   => $this->sessionInvoice?->invoice_number,
-                    'mentee_id'        => $this->mentee_id,
-                    'mentee_name'      => $this->mentee?->name,
-                    'duration_minutes' => $durationMinutes,
-                    'session_title'    => $this->title,
-                    'gross_amount'     => $breakdown['gross'],
-                    'platform_fee'     => $fee,
-                    'platform_fee_rate'=> $feeRate,
-                    'net_amount'       => $net,
+                    'source'             => 'session_mentor_payout',
+                    'booking_ref'        => $this->booking_ref,
+                    'session_id'         => $this->id,
+                    'invoice_number'     => $this->sessionInvoice?->invoice_number,
+                    'mentee_id'          => $this->mentee_id,
+                    'mentee_name'        => $this->mentee?->name,
+                    'duration_minutes'   => $durationMinutes,
+                    'session_title'      => $this->title,
+                    'gross_amount'       => $breakdown['gross'],
+                    'list_amount'        => $breakdown['list_amount'],
+                    'mentee_paid'        => $breakdown['mentee_paid'],
+                    'coupon_discount'    => $breakdown['coupon_discount'],
+                    'platform_subsidy'   => $breakdown['platform_subsidy'],
+                    'platform_fee'       => $fee,
+                    'platform_fee_rate'  => $feeRate,
+                    'net_amount'         => $net,
                 ],
             ]
         );

@@ -76,6 +76,7 @@ use App\Http\Controllers\Admin\AssessmentController;
 use App\Http\Controllers\Admin\AssessmentQuestionController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\BlogController;
+use App\Http\Controllers\Admin\OfferController;
 use App\Http\Controllers\Admin\WhitePaperController;
 use App\Http\Controllers\Admin\CaseStudyController;
 use App\Http\Controllers\Admin\TestimonialController;
@@ -584,6 +585,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('blogs/export/excel', [BlogController::class, 'exportExcel'])->name('blogs.export.excel');
     Route::get('blogs/export/pdf', [BlogController::class, 'exportPdf'])->name('blogs.export.pdf');
     Route::resource('blogs', BlogController::class)->except(['show']);
+    Route::resource('offers', OfferController::class)->except(['show']);
     Route::resource('white-papers', WhitePaperController::class)->except(['show']);
     Route::resource('case-studies', CaseStudyController::class)->except(['show']);
     Route::resource('testimonials', TestimonialController::class)->except(['show']);

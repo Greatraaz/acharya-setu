@@ -300,6 +300,8 @@ class MenteeOnboardingService
             $assignment = app(MentorMatcherService::class)->assignBestMentor($user);
         }
 
+        app(OfferService::class)->creditNewJoineeIfEligible($user->fresh());
+
         return [
             'completed'   => true,
             'assigned'    => $assignment['assigned'],

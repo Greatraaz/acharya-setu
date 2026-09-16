@@ -28,9 +28,10 @@
                                 <span class="session-status {{ $session->status ?? 'pending' }}">{{ ucfirst($session->status ?? 'Pending') }}</span>
                             </div>
                             <div class="session-detail-meta">
+                                @php $payout = $session->payoutBreakdown(); @endphp
                                 <span>📅 {{ $session->scheduled_at?->format('D, d M Y · g:i A') ?? '—' }}</span>
                                 <span>⏱ {{ $session->duration_minutes ?? 30 }} min</span>
-                                <span>💰 ₹{{ number_format($session->amount_paid ?? 0, 0) }} (your cut: ₹{{ number_format(($session->amount_paid ?? 0) * 0.8, 0) }})</span>
+                                <span>💰 ₹{{ number_format($payout['list_amount'], 0) }} (your cut: ₹{{ number_format($payout['net'], 0) }})</span>
                             </div>
                         </div>
                         <div class="session-detail-actions">
@@ -144,6 +145,7 @@
                 {{-- Receipt --}}
                 <div class="card">
                     <h3 style="font-size:14px;font-weight:700;margin-bottom:14px;">🧾 Receipt</h3>
+                    @php $payout = $session->payoutBreakdown(); @endphp
                     <div class="booking-summary">
                         <div class="booking-summary-row">
                             <span>Session rate</span>
@@ -154,16 +156,22 @@
                             <span>{{ $session->duration_minutes ?? 30 }} min</span>
                         </div>
                         <div class="booking-summary-row">
-                            <span>Gross amount</span>
-                            <span>₹{{ number_format($session->amount_paid ?? 0, 0) }}</span>
+                            <span>Session amount</span>
+                            <span>₹{{ number_format($payout['list_amount'], 0) }}</span>
                         </div>
+                        @if($payout['coupon_discount'] > 0)
+                        <div class="booking-summary-row" style="color:var(--text-3);">
+                            <span>Coupon (covered by platform)</span>
+                            <span>−₹{{ number_format($payout['coupon_discount'], 0) }}</span>
+                        </div>
+                        @endif
                         <div class="booking-summary-row" style="color:var(--error);">
-                            <span>Platform fee (20%)</span>
-                            <span>−₹{{ number_format(($session->amount_paid ?? 0) * 0.2, 0) }}</span>
+                            <span>Platform fee ({{ (int) round($payout['fee_rate'] * 100) }}%)</span>
+                            <span>−₹{{ number_format($payout['platform_fee'], 0) }}</span>
                         </div>
                         <div class="booking-summary-row" style="padding-top:10px;border-top:1px solid var(--border);">
                             <span style="font-weight:700;">Your earnings</span>
-                            <strong style="color:var(--success);">₹{{ number_format(($session->amount_paid ?? 0) * 0.8, 0) }}</strong>
+                            <strong style="color:var(--success);">₹{{ number_format($payout['net'], 0) }}</strong>
                         </div>
                         <div class="booking-summary-row" style="font-size:11px;color:var(--text-3);">
                             <span>Status</span>

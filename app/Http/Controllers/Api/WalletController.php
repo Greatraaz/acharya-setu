@@ -299,6 +299,25 @@ class WalletController extends Controller
         $data['updated_at_ist'] = $updated?->format('d M Y, h:i A');
         $data['timezone']       = 'Asia/Kolkata';
 
+        $meta = is_array($txn->meta) ? $txn->meta : [];
+        if (($meta['source'] ?? null) === 'session_mentor_payout') {
+            $data['payout'] = [
+                'list_amount'      => isset($meta['list_amount']) ? (float) $meta['list_amount'] : (isset($meta['gross_amount']) ? (float) $meta['gross_amount'] : null),
+                'gross_amount'     => isset($meta['gross_amount']) ? (float) $meta['gross_amount'] : null,
+                'mentee_paid'      => isset($meta['mentee_paid']) ? (float) $meta['mentee_paid'] : null,
+                'coupon_discount'  => (float) ($meta['coupon_discount'] ?? 0),
+                'platform_fee'     => isset($meta['platform_fee']) ? (float) $meta['platform_fee'] : null,
+                'platform_fee_rate'=> isset($meta['platform_fee_rate']) ? (float) $meta['platform_fee_rate'] : 0.20,
+                'net_amount'       => isset($meta['net_amount']) ? (float) $meta['net_amount'] : (float) $txn->amount,
+                'session_id'       => $meta['session_id'] ?? null,
+                'booking_ref'      => $meta['booking_ref'] ?? null,
+                'invoice_number'   => $meta['invoice_number'] ?? null,
+                'mentee_name'      => $meta['mentee_name'] ?? null,
+                'duration_minutes' => $meta['duration_minutes'] ?? null,
+                'session_title'    => $meta['session_title'] ?? null,
+            ];
+        }
+
         return $data;
     }
 

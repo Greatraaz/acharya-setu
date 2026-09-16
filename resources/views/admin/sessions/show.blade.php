@@ -78,11 +78,19 @@
                         $st = $session->scheduled_at;
                         $se = $session->scheduled_end;
                         $tz = $session->sessionTimezone();
+                        $payout = $session->payoutBreakdown();
+                        $amountLabel = $payout['list_amount'] > 0
+                            ? '₹'.number_format($payout['list_amount'], 0).' list · mentee ₹'.number_format($payout['mentee_paid'], 0).' ('.$session->payment_status.')'
+                            : 'Free';
+                        if ($payout['coupon_discount'] > 0) {
+                            $amountLabel .= ' · coupon −₹'.number_format($payout['coupon_discount'], 0).' (admin)';
+                        }
                     @endphp
                     @foreach([
                         ['Scheduled', ($st?->format('D, d M Y · H:i') ?? '—').' – '.($se?->format('H:i') ?? '—').' ('.$tz.')'],
                         ['Duration', $session->duration_minutes.' minutes'],
-                        ['Amount', $session->amount > 0 ? '₹'.number_format($session->amount,0).' ('.$session->payment_status.')' : 'Free'],
+                        ['Amount', $amountLabel],
+                        ['Mentor earned', $payout['list_amount'] > 0 ? '₹'.number_format($payout['net'], 0).' (after '.(int) round($payout['fee_rate'] * 100).'% fee)' : '—'],
                         ['Payment method', $session->paymentMethodLabel()],
                         ['Provider', ucfirst($session->meeting_provider ?? 'Not set')],
                     ] as [$label, $value])

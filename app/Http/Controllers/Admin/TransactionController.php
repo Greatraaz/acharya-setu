@@ -85,12 +85,12 @@ class TransactionController extends Controller
             if ($tab === 'sessions') {
                 fputcsv($out, [
                     'Invoice #', 'Session', 'Date', 'Mentee', 'Mentor', 'Method', 'Duration (min)',
-                    'Gross', 'Admin Commission', 'Mentor Earned', 'Reference', 'Status',
+                    'Session Gross (list)', 'Admin Commission', 'Mentor Earned', 'Reference', 'Status',
                 ]);
                 $this->sessionInvoiceQuery($request)->with([
                     'user:id,name',
                     'mentor:id,name',
-                    'session:id,title',
+                    'session:id,title,amount,coupon_discount',
                 ])->orderByDesc('id')->chunk(200, function ($rows) use ($out) {
                     foreach ($rows as $inv) {
                         $bd = $inv->payoutBreakdown();
@@ -172,25 +172,38 @@ class TransactionController extends Controller
 
         $query = $this->sessionInvoiceQuery($request);
         $summaryRow = (clone $query)
-            ->selectRaw('COUNT(*) as c, COALESCE(SUM(total_amount),0) as total, COALESCE(SUM(wallet_amount),0) as wallet, COALESCE(SUM(razorpay_amount),0) as razorpay')
+            ->leftJoin('consultation_sessions', 'consultation_sessions.id', '=', 'session_invoices.consultation_session_id')
+            ->selectRaw('
+                COUNT(session_invoices.id) as c,
+                COALESCE(SUM(session_invoices.total_amount),0) as total,
+                COALESCE(SUM(session_invoices.wallet_amount),0) as wallet,
+                COALESCE(SUM(session_invoices.razorpay_amount),0) as razorpay,
+                COALESCE(SUM(session_invoices.total_amount + COALESCE(consultation_sessions.coupon_discount, 0)),0) as list_total,
+                COALESCE(SUM(COALESCE(consultation_sessions.coupon_discount, 0)),0) as coupon_total
+            ')
             ->first();
 
-        $grossTotal = (float) ($summaryRow->total ?? 0);
-        $breakdown = SessionPayoutBreakdown::fromGross($grossTotal);
+        $menteePaidTotal = (float) ($summaryRow->total ?? 0);
+        $listTotal = (float) ($summaryRow->list_total ?? $menteePaidTotal);
+        $couponTotal = (float) ($summaryRow->coupon_total ?? 0);
+        $breakdown = SessionPayoutBreakdown::fromGross($listTotal, $couponTotal, $menteePaidTotal);
 
         $summary = [
-            'count'      => (int) ($summaryRow->c ?? 0),
-            'total'      => $grossTotal,
-            'wallet'     => (float) ($summaryRow->wallet ?? 0),
-            'razorpay'   => (float) ($summaryRow->razorpay ?? 0),
-            'commission' => $breakdown['platform_fee'],
-            'mentor_net' => $breakdown['net'],
+            'count'           => (int) ($summaryRow->c ?? 0),
+            'total'           => $menteePaidTotal,
+            'list_total'      => $listTotal,
+            'coupon_total'    => $couponTotal,
+            'wallet'          => (float) ($summaryRow->wallet ?? 0),
+            'razorpay'        => (float) ($summaryRow->razorpay ?? 0),
+            'commission'      => $breakdown['platform_fee'],
+            'mentor_net'      => $breakdown['net'],
+            'platform_subsidy'=> $breakdown['platform_subsidy'],
         ];
 
         $invoices = $query->with([
             'user:id,name,email',
             'mentor:id,name,email',
-            'session:id,title,booking_ref,amount,duration_minutes',
+            'session:id,title,booking_ref,amount,coupon_discount,duration_minutes',
         ])
             ->latest('id')
             ->paginate(25)

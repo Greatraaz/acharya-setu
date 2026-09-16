@@ -17,7 +17,8 @@ class SessionBookingService
 {
     public function __construct(
         private readonly SessionInvoiceService $invoices,
-        private readonly MentorAvailabilityService $availability
+        private readonly MentorAvailabilityService $availability,
+        private readonly OfferService $offers
     ) {}
 
     /**
@@ -40,7 +41,7 @@ class SessionBookingService
         $data['duration'] = $duration;
 
         // Session fees are GST-free: charge rate × duration only (no CGST/SGST/IGST).
-        $amount = round((float) ($mentor->rate_per_minute ?? 0) * $duration, 2);
+        $baseAmount = round((float) ($mentor->rate_per_minute ?? 0) * $duration, 2);
         $time = substr((string) ($data['time'] ?? ''), 0, 5);
         $data['time'] = $time;
         $scheduledAt = Carbon::parse($data['date'].' '.$time, 'Asia/Kolkata');
@@ -51,7 +52,22 @@ class SessionBookingService
             return $this->fail('That time/duration is not in the mentor\'s available slots. Please choose another option.', 422);
         }
         $planAllowance = $mentee->planSessionAllowance();
-        $coveredByPlan = $amount > 0 && ($planAllowance['covered'] ?? false);
+        $coveredByPlan = $baseAmount > 0 && ($planAllowance['covered'] ?? false);
+
+        $couponDiscount = 0.0;
+        $appliedOffer = null;
+        $amount = $baseAmount;
+
+        if ($baseAmount > 0 && ! $coveredByPlan) {
+            $couponResult = $this->resolveCouponDiscount($mentee, $data, $baseAmount);
+            if (isset($couponResult['error'])) {
+                return $this->fail($couponResult['error'], 422);
+            }
+            $amount = $couponResult['amount'];
+            $couponDiscount = $couponResult['discount'];
+            $appliedOffer = $couponResult['offer'];
+        }
+
         $paymentMethod = isset($data['payment_method']) ? strtolower((string) $data['payment_method']) : null;
 
         ConsultationSession::releaseOwnUnpaidHold($mentee->id, $mentor->id, $scheduledAt);
@@ -126,6 +142,8 @@ class SessionBookingService
                 'requires_payment_choice' => true,
                 'booked'                  => false,
                 'amount'                  => $amount,
+                'base_amount'             => $baseAmount,
+                'coupon_discount'         => $couponDiscount,
                 'currency'                => $currency,
                 'wallet_balance'          => $walletBalance,
                 'shortfall'               => $shortfall,
@@ -141,6 +159,7 @@ class SessionBookingService
                     'duration'  => (int) $data['duration'],
                     'title'     => $title,
                     'agenda'    => $data['agenda'] ?? null,
+                    'coupon_code' => $data['coupon_code'] ?? null,
                 ],
             ]);
         }
@@ -169,7 +188,7 @@ class SessionBookingService
             }
 
             try {
-                $session = DB::transaction(function () use ($mentor, $mentee, $scheduledAt, $data, $amount, $currency, $bookingRef, $channel, $title, $source) {
+                $session = DB::transaction(function () use ($mentor, $mentee, $scheduledAt, $data, $amount, $currency, $bookingRef, $channel, $title, $source, $appliedOffer, $couponDiscount) {
                     $session = ConsultationSession::create([
                         'mentor_id'         => $mentor->id,
                         'mentee_id'         => $mentee->id,
@@ -180,6 +199,8 @@ class SessionBookingService
                         'agenda'            => $data['agenda'] ?? null,
                         'status'            => ConsultationSession::STATUS_UPCOMING,
                         'amount'            => $amount,
+                        'offer_id'          => $appliedOffer?->id,
+                        'coupon_discount'   => $couponDiscount,
                         'currency'          => $currency,
                         'payment_status'    => 'paid',
                         'payment_method'    => 'wallet',
@@ -193,18 +214,24 @@ class SessionBookingService
 
                     $mentee->debitWallet(
                         $amount,
-                        "Session booking {$bookingRef}",
+                        "Session booking {$bookingRef}".($couponDiscount > 0 ? ' (coupon applied)' : ''),
                         [
                             'reference'            => 'WAL-'.$bookingRef,
                             'transactionable_type' => ConsultationSession::class,
                             'transactionable_id'   => $session->id,
                             'meta'                 => [
-                                'booking_ref' => $bookingRef,
-                                'mentor_id'   => $mentor->id,
-                                'source'      => 'session_booking_wallet_'.$source,
+                                'booking_ref'      => $bookingRef,
+                                'mentor_id'        => $mentor->id,
+                                'source'           => 'session_booking_wallet_'.$source,
+                                'coupon_discount'  => $couponDiscount,
+                                'offer_id'         => $appliedOffer?->id,
                             ],
                         ]
                     );
+
+                    if ($appliedOffer && $couponDiscount > 0) {
+                        $this->offers->recordSessionRedemption($appliedOffer, $mentee, $session, $couponDiscount);
+                    }
 
                     return $session;
                 });
@@ -261,7 +288,9 @@ class SessionBookingService
             $bookingRef,
             $channel,
             $title,
-            $source
+            $source,
+            $appliedOffer,
+            $couponDiscount
         );
     }
 
@@ -342,6 +371,8 @@ class SessionBookingService
                     'agenda'              => $draft['agenda'] ?? null,
                     'status'              => ConsultationSession::STATUS_UPCOMING,
                     'amount'              => $draft['amount'],
+                    'offer_id'            => $draft['offer_id'] ?? null,
+                    'coupon_discount'     => $draft['coupon_discount'] ?? 0,
                     'currency'            => $draft['currency'] ?? 'INR',
                     'payment_status'      => 'paid',
                     'payment_method'      => $method,
@@ -370,6 +401,18 @@ class SessionBookingService
                             ],
                         ]
                     );
+                }
+
+                if (! empty($draft['offer_id']) && (float) ($draft['coupon_discount'] ?? 0) > 0) {
+                    $offer = \App\Models\Offer::find($draft['offer_id']);
+                    if ($offer) {
+                        $this->offers->recordSessionRedemption(
+                            $offer,
+                            $mentee,
+                            $session,
+                            (float) $draft['coupon_discount']
+                        );
+                    }
                 }
 
                 return $session;
@@ -413,7 +456,9 @@ class SessionBookingService
         string $bookingRef,
         string $channel,
         string $title,
-        string $source
+        string $source,
+        ?\App\Models\Offer $appliedOffer = null,
+        float $couponDiscount = 0.0
     ): array {
         $creds = $this->razorpayCredentials();
         if (! ($creds['enabled'] ?? true)) {
@@ -484,6 +529,8 @@ class SessionBookingService
             'title'           => $title,
             'agenda'          => $data['agenda'] ?? null,
             'amount'          => $amount,
+            'offer_id'        => $appliedOffer?->id,
+            'coupon_discount' => $couponDiscount,
             'currency'        => $currency,
             'payment_method'  => $method,
             'wallet_amount'   => $walletPart,
@@ -522,6 +569,8 @@ class SessionBookingService
                 'amount'                  => $amountInPaise,
                 'amount_rupees'           => $razorPart,
                 'session_amount'          => $amount,
+                'base_amount'             => round($amount + $couponDiscount, 2),
+                'coupon_discount'         => $couponDiscount,
                 'wallet_amount'           => $walletPart,
                 'razorpay_amount'         => $razorPart,
                 'currency'                => $currency,
@@ -543,13 +592,42 @@ class SessionBookingService
                     'duration'  => (int) $data['duration'],
                     'title'     => $title,
                     'agenda'    => $data['agenda'] ?? null,
+                    'coupon_code' => $data['coupon_code'] ?? null,
                 ],
             ]
         );
     }
 
+    /**
+     * @return array{amount: float, discount: float, offer: ?\App\Models\Offer}|array{error: string}
+     */
+    private function resolveCouponDiscount(User $mentee, array $data, float $baseAmount): array
+    {
+        $code = trim((string) ($data['coupon_code'] ?? ''));
+        if ($code === '') {
+            return [
+                'amount'   => $baseAmount,
+                'discount' => 0.0,
+                'offer'    => null,
+            ];
+        }
+
+        $check = $this->offers->validateCoupon($mentee, $code, $baseAmount);
+        if (! $check['valid']) {
+            return ['error' => $check['message'] ?? 'Invalid coupon.'];
+        }
+
+        return [
+            'amount'   => round(max(0, $baseAmount - $check['discount']), 2),
+            'discount' => (float) $check['discount'],
+            'offer'    => $check['offer'],
+        ];
+    }
+
     private function sessionArray(ConsultationSession $session): array
     {
+        $listAmount = round((float) $session->amount + (float) ($session->coupon_discount ?? 0), 2);
+
         return [
             'id'               => $session->id,
             'booking_ref'      => $session->booking_ref,
@@ -557,6 +635,9 @@ class SessionBookingService
             'payment_status'   => $session->payment_status,
             'payment_method'   => $session->payment_method,
             'amount'           => (float) $session->amount,
+            'list_amount'      => $listAmount,
+            'coupon_discount'  => (float) ($session->coupon_discount ?? 0),
+            'offer_id'         => $session->offer_id,
             'wallet_amount'    => (float) ($session->wallet_amount ?? 0),
             'razorpay_amount'  => (float) ($session->razorpay_amount ?? 0),
             'currency'         => $session->currency,

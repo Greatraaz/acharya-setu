@@ -88,19 +88,40 @@ class SessionInvoice extends Model
     }
 
     /**
-     * Same split as mentor wallet earnings (gross − admin commission = mentor net).
+     * Same split as mentor wallet earnings.
+     * Mentor gross = full session list price; coupon discount is borne by the platform.
      *
-     * @return array{gross: float, platform_fee: float, net: float, fee_rate: float}
+     * @return array{
+     *   gross: float,
+     *   platform_fee: float,
+     *   net: float,
+     *   fee_rate: float,
+     *   list_amount: float,
+     *   mentee_paid: float,
+     *   coupon_discount: float,
+     *   platform_subsidy: float
+     * }
      */
     public function payoutBreakdown(): array
     {
-        $gross = (float) ($this->total_amount ?: $this->base_amount ?: 0);
+        $meta = is_array($this->meta) ? $this->meta : [];
 
-        if ($gross <= 0 && $this->relationLoaded('session') && $this->session) {
-            $gross = (float) $this->session->amount;
+        if (isset($meta['list_amount']) && (float) $meta['list_amount'] > 0) {
+            return SessionPayoutBreakdown::fromGross(
+                (float) $meta['list_amount'],
+                (float) ($meta['coupon_discount'] ?? 0),
+                isset($meta['mentee_paid']) ? (float) $meta['mentee_paid'] : (float) ($this->total_amount ?: 0)
+            );
         }
 
-        return SessionPayoutBreakdown::fromGross($gross);
+        $this->loadMissing('session');
+        if ($this->session) {
+            return SessionPayoutBreakdown::fromSession($this->session);
+        }
+
+        $paid = (float) ($this->total_amount ?: $this->base_amount ?: 0);
+
+        return SessionPayoutBreakdown::fromGross($paid);
     }
 
     public function toPublicArray(): array
@@ -134,6 +155,8 @@ class SessionInvoice extends Model
             ],
             'pricing'        => [
                 'base'            => $this->base_amount,
+                'list_amount'     => is_array($this->meta) ? ($this->meta['list_amount'] ?? null) : null,
+                'coupon_discount' => is_array($this->meta) ? (float) ($this->meta['coupon_discount'] ?? 0) : 0,
                 'wallet_amount'   => $this->wallet_amount,
                 'razorpay_amount' => $this->razorpay_amount,
                 'total'           => $this->total_amount,

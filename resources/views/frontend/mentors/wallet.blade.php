@@ -145,7 +145,10 @@
                         $meta = is_array($txn->meta) ? $txn->meta : [];
                         $breakdown = \App\Support\SessionPayoutBreakdown::fromMeta(
                             $meta,
-                            $invoice?->total_amount !== null ? (float) $invoice->total_amount : ($session?->amount !== null ? (float) $session->amount : null),
+                            $session
+                                ? (float) $session->listAmount()
+                                : ($invoice?->payoutBreakdown()['gross']
+                                    ?? ($invoice?->total_amount !== null ? (float) $invoice->total_amount : null)),
                             (float) $txn->amount
                         );
                         $duration = $meta['duration_minutes']

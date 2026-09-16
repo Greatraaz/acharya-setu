@@ -86,7 +86,7 @@
                         <span>📅 {{ $session->scheduled_at->format('D, d M Y') }}</span>
                         <span>🕐 {{ $session->scheduled_at->format('g:i A') }}</span>
                         <span>⏱ {{ $session->duration_minutes }} min</span>
-                        <span class="session-card-meta__earn">💰 ₹{{ number_format($session->mentor_earning ?? $session->amount ?? 0, 0) }}</span>
+                        <span class="session-card-meta__earn">💰 ₹{{ number_format($session->mentor_earning ?? 0, 0) }}</span>
                     </div>
                     @if($session->agenda ?? $session->topic_notes ?? false)
                     <div class="session-card-notes">

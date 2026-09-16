@@ -83,6 +83,10 @@ class SessionsController extends Controller
             'channel'        => $s->meeting_channel,
             'canJoinCall'    => $s->canJoinCall(),
             'amountPaid'     => (float) $s->amount,
+            'listAmount'     => (float) $s->listAmount(),
+            'couponDiscount' => (float) ($s->coupon_discount ?? 0),
+            'mentorEarning'  => (float) $s->mentor_earning,
+            'platformFee'    => (float) $s->payoutBreakdown()['platform_fee'],
             'paymentStatus'  => $s->payment_status,
             'paymentMethod'  => $s->payment_method,
             'paymentMethodLabel' => $s->paymentMethodLabel(),
@@ -132,6 +136,7 @@ class SessionsController extends Controller
             'duration'       => 'required|integer|in:'.implode(',', ConsultationSession::BOOKING_DURATIONS),
             'title'          => 'required|string|max:255',
             'agenda'         => 'nullable|string|max:1000',
+            'coupon_code'    => 'nullable|string|max:40',
             'payment_method' => 'nullable|in:wallet,razorpay,hybrid',
         ]);
 
