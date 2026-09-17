@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\Plan;
 use App\Models\UserSubscription;
+use App\Services\PlanCheckoutService;
 use App\Services\PlanInvoiceService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -21,9 +22,12 @@ class PlanController extends Controller
     // GET /api/plans
     // ─────────────────────────────────────────────────────────────────────────────
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $plans = Plan::active()->orderBy('price', 'asc')->get()->map->toPublicArray();
+        $checkout = app(PlanCheckoutService::class);
+        $current = $this->paidActiveForRequest($request);
+        $plans = Plan::active()->orderBy('price_monthly', 'asc')->get()
+            ->map(fn (Plan $plan) => $plan->toPublicArray($checkout->quote($plan, $current)));
 
         return response()->json([
             'status'  => true,
@@ -37,7 +41,7 @@ class PlanController extends Controller
     // GET /api/plans/{slug}
     // ─────────────────────────────────────────────────────────────────────────────
 
-    public function show($id): JsonResponse
+    public function show(Request $request, $id): JsonResponse
     {
         $plan = Plan::active()->where('id', $id)->first();
 
@@ -51,7 +55,9 @@ class PlanController extends Controller
         return response()->json([
             'status'  => true,
             'message' => 'Plan fetched successfully.',
-            'data'    => $plan->toPublicArray(),
+            'data'    => $plan->toPublicArray(
+                app(PlanCheckoutService::class)->quote($plan, $this->paidActiveForRequest($request))
+            ),
         ], 200);
     }
 
@@ -89,18 +95,14 @@ class PlanController extends Controller
             ], 422);
         }
 
-        $isUpgrade = $current
-            && $current->status === 'active'
-            && $current->payment_status === 'paid'
-            && $current->expires_at
-            && $current->expires_at->isFuture()
-            && (int) $current->plan_id !== (int) $plan->id;
+        $checkout = app(PlanCheckoutService::class);
+        $isUpgrade = $checkout->isPaidActive($current) && (int) $current->plan_id !== (int) $plan->id;
+        $quote = $checkout->quote($plan, $isUpgrade ? $current : null);
+        $pricing = $quote['pricing'];
+        $price = (float) $quote['payable'];
 
-        $pricing = $plan->pricingBreakdown('monthly');
-        $price = (float) $pricing['total'];
-
-        if ($price <= 0) {
-            $subscription = $this->activateOrUpgradeSubscription($user->id, $plan, null);
+        if (! $checkout->requiresOnlinePayment($quote)) {
+            $subscription = $this->activateOrUpgradeSubscription($user->id, $plan, null, $quote);
             $invoice = app(PlanInvoiceService::class)->ensureForSubscription($subscription->fresh(), 'system');
 
             return response()->json([
@@ -114,6 +116,12 @@ class PlanController extends Controller
                     'payment_status'    => $subscription->payment_status,
                     'is_upgrade'        => $isUpgrade,
                     'pricing'           => $pricing,
+                    'checkout'          => [
+                        'is_upgrade' => $quote['is_upgrade'],
+                        'plan_total' => $quote['plan_total'],
+                        'payable'    => $quote['payable'],
+                        'credit'     => $quote['credit'],
+                    ],
                     'invoice'           => $invoice->toPublicArray(),
                     'starts_at'         => $subscription->starts_at?->toDateTimeString(),
                     'expires_at'        => $subscription->expires_at?->toDateTimeString(),
@@ -155,12 +163,17 @@ class PlanController extends Controller
                     'currency' => $currency,
                     'receipt'  => Str::limit($receipt, 40, ''),
                     'notes'    => [
-                        'user_id'    => (string) $user->id,
-                        'plan_id'    => (string) $plan->id,
-                        'is_upgrade' => $isUpgrade ? '1' : '0',
-                        'base'       => (string) $pricing['base'],
-                        'cgst'       => (string) $pricing['cgst_amount'],
-                        'sgst'       => (string) $pricing['sgst_amount'],
+                        'user_id'           => (string) $user->id,
+                        'plan_id'           => (string) $plan->id,
+                        'is_upgrade'        => $isUpgrade ? '1' : '0',
+                        'base'              => (string) $pricing['base'],
+                        'cgst'              => (string) $pricing['cgst_amount'],
+                        'sgst'              => (string) $pricing['sgst_amount'],
+                        'igst'              => (string) ($pricing['igst_amount'] ?? 0),
+                        'discount_percent'  => (string) ($pricing['discount_percent'] ?? 0),
+                        'discount_amount'   => (string) ($pricing['discount_amount'] ?? 0),
+                        'credit_amount'     => (string) ($quote['credit']['amount'] ?? 0),
+                        'payable'           => (string) $price,
                     ],
                 ]);
 
@@ -204,7 +217,7 @@ class PlanController extends Controller
             $currency,
             $order['id'] ?? null,
             $isUpgrade,
-            $price
+            $quote
         );
 
         return response()->json([
@@ -218,6 +231,12 @@ class PlanController extends Controller
                 'amount'             => $price,
                 'amount_paise'       => $amountInPaise,
                 'pricing'            => $pricing,
+                'checkout'           => [
+                    'is_upgrade' => $quote['is_upgrade'],
+                    'plan_total' => $quote['plan_total'],
+                    'payable'    => $quote['payable'],
+                    'credit'     => $quote['credit'],
+                ],
                 'currency'           => $currency,
                 'razorpay_key'       => $creds['key'],
                 'payment_status'     => 'pending',
@@ -297,25 +316,17 @@ class PlanController extends Controller
             ], 200);
         }
 
-        $isUpgrade = (int) $subscription->plan_id !== (int) $plan->id
-            && $subscription->status === 'active'
-            && $subscription->payment_status === 'paid';
+        $checkout = app(PlanCheckoutService::class);
+        $quote = $checkout->quoteFromSnapshot($subscription, $plan);
+        $isUpgrade = (bool) $quote['is_upgrade']
+            || ((int) $subscription->plan_id !== (int) $plan->id
+                && $subscription->status === 'active'
+                && $subscription->payment_status === 'paid');
 
-        $pricing = $plan->pricingBreakdown('monthly');
-        $startsAt = Carbon::now();
-        $expiresAt = $startsAt->copy()->addDays($plan->billingDays());
-
-        // Upgrade / change plan on the same row — never create a second active subscription
-        $subscription->update([
-            'plan_id'             => $plan->id,
-            'amount_paid'         => $pricing['total'],
-            'currency'            => $pricing['currency'],
-            'payment_status'      => 'paid',
+        $subscription = $checkout->activate($subscription, $plan, $quote, [
             'payment_reference'   => $data['razorpay_payment_id'],
             'razorpay_payment_id' => $data['razorpay_payment_id'],
-            'status'              => 'active',
-            'starts_at'           => $startsAt,
-            'expires_at'          => $expiresAt,
+            'razorpay_order_id'   => $data['razorpay_order_id'],
         ]);
 
         // Clean up any leftover duplicate rows for this user (from older flow)
@@ -335,6 +346,12 @@ class PlanController extends Controller
                         'payment_reference' => $subscription->payment_reference,
                         'payment_status'    => $subscription->payment_status,
                         'is_upgrade'        => $isUpgrade,
+                        'checkout'          => [
+                            'is_upgrade' => $quote['is_upgrade'],
+                            'plan_total' => $quote['plan_total'],
+                            'payable'    => $quote['payable'],
+                            'credit'     => $quote['credit'],
+                        ],
                         'invoice'           => $invoice->toPublicArray(),
                     ]
                 ),
@@ -397,8 +414,7 @@ class PlanController extends Controller
         $user = $request->user();
         $subscription = $user->activeSubscription();
         $allowance = $user->planSessionAllowance();
-        $periodStart = Carbon::now('Asia/Kolkata')->startOfMonth();
-        $periodEnd = Carbon::now('Asia/Kolkata')->endOfMonth();
+        [$periodStart, $periodEnd] = $user->planUsageWindow();
 
         if (! $subscription) {
             return response()->json([
@@ -408,7 +424,7 @@ class PlanController extends Controller
                     'has_active_subscription' => false,
                     'subscription'            => null,
                     'period'                  => [
-                        'label'     => 'current_month',
+                        'label'     => 'billing_period',
                         'timezone'  => 'Asia/Kolkata',
                         'starts_at' => $periodStart->toDateTimeString(),
                         'ends_at'   => $periodEnd->toDateTimeString(),
@@ -420,7 +436,7 @@ class PlanController extends Controller
                         'unlimited'           => false,
                         'percent_used'        => null,
                         'next_booking_free'   => false,
-                        'resets_at'           => $periodEnd->copy()->addSecond()->toDateTimeString(),
+                        'resets_at'           => $periodEnd->copy()->toDateTimeString(),
                     ],
                     'progress_report_enabled' => false,
                 ],
@@ -459,7 +475,7 @@ class PlanController extends Controller
                     ],
                 ],
                 'period'                  => [
-                    'label'     => 'current_month',
+                    'label'     => 'billing_period',
                     'timezone'  => 'Asia/Kolkata',
                     'starts_at' => $periodStart->toDateTimeString(),
                     'ends_at'   => $periodEnd->toDateTimeString(),
@@ -471,7 +487,7 @@ class PlanController extends Controller
                     'unlimited'         => $unlimited,
                     'percent_used'      => $percentUsed,
                     'next_booking_free' => (bool) $allowance['covered'],
-                    'resets_at'         => $periodEnd->copy()->addSecond()->toDateTimeString(),
+                    'resets_at'         => $periodEnd->copy()->toDateTimeString(),
                 ],
                 'progress_report_enabled' => (bool) ($subscription->plan?->progress_report_enabled),
             ],
@@ -585,6 +601,18 @@ class PlanController extends Controller
             ->first();
     }
 
+    private function paidActiveForRequest(Request $request): ?UserSubscription
+    {
+        $user = $request->user() ?: auth('sanctum')->user();
+        if (! $user) {
+            return null;
+        }
+
+        $current = $user->activeSubscription();
+
+        return app(PlanCheckoutService::class)->isPaidActive($current) ? $current : null;
+    }
+
     /**
      * Create pending row only if user has none; otherwise update the same row for upgrade/change.
      * For upgrades, keep current plan active until payment is verified.
@@ -595,16 +623,18 @@ class PlanController extends Controller
         string $currency,
         ?string $razorpayOrderId,
         bool $isUpgrade = false,
-        ?float $amountTotal = null
+        ?array $quote = null
     ): UserSubscription {
+        $checkout = app(PlanCheckoutService::class);
+        $quote = $quote ?? $checkout->quote($plan, $isUpgrade ? $this->currentSubscription($userId) : null);
         $subscription = $this->currentSubscription($userId);
-        $price = $amountTotal ?? (float) $plan->pricingBreakdown('monthly')['total'];
+        $price = (float) $quote['payable'];
 
         if ($subscription && $isUpgrade) {
-            // Keep current active plan until verify succeeds; only attach new order id
             $subscription->update([
                 'razorpay_order_id'   => $razorpayOrderId,
                 'razorpay_payment_id' => null,
+                'meta'                => $checkout->storeSnapshot($subscription, $plan, $quote),
             ]);
 
             return $subscription->fresh();
@@ -621,6 +651,7 @@ class PlanController extends Controller
             'status'              => 'pending',
             'starts_at'           => null,
             'expires_at'          => null,
+            'meta'                => $checkout->storeSnapshot($subscription ?? new UserSubscription(), $plan, $quote),
         ];
 
         if ($subscription) {
@@ -641,36 +672,40 @@ class PlanController extends Controller
     private function activateOrUpgradeSubscription(
         int $userId,
         Plan $plan,
-        ?string $paymentReference
+        ?string $paymentReference,
+        ?array $quote = null
     ): UserSubscription {
-        $pricing = $plan->pricingBreakdown('monthly');
-        $startsAt = Carbon::now();
-        $expiresAt = $startsAt->copy()->addDays($plan->billingDays());
+        $checkout = app(PlanCheckoutService::class);
+        $subscription = $this->currentSubscription($userId);
+        $quote = $quote ?? $checkout->quote(
+            $plan,
+            $checkout->isPaidActive($subscription) ? $subscription : null
+        );
 
-        $payload = [
+        if ($subscription) {
+            $activated = $checkout->activate($subscription, $plan, $quote, [
+                'payment_reference' => $paymentReference,
+            ]);
+            $this->expireOtherSubscriptions($userId, $activated->id);
+
+            return $activated;
+        }
+
+        $startsAt = Carbon::now();
+        $placeholder = new UserSubscription();
+        $subscription = UserSubscription::create([
+            'user_id'           => $userId,
+            'subscription_id'   => 'SUB-' . mt_rand(10000000, 99999999),
             'plan_id'           => $plan->id,
-            'amount_paid'       => $pricing['total'],
-            'currency'          => $pricing['currency'],
+            'amount_paid'       => (float) $quote['payable'],
+            'currency'          => $quote['currency'] ?? 'INR',
             'payment_status'    => 'paid',
             'payment_reference' => $paymentReference,
             'status'            => 'active',
             'starts_at'         => $startsAt,
-            'expires_at'        => $expiresAt,
-        ];
-
-        $subscription = $this->currentSubscription($userId);
-
-        if ($subscription) {
-            $subscription->update($payload);
-            $this->expireOtherSubscriptions($userId, $subscription->id);
-
-            return $subscription->fresh();
-        }
-
-        $subscription = UserSubscription::create(array_merge($payload, [
-            'user_id'         => $userId,
-            'subscription_id' => 'SUB-' . mt_rand(10000000, 99999999),
-        ]));
+            'expires_at'        => $startsAt->copy()->addDays($plan->billingDays()),
+            'meta'              => $checkout->storeSnapshot($placeholder, $plan, $quote),
+        ]);
 
         return $subscription;
     }

@@ -14,7 +14,7 @@
 
 <form method="POST"
       action="{{ $plan->exists ? route('admin.plans.update', $plan) : route('admin.plans.store') }}"
-      class="max-w-4xl">
+      class="max-w-6xl">
     @csrf
     @if($plan->exists) @method('PUT') @endif
 
@@ -56,7 +56,7 @@
                             type="text"
                             name="name"
                             value="{{ old('name', $plan->name) }}"
-                            placeholder="e.g. Professional, Enterprise"
+                            placeholder="e.g. Essential, Growth, Premium"
                             class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                         >
                         @error('name')
@@ -171,65 +171,51 @@
                         <p class="text-xs text-gray-400 mt-1">0 = no trial period.</p>
                     </div>
                 </div>
+
+                <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Discount %</label>
+                        <input
+                            type="number"
+                            name="discount_percent"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            value="{{ old('discount_percent', $plan->discount_percent ?? 0) }}"
+                            placeholder="e.g. 10"
+                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                        >
+                        <p class="text-xs text-gray-400 mt-1">Percentage off the plan price at checkout. GST is applied after discount.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Discount valid until</label>
+                        <input
+                            type="date"
+                            name="discount_expires_at"
+                            value="{{ old('discount_expires_at', optional($plan->discount_expires_at)->format('Y-m-d')) }}"
+                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                        >
+                        <p class="text-xs text-gray-400 mt-1">Purchase on or before this date gets the discount. Leave empty for no end date.</p>
+                    </div>
+                </div>
             </div>
 
-            {{-- Features --}}
-            <div class="bg-white border border-gray-200 rounded-2xl p-6">
-                <h3 class="text-sm font-semibold text-gray-800 mb-4 pb-3 border-b border-gray-100">Features</h3>
-
-                <label class="block text-sm font-medium text-gray-700 mb-1.5">Feature List</label>
-                <textarea
-                    name="features_raw"
-                    rows="10"
-                    placeholder="One feature per line, e.g.:&#10;Unlimited video calls&#10;Up to 10 users&#10;Priority support&#10;Custom branding"
-                    class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100 font-mono resize-y"
-                >{{ old('features_raw', implode("\n", $plan->features_list ?? [])) }}</textarea>
-                <p class="text-xs text-gray-400 mt-1">Enter one feature per line. These appear as bullet points on the pricing card.</p>
-            </div>
+            @include('admin.plans._benefits')
 
             {{-- Usage Limits & Entitlements --}}
             <div class="bg-white border border-gray-200 rounded-2xl p-6">
                 <h3 class="text-sm font-semibold text-gray-800 mb-4 pb-3 border-b border-gray-100">Usage & Entitlements</h3>
 
-                @php $limits = $plan->limits ?? []; @endphp
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Sessions / Month</label>
-                        <input
-                            type="number"
-                            name="limit_sessions"
-                            min="-1"
-                            value="{{ old('limit_sessions', $limits['sessions'] ?? '') }}"
-                            placeholder="-1 for unlimited"
-                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        >
-                        <p class="text-xs text-gray-400 mt-1">Included mentor sessions per month. -1 = unlimited. Blank = no included sessions.</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Billing cycle (days)</label>
-                        <input
-                            type="number"
-                            name="duration"
-                            min="1"
-                            value="{{ old('duration', $plan->duration ?? 30) }}"
-                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        >
-                        <p class="text-xs text-gray-400 mt-1">Subscription length after purchase (e.g. 30).</p>
-                    </div>
-
-                    <div class="col-span-2 flex items-center justify-between gap-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                        <div>
-                            <p class="text-sm font-medium text-gray-800">Progress report</p>
-                            <p class="text-xs text-gray-400 mt-0.5">Allow mentees to see scores, submission history, and progress % (journey content stays available either way).</p>
-                        </div>
-                        <label class="toggle-switch">
-                            <input type="hidden" name="progress_report_enabled" value="0">
-                            <input type="checkbox" name="progress_report_enabled" value="1"
-                                {{ old('progress_report_enabled', $plan->progress_report_enabled ?? false) ? 'checked' : '' }}>
-                            <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                        </label>
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Billing cycle (days)</label>
+                    <input
+                        type="number"
+                        name="duration"
+                        min="1"
+                        value="{{ old('duration', $plan->duration ?? 30) }}"
+                        class="w-full max-w-xs border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    >
+                    <p class="text-xs text-gray-400 mt-1">Subscription length after purchase (e.g. 30).</p>
                 </div>
             </div>
 
@@ -238,7 +224,7 @@
                 <h3 class="text-sm font-semibold text-gray-800 mb-1 pb-3 border-b border-gray-100">Tax &amp; Invoicing</h3>
                 <p class="text-xs text-gray-400 mt-3 mb-4">Used for subscription invoices (India GST). Leave blank if not applicable.</p>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">CGST %</label>
                         <input type="number" step="0.01" min="0" max="100" name="cgst_percent"
@@ -251,6 +237,13 @@
                         <input type="number" step="0.01" min="0" max="100" name="sgst_percent"
                                value="{{ old('sgst_percent', $plan->sgst_percent) }}"
                                placeholder="e.g. 9"
+                               class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">IGST %</label>
+                        <input type="number" step="0.01" min="0" max="100" name="igst_percent"
+                               value="{{ old('igst_percent', $plan->igst_percent) }}"
+                               placeholder="e.g. 18"
                                class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
                     </div>
                 </div>
@@ -336,15 +329,18 @@
             <div class="bg-white border border-gray-200 rounded-2xl p-6 sticky top-4">
                 <h3 class="text-sm font-semibold text-gray-800 mb-4 pb-3 border-b border-gray-100">Live Preview</h3>
 
-                <div class="border-2 border-dashed border-gray-100 rounded-xl p-4 bg-gray-50">
+                <div class="border-2 border-dashed border-gray-100 rounded-xl p-4 bg-gray-50 relative">
+                    <div id="preview-badge"
+                         class="absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                         style="display:none;">Badge</div>
                     <div id="preview-icon"
                          class="w-9 h-9 rounded-xl mb-3 flex items-center justify-center text-white font-bold text-base flex-shrink-0"
                          style="background:#2563eb;">P
                     </div>
                     <p id="preview-name" class="font-bold text-gray-900 text-sm mb-0.5">Plan Name</p>
                     <p id="preview-desc" class="text-xs text-gray-500 mb-3 leading-relaxed">Description goes here</p>
-                    <div id="preview-price" class="text-2xl font-extrabold text-gray-900 mb-3">Free</div>
-                    <div id="preview-features" class="space-y-1.5"></div>
+                    <div id="preview-price" class="text-2xl font-extrabold text-gray-900 mb-1">Free</div>
+                    <div id="preview-discount" class="text-[11px] text-green-700 font-medium mb-3" style="display:none;"></div>
                 </div>
 
                 <div class="mt-5 flex gap-2">
@@ -368,21 +364,23 @@
     const nameInput  = document.querySelector('[name="name"]');
     const descInput  = document.querySelector('[name="description"]');
     const priceInput = document.querySelector('[name="price_monthly"]');
-    const featInput  = document.querySelector('[name="features_raw"]');
     const colorInput = document.querySelector('[name="color"]');
     const colorText  = document.getElementById('color-text');
+    const badgeLabelInput = document.querySelector('[name="badge_label"]');
+    const discountInput = document.querySelector('[name="discount_percent"]');
+    const discountUntilInput = document.querySelector('[name="discount_expires_at"]');
     const sym        = '{{ addslashes(config_val("currency_symbol", "₹")) }}';
+    const badgePalettes = {
+        blue:   { bg: '#dbeafe', text: '#1d4ed8' },
+        green:  { bg: '#dcfce7', text: '#15803d' },
+        orange: { bg: '#ffedd5', text: '#c2410c' },
+    };
 
     function updatePreview() {
         const name  = nameInput.value.trim()       || 'Plan Name';
         const desc  = descInput.value.trim()       || 'Description goes here';
         const price = parseFloat(priceInput.value) || 0;
         const color = colorInput.value             || '#2563eb';
-        const feats = featInput.value
-                        .split('\n')
-                        .map(f => f.trim())
-                        .filter(Boolean)
-                        .slice(0, 5);
 
         // Icon
         const icon = document.getElementById('preview-icon');
@@ -395,23 +393,39 @@
 
         // Price
         const priceEl = document.getElementById('preview-price');
-        priceEl.innerHTML = price === 0
-            ? '<span class="text-green-600 text-2xl font-extrabold">Free</span>'
-            : `<span class="text-2xl font-extrabold text-gray-900">${sym}${price.toLocaleString('en-IN')}</span>`
-            + `<span class="text-sm font-normal text-gray-400 ml-0.5">/mo</span>`;
+        const discountEl = document.getElementById('preview-discount');
+        const discountPct = parseFloat(discountInput?.value) || 0;
+        const until = (discountUntilInput?.value || '').trim();
+        const sale = discountPct > 0 ? price * (1 - Math.min(discountPct, 100) / 100) : price;
 
-        // Features
-        document.getElementById('preview-features').innerHTML = feats.map(f => `
-            <div class="flex items-start gap-1.5 text-xs text-gray-600">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
-                     fill="${color}" viewBox="0 0 16 16"
-                     style="flex-shrink:0;margin-top:1px">
-                    <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022
-                             L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0
-                             0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
-                </svg>
-                <span>${f}</span>
-            </div>`).join('');
+        if (price === 0) {
+            priceEl.innerHTML = '<span class="text-green-600 text-2xl font-extrabold">Free</span>';
+            discountEl.style.display = 'none';
+        } else if (discountPct > 0) {
+            priceEl.innerHTML = `<span class="text-2xl font-extrabold text-gray-900">${sym}${Math.round(sale).toLocaleString('en-IN')}</span>`
+                + `<span class="text-sm font-normal text-gray-400 ml-0.5">/mo</span>`
+                + ` <span class="text-sm font-normal text-gray-400 line-through ml-1">${sym}${price.toLocaleString('en-IN')}</span>`;
+            discountEl.style.display = '';
+            discountEl.textContent = (Number.isInteger(discountPct) ? discountPct : discountPct.toFixed(2)) + '% off'
+                + (until ? ' until ' + until : '');
+        } else {
+            priceEl.innerHTML = `<span class="text-2xl font-extrabold text-gray-900">${sym}${price.toLocaleString('en-IN')}</span>`
+                + `<span class="text-sm font-normal text-gray-400 ml-0.5">/mo</span>`;
+            discountEl.style.display = 'none';
+        }
+
+        const badgeEl = document.getElementById('preview-badge');
+        const badgeText = (badgeLabelInput?.value || '').trim();
+        const selectedColor = document.querySelector('[name="badge_color"]:checked')?.value || 'blue';
+        const palette = badgePalettes[selectedColor] || badgePalettes.blue;
+        if (badgeText) {
+            badgeEl.style.display = '';
+            badgeEl.style.background = palette.bg;
+            badgeEl.style.color = palette.text;
+            badgeEl.textContent = badgeText;
+        } else {
+            badgeEl.style.display = 'none';
+        }
     }
 
     // Sync color picker ↔ hex text field
@@ -421,7 +435,7 @@
     });
 
     // Watch all live-preview inputs
-    [nameInput, descInput, priceInput, featInput].forEach(el => {
+    [nameInput, descInput, priceInput, badgeLabelInput, discountInput, discountUntilInput].forEach(el => {
         el?.addEventListener('input', updatePreview);
     });
 
@@ -437,6 +451,7 @@
                 div.classList.add('border-transparent');
             }
         });
+        updatePreview();
     }
 
     document.querySelectorAll('[name="badge_color"]').forEach(radio => {
@@ -446,6 +461,24 @@
     // Init
     refreshBadgePicker();
     updatePreview();
+
+    const benefitRows = document.getElementById('benefit-rows');
+    const benefitTpl = document.getElementById('benefit-row-template');
+    document.getElementById('add-benefit-row')?.addEventListener('click', () => {
+        if (!benefitRows || !benefitTpl) return;
+        const html = benefitTpl.innerHTML.replaceAll('__INDEX__', String(Date.now()));
+        benefitRows.insertAdjacentHTML('beforeend', html);
+    });
+    benefitRows?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.remove-benefit-row');
+        if (!btn) return;
+        const rows = benefitRows.querySelectorAll('.benefit-row');
+        if (rows.length <= 1) {
+            rows[0]?.querySelectorAll('input').forEach(input => { input.value = ''; });
+            return;
+        }
+        btn.closest('.benefit-row')?.remove();
+    });
 })();
 </script>
 

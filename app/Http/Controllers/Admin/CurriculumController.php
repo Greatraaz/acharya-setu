@@ -268,9 +268,9 @@ class CurriculumController extends Controller
     public function weeks(CurriculumMonth $month)
     {
         $month->load(['stream.mentee:id,name,email', 'weeks.tasks', 'weeks.mcqs']);
-        $plans = Plan::query()->orderBy('id')->get(['id', 'plan_name', 'slug', 'status']);
-        if ($plans->contains(fn ($p) => ($p->status ?? null) === 'active')) {
-            $plans = $plans->where('status', 'active')->values();
+        $plans = Plan::query()->orderBy('id')->get(['id', 'name', 'slug', 'is_active']);
+        if ($plans->contains(fn ($p) => (bool) $p->is_active)) {
+            $plans = $plans->where('is_active', true)->values();
         }
 
         return view('admin.curriculum.weeks.index', compact('month', 'plans'));

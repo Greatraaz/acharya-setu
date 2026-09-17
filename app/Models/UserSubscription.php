@@ -21,12 +21,14 @@ class UserSubscription extends Model
         'status',
         'starts_at',
         'expires_at',
+        'meta',
     ];
 
     protected $casts = [
-        'starts_at'  => 'datetime',
-        'expires_at' => 'datetime',
+        'starts_at'   => 'datetime',
+        'expires_at'  => 'datetime',
         'amount_paid' => 'float',
+        'meta'        => 'array',
     ];
 
     // ─── Relationships ───────────────────────────────────────────────────────────
@@ -43,7 +45,12 @@ class UserSubscription extends Model
 
     public function invoice(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
-        return $this->hasOne(PlanInvoice::class, 'user_subscription_id');
+        return $this->hasOne(PlanInvoice::class, 'user_subscription_id')->latestOfMany();
+    }
+
+    public function invoices(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PlanInvoice::class, 'user_subscription_id');
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -68,6 +75,6 @@ class UserSubscription extends Model
             return 0;
         }
 
-        return (int) Carbon::now()->diffInDays($this->expires_at, false);
+        return (int) max(0, Carbon::now()->diffInDays($this->expires_at, false));
     }
 }

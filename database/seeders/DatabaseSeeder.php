@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(['email'=>'admin@acharyasetu.com'], ['name'=>'Admin','password'=>Hash::make('Admin@123'),'role'=>'admin','is_active'=>true]);
 
         $this->call(UtilitiesContentSeeder::class);
+        $this->call(SubscriptionPlansSeeder::class);
 
         $this->command->info('✅ Seeded! Admin: admin@acharyasetu.com / Admin@123 | Mentor: rajesh@mentor.com / Mentor@123 | Student: rahul@student.com / Student@123');
     }

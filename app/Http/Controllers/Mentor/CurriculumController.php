@@ -249,13 +249,7 @@ class CurriculumController extends Controller
             'weeks.supportingMaterials',
         ]);
 
-        $planColumns = ['id', 'slug'];
-        if (\Illuminate\Support\Facades\Schema::hasColumn('plans', 'plan_name')) {
-            $planColumns[] = 'plan_name';
-        }
-        if (\Illuminate\Support\Facades\Schema::hasColumn('plans', 'name')) {
-            $planColumns[] = 'name';
-        }
+        $planColumns = ['id', 'slug', 'name'];
 
         $activePlans = Plan::active()->orderBy('id')->get($planColumns);
         $plans = $activePlans->isNotEmpty()

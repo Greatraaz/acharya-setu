@@ -42,7 +42,7 @@ class SubscriptionController extends Controller
         }
 
         $subscriptions = $query->paginate(20)->withQueryString();
-        $plans = Plan::orderBy('name')->get(['id', 'name', 'plan_name']);
+        $plans = Plan::orderBy('name')->get(['id', 'name']);
 
         return view('admin.subscriptions.index', compact('subscriptions', 'plans'));
     }

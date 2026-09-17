@@ -716,7 +716,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     });
 
     // ── Plans ─────────────────────────────────────────────────
-    Route::get('plans/restore/{id}',          [PlanController::class, 'restore'])    ->name('plans.restore');
+    Route::post('plans/restore/{id}',         [PlanController::class, 'restore'])    ->name('plans.restore');
     Route::post('plans/{plan}/toggle-status', [PlanController::class, 'toggleStatus'])->name('plans.toggle-status');
     Route::post('plans/reorder',              [PlanController::class, 'reorder'])    ->name('plans.reorder');
     Route::resource('plans', PlanController::class);

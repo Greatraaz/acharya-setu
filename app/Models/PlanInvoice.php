@@ -20,8 +20,10 @@ class PlanInvoice extends Model
         'base_amount',
         'cgst_percent',
         'sgst_percent',
+        'igst_percent',
         'cgst_amount',
         'sgst_amount',
+        'igst_amount',
         'tax_total',
         'total_amount',
         'currency',
@@ -45,8 +47,10 @@ class PlanInvoice extends Model
         'base_amount'              => 'float',
         'cgst_percent'             => 'float',
         'sgst_percent'             => 'float',
+        'igst_percent'             => 'float',
         'cgst_amount'              => 'float',
         'sgst_amount'              => 'float',
+        'igst_amount'              => 'float',
         'tax_total'                => 'float',
         'total_amount'             => 'float',
         'subscription_starts_at'   => 'datetime',
@@ -67,6 +71,19 @@ class PlanInvoice extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    public function visibleTaxes(): array
+    {
+        return Plan::visibleTaxLines(
+            (float) $this->base_amount,
+            $this->cgst_percent,
+            $this->sgst_percent,
+            $this->igst_percent,
+            $this->cgst_amount,
+            $this->sgst_amount,
+            $this->igst_amount
+        );
     }
 
     public function toPublicArray(): array
@@ -93,14 +110,32 @@ class PlanInvoice extends Model
                 'name' => $this->plan_name,
             ],
             'pricing'                  => [
-                'base'         => $this->base_amount,
-                'cgst_percent' => $this->cgst_percent,
-                'sgst_percent' => $this->sgst_percent,
-                'cgst_amount'  => $this->cgst_amount,
-                'sgst_amount'  => $this->sgst_amount,
-                'tax_total'    => $this->tax_total,
-                'total'        => $this->total_amount,
-                'currency'     => $this->currency,
+                'original_base' => (float) (data_get($this->meta, 'discount.original_base', $this->base_amount)),
+                'discount'      => [
+                    'applied'    => (bool) data_get($this->meta, 'discount.applied', false),
+                    'percent'    => (float) data_get($this->meta, 'discount.percent', 0),
+                    'amount'     => (float) data_get($this->meta, 'discount.amount', 0),
+                    'expires_at' => data_get($this->meta, 'discount.expires_at'),
+                ],
+                'base'          => $this->base_amount,
+                'cgst_percent'  => Plan::filledTaxPercent($this->cgst_percent),
+                'sgst_percent'  => Plan::filledTaxPercent($this->sgst_percent),
+                'igst_percent'  => Plan::filledTaxPercent($this->igst_percent),
+                'cgst_amount'   => Plan::filledTaxPercent($this->cgst_percent) !== null ? (float) $this->cgst_amount : 0,
+                'sgst_amount'   => Plan::filledTaxPercent($this->sgst_percent) !== null ? (float) $this->sgst_amount : 0,
+                'igst_amount'   => Plan::filledTaxPercent($this->igst_percent) !== null ? (float) $this->igst_amount : 0,
+                'tax_total'     => $this->tax_total,
+                'taxes'         => $this->visibleTaxes(),
+                'credit'        => [
+                    'applied'         => (bool) data_get($this->meta, 'credit.applied', false),
+                    'amount'          => (float) data_get($this->meta, 'credit.amount', 0),
+                    'remaining_days'  => (int) data_get($this->meta, 'credit.remaining_days', 0),
+                    'used_days'       => (int) data_get($this->meta, 'credit.used_days', 0),
+                    'from_plan_name'  => data_get($this->meta, 'credit.from_plan_name'),
+                ],
+                'plan_total'    => (float) data_get($this->meta, 'plan_total', $this->total_amount),
+                'total'         => $this->total_amount,
+                'currency'      => $this->currency,
             ],
             'payment'                  => [
                 'reference'           => $this->payment_reference,

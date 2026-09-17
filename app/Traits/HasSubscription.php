@@ -35,7 +35,7 @@ trait HasSubscription
     }
 
     /**
-     * Check if user is subscribed to a specific plan level.
+     * Check if user is subscribed to a specific plan slug.
      * Usage: $user->hasSubscriptionOfLevel('premium')
      */
     public function hasSubscriptionOfLevel(string $level): bool
@@ -44,12 +44,13 @@ trait HasSubscription
             ->where('status', 'active')
             ->where('payment_status', 'paid')
             ->where('expires_at', '>', Carbon::now())
-            ->whereHas('plan', fn ($q) => $q->where('level', $level))
+            ->whereHas('plan', fn ($q) => $q->where('slug', $level))
             ->exists();
     }
 
     /**
-     * Sessions included in the active plan for the current calendar month.
+     * Sessions included in the active plan for the current billing period.
+     * Usage resets when a plan is purchased or upgraded (new starts_at).
      *
      * @return array{
      *   covered: bool,
@@ -132,16 +133,37 @@ trait HasSubscription
     }
 
     /**
-     * Confirmed/upcoming sessions in the current month (counts against plan allowance).
+     * Confirmed/upcoming sessions in the current subscription period
+     * (counts against plan allowance). Falls back to calendar month if none.
      */
     public function sessionsUsedThisMonth(): int
     {
-        $start = Carbon::now('Asia/Kolkata')->startOfMonth();
-        $end = Carbon::now('Asia/Kolkata')->endOfMonth();
+        [$start, $end] = $this->planUsageWindow();
 
         return ConsultationSession::where('mentee_id', $this->id)
             ->whereBetween('scheduled_at', [$start, $end])
             ->where('status', '!=', ConsultationSession::STATUS_CANCELLED)
             ->count();
+    }
+
+    /**
+     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}
+     */
+    public function planUsageWindow(): array
+    {
+        $subscription = $this->activeSubscription();
+
+        if ($subscription?->starts_at) {
+            $start = $subscription->starts_at->copy()->timezone('Asia/Kolkata');
+            $end = ($subscription->expires_at ?? Carbon::now('Asia/Kolkata'))
+                ->copy()
+                ->timezone('Asia/Kolkata');
+
+            return [$start, $end];
+        }
+
+        $now = Carbon::now('Asia/Kolkata');
+
+        return [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()];
     }
 }

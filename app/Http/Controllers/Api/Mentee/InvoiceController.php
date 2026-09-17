@@ -25,14 +25,14 @@ class InvoiceController extends Controller
         $search  = trim((string) ($data['search'] ?? ''));
         $perPage = $data['per_page'] ?? 20;
 
-        $paginator = PlanInvoice::with(['plan:id,name,plan_name'])
+        $paginator = PlanInvoice::with(['plan:id,name'])
             ->where('user_id', $request->user()->id)
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('invoice_number', 'like', '%'.$search.'%')
+                        ->orWhere('plan_name', 'like', '%'.$search.'%')
                         ->orWhereHas('plan', function ($p) use ($search) {
-                            $p->where('name', 'like', '%'.$search.'%')
-                                ->orWhere('plan_name', 'like', '%'.$search.'%');
+                            $p->where('name', 'like', '%'.$search.'%');
                         });
                 });
             })

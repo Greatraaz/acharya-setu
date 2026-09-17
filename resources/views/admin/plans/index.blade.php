@@ -7,7 +7,7 @@
 
     {{-- Header --}}
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p class="text-sm text-gray-500">Manage subscription plans shown to your users.</p>
+        <p class="text-sm text-gray-500">Each plan is its own record with its own benefits. Names can be changed anytime.</p>
         <a href="{{ route('admin.plans.create') }}"
            class="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors w-full sm:w-auto">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
@@ -76,6 +76,10 @@
                             @if($plan->is_featured)
                             <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800">Featured</span>
                             @endif
+                            @if($plan->badge_label)
+                            @php $badge = $plan->badgePalette(); @endphp
+                            <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-md" style="background: {{ $badge['bg'] }}; color: {{ $badge['text'] }};">{{ $plan->badge_label }}</span>
+                            @endif
                             @if($archived)
                             <span class="text-[10px] font-medium bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md">Archived</span>
                             @elseif($plan->is_active)
@@ -88,7 +92,7 @@
                         <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">
                             <span><strong>{{ $plan->formatted_price_monthly }}</strong>/mo</span>
                             <span><strong>{{ $plan->formatted_price_yearly }}</strong>/yr</span>
-                            <span>{{ count($plan->features_list) }} features</span>
+                            <span>{{ count($plan->benefitSummary()) }} benefits</span>
                             <span class="font-mono text-gray-400">#{{ $plan->sort_order ?: '—' }}</span>
                         </div>
                     </div>
@@ -149,14 +153,22 @@
                                         @if($plan->is_featured)
                                         <span class="text-xs font-medium px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800">Featured</span>
                                         @endif
+                                        @if($plan->badge_label)
+                                        @php $badge = $plan->badgePalette(); @endphp
+                                        <span class="text-xs font-medium px-1.5 py-0.5 rounded-md" style="background: {{ $badge['bg'] }}; color: {{ $badge['text'] }};">{{ $plan->badge_label }}</span>
+                                        @endif
                                     </div>
                                     <div class="text-xs text-gray-400 font-mono mt-0.5 truncate">{{ $plan->slug }}</div>
                                 </div>
                             </div>
                         </td>
                         <td class="px-4 py-4 whitespace-nowrap">
+                            @php $offer = $plan->publicDiscount(); @endphp
                             <span class="text-sm font-semibold text-gray-900">{{ $plan->formatted_price_monthly }}</span>
                             @if($plan->price_monthly > 0)<span class="text-xs text-gray-400">/mo</span>@endif
+                            @if($offer)
+                            <div class="text-xs font-medium mt-0.5 {{ $offer['is_active'] ? 'text-green-600' : 'text-gray-400' }}">{{ $offer['label'] }}</div>
+                            @endif
                         </td>
                         <td class="px-4 py-4 whitespace-nowrap">
                             <span class="text-sm font-semibold text-gray-900">{{ $plan->formatted_price_yearly }}</span>
@@ -173,12 +185,12 @@
                             @endif
                         </td>
                         <td class="px-4 py-4">
-                            @php $features = $plan->features_list; @endphp
-                            @if(count($features))
-                            <div class="text-xs font-semibold text-gray-700">{{ count($features) }} features</div>
-                            <div class="text-xs text-gray-400 mt-0.5 truncate max-w-[160px]">{{ $features[0] ?? '' }}</div>
-                            @else
-                            <span class="text-xs text-gray-400">—</span>
+                            @if(is_array($plan->benefits) && count($plan->benefits))
+                            <div class="mt-1.5 flex flex-wrap gap-1 max-w-[220px]">
+                                @foreach(array_slice($plan->benefitSummary(), 0, 3) as $row)
+                                <span class="text-[10px] bg-slate-50 text-slate-600 px-1.5 py-0.5 rounded" title="{{ $row['label'] }}: {{ $row['value'] }}">{{ $row['value'] }}</span>
+                                @endforeach
+                            </div>
                             @endif
                         </td>
                         <td class="px-4 py-4">
@@ -241,14 +253,17 @@
         <h3 class="text-sm font-semibold text-gray-700 mb-4">Live Preview — How users see your plans</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6 pt-2">
             @foreach($plans->where('is_active', true)->whereNull('deleted_at') as $plan)
-            @php $planColor = $plan->color ?: '#2563eb'; @endphp
+            @php
+                $planColor = $plan->color ?: '#2563eb';
+                $badge = $plan->badgePalette();
+            @endphp
             <div class="relative bg-white border-2 rounded-2xl p-5 sm:p-6 flex flex-col h-full
                 {{ $plan->is_featured ? 'border-blue-400 shadow-lg shadow-blue-50' : 'border-gray-200' }}
                 {{ $plan->badge_label ? 'pt-8' : '' }}">
                 @if($plan->badge_label)
                 <div class="absolute inset-x-0 -top-3 flex justify-center px-3 pointer-events-none">
-                    <span class="inline-block max-w-full text-[11px] sm:text-xs font-bold px-3 py-1 rounded-full text-white text-center leading-snug shadow-sm"
-                          style="background: {{ $planColor }};">
+                    <span class="inline-block max-w-full text-[11px] sm:text-xs font-bold px-3 py-1 rounded-full text-center leading-snug shadow-sm"
+                          style="background: {{ $badge['bg'] }}; color: {{ $badge['text'] }};">
                         {{ $plan->badge_label }}
                     </span>
                 </div>
@@ -263,19 +278,32 @@
                 <p class="text-xs text-gray-500 mb-3 leading-relaxed">{{ $plan->description }}</p>
                 @endif
                 <div class="mb-4">
+                    @php
+                        $previewPricing = $plan->pricingBreakdown('monthly');
+                        $previewOffer = $plan->publicDiscount();
+                    @endphp
+                    @if(!empty($previewPricing['discount_active']))
+                    <span class="text-2xl sm:text-3xl font-extrabold text-gray-900">₹{{ number_format($previewPricing['base'], 0) }}</span>
+                    @if($plan->price_monthly > 0)<span class="text-sm text-gray-400">/month</span>@endif
+                    <div class="text-xs text-gray-400 line-through mt-0.5">{{ $plan->formatted_price_monthly }}/month</div>
+                    @if($previewOffer)
+                    <div class="text-xs font-medium text-green-600 mt-0.5">{{ $previewOffer['label'] }}</div>
+                    @endif
+                    @else
                     <span class="text-2xl sm:text-3xl font-extrabold text-gray-900">{{ $plan->formatted_price_monthly }}</span>
                     @if($plan->price_monthly > 0)<span class="text-sm text-gray-400">/month</span>@endif
+                    @endif
                 </div>
-                @if(count($plan->features_list))
+                @if(count($plan->benefitSummary()))
                 <ul class="space-y-2 mt-auto">
-                    @foreach(array_slice($plan->features_list, 0, 5) as $feature)
+                    @foreach(array_slice($plan->benefitSummary(), 0, 5) as $row)
                     <li class="flex items-start gap-2 text-xs text-gray-600">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="{{ $planColor }}" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
-                        <span class="break-words">{{ $feature }}</span>
+                        <span class="break-words">{{ $row['label'] }}{{ $row['value'] !== '' ? ': '.$row['value'] : '' }}</span>
                     </li>
                     @endforeach
-                    @if(count($plan->features_list) > 5)
-                    <li class="text-xs text-gray-400">+{{ count($plan->features_list) - 5 }} more features</li>
+                    @if(count($plan->benefitSummary()) > 5)
+                    <li class="text-xs text-gray-400">+{{ count($plan->benefitSummary()) - 5 }} more benefits</li>
                     @endif
                 </ul>
                 @endif

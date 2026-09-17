@@ -14,7 +14,7 @@ class SubscriptionInvoiceController extends Controller
 {
     public function subscriptions(Request $request): JsonResponse
     {
-        $query = UserSubscription::with(['user:id,name,email,phone', 'plan:id,name,plan_name', 'invoice'])
+        $query = UserSubscription::with(['user:id,name,email,phone', 'plan:id,name', 'invoice'])
             ->latest('id');
 
         if ($request->filled('status')) {
@@ -127,7 +127,7 @@ class SubscriptionInvoiceController extends Controller
 
     public function invoices(Request $request): JsonResponse
     {
-        $query = PlanInvoice::with(['user:id,name,email', 'plan:id,name,plan_name'])
+        $query = PlanInvoice::with(['user:id,name,email', 'plan:id,name'])
             ->latest('invoice_date')
             ->latest('id');
 

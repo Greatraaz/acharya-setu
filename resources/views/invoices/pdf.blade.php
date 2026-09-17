@@ -189,8 +189,17 @@
                 <strong>{{ $invoice->plan_name }}</strong><br>
                 <span class="muted">Mentorship subscription plan</span>
             </td>
-            <td class="right">{{ number_format((float) $invoice->base_amount, 2) }}</td>
+            @php $disc = is_array($invoice->meta) ? ($invoice->meta['discount'] ?? []) : []; @endphp
+            <td class="right">{{ number_format((float) ($disc['original_base'] ?? $invoice->base_amount), 2) }}</td>
         </tr>
+        @if(!empty($disc['applied']) && (float) ($disc['amount'] ?? 0) > 0)
+        <tr>
+            <td>
+                Discount ({{ rtrim(rtrim(number_format((float) $disc['percent'], 2, '.', ''), '0'), '.') }}%)
+            </td>
+            <td class="right">−{{ number_format((float) $disc['amount'], 2) }}</td>
+        </tr>
+        @endif
     </tbody>
 </table>
 
@@ -202,16 +211,17 @@
                     <td>Taxable value</td>
                     <td class="right">{{ number_format((float) $invoice->base_amount, 2) }}</td>
                 </tr>
-                @if((float) $invoice->cgst_percent > 0)
+                @foreach($invoice->visibleTaxes() as $taxLine)
                 <tr>
-                    <td>CGST ({{ rtrim(rtrim(number_format($invoice->cgst_percent, 2, '.', ''), '0'), '.') }}%)</td>
-                    <td class="right">{{ number_format((float) $invoice->cgst_amount, 2) }}</td>
+                    <td>{{ $taxLine['code'] }} ({{ rtrim(rtrim(number_format($taxLine['percent'], 2, '.', ''), '0'), '.') }}%)</td>
+                    <td class="right">{{ number_format((float) $taxLine['amount'], 2) }}</td>
                 </tr>
-                @endif
-                @if((float) $invoice->sgst_percent > 0)
+                @endforeach
+                @php $credit = is_array($invoice->meta) ? ($invoice->meta['credit'] ?? []) : []; @endphp
+                @if(!empty($credit['applied']) && (float) ($credit['amount'] ?? 0) > 0)
                 <tr>
-                    <td>SGST ({{ rtrim(rtrim(number_format($invoice->sgst_percent, 2, '.', ''), '0'), '.') }}%)</td>
-                    <td class="right">{{ number_format((float) $invoice->sgst_amount, 2) }}</td>
+                    <td>Unused days credit{{ !empty($credit['from_plan_name']) ? ' ('.$credit['from_plan_name'].', '.(int) ($credit['remaining_days'] ?? 0).' days)' : '' }}</td>
+                    <td class="right">−{{ number_format((float) $credit['amount'], 2) }}</td>
                 </tr>
                 @endif
                 <tr class="grand">
