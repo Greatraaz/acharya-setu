@@ -94,6 +94,8 @@ class PlanController extends Controller
             'sgst_percent'            => 'nullable|numeric|min:0|max:100',
             'igst_percent'            => 'nullable|numeric|min:0|max:100',
             'duration'                => 'nullable|integer|min:1|max:3650',
+            'free_session_minutes'    => 'nullable|integer|min:0|max:10000',
+            'free_session_max_duration' => 'nullable|integer|in:'.implode(',', \App\Models\ConsultationSession::BOOKING_DURATIONS),
             'benefits'                => 'nullable|array',
             'benefits.*.label'        => 'nullable|string|max:120',
             'benefits.*.value'        => 'nullable|string|max:255',
@@ -103,6 +105,14 @@ class PlanController extends Controller
             'sort_order'              => 'nullable|integer',
             'color'                   => 'nullable|string|max:20',
         ]);
+
+        $existingLimits = is_array($plan?->limits) ? $plan->limits : [];
+        $freeMinutes = array_key_exists('free_session_minutes', $data)
+            ? (int) ($data['free_session_minutes'] ?? 0)
+            : (int) ($existingLimits['free_session_minutes'] ?? 0);
+        $freeMax = array_key_exists('free_session_max_duration', $data) && $data['free_session_max_duration'] !== null
+            ? (int) $data['free_session_max_duration']
+            : (int) ($existingLimits['free_session_max_duration'] ?? ($freeMinutes > 0 ? min($freeMinutes, 120) : 30));
 
         return [
             'name'                    => $data['name'],
@@ -120,7 +130,11 @@ class PlanController extends Controller
             'sgst_percent'            => Plan::filledTaxPercent($request->input('sgst_percent')),
             'igst_percent'            => Plan::filledTaxPercent($request->input('igst_percent')),
             'duration'                => (int) ($data['duration'] ?? $plan?->duration ?? 30),
-            'limits'                  => is_array($plan?->limits) ? $plan->limits : [],
+            'limits'                  => [
+                'sessions' => $existingLimits['sessions'] ?? null,
+                'free_session_minutes' => $freeMinutes > 0 ? $freeMinutes : null,
+                'free_session_max_duration' => $freeMinutes > 0 ? $freeMax : null,
+            ],
             'benefits'                => Plan::normalizeBenefits($request->input('benefits', [])),
             'trial_days'              => (int) ($data['trial_days'] ?? 0),
             'is_active'               => $request->boolean('is_active'),

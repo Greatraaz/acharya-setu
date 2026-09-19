@@ -8,7 +8,8 @@ use App\Models\ConsultationSession;
  * Single source of truth for session payment → mentor payout split.
  *
  * Mentor always earns against the FULL session list price (rate × duration).
- * Coupon discounts reduce what the mentee pays; the platform absorbs that cost.
+ * Coupon discounts and plan free minutes reduce what the mentee pays;
+ * the platform (admin) absorbs that cost via platform_subsidy.
  * Platform fee = 20% of list price; mentor net = 80% of list price.
  */
 final class SessionPayoutBreakdown
@@ -27,18 +28,19 @@ final class SessionPayoutBreakdown
      *   platform_subsidy: float
      * }
      */
-    public static function fromGross(float $gross, float $couponDiscount = 0.0, ?float $menteePaid = null): array
+    public static function fromGross(float $gross, float $couponDiscount = 0.0, ?float $menteePaid = null, ?float $platformSubsidy = null): array
     {
         $list = round(max(0, $gross), 2);
         $discount = round(max(0, $couponDiscount), 2);
         $paid = $menteePaid !== null
             ? round(max(0, $menteePaid), 2)
             : round(max(0, $list - $discount), 2);
+        $subsidy = $platformSubsidy !== null
+            ? round(max(0, $platformSubsidy), 2)
+            : round(max(0, $list - $paid), 2);
 
         $fee = round($list * self::FEE_RATE, 2);
         $net = round($list - $fee, 2);
-        // Promo cost absorbed by platform (can make platform net negative vs fee alone).
-        $subsidy = $discount;
 
         return [
             'gross'            => $list,
@@ -53,7 +55,7 @@ final class SessionPayoutBreakdown
     }
 
     /**
-     * Mentor payout base = list price (amount paid + coupon discount).
+     * Mentor payout base = stored list price (or paid + coupon fallback).
      *
      * @return array{
      *   gross: float,
@@ -70,9 +72,16 @@ final class SessionPayoutBreakdown
     {
         $menteePaid = round((float) $session->amount, 2);
         $discount = round((float) ($session->coupon_discount ?? 0), 2);
-        $list = round($menteePaid + $discount, 2);
+        $storedList = round((float) ($session->list_amount ?? 0), 2);
+        $list = $storedList > 0
+            ? $storedList
+            : round($menteePaid + $discount, 2);
+        $storedSubsidy = round((float) ($session->platform_subsidy ?? 0), 2);
+        $subsidy = $storedSubsidy > 0
+            ? $storedSubsidy
+            : round(max(0, $list - $menteePaid), 2);
 
-        return self::fromGross($list, $discount, $menteePaid);
+        return self::fromGross($list, $discount, $menteePaid, $subsidy);
     }
 
     /**
@@ -101,6 +110,9 @@ final class SessionPayoutBreakdown
             $paid = isset($meta['mentee_paid'])
                 ? round((float) $meta['mentee_paid'], 2)
                 : round(max(0, $list - $discount), 2);
+            $subsidy = isset($meta['platform_subsidy'])
+                ? round((float) $meta['platform_subsidy'], 2)
+                : round(max(0, $list - $paid), 2);
 
             return [
                 'gross'            => $list,
@@ -112,7 +124,7 @@ final class SessionPayoutBreakdown
                 'list_amount'      => $list,
                 'mentee_paid'      => $paid,
                 'coupon_discount'  => $discount,
-                'platform_subsidy' => $discount,
+                'platform_subsidy' => $subsidy,
             ];
         }
 

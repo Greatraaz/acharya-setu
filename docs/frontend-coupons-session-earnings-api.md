@@ -1,20 +1,3 @@
-# Frontend Integration Guide — Coupons, Session Pricing & Mentor Earnings
-
-**Audience:** Mobile / frontend developers  
-**Auth:** Bearer token (same as existing mentee/mentor APIs)  
-**Base path:** `/api/v1`  
-**Currency:** INR (no GST on session bookings)
-
----
-
-## 1. Business rules (read first)
-
-| Party | What they pay / earn |
-|--------|----------------------|
-| **Mentee** | Pays **list price − coupon discount** |
-| **Mentor** | Always earns **80% of full list price** (coupon does **not** reduce mentor earnings) |
-| **Platform / Admin** | Takes 20% of list price **and absorbs** the coupon discount |
-
 ### Formula
 
 ```
@@ -40,8 +23,10 @@ mentor_earning   = list_amount × 0.80
 
 - Coupons are **flat ₹**, not percentage.
 - Coupons apply only to **paid** bookings (not plan-covered / free sessions).
-- Allowed durations: `15 | 30 | 60 | 90` minutes.
-- Mentor payout is credited when the session is **completed** and `payment_status = paid`.
+- Allowed durations: `30 | 60 | 90 | 120` minutes.
+- Mentor payout is credited when the session is **completed** and `payment_status` is `paid` **or** `waived` with a positive `list_amount` (plan free / platform-funded).
+- Plan free minutes and coupon discounts are **platform-borne**; mentor always earns **80% of list price**.
+- See also: [`mentee-session-booking-flow.md`](./mentee-session-booking-flow.md).
 
 ---
 
@@ -343,36 +328,6 @@ Coupon is already locked in the booking draft from the initiate step — do **no
 
 ---
 
-### 3.5 List sessions (mentee)
-
-```
-GET /api/v1/mentee/sessions
-```
-
-Relevant fields per session:
-
-```json
-{
-  "amountPaid": 200,
-  "listAmount": 300,
-  "couponDiscount": 100,
-  "mentorEarning": 240,
-  "platformFee": 60,
-  "paymentStatus": "paid",
-  "paymentMethod": "wallet",
-  "paymentMethodLabel": "Wallet",
-  "walletAmount": 200,
-  "razorpayAmount": 0,
-  "invoice": { "id": 9, "invoice_number": "SIN-202609-00001" }
-}
-```
-
-**Mentee UI:** show `amountPaid` as “You paid”. Optionally show coupon savings if `couponDiscount > 0`.
-
----
-
-### 3.6 Session invoices
-
 ```
 GET  /api/v1/mentee/session-invoices
 GET  /api/v1/mentee/session-invoices/{id}
@@ -546,46 +501,3 @@ Fallback if `payout` missing (older txns): use `amount` as net only.
 Always prefer server `message` string for user-facing text.
 
 ---
-
-## 7. Checklist for frontend
-
-### Mentee app
-- [ ] Coupon list + validate before pay
-- [ ] Pass `coupon_code` on book
-- [ ] Show `base_amount` − `coupon_discount` = payable
-- [ ] Charge Razorpay/wallet with **payable**, not list
-- [ ] Invoice shows list + coupon + total paid
-- [ ] Handle `welcome_wallet_credit` after onboarding
-
-### Mentor app
-- [ ] Use `mentorEarning` / `payout.net_amount` everywhere for income
-- [ ] Use `listAmount` as session gross
-- [ ] Do **not** treat `amountPaid` as mentor income
-- [ ] Optional: show coupon as “platform covered” if `couponDiscount > 0`
-
----
-
-## 8. Quick reference — endpoints
-
-| Method | Endpoint | Role |
-|--------|----------|------|
-| GET | `/api/v1/mentee/coupons` | List coupons |
-| POST | `/api/v1/mentee/coupons/validate` | Preview discount |
-| POST | `/api/v1/mentee/sessions` | Book (+ `coupon_code`) |
-| POST | `/api/v1/mentee/sessions/verify` | Confirm Razorpay |
-| GET | `/api/v1/mentee/sessions` | Sessions + money fields |
-| GET | `/api/v1/mentee/session-invoices` | Invoices |
-| GET | `/api/v1/mentor/sessions` | Sessions + `mentorEarning` |
-| GET | `/api/v1/mentor/wallet/transactions` | Earnings + `payout` |
-
----
-
-## 9. Contact / QA tip
-
-Test with a mentee who has an assigned coupon in Admin → Offers, book a paid mentor session, complete it, then verify:
-
-1. Mentee charged = list − coupon  
-2. Mentor wallet credit = 80% of list  
-3. Session list / invoice / wallet txn all show matching numbers  
-
-Questions on field mapping: sync with backend on this doc version.

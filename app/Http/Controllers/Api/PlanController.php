@@ -443,10 +443,11 @@ class PlanController extends Controller
             ], 200);
         }
 
-        $limit = $allowance['limit'];
-        $used = (int) $allowance['used'];
+        $limit = $allowance['minutes_limit'] ?? $allowance['limit'];
+        $used = (int) ($allowance['minutes_used'] ?? $allowance['used'] ?? 0);
         $unlimited = (bool) $allowance['unlimited'];
-        $remaining = $allowance['remaining'];
+        $remaining = $allowance['minutes_remaining'] ?? $allowance['remaining'];
+        $maxSession = $allowance['max_session_minutes'] ?? null;
         $percentUsed = null;
 
         if (! $unlimited && is_int($limit) && $limit > 0) {
@@ -454,6 +455,8 @@ class PlanController extends Controller
         } elseif (! $unlimited && $limit === 0) {
             $percentUsed = 100.0;
         }
+
+        $nextFree = $unlimited || (is_int($remaining) && $remaining > 0);
 
         return response()->json([
             'status'  => true,
@@ -481,13 +484,17 @@ class PlanController extends Controller
                     'ends_at'   => $periodEnd->toDateTimeString(),
                 ],
                 'sessions'                => [
-                    'included_limit'    => $limit,
-                    'used'              => $used,
-                    'remaining'         => $remaining,
-                    'unlimited'         => $unlimited,
-                    'percent_used'      => $percentUsed,
-                    'next_booking_free' => (bool) $allowance['covered'],
-                    'resets_at'         => $periodEnd->copy()->toDateTimeString(),
+                    // Minute-based free career counselling entitlement
+                    'included_limit'       => $limit,
+                    'used'                 => $used,
+                    'remaining'            => $remaining,
+                    'unlimited'            => $unlimited,
+                    'percent_used'         => $percentUsed,
+                    'max_session_minutes'  => $maxSession,
+                    'unit'                 => 'minutes',
+                    'benefit'              => $allowance['benefit'] ?? 'career_counselling',
+                    'next_booking_free'    => $nextFree,
+                    'resets_at'            => $periodEnd->copy()->toDateTimeString(),
                 ],
                 'progress_report_enabled' => (bool) ($subscription->plan?->progress_report_enabled),
             ],

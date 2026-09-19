@@ -165,8 +165,10 @@ class SessionInvoice extends Model
                 'tax_applicable'  => false,
                 'cgst_percent'    => 0,
                 'sgst_percent'    => 0,
+                'igst_percent'    => 0,
                 'cgst_amount'     => 0,
                 'sgst_amount'     => 0,
+                'igst_amount'     => 0,
                 'tax_total'       => 0,
             ],
             'payment'        => [

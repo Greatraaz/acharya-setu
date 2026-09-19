@@ -35,7 +35,14 @@ class SessionInvoiceService
             $user = $locked->mentee;
             $total = (float) $locked->amount;
             $couponDiscount = round((float) ($locked->coupon_discount ?? 0), 2);
-            $listAmount = round($total + $couponDiscount, 2);
+            $listAmount = round((float) ($locked->list_amount ?? 0), 2);
+            if ($listAmount <= 0) {
+                $listAmount = round($total + $couponDiscount, 2);
+            }
+            $platformSubsidy = round((float) ($locked->platform_subsidy ?? 0), 2);
+            if ($platformSubsidy <= 0) {
+                $platformSubsidy = round(max(0, $listAmount - $total), 2);
+            }
             $wallet = (float) ($locked->wallet_amount ?? 0);
             $razor = (float) ($locked->razorpay_amount ?? 0);
 
@@ -49,8 +56,7 @@ class SessionInvoiceService
                 $wallet = 0;
                 $razor = 0;
                 $total = 0;
-                $listAmount = 0;
-                $couponDiscount = 0;
+                // Keep list_amount / platform_subsidy so invoice shows mentor-funded value.
             }
 
             return SessionInvoice::create([
@@ -88,12 +94,15 @@ class SessionInvoiceService
                     'tax_applicable' => false,
                     'cgst_amount' => 0,
                     'sgst_amount' => 0,
+                    'igst_amount' => 0,
                     'tax_total' => 0,
-                    // Mentor earnings use list_amount; coupon is platform-borne.
+                    // Mentor earnings use list_amount; coupon/plan free minutes are platform-borne.
                     'list_amount' => $listAmount,
                     'coupon_discount' => $couponDiscount,
+                    'platform_subsidy' => $platformSubsidy,
                     'mentee_paid' => $total,
                     'offer_id' => $locked->offer_id,
+                    'payment_method' => $locked->payment_method,
                 ],
             ]);
         });

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Builder;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ConsultationSession extends Model
@@ -23,20 +24,22 @@ class ConsultationSession extends Model
         'booking_ref', 'mentor_id', 'mentee_id', 'scheduled_at', 'duration_minutes', 'timezone',
         'title', 'agenda', 'mentor_notes', 'meeting_link', 'meeting_provider', 'meeting_channel',
         'status', 'cancellation_reason', 'cancelled_by', 'cancelled_at', 'started_at', 'ended_at',
-        'actual_duration_seconds', 'amount', 'currency', 'payment_status', 'payment_method',
-        'offer_id', 'coupon_discount',
+        'actual_duration_seconds', 'amount', 'list_amount', 'currency', 'payment_status', 'payment_method',
+        'offer_id', 'coupon_discount', 'platform_subsidy',
         'wallet_amount', 'razorpay_amount', 'payment_reference',
         'razorpay_order_id', 'razorpay_payment_id',
     ];
 
     protected $casts = [
-        'cancelled_at'    => 'datetime',
-        'started_at'      => 'datetime',
-        'ended_at'        => 'datetime',
-        'amount'          => 'decimal:2',
-        'coupon_discount' => 'decimal:2',
-        'wallet_amount'   => 'decimal:2',
-        'razorpay_amount' => 'decimal:2',
+        'cancelled_at'      => 'datetime',
+        'started_at'        => 'datetime',
+        'ended_at'          => 'datetime',
+        'amount'            => 'decimal:2',
+        'list_amount'       => 'decimal:2',
+        'coupon_discount'   => 'decimal:2',
+        'platform_subsidy'  => 'decimal:2',
+        'wallet_amount'     => 'decimal:2',
+        'razorpay_amount'   => 'decimal:2',
     ];
 
     protected static function booted(): void
@@ -77,7 +80,10 @@ class ConsultationSession extends Model
     public const STATUS_ONGOING   = 'upcoming';
     public const STATUS_NO_SHOW   = 'completed';
 
-    public const BOOKING_DURATIONS = [15, 30, 60, 90];
+    /** Bookable session lengths (minutes). Mentor windows must match exactly. */
+    public const BOOKING_DURATIONS = [30, 60, 90, 120];
+
+    public const MIN_SLOT_MINUTES = 30;
 
     public const STATUSES = [
         'upcoming'  => 'Upcoming',
@@ -175,6 +181,60 @@ class ConsultationSession extends Model
         return 'session_slot_hold:'.$mentorId.':'.$stamp;
     }
 
+    /** True when another mentee holds this slot for Razorpay checkout. */
+    public static function isSlotHeldByOther(int $mentorId, Carbon $scheduledAt, int $menteeId): bool
+    {
+        $val = Cache::get(self::slotHoldCacheKey($mentorId, $scheduledAt));
+        if (! $val) {
+            return false;
+        }
+
+        return (int) ($val['mentee_id'] ?? 0) !== $menteeId;
+    }
+
+    /**
+     * Atomically claim a payment hold. False if another mentee already holds it.
+     */
+    public static function tryAcquireSlotHold(
+        int $mentorId,
+        int $menteeId,
+        Carbon $scheduledAt,
+        string $orderId,
+        int $durationMinutes = 30
+    ): bool {
+        $scheduledAt = $scheduledAt->copy()->timezone(self::SCHEDULE_TIMEZONE);
+        $durationMinutes = max(self::MIN_SLOT_MINUTES, $durationMinutes);
+        $key = self::slotHoldCacheKey($mentorId, $scheduledAt);
+        $ttl = now()->addMinutes(self::PAYMENT_HOLD_MINUTES);
+
+        $existing = Cache::get($key);
+        if (is_array($existing) && (int) ($existing['mentee_id'] ?? 0) === $menteeId) {
+            self::putSlotHold($mentorId, $menteeId, $scheduledAt, $orderId, $durationMinutes);
+
+            return true;
+        }
+
+        $payload = [
+            'mentee_id'         => $menteeId,
+            'order_id'          => $orderId,
+            'duration_minutes' => $durationMinutes,
+        ];
+
+        if (! Cache::add($key, $payload, $ttl)) {
+            return false;
+        }
+
+        $dayKey = self::slotHoldDayKey($mentorId, $scheduledAt->toDateString());
+        $day = Cache::get($dayKey, []);
+        if (! is_array($day)) {
+            $day = [];
+        }
+        $day[$scheduledAt->format('H:i')] = $payload;
+        Cache::put($dayKey, $day, $ttl);
+
+        return true;
+    }
+
     public static function hasActiveSlotHold(int $mentorId, Carbon $scheduledAt, ?int $exceptMenteeId = null): bool
     {
         $val = Cache::get(self::slotHoldCacheKey($mentorId, $scheduledAt));
@@ -182,7 +242,7 @@ class ConsultationSession extends Model
             return false;
         }
         if ($exceptMenteeId !== null && (int) ($val['mentee_id'] ?? 0) === $exceptMenteeId) {
-            return true; // own hold still counts as occupied for others; caller decides
+            return true;
         }
 
         return true;
@@ -201,18 +261,22 @@ class ConsultationSession extends Model
         int $durationMinutes = 30
     ): void {
         $scheduledAt = $scheduledAt->copy()->timezone(self::SCHEDULE_TIMEZONE);
-        $durationMinutes = max(15, $durationMinutes);
+        $durationMinutes = max(self::MIN_SLOT_MINUTES, $durationMinutes);
         $payload = [
             'mentee_id'         => $menteeId,
             'order_id'          => $orderId,
             'duration_minutes' => $durationMinutes,
         ];
-        Cache::put(self::slotHoldCacheKey($mentorId, $scheduledAt), $payload, now()->addMinutes(self::PAYMENT_HOLD_MINUTES));
+        $ttl = now()->addMinutes(self::PAYMENT_HOLD_MINUTES);
+        Cache::put(self::slotHoldCacheKey($mentorId, $scheduledAt), $payload, $ttl);
 
         $dayKey = self::slotHoldDayKey($mentorId, $scheduledAt->toDateString());
         $day = Cache::get($dayKey, []);
+        if (! is_array($day)) {
+            $day = [];
+        }
         $day[$scheduledAt->format('H:i')] = $payload;
-        Cache::put($dayKey, $day, now()->addMinutes(self::PAYMENT_HOLD_MINUTES));
+        Cache::put($dayKey, $day, $ttl);
     }
 
     public static function clearSlotHold(int $mentorId, Carbon $scheduledAt): void
@@ -243,7 +307,7 @@ class ConsultationSession extends Model
     {
         $intervals = [];
         foreach (self::heldDayMap($mentorId, $date) as $start => $payload) {
-            $duration = max(15, (int) ($payload['duration_minutes'] ?? 30));
+            $duration = max(self::MIN_SLOT_MINUTES, (int) ($payload['duration_minutes'] ?? 30));
             try {
                 $end = Carbon::createFromFormat('H:i', substr((string) $start, 0, 5), self::SCHEDULE_TIMEZONE)
                     ->addMinutes($duration)
@@ -270,18 +334,51 @@ class ConsultationSession extends Model
         return is_array($day) ? $day : [];
     }
 
+    /**
+     * MySQL named lock so two concurrent books cannot both insert the same slot.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public static function withSlotLock(int $mentorId, Carbon $scheduledAt, callable $callback, int $timeoutSeconds = 8): mixed
+    {
+        $name = substr(
+            'as_slot_'.$mentorId.'_'.$scheduledAt->copy()->timezone(self::SCHEDULE_TIMEZONE)->format('YmdHi'),
+            0,
+            64
+        );
+
+        $row = DB::selectOne('SELECT GET_LOCK(?, ?) AS acquired', [$name, $timeoutSeconds]);
+        if ((int) ($row->acquired ?? 0) !== 1) {
+            throw new \RuntimeException('SLOT_BUSY');
+        }
+
+        try {
+            return $callback();
+        } finally {
+            DB::selectOne('SELECT RELEASE_LOCK(?) AS released', [$name]);
+        }
+    }
+
     /** No-op compatibility: unpaid holds are cache-only now. */
     public static function expireAbandonedUnpaidPayments(): int
     {
         return 0;
     }
 
-    /** No-op compatibility: unpaid holds are cache-only now. */
+    /** Clear hold only if it belongs to this mentee (never steal another mentee's hold). */
     public static function releaseOwnUnpaidHold(int $menteeId, int $mentorId, Carbon $scheduledAt): int
     {
+        $val = Cache::get(self::slotHoldCacheKey($mentorId, $scheduledAt));
+        if (! is_array($val) || (int) ($val['mentee_id'] ?? 0) !== $menteeId) {
+            return 0;
+        }
+
         self::clearSlotHold($mentorId, $scheduledAt);
 
-        return 0;
+        return 1;
     }
 
     public function sessionTimezone(): string
@@ -560,7 +657,8 @@ class ConsultationSession extends Model
             return null;
         }
 
-        if ($this->payment_status !== 'paid') {
+        // Paid mentee sessions, or plan/free sessions funded by platform subsidy.
+        if (! in_array($this->payment_status, ['paid', 'waived'], true)) {
             return null;
         }
 

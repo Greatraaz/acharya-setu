@@ -126,7 +126,7 @@ class MentorListingController extends Controller
 
         $request->validate([
             'date'     => 'required|date|after_or_equal:today',
-            'duration' => 'nullable|integer|in:15,30,45,60,90,120',
+            'duration' => 'nullable|integer|in:'.implode(',', \App\Models\ConsultationSession::BOOKING_DURATIONS),
         ]);
 
         return response()->json(

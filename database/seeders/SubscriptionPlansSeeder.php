@@ -25,7 +25,11 @@ class SubscriptionPlansSeeder extends Seeder
                 'is_featured'             => $row['is_featured'],
                 'is_active'               => true,
                 'color'                   => $row['color'],
-                'limits'                  => ['sessions' => null],
+                'limits'                  => [
+                    'sessions' => null,
+                    'free_session_minutes' => $row['free_session_minutes'],
+                    'free_session_max_duration' => $row['free_session_max_duration'],
+                ],
                 'progress_report_enabled' => true,
                 'benefits'                => $row['benefits'],
             ];
@@ -35,6 +39,9 @@ class SubscriptionPlansSeeder extends Seeder
                 unset($payload['name']);
                 if (empty($plan->benefits)) {
                     $plan->update($payload);
+                } else {
+                    // Always refresh free-minute entitlements from catalog.
+                    $plan->update(['limits' => $payload['limits']]);
                 }
 
                 continue;

@@ -2157,15 +2157,15 @@
    
    .time-grid {
        display: grid;
-       grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
        gap: 8px;
        margin-top: 0;
    }
    .time-slot {
-       padding: 10px 8px;
+       padding: 10px 10px;
        border-radius: 10px;
        text-align: center;
-       font-size: 13px;
+       font-size: 12px;
        font-weight: 600;
        cursor: pointer;
        border: 1px solid var(--border);
@@ -2176,6 +2176,8 @@
        appearance: none;
        -webkit-appearance: none;
        width: 100%;
+       line-height: 1.35;
+       white-space: nowrap;
    }
    .time-slot:hover {
        border-color: var(--brand);
@@ -3536,6 +3538,66 @@
        letter-spacing: 0.05em;
        color: var(--text-3);
        white-space: nowrap;
+   }
+   .plan-discount-badge {
+       display: inline-flex;
+       align-items: center;
+       font-size: 11px;
+       font-weight: 800;
+       letter-spacing: .02em;
+       padding: 3px 8px;
+       border-radius: 999px;
+       background: #dcfce7;
+       color: #15803d;
+       white-space: nowrap;
+   }
+   .plan-price-row {
+       display: flex;
+       align-items: baseline;
+       flex-wrap: wrap;
+       gap: 8px;
+   }
+   .plan-price-period {
+       font-size: 13px;
+       font-weight: 500;
+       color: var(--text-3);
+   }
+   .plan-history-head {
+       display: flex;
+       justify-content: space-between;
+       align-items: center;
+       gap: 12px;
+       flex-wrap: wrap;
+       margin-bottom: 14px;
+   }
+   .plan-history-actions {
+       display: inline-flex;
+       align-items: center;
+       gap: 8px;
+   }
+   .plan-history-icon-btn {
+       display: inline-flex;
+       align-items: center;
+       justify-content: center;
+       width: 32px;
+       height: 32px;
+       padding: 0;
+       border: 1px solid var(--border);
+       border-radius: 8px;
+       background: var(--bg-3);
+       color: var(--text-2);
+       text-decoration: none;
+       cursor: pointer;
+       flex-shrink: 0;
+   }
+   .plan-history-icon-btn:hover {
+       color: var(--brand);
+       border-color: var(--brand);
+       background: var(--bg-4);
+   }
+   .plan-history-icon-btn svg {
+       width: 16px;
+       height: 16px;
    }
    .session-card-inner {
        display: flex;

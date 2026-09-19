@@ -62,6 +62,7 @@
                 $quote = $quotes[$plan->id] ?? null;
                 $isUpgrade = (bool) ($quote['is_upgrade'] ?? false);
                 $credit = $quote['credit'] ?? [];
+                $creditAmount = (float) ($credit['amount'] ?? 0);
                 $price = (float) ($quote['payable'] ?? $pricing['total']);
                 $planTotal = (float) ($quote['plan_total'] ?? $pricing['total']);
                 $basePrice = (float) $pricing['base'];
@@ -70,6 +71,14 @@
                 $accent = $plan->color ?: '#f59e0b';
                 $badge = $plan->badgePalette();
                 $offer = $plan->publicDiscount();
+                $discountActive = ! empty($pricing['discount_active']) && (float) ($pricing['discount_percent'] ?? 0) > 0;
+                $discountPct = $discountActive
+                    ? rtrim(rtrim(number_format((float) $pricing['discount_percent'], 2, '.', ''), '0'), '.')
+                    : null;
+                $listTotal = (float) ($pricing['original_total'] ?? $pricing['original_base'] ?? 0);
+                $strikePrice = $discountActive
+                    ? $listTotal
+                    : (($isUpgrade && $planTotal > $price) ? $planTotal : 0);
             @endphp
             <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px;position:relative;{{ $plan->is_featured ? 'border-color:'.$accent.';box-shadow:0 0 0 1px '.$accent.'33;' : '' }}">
                 @if($plan->is_featured || $plan->badge_label)
@@ -92,26 +101,36 @@
                     @if($price <= 0)
                     <div style="font-size:28px;font-weight:800;color:var(--success);">{{ $isUpgrade ? 'No extra cost' : 'Free' }}</div>
                     @else
-                    <div style="font-size:28px;font-weight:800;color:var(--text);">
-                        ₹{{ number_format($price, 0) }}
-                        <span style="font-size:13px;font-weight:500;color:var(--text-3);">{{ $isUpgrade ? 'due now' : '/mo' }}</span>
+                    <div class="plan-price-row">
+                        <span style="font-size:28px;font-weight:800;color:var(--text);line-height:1;">₹{{ number_format($price, 0) }}</span>
+                        <span class="plan-price-period">/mo</span>
+                        @if($discountActive)
+                        <span class="plan-discount-badge">{{ $discountPct }}% off</span>
+                        @endif
                     </div>
-                    @if($isUpgrade && $planTotal > $price)
-                    <div style="font-size:12px;color:var(--text-3);margin-top:4px;">
-                        <span style="text-decoration:line-through;">₹{{ number_format($planTotal, 0) }}</span>
-                        <span style="color:#15803d;font-weight:700;margin-left:6px;">₹{{ number_format((float) ($credit['amount'] ?? 0), 0) }} unused-day credit</span>
+                    @if($strikePrice > $price || $discountActive)
+                    <div style="font-size:12px;color:var(--text-3);margin-top:6px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+                        @if($strikePrice > $price)
+                        <span style="text-decoration:line-through;">₹{{ number_format($strikePrice, 0) }}</span>
+                        @endif
+                        @if($discountActive)
+                        <span style="color:#15803d;font-weight:700;">Save ₹{{ number_format((float) $pricing['discount_amount'], 0) }}</span>
+                        @if(!empty($offer['expires_at']))
+                        <span>until {{ \Carbon\Carbon::parse($offer['expires_at'])->format('d M Y') }}</span>
+                        @endif
+                        @endif
                     </div>
-                    @elseif(!empty($pricing['discount_active']))
-                    <div style="font-size:12px;color:var(--text-3);margin-top:4px;">
-                        <span style="text-decoration:line-through;">₹{{ number_format((float) $pricing['original_total'], 0) }}</span>
-                        <span style="color:#15803d;font-weight:700;margin-left:6px;">{{ $offer['label'] ?? ((float) $pricing['discount_percent']).'% off' }}</span>
+                    @endif
+                    @if($isUpgrade && $creditAmount > 0)
+                    <div style="font-size:12px;color:#15803d;font-weight:700;margin-top:4px;">
+                        ₹{{ number_format($creditAmount, 0) }} unused-day credit applied
                     </div>
                     @endif
                     @if($pricing['tax_total'] > 0)
                     <div style="font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.45;">
-                        @if(!empty($pricing['discount_active']))
+                        @if($discountActive)
                         List ₹{{ number_format((float) $pricing['original_base'], 0) }}
-                        − {{ rtrim(rtrim(number_format((float) $pricing['discount_percent'], 2, '.', ''), '0'), '.') }}% (₹{{ number_format((float) $pricing['discount_amount'], 2) }})
+                        − {{ $discountPct }}% (₹{{ number_format((float) $pricing['discount_amount'], 2) }})
                         = ₹{{ number_format($basePrice, 0) }}
                         @else
                         Base ₹{{ number_format($basePrice, 0) }}
@@ -159,32 +178,19 @@
         </div>
         @endif
 
-        @if($history->isNotEmpty() || request()->filled('status') || request()->filled('search'))
+        @if($history->isNotEmpty() || request()->filled('search'))
         <div class="card">
-            <h3 style="font-size:15px;font-weight:700;margin-bottom:14px;">Subscription history</h3>
-
-            <form method="GET" action="{{ route('mentee.plans') }}" class="session-toolbar" style="margin-bottom:14px;">
-                <div class="session-filter-tabs">
-                    @foreach(['' => 'All', 'active' => 'Active', 'cancelled' => 'Cancelled', 'expired' => 'Expired', 'pending' => 'Pending'] as $key => $label)
-                        @php $tabParams = array_filter(['status' => $key ?: null, 'search' => ($search ?? request('search')) ?: null]); @endphp
-                        <a href="{{ route('mentee.plans', $tabParams) }}"
-                           class="session-filter-tab {{ ($status ?? request('status', '')) === $key ? 'active' : '' }}">
-                            {{ $label }}
-                        </a>
-                    @endforeach
-                </div>
-                <div class="session-toolbar-controls">
-                    @if(($status ?? request('status')))
-                        <input type="hidden" name="status" value="{{ $status ?? request('status') }}">
-                    @endif
+            <div class="plan-history-head">
+                <h3 style="font-size:15px;font-weight:700;margin:0;">Subscription history</h3>
+                <form method="GET" action="{{ route('mentee.plans') }}" class="session-toolbar-controls" style="margin:0;">
                     <div class="session-search-field">
                         <span class="session-search-icon" aria-hidden="true">🔍</span>
                         <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
-                               placeholder="Search plan or subscription ID…" autocomplete="off">
+                               placeholder="Search plan or ID…" autocomplete="off">
                     </div>
                     <button type="submit" class="btn btn-outline btn-sm">Search</button>
-                </div>
-            </form>
+                </form>
+            </div>
 
             <div class="table-scroll">
             <table class="data-table">
@@ -193,40 +199,68 @@
                         <th>Plan</th>
                         <th>Amount</th>
                         <th>Status</th>
-                        <th>Payment</th>
                         <th>Period</th>
                         <th>Invoice</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($history as $sub)
+                    @forelse($history as $sub)
+                    @php
+                        $statusClass = match ($sub->status) {
+                            'active' => 'completed',
+                            'cancelled' => 'cancelled',
+                            'expired' => 'pending',
+                            default => 'pending',
+                        };
+                    @endphp
                     <tr>
-                        <td style="font-weight:600;">{{ $sub->plan->name ?? 'N/A' }}</td>
-                        <td>₹{{ number_format((float) $sub->amount_paid, 0) }}</td>
-                        <td><span class="session-status {{ $sub->status === 'active' ? 'completed' : ($sub->status === 'cancelled' ? 'cancelled' : 'pending') }}">{{ ucfirst($sub->status) }}</span></td>
-                        <td style="font-size:12px;">{{ ucfirst($sub->payment_status ?? '—') }}</td>
-                        <td style="font-size:12px;white-space:nowrap;">
+                        <td>
+                            <div style="font-weight:600;">{{ $sub->plan->name ?? 'N/A' }}</div>
+                            @if($sub->subscription_id)
+                            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">{{ $sub->subscription_id }}</div>
+                            @endif
+                        </td>
+                        <td style="white-space:nowrap;font-weight:600;">₹{{ number_format((float) $sub->amount_paid, 0) }}</td>
+                        <td><span class="session-status {{ $statusClass }}">{{ ucfirst($sub->status) }}</span></td>
+                        <td style="font-size:12px;white-space:nowrap;color:var(--text-2);">
                             @if($sub->starts_at && $sub->expires_at)
                                 {{ $sub->starts_at->format('d M Y') }} → {{ $sub->expires_at->format('d M Y') }}
                             @else
                                 —
                             @endif
                         </td>
-                        <td style="font-size:12px;">
+                        <td>
                             @if($sub->invoice)
-                                <a href="{{ route('mentee.invoices.show', $sub->invoice) }}" style="color:var(--brand);font-weight:600;">{{ $sub->invoice->invoice_number }}</a>
-                                <a href="{{ route('mentee.invoices.download', $sub->invoice) }}" style="margin-left:8px;color:var(--text-2);">Download</a>
+                                <div class="plan-history-actions">
+                                    <a href="{{ route('mentee.invoices.show', $sub->invoice) }}" style="color:var(--brand);font-weight:600;font-size:12px;white-space:nowrap;">{{ $sub->invoice->invoice_number }}</a>
+                                    <a href="{{ route('mentee.invoices.download', $sub->invoice) }}"
+                                       class="plan-history-icon-btn"
+                                       title="Download invoice"
+                                       aria-label="Download invoice">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                        </svg>
+                                    </a>
+                                </div>
                             @elseif(($sub->payment_status ?? '') === 'paid')
-                                <form method="POST" action="{{ route('mentee.subscriptions.invoice', $sub->id) }}" style="display:inline;">
+                                <form method="POST" action="{{ route('mentee.subscriptions.invoice', $sub->id) }}" style="margin:0;">
                                     @csrf
-                                    <button type="submit" class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px;">Generate</button>
+                                    <button type="submit" class="plan-history-icon-btn" title="Generate invoice" aria-label="Generate invoice">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                    </button>
                                 </form>
                             @else
-                                —
+                                <span style="font-size:12px;color:var(--text-3);">—</span>
                             @endif
                         </td>
                     </tr>
-                    @endforeach
+                    @empty
+                    <tr>
+                        <td colspan="5" style="text-align:center;padding:36px 16px;color:var(--text-2);">No subscriptions match that search.</td>
+                    </tr>
+                    @endforelse
                 </tbody>
             </table>
             </div>

@@ -567,7 +567,7 @@
                no_slots:
                    "No open slots on this date. Try another day from the calendar.",
                no_duration:
-                   "No slots fit the selected session duration. Try 15 or 30 minutes, or pick another date.",
+                   "No mentor slots match this duration. Mentors offer full windows (30 / 60 / 90 / 120 min) — pick a matching length or another date.",
                pick_date: "Select an available date to see time slots.",
                loading: "Loading available times…",
            };
@@ -603,30 +603,37 @@
                if (opt && opt.start_time) byStart[String(opt.start_time).slice(0, 5)] = opt;
            });
 
+           const allowedDurations = [30, 60, 90, 120];
+
            slots.forEach((slot) => {
                const start = typeof slot === "string" ? String(slot).slice(0, 5) : String(slot.start_time || "").slice(0, 5);
                if (!start) return;
                const opt = byStart[start] || (typeof slot === "object" ? slot : null);
+               const end = opt && opt.end_time ? String(opt.end_time).slice(0, 5) : null;
+               const windowMins = opt && opt.duration ? Number(opt.duration) : null;
                const btn = document.createElement("button");
                btn.type = "button";
                btn.className = "time-slot";
                btn.dataset.time = start;
-               if (opt && opt.duration) btn.dataset.maxDuration = String(opt.duration);
-               btn.textContent = formatDisplayTime(start);
+               if (end) btn.dataset.end = end;
+               if (windowMins) btn.dataset.maxDuration = String(windowMins);
+               btn.textContent = end
+                   ? `${formatDisplayTime(start)} – ${formatDisplayTime(end)}`
+                   : formatDisplayTime(start);
+               btn.title = windowMins ? `${windowMins} minute slot` : "";
                btn.addEventListener("click", (e) => {
                    e.preventDefault();
                    e.stopPropagation();
                    grid.querySelectorAll(".time-slot").forEach((s) => s.classList.remove("selected"));
                    btn.classList.add("selected");
                    selectedTime = start;
-                   selectedSlotMax = opt && opt.duration ? Number(opt.duration) : null;
-                   constrainDurationButtons();
-                   if (selectedSlotMax && selectedDuration > selectedSlotMax) {
-                       const allowed = [15, 30, 60, 90].filter((m) => m <= selectedSlotMax);
-                       selectedDuration = allowed.length ? allowed[allowed.length - 1] : 15;
+                   selectedSlotMax = windowMins;
+                   if (windowMins && allowedDurations.includes(windowMins)) {
+                       selectedDuration = windowMins;
                        document.querySelectorAll(".duration-btn").forEach((b) => b.classList.remove("selected"));
                        document.querySelector(`.duration-btn[data-min="${selectedDuration}"]`)?.classList.add("selected");
                    }
+                   constrainDurationButtons();
                    updateSummary();
                });
                grid.appendChild(btn);
@@ -636,17 +643,23 @@
        function constrainDurationButtons() {
            document.querySelectorAll(".duration-btn").forEach((btn) => {
                const min = Number(btn.dataset.min);
-               const tooLong = selectedSlotMax != null && min > selectedSlotMax;
-               btn.classList.toggle("is-disabled", tooLong);
-               btn.style.opacity = tooLong ? "0.35" : "";
-               btn.style.pointerEvents = tooLong ? "none" : "";
+               // Exact match only: disable durations that are not the selected window length.
+               const mismatch = selectedSlotMax != null && min !== selectedSlotMax;
+               btn.classList.toggle("is-disabled", mismatch);
+               btn.style.opacity = mismatch ? "0.35" : "";
+               btn.style.pointerEvents = mismatch ? "none" : "";
            });
        }
 
        function updateSummary() {
            const el = (id) => document.getElementById(id);
            if (el("bk-date")) el("bk-date").textContent = selectedDate ? formatPrettyDate(selectedDate) : "—";
-           if (el("bk-time")) el("bk-time").textContent = formatDisplayTime(selectedTime);
+           if (el("bk-time")) {
+               const end = document.querySelector(".time-slot.selected")?.dataset?.end;
+               el("bk-time").textContent = selectedTime
+                   ? (end ? `${formatDisplayTime(selectedTime)} – ${formatDisplayTime(end)}` : formatDisplayTime(selectedTime))
+                   : "—";
+           }
            if (el("bk-duration")) el("bk-duration").textContent = selectedDuration + " min";
            const total = selectedDuration * ratePerMin;
            if (el("bk-total")) el("bk-total").textContent = "₹" + total.toLocaleString("en-IN");

@@ -76,7 +76,7 @@ class AvailabilityController extends Controller
         if ($request->filled('date')) {
             $request->validate([
                 'date'     => 'date',
-                'duration' => 'nullable|integer|in:15,30,45,60,90,120',
+                'duration' => 'nullable|integer|in:'.implode(',', \App\Models\ConsultationSession::BOOKING_DURATIONS),
             ]);
             $payload = $this->availabilityService->slotsForDate(
                 $mentor,
@@ -318,7 +318,7 @@ class AvailabilityController extends Controller
             'slots.*.day_of_week'  => 'required|string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
             'slots.*.start_time'   => 'required|string|date_format:H:i',
             'slots.*.end_time'     => 'nullable|string|date_format:H:i',
-            'slots.*.duration'     => 'nullable|integer|min:15|max:480',
+            'slots.*.duration'     => 'nullable|integer|in:'.implode(',', \App\Models\ConsultationSession::BOOKING_DURATIONS),
             'slots.*.is_available' => 'nullable|boolean',
         ]);
 
@@ -343,9 +343,9 @@ class AvailabilityController extends Controller
             }
 
             $mins = \Carbon\Carbon::createFromFormat('H:i', $start)->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i', $end));
-            if ($mins < 15) {
+            if (! in_array($mins, \App\Models\ConsultationSession::BOOKING_DURATIONS, true)) {
                 throw ValidationException::withMessages([
-                    "slots.{$i}.end_time" => 'Each slot must be at least 15 minutes.',
+                    "slots.{$i}.end_time" => 'Each slot must be exactly 30, 60, 90, or 120 minutes.',
                 ]);
             }
 

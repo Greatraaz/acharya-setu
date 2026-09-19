@@ -166,6 +166,8 @@ class Plan extends Model
                 'badge_color'    => null,
                 'is_featured'    => false,
                 'color'          => '#64748b',
+                'free_session_minutes' => 30,
+                'free_session_max_duration' => 30,
                 'benefits'       => [
                     ['label' => 'Career counselling', 'value' => '30 min / month'],
                     ['label' => 'In-house mentor allowance', 'value' => '60 min / month'],
@@ -192,6 +194,8 @@ class Plan extends Model
                 'badge_color'    => 'blue',
                 'is_featured'    => true,
                 'color'          => '#4f46e5',
+                'free_session_minutes' => 60,
+                'free_session_max_duration' => 60,
                 'benefits'       => [
                     ['label' => 'Career counselling', 'value' => '60 min / month'],
                     ['label' => 'In-house mentor allowance', 'value' => '120 min / month'],
@@ -218,6 +222,8 @@ class Plan extends Model
                 'badge_color'    => 'orange',
                 'is_featured'    => false,
                 'color'          => '#d97706',
+                'free_session_minutes' => 60,
+                'free_session_max_duration' => 60,
                 'benefits'       => [
                     ['label' => 'Career counselling', 'value' => '60 min / month + priority'],
                     ['label' => 'In-house mentor allowance', 'value' => '180 min / month'],
@@ -594,6 +600,12 @@ class Plan extends Model
             'benefit_summary'         => $this->benefitSummary(),
             'limits'                  => [
                 'sessions' => $sessions,
+                'free_session_minutes' => is_array($this->limits)
+                    ? ($this->limits['free_session_minutes'] ?? null)
+                    : null,
+                'free_session_max_duration' => is_array($this->limits)
+                    ? ($this->limits['free_session_max_duration'] ?? null)
+                    : null,
             ],
             'tax'                     => [
                 'cgst_percent' => Plan::filledTaxPercent($this->cgst_percent),

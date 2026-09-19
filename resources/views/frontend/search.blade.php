@@ -223,10 +223,10 @@
                     <div class="booking-card">
                         <p class="label-caps booking-card__label">Session Duration</p>
                         <div class="duration-btns">
-                            <div class="duration-btn" data-min="15" onclick="BookingWidget.setDuration(15)">15m</div>
                             <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30m</div>
                             <div class="duration-btn" data-min="60" onclick="BookingWidget.setDuration(60)">60m</div>
                             <div class="duration-btn" data-min="90" onclick="BookingWidget.setDuration(90)">90m</div>
+                            <div class="duration-btn" data-min="120" onclick="BookingWidget.setDuration(120)">120m</div>
                         </div>
                     </div>
 

@@ -217,6 +217,36 @@
                     >
                     <p class="text-xs text-gray-400 mt-1">Subscription length after purchase (e.g. 30).</p>
                 </div>
+
+                @php
+                    $planLimits = is_array($plan->limits) ? $plan->limits : [];
+                    $freeMins = old('free_session_minutes', $planLimits['free_session_minutes'] ?? '');
+                    $freeMax = old('free_session_max_duration', $planLimits['free_session_max_duration'] ?? 30);
+                @endphp
+                <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Free session minutes / period</label>
+                        <input
+                            type="number"
+                            name="free_session_minutes"
+                            min="0"
+                            value="{{ $freeMins }}"
+                            placeholder="e.g. 30"
+                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                        >
+                        <p class="text-xs text-gray-400 mt-1">Career counselling free minutes in the billing period. 0 = none.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Max free booking length</label>
+                        <select name="free_session_max_duration"
+                                class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                            @foreach([30, 60, 90, 120] as $mins)
+                                <option value="{{ $mins }}" @selected((int) $freeMax === $mins)>{{ $mins }} minutes</option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-gray-400 mt-1">Free minutes apply only to bookings up to this length (Essential: 30).</p>
+                    </div>
+                </div>
             </div>
 
             {{-- Tax / Invoice --}}

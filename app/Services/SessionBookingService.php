@@ -36,12 +36,16 @@ class SessionBookingService
 
         $duration = (int) ($data['duration'] ?? 0);
         if (! in_array($duration, ConsultationSession::BOOKING_DURATIONS, true)) {
-            return $this->fail('Duration must be 15, 30, 60, or 90 minutes.', 422);
+            return $this->fail(
+                'Duration must be '.implode(', ', ConsultationSession::BOOKING_DURATIONS).' minutes.',
+                422
+            );
         }
         $data['duration'] = $duration;
 
         // Session fees are GST-free: charge rate × duration only (no CGST/SGST/IGST).
         $baseAmount = round((float) ($mentor->rate_per_minute ?? 0) * $duration, 2);
+        $listAmount = $baseAmount;
         $time = substr((string) ($data['time'] ?? ''), 0, 5);
         $data['time'] = $time;
         $scheduledAt = Carbon::parse($data['date'].' '.$time, 'Asia/Kolkata');
@@ -49,14 +53,18 @@ class SessionBookingService
             return $this->fail('That time slot has already passed. Please choose a later time.', 422);
         }
         if (! $this->availability->isSlotOpen($mentor, (string) $data['date'], $time, $duration)) {
-            return $this->fail('That time/duration is not in the mentor\'s available slots. Please choose another option.', 422);
+            return $this->fail(
+                'That slot is not available for a '.$duration.'-minute session. Pick a mentor window that matches this duration exactly.',
+                422
+            );
         }
-        $planAllowance = $mentee->planSessionAllowance();
+        $planAllowance = $mentee->planSessionAllowance($duration);
         $coveredByPlan = $baseAmount > 0 && ($planAllowance['covered'] ?? false);
 
         $couponDiscount = 0.0;
         $appliedOffer = null;
         $amount = $baseAmount;
+        $platformSubsidy = 0.0;
 
         if ($baseAmount > 0 && ! $coveredByPlan) {
             $couponResult = $this->resolveCouponDiscount($mentee, $data, $baseAmount);
@@ -66,14 +74,30 @@ class SessionBookingService
             $amount = $couponResult['amount'];
             $couponDiscount = $couponResult['discount'];
             $appliedOffer = $couponResult['offer'];
+            $platformSubsidy = $couponDiscount;
+        }
+
+        if ($coveredByPlan) {
+            $amount = 0.0;
+            $platformSubsidy = $listAmount;
         }
 
         $paymentMethod = isset($data['payment_method']) ? strtolower((string) $data['payment_method']) : null;
 
         ConsultationSession::releaseOwnUnpaidHold($mentee->id, $mentor->id, $scheduledAt);
 
+        if (ConsultationSession::isSlotHeldByOther($mentor->id, $scheduledAt, $mentee->id)) {
+            return $this->fail(
+                'This time slot is temporarily held by another mentee completing payment. Please pick another slot or try again in a few minutes.',
+                409,
+                ['slot_busy' => true, 'retry_after_seconds' => ConsultationSession::PAYMENT_HOLD_MINUTES * 60]
+            );
+        }
+
         if ($this->availability->overlapsExisting($mentor->id, (string) $data['date'], $time, $duration, $mentee->id)) {
-            return $this->fail('This mentor already has an appointment that overlaps the selected time.', 422);
+            return $this->fail('This mentor already has an appointment that overlaps the selected time.', 409, [
+                'slot_busy' => true,
+            ]);
         }
 
         $channel = Str::random(10);
@@ -81,39 +105,64 @@ class SessionBookingService
         $currency = 'INR';
         $title = $data['title'] ?? ($data['agenda'] ? Str::limit($data['agenda'], 80) : 'Mentorship Session');
 
-        // 1) Free mentor OR included plan sessions → auto book, no Razorpay
+        // 1) Free mentor OR included plan minutes → auto book (admin funds mentor payout)
         if ($amount <= 0 || $coveredByPlan) {
             $method = $coveredByPlan ? 'plan' : 'free';
-            $session = ConsultationSession::create([
-                'mentor_id'         => $mentor->id,
-                'mentee_id'         => $mentee->id,
-                'scheduled_at'      => $scheduledAt,
-                'duration_minutes'  => $data['duration'],
-                'timezone'          => 'Asia/Kolkata',
-                'title'             => $title,
-                'agenda'            => $data['agenda'] ?? null,
-                'status'            => ConsultationSession::STATUS_UPCOMING,
-                'amount'            => $coveredByPlan ? 0 : $amount,
-                'currency'          => $currency,
-                'payment_status'    => 'waived',
-                'payment_method'    => $method,
-                'wallet_amount'     => 0,
-                'razorpay_amount'   => 0,
-                'payment_reference' => $coveredByPlan
-                    ? 'PLAN-'.($planAllowance['subscription_id'] ?? 'FREE')
-                    : null,
-                'booking_ref'       => $bookingRef,
-                'meeting_channel'   => $channel,
-                'meeting_link'      => url('as/'.$channel),
-            ]);
+            try {
+                $session = ConsultationSession::withSlotLock($mentor->id, $scheduledAt, function () use (
+                    $mentor, $mentee, $scheduledAt, $data, $listAmount, $currency, $bookingRef, $channel, $title,
+                    $method, $platformSubsidy, $planAllowance, $duration, $time
+                ) {
+                    if ($this->availability->overlapsExisting($mentor->id, (string) $data['date'], $time, $duration, $mentee->id)) {
+                        throw new InvalidArgumentException('SLOT_TAKEN');
+                    }
+
+                    return ConsultationSession::create([
+                        'mentor_id'         => $mentor->id,
+                        'mentee_id'         => $mentee->id,
+                        'scheduled_at'      => $scheduledAt,
+                        'duration_minutes'  => $data['duration'],
+                        'timezone'          => 'Asia/Kolkata',
+                        'title'             => $title,
+                        'agenda'            => $data['agenda'] ?? null,
+                        'status'            => ConsultationSession::STATUS_UPCOMING,
+                        'amount'            => 0,
+                        'list_amount'       => $listAmount,
+                        'currency'          => $currency,
+                        'payment_status'    => 'waived',
+                        'payment_method'    => $method,
+                        'coupon_discount'   => 0,
+                        'platform_subsidy'  => $platformSubsidy,
+                        'wallet_amount'     => 0,
+                        'razorpay_amount'   => 0,
+                        'payment_reference' => $method === 'plan'
+                            ? 'PLAN-'.($planAllowance['subscription_id'] ?? 'FREE')
+                            : null,
+                        'booking_ref'       => $bookingRef,
+                        'meeting_channel'   => $channel,
+                        'meeting_link'      => url('as/'.$channel),
+                    ]);
+                });
+            } catch (\RuntimeException $e) {
+                if ($e->getMessage() === 'SLOT_BUSY') {
+                    return $this->slotBusyResponse();
+                }
+                throw $e;
+            } catch (InvalidArgumentException $e) {
+                if ($e->getMessage() === 'SLOT_TAKEN') {
+                    return $this->slotBusyResponse('This time slot was just booked by someone else. Please choose another.');
+                }
+                throw $e;
+            }
 
             $invoice = $this->invoices->ensureForSession($session, 'system');
 
+            $minsLeft = $planAllowance['minutes_remaining'] ?? null;
             $msg = $coveredByPlan
-                ? 'Session booked using your '.($planAllowance['plan_name'] ?? 'subscription').' plan'
+                ? 'Session booked using your '.($planAllowance['plan_name'] ?? 'subscription').' plan free minutes'
                     .(! empty($planAllowance['unlimited'])
-                        ? ' (unlimited included sessions).'
-                        : ' ('.max(0, (int) $planAllowance['remaining'] - 1).' included sessions left this month).')
+                        ? ' (unlimited).'
+                        : ' ('.max(0, (int) $minsLeft - $duration).' free minutes left this period).')
                 : 'Session booked successfully!';
 
             return $this->ok($msg, 201, [
@@ -123,7 +172,13 @@ class SessionBookingService
                 'session'                 => $this->sessionArray($session),
                 'invoice'                 => $invoice?->toPublicArray(),
                 'payment_method'          => $method,
-                'plan_allowance'          => $planAllowance,
+                'plan_allowance'          => $mentee->planSessionAllowance($duration),
+                'pricing'                 => [
+                    'list_amount'      => $listAmount,
+                    'mentee_paid'      => 0,
+                    'coupon_discount'  => 0,
+                    'platform_subsidy' => $platformSubsidy,
+                ],
             ]);
         }
 
@@ -143,7 +198,9 @@ class SessionBookingService
                 'booked'                  => false,
                 'amount'                  => $amount,
                 'base_amount'             => $baseAmount,
+                'list_amount'             => $listAmount,
                 'coupon_discount'         => $couponDiscount,
+                'platform_subsidy'        => $platformSubsidy,
                 'currency'                => $currency,
                 'wallet_balance'          => $walletBalance,
                 'shortfall'               => $shortfall,
@@ -188,53 +245,92 @@ class SessionBookingService
             }
 
             try {
-                $session = DB::transaction(function () use ($mentor, $mentee, $scheduledAt, $data, $amount, $currency, $bookingRef, $channel, $title, $source, $appliedOffer, $couponDiscount) {
-                    $session = ConsultationSession::create([
-                        'mentor_id'         => $mentor->id,
-                        'mentee_id'         => $mentee->id,
-                        'scheduled_at'      => $scheduledAt,
-                        'duration_minutes'  => $data['duration'],
-                        'timezone'          => 'Asia/Kolkata',
-                        'title'             => $title,
-                        'agenda'            => $data['agenda'] ?? null,
-                        'status'            => ConsultationSession::STATUS_UPCOMING,
-                        'amount'            => $amount,
-                        'offer_id'          => $appliedOffer?->id,
-                        'coupon_discount'   => $couponDiscount,
-                        'currency'          => $currency,
-                        'payment_status'    => 'paid',
-                        'payment_method'    => 'wallet',
-                        'wallet_amount'     => $amount,
-                        'razorpay_amount'   => 0,
-                        'payment_reference' => 'WAL-'.$bookingRef,
-                        'booking_ref'       => $bookingRef,
-                        'meeting_channel'   => $channel,
-                        'meeting_link'      => url('as/'.$channel),
-                    ]);
+                $session = ConsultationSession::withSlotLock($mentor->id, $scheduledAt, function () use (
+                    $mentor, $mentee, $scheduledAt, $data, $amount, $listAmount, $currency, $bookingRef,
+                    $channel, $title, $source, $appliedOffer, $couponDiscount, $platformSubsidy, $time, $duration
+                ) {
+                    return DB::transaction(function () use (
+                        $mentor, $mentee, $scheduledAt, $data, $amount, $listAmount, $currency, $bookingRef,
+                        $channel, $title, $source, $appliedOffer, $couponDiscount, $platformSubsidy, $time, $duration
+                    ) {
+                        if ($this->availability->overlapsExisting($mentor->id, (string) $data['date'], $time, $duration, $mentee->id)) {
+                            throw new InvalidArgumentException('SLOT_TAKEN');
+                        }
 
-                    $mentee->debitWallet(
-                        $amount,
-                        "Session booking {$bookingRef}".($couponDiscount > 0 ? ' (coupon applied)' : ''),
-                        [
-                            'reference'            => 'WAL-'.$bookingRef,
-                            'transactionable_type' => ConsultationSession::class,
-                            'transactionable_id'   => $session->id,
-                            'meta'                 => [
-                                'booking_ref'      => $bookingRef,
-                                'mentor_id'        => $mentor->id,
-                                'source'           => 'session_booking_wallet_'.$source,
-                                'coupon_discount'  => $couponDiscount,
-                                'offer_id'         => $appliedOffer?->id,
-                            ],
-                        ]
-                    );
+                        $fresh = User::where('id', $mentee->id)->lockForUpdate()->firstOrFail();
+                        if ((float) $fresh->wallet_balance < $amount) {
+                            throw new InvalidArgumentException('INSUFFICIENT_WALLET');
+                        }
 
-                    if ($appliedOffer && $couponDiscount > 0) {
-                        $this->offers->recordSessionRedemption($appliedOffer, $mentee, $session, $couponDiscount);
-                    }
+                        $session = ConsultationSession::create([
+                            'mentor_id'         => $mentor->id,
+                            'mentee_id'         => $mentee->id,
+                            'scheduled_at'      => $scheduledAt,
+                            'duration_minutes'  => $data['duration'],
+                            'timezone'          => 'Asia/Kolkata',
+                            'title'             => $title,
+                            'agenda'            => $data['agenda'] ?? null,
+                            'status'            => ConsultationSession::STATUS_UPCOMING,
+                            'amount'            => $amount,
+                            'list_amount'       => $listAmount,
+                            'offer_id'          => $appliedOffer?->id,
+                            'coupon_discount'   => $couponDiscount,
+                            'platform_subsidy'  => $platformSubsidy,
+                            'currency'          => $currency,
+                            'payment_status'    => 'paid',
+                            'payment_method'    => 'wallet',
+                            'wallet_amount'     => $amount,
+                            'razorpay_amount'   => 0,
+                            'payment_reference' => 'WAL-'.$bookingRef,
+                            'booking_ref'       => $bookingRef,
+                            'meeting_channel'   => $channel,
+                            'meeting_link'      => url('as/'.$channel),
+                        ]);
 
-                    return $session;
+                        $fresh->debitWallet(
+                            $amount,
+                            "Session booking {$bookingRef}".($couponDiscount > 0 ? ' (coupon applied)' : ''),
+                            [
+                                'reference'            => 'WAL-'.$bookingRef,
+                                'transactionable_type' => ConsultationSession::class,
+                                'transactionable_id'   => $session->id,
+                                'meta'                 => [
+                                    'booking_ref'      => $bookingRef,
+                                    'mentor_id'        => $mentor->id,
+                                    'source'           => 'session_booking_wallet_'.$source,
+                                    'list_amount'      => $listAmount,
+                                    'coupon_discount'  => $couponDiscount,
+                                    'platform_subsidy' => $platformSubsidy,
+                                    'offer_id'         => $appliedOffer?->id,
+                                ],
+                            ]
+                        );
+
+                        if ($appliedOffer && $couponDiscount > 0) {
+                            $this->offers->recordSessionRedemption($appliedOffer, $mentee, $session, $couponDiscount);
+                        }
+
+                        return $session;
+                    });
                 });
+            } catch (\RuntimeException $e) {
+                if ($e->getMessage() === 'SLOT_BUSY') {
+                    return $this->slotBusyResponse();
+                }
+                throw $e;
+            } catch (InvalidArgumentException $e) {
+                if ($e->getMessage() === 'SLOT_TAKEN') {
+                    return $this->slotBusyResponse('This time slot was just booked by someone else. Please choose another.');
+                }
+                if ($e->getMessage() === 'INSUFFICIENT_WALLET') {
+                    return $this->fail('Insufficient wallet balance.', 422, [
+                        'insufficient_wallet' => true,
+                        'amount'              => $amount,
+                        'needs_topup'         => true,
+                        'topup_url'           => route('mentee.wallet'),
+                    ]);
+                }
+                throw $e;
             } catch (\Throwable $e) {
                 Log::error('Wallet booking failed.', ['error' => $e->getMessage()]);
 
@@ -281,6 +377,7 @@ class SessionBookingService
             $scheduledAt,
             $data,
             $amount,
+            $listAmount,
             $walletPart,
             $razorPart,
             $method,
@@ -290,7 +387,8 @@ class SessionBookingService
             $title,
             $source,
             $appliedOffer,
-            $couponDiscount
+            $couponDiscount,
+            $platformSubsidy
         );
     }
 
@@ -339,85 +437,118 @@ class SessionBookingService
         }
 
         $scheduledAt = Carbon::parse($draft['scheduled_at'], 'Asia/Kolkata');
-
-        $slotTaken = ConsultationSession::where('mentor_id', $draft['mentor_id'])
-            ->where('scheduled_at', $scheduledAt)
-            ->occupyingSlot()
-            ->exists();
-
-        if ($slotTaken) {
-            return $this->fail('This time slot was booked by someone else. Please contact support if you were charged.', 422);
-        }
+        $duration = (int) ($draft['duration'] ?? 30);
+        $time = substr((string) ($draft['time'] ?? $scheduledAt->format('H:i')), 0, 5);
+        $date = (string) ($draft['date'] ?? $scheduledAt->toDateString());
+        $paymentId = (string) ($data['razorpay_payment_id'] ?? '');
+        $razorAmount = round((float) ($draft['razorpay_amount'] ?? $draft['amount'] ?? 0), 2);
 
         try {
-            $session = DB::transaction(function () use ($mentee, $data, $draft, $scheduledAt, $orderId) {
-                $walletPart = round((float) ($draft['wallet_amount'] ?? 0), 2);
-                $method = (string) ($draft['payment_method'] ?? 'razorpay');
+            $session = ConsultationSession::withSlotLock((int) $draft['mentor_id'], $scheduledAt, function () use (
+                $mentee, $data, $draft, $scheduledAt, $orderId, $duration, $time, $date, $paymentId, $razorAmount
+            ) {
+                if ($this->availability->overlapsExisting((int) $draft['mentor_id'], $date, $time, $duration, $mentee->id)) {
+                    throw new InvalidArgumentException('SLOT_TAKEN');
+                }
 
-                if ($walletPart > 0 && $method === 'hybrid') {
-                    $fresh = User::where('id', $mentee->id)->lockForUpdate()->firstOrFail();
-                    if ((float) $fresh->wallet_balance < $walletPart) {
-                        throw new InvalidArgumentException('Insufficient wallet balance to complete hybrid payment. Please top up and retry.');
+                return DB::transaction(function () use ($mentee, $data, $draft, $scheduledAt, $orderId) {
+                    $walletPart = round((float) ($draft['wallet_amount'] ?? 0), 2);
+                    $method = (string) ($draft['payment_method'] ?? 'razorpay');
+
+                    if ($walletPart > 0 && $method === 'hybrid') {
+                        $fresh = User::where('id', $mentee->id)->lockForUpdate()->firstOrFail();
+                        if ((float) $fresh->wallet_balance < $walletPart) {
+                            throw new InvalidArgumentException('Insufficient wallet balance to complete hybrid payment. Please top up and retry.');
+                        }
                     }
-                }
 
-                $session = ConsultationSession::create([
-                    'mentor_id'           => $draft['mentor_id'],
-                    'mentee_id'           => $mentee->id,
-                    'scheduled_at'        => $scheduledAt,
-                    'duration_minutes'    => $draft['duration'],
-                    'timezone'            => 'Asia/Kolkata',
-                    'title'               => $draft['title'],
-                    'agenda'              => $draft['agenda'] ?? null,
-                    'status'              => ConsultationSession::STATUS_UPCOMING,
-                    'amount'              => $draft['amount'],
-                    'offer_id'            => $draft['offer_id'] ?? null,
-                    'coupon_discount'     => $draft['coupon_discount'] ?? 0,
-                    'currency'            => $draft['currency'] ?? 'INR',
-                    'payment_status'      => 'paid',
-                    'payment_method'      => $method,
-                    'wallet_amount'       => $walletPart,
-                    'razorpay_amount'     => $draft['razorpay_amount'] ?? 0,
-                    'razorpay_order_id'   => $orderId,
-                    'razorpay_payment_id' => $data['razorpay_payment_id'],
-                    'payment_reference'   => $data['razorpay_payment_id'],
-                    'booking_ref'         => $draft['booking_ref'],
-                    'meeting_channel'     => $draft['meeting_channel'],
-                    'meeting_link'        => url('as/'.$draft['meeting_channel']),
-                ]);
+                    $session = ConsultationSession::create([
+                        'mentor_id'           => $draft['mentor_id'],
+                        'mentee_id'           => $mentee->id,
+                        'scheduled_at'        => $scheduledAt,
+                        'duration_minutes'    => $draft['duration'],
+                        'timezone'            => 'Asia/Kolkata',
+                        'title'               => $draft['title'],
+                        'agenda'              => $draft['agenda'] ?? null,
+                        'status'              => ConsultationSession::STATUS_UPCOMING,
+                        'amount'              => $draft['amount'],
+                        'list_amount'         => $draft['list_amount'] ?? round((float) $draft['amount'] + (float) ($draft['coupon_discount'] ?? 0), 2),
+                        'offer_id'            => $draft['offer_id'] ?? null,
+                        'coupon_discount'     => $draft['coupon_discount'] ?? 0,
+                        'platform_subsidy'    => $draft['platform_subsidy'] ?? ($draft['coupon_discount'] ?? 0),
+                        'currency'            => $draft['currency'] ?? 'INR',
+                        'payment_status'      => 'paid',
+                        'payment_method'      => $method,
+                        'wallet_amount'       => $walletPart,
+                        'razorpay_amount'     => $draft['razorpay_amount'] ?? 0,
+                        'razorpay_order_id'   => $orderId,
+                        'razorpay_payment_id' => $data['razorpay_payment_id'],
+                        'payment_reference'   => $data['razorpay_payment_id'],
+                        'booking_ref'         => $draft['booking_ref'],
+                        'meeting_channel'     => $draft['meeting_channel'],
+                        'meeting_link'        => url('as/'.$draft['meeting_channel']),
+                    ]);
 
-                if ($walletPart > 0 && $method === 'hybrid') {
-                    $fresh = User::where('id', $mentee->id)->lockForUpdate()->firstOrFail();
-                    $fresh->debitWallet(
-                        $walletPart,
-                        "Hybrid session booking {$session->booking_ref}",
-                        [
-                            'reference'            => 'WAL-'.$session->booking_ref,
-                            'transactionable_type' => ConsultationSession::class,
-                            'transactionable_id'   => $session->id,
-                            'meta'                 => [
-                                'booking_ref' => $session->booking_ref,
-                                'source'      => 'session_booking_hybrid',
-                            ],
-                        ]
-                    );
-                }
-
-                if (! empty($draft['offer_id']) && (float) ($draft['coupon_discount'] ?? 0) > 0) {
-                    $offer = \App\Models\Offer::find($draft['offer_id']);
-                    if ($offer) {
-                        $this->offers->recordSessionRedemption(
-                            $offer,
-                            $mentee,
-                            $session,
-                            (float) $draft['coupon_discount']
+                    if ($walletPart > 0 && $method === 'hybrid') {
+                        $fresh = User::where('id', $mentee->id)->lockForUpdate()->firstOrFail();
+                        $fresh->debitWallet(
+                            $walletPart,
+                            "Hybrid session booking {$session->booking_ref}",
+                            [
+                                'reference'            => 'WAL-'.$session->booking_ref,
+                                'transactionable_type' => ConsultationSession::class,
+                                'transactionable_id'   => $session->id,
+                                'meta'                 => [
+                                    'booking_ref' => $session->booking_ref,
+                                    'source'      => 'session_booking_hybrid',
+                                ],
+                            ]
                         );
                     }
-                }
 
-                return $session;
+                    if (! empty($draft['offer_id']) && (float) ($draft['coupon_discount'] ?? 0) > 0) {
+                        $offer = \App\Models\Offer::find($draft['offer_id']);
+                        if ($offer) {
+                            $this->offers->recordSessionRedemption(
+                                $offer,
+                                $mentee,
+                                $session,
+                                (float) $draft['coupon_discount']
+                            );
+                        }
+                    }
+
+                    return $session;
+                });
             });
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'SLOT_BUSY') {
+                $this->refundRazorpayPayment($paymentId, $razorAmount);
+
+                return $this->slotBusyResponse(
+                    'This time slot is busy. Your online payment has been refunded automatically.'
+                );
+            }
+            throw $e;
         } catch (InvalidArgumentException $e) {
+            if ($e->getMessage() === 'SLOT_TAKEN') {
+                $refunded = $this->refundRazorpayPayment($paymentId, $razorAmount);
+                ConsultationSession::clearSlotHold((int) $draft['mentor_id'], $scheduledAt);
+                Cache::forget(ConsultationSession::bookingDraftCacheKey($orderId));
+
+                return $this->fail(
+                    $refunded
+                        ? 'This time slot was booked by someone else. Your payment has been refunded automatically. Please choose another slot.'
+                        : 'This time slot was booked by someone else. Your payment will be refunded shortly — contact support if it does not appear.',
+                    409,
+                    [
+                        'slot_busy'        => true,
+                        'payment_refunded' => $refunded,
+                        'booked'           => false,
+                    ]
+                );
+            }
+
             return $this->fail($e->getMessage(), 422, [
                 'needs_topup' => true,
                 'topup_url'   => route('mentee.wallet'),
@@ -449,6 +580,7 @@ class SessionBookingService
         Carbon $scheduledAt,
         array $data,
         float $amount,
+        float $listAmount,
         float $walletPart,
         float $razorPart,
         string $method,
@@ -458,7 +590,8 @@ class SessionBookingService
         string $title,
         string $source,
         ?\App\Models\Offer $appliedOffer = null,
-        float $couponDiscount = 0.0
+        float $couponDiscount = 0.0,
+        float $platformSubsidy = 0.0
     ): array {
         $creds = $this->razorpayCredentials();
         if (! ($creds['enabled'] ?? true)) {
@@ -518,39 +651,70 @@ class SessionBookingService
             return $this->fail('Unable to initiate payment right now.', 502);
         }
 
+        // Claim the slot BEFORE telling the mentee to pay — second mentee fails here (no charge).
+        if (! ConsultationSession::tryAcquireSlotHold(
+            $mentor->id,
+            $mentee->id,
+            $scheduledAt,
+            $orderId,
+            (int) $data['duration']
+        )) {
+            return $this->slotBusyResponse(
+                'This time slot is being booked by another mentee. Please choose another slot.'
+            );
+        }
+
+        // Re-check DB under lock in case someone wallet/plan booked while we created the order.
+        try {
+            ConsultationSession::withSlotLock($mentor->id, $scheduledAt, function () use ($mentor, $mentee, $data, $scheduledAt) {
+                $duration = (int) $data['duration'];
+                $time = substr((string) ($data['time'] ?? ''), 0, 5);
+                if ($this->availability->overlapsExisting($mentor->id, (string) $data['date'], $time, $duration, $mentee->id)) {
+                    throw new InvalidArgumentException('SLOT_TAKEN');
+                }
+            });
+        } catch (\RuntimeException $e) {
+            ConsultationSession::clearSlotHold($mentor->id, $scheduledAt);
+            if ($e->getMessage() === 'SLOT_BUSY') {
+                return $this->slotBusyResponse();
+            }
+            throw $e;
+        } catch (InvalidArgumentException $e) {
+            ConsultationSession::clearSlotHold($mentor->id, $scheduledAt);
+            if ($e->getMessage() === 'SLOT_TAKEN') {
+                return $this->slotBusyResponse('This time slot was just booked by someone else. Please choose another.');
+            }
+            throw $e;
+        }
+
         // Cache draft only — no DB row until payment succeeds.
         $draft = [
-            'mentee_id'       => $mentee->id,
-            'mentor_id'       => $mentor->id,
-            'scheduled_at'    => $scheduledAt->format('Y-m-d H:i:s'),
-            'date'            => $data['date'],
-            'time'            => $data['time'],
-            'duration'        => (int) $data['duration'],
-            'title'           => $title,
-            'agenda'          => $data['agenda'] ?? null,
-            'amount'          => $amount,
-            'offer_id'        => $appliedOffer?->id,
-            'coupon_discount' => $couponDiscount,
-            'currency'        => $currency,
-            'payment_method'  => $method,
-            'wallet_amount'   => $walletPart,
-            'razorpay_amount' => $razorPart,
-            'booking_ref'     => $bookingRef,
-            'meeting_channel' => $channel,
-            'source'          => $source,
+            'mentee_id'         => $mentee->id,
+            'mentor_id'         => $mentor->id,
+            'scheduled_at'      => $scheduledAt->format('Y-m-d H:i:s'),
+            'date'              => $data['date'],
+            'time'              => $data['time'],
+            'duration'          => (int) $data['duration'],
+            'title'             => $title,
+            'agenda'            => $data['agenda'] ?? null,
+            'amount'            => $amount,
+            'list_amount'       => $listAmount,
+            'offer_id'          => $appliedOffer?->id,
+            'coupon_discount'   => $couponDiscount,
+            'platform_subsidy'  => $platformSubsidy,
+            'currency'          => $currency,
+            'payment_method'    => $method,
+            'wallet_amount'     => $walletPart,
+            'razorpay_amount'   => $razorPart,
+            'booking_ref'       => $bookingRef,
+            'meeting_channel'   => $channel,
+            'source'            => $source,
         ];
 
         Cache::put(
             ConsultationSession::bookingDraftCacheKey($orderId),
             $draft,
             now()->addMinutes(max(30, ConsultationSession::PAYMENT_HOLD_MINUTES))
-        );
-        ConsultationSession::putSlotHold(
-            $mentor->id,
-            $mentee->id,
-            $scheduledAt,
-            $orderId,
-            (int) $data['duration']
         );
 
         return $this->ok(
@@ -569,8 +733,10 @@ class SessionBookingService
                 'amount'                  => $amountInPaise,
                 'amount_rupees'           => $razorPart,
                 'session_amount'          => $amount,
-                'base_amount'             => round($amount + $couponDiscount, 2),
+                'base_amount'             => $listAmount,
+                'list_amount'             => $listAmount,
                 'coupon_discount'         => $couponDiscount,
+                'platform_subsidy'        => $platformSubsidy,
                 'wallet_amount'           => $walletPart,
                 'razorpay_amount'         => $razorPart,
                 'currency'                => $currency,
@@ -626,7 +792,10 @@ class SessionBookingService
 
     private function sessionArray(ConsultationSession $session): array
     {
-        $listAmount = round((float) $session->amount + (float) ($session->coupon_discount ?? 0), 2);
+        $listAmount = round((float) ($session->list_amount ?? 0), 2);
+        if ($listAmount <= 0) {
+            $listAmount = round((float) $session->amount + (float) ($session->coupon_discount ?? 0), 2);
+        }
 
         return [
             'id'               => $session->id,
@@ -637,6 +806,7 @@ class SessionBookingService
             'amount'           => (float) $session->amount,
             'list_amount'      => $listAmount,
             'coupon_discount'  => (float) ($session->coupon_discount ?? 0),
+            'platform_subsidy' => (float) ($session->platform_subsidy ?? 0),
             'offer_id'         => $session->offer_id,
             'wallet_amount'    => (float) ($session->wallet_amount ?? 0),
             'razorpay_amount'  => (float) ($session->razorpay_amount ?? 0),
@@ -676,5 +846,73 @@ class SessionBookingService
             'http'    => $http,
             'payload' => array_merge(['message' => $message], $extra),
         ];
+    }
+
+    private function slotBusyResponse(?string $message = null): array
+    {
+        return $this->fail(
+            $message ?: 'This time slot is being booked by someone else. Please choose another slot.',
+            409,
+            [
+                'slot_busy'           => true,
+                'booked'              => false,
+                'retry_after_seconds' => ConsultationSession::PAYMENT_HOLD_MINUTES * 60,
+            ]
+        );
+    }
+
+    /**
+     * Auto-refund when payment succeeded but the slot was taken by another mentee.
+     */
+    private function refundRazorpayPayment(string $paymentId, float $amountRupees): bool
+    {
+        $paymentId = trim($paymentId);
+        if ($paymentId === '' || $amountRupees <= 0) {
+            return false;
+        }
+
+        $creds = $this->razorpayCredentials();
+        if (empty($creds['key']) || empty($creds['secret'])) {
+            Log::error('Cannot refund session payment — Razorpay not configured.', [
+                'payment_id' => $paymentId,
+            ]);
+
+            return false;
+        }
+
+        try {
+            $response = Http::withBasicAuth($creds['key'], $creds['secret'])
+                ->acceptJson()
+                ->post('https://api.razorpay.com/v1/payments/'.$paymentId.'/refund', [
+                    'amount' => (int) round($amountRupees * 100),
+                    'notes'  => [
+                        'reason' => 'slot_taken_by_another_mentee',
+                        'source' => 'session_booking_conflict',
+                    ],
+                ]);
+
+            if (! $response->successful()) {
+                Log::error('Razorpay session refund failed.', [
+                    'payment_id' => $paymentId,
+                    'status'     => $response->status(),
+                    'body'       => $response->body(),
+                ]);
+
+                return false;
+            }
+
+            Log::info('Razorpay session payment refunded after slot conflict.', [
+                'payment_id' => $paymentId,
+                'amount'     => $amountRupees,
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Razorpay session refund exception: '.$e->getMessage(), [
+                'payment_id' => $paymentId,
+            ]);
+
+            return false;
+        }
     }
 }

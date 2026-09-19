@@ -109,14 +109,18 @@ class MentorAvailabilityService
             }
 
             $windowMins = (int) ($range['duration'] ?? $this->minutesBetween($from, $to));
-            if ($windowMins < 15) {
+            if ($windowMins < ConsultationSession::MIN_SLOT_MINUTES) {
                 continue;
             }
-            if ($duration !== null && $windowMins < $duration) {
+            // Book the full mentor window only — no shorter bookings inside a longer slot.
+            if ($duration !== null && $windowMins !== $duration) {
+                continue;
+            }
+            if (! in_array($windowMins, ConsultationSession::BOOKING_DURATIONS, true)) {
                 continue;
             }
 
-            $bookEnd = $duration !== null ? $this->addMinutes($from, $duration) : $to;
+            $bookEnd = $to;
             if ($this->overlapsAny($from, $bookEnd, $occupied)) {
                 continue;
             }
@@ -125,6 +129,7 @@ class MentorAvailabilityService
                 'start_time' => $from,
                 'end_time'   => $to,
                 'duration'   => $windowMins,
+                'label'      => $from.'–'.$to,
             ];
         }
 
@@ -174,7 +179,7 @@ class MentorAvailabilityService
 
         $payload = $this->slotsForDate($mentor, $date, $duration);
         foreach ($payload['slot_options'] as $opt) {
-            if ($opt['start_time'] === $time && (int) $opt['duration'] >= $duration) {
+            if ($opt['start_time'] === $time && (int) $opt['duration'] === $duration) {
                 return true;
             }
         }

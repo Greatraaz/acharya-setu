@@ -35,12 +35,11 @@ class PlanController extends Controller
             fn (Plan $plan) => [$plan->id => $checkout->quote($plan, $current)]
         );
 
-        $status = $request->input('status');
         $search = trim((string) $request->input('search', $request->input('q', '')));
 
         $history = UserSubscription::with(['plan', 'invoice'])
             ->where('user_id', $user->id)
-            ->when(in_array($status, ['active', 'cancelled', 'expired', 'pending'], true), fn ($q) => $q->where('status', $status))
+            ->where('status', '!=', 'pending')
             ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
                 $inner->where('subscription_id', 'like', '%'.$search.'%')
                     ->orWhereHas('plan', fn ($p) => $p->where('name', 'like', '%'.$search.'%'));
@@ -49,7 +48,7 @@ class PlanController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('frontend.mentee.plans', compact('plans', 'current', 'quotes', 'history', 'status', 'search'));
+        return view('frontend.mentee.plans', compact('plans', 'current', 'quotes', 'history', 'search'));
     }
 
     /**

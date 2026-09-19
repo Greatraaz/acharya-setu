@@ -110,6 +110,11 @@ class AvailabilityController extends Controller
                         "days.{$day}.ranges" => "Each slot on {$day} must be at least 15 minutes ({$from}–{$to}).",
                     ]);
                 }
+                if (! in_array($mins, \App\Models\ConsultationSession::BOOKING_DURATIONS, true)) {
+                    throw ValidationException::withMessages([
+                        "days.{$day}.ranges" => "Each slot on {$day} must be exactly 30, 60, 90, or 120 minutes ({$from}–{$to} is {$mins} min).",
+                    ]);
+                }
                 $ranges[] = [
                     'from'     => $from,
                     'to'       => $to,
