@@ -661,8 +661,36 @@
                    : "—";
            }
            if (el("bk-duration")) el("bk-duration").textContent = selectedDuration + " min";
-           const total = selectedDuration * ratePerMin;
-           if (el("bk-total")) el("bk-total").textContent = "₹" + total.toLocaleString("en-IN");
+
+           const listTotal = Math.max(0, selectedDuration * ratePerMin);
+           let discount = 0;
+           let couponCode = "";
+           if (window.BookingCoupon && typeof BookingCoupon.getDiscountInfo === "function") {
+               const info = BookingCoupon.getDiscountInfo();
+               couponCode = info.code || "";
+               if (info.discount > 0) {
+                   if (listTotal >= (info.min || 0)) {
+                       discount = Math.min(info.discount, listTotal);
+                   }
+               }
+           }
+           const payable = Math.max(0, Math.round((listTotal - discount) * 100) / 100);
+
+           const discountRow = el("bk-discount-row");
+           const discountEl = el("bk-discount");
+           if (discountRow) {
+               discountRow.hidden = discount <= 0;
+           }
+           if (discountEl) {
+               discountEl.textContent = discount > 0 ? `−₹${discount.toLocaleString("en-IN")}` : "";
+           }
+           if (el("bk-subtotal")) {
+               el("bk-subtotal").textContent = "₹" + listTotal.toLocaleString("en-IN");
+           }
+           if (el("bk-total")) {
+               el("bk-total").textContent = "₹" + payable.toLocaleString("en-IN");
+           }
+
            const heading = document.getElementById("slots-heading");
            if (heading) {
                heading.textContent = selectedDate
@@ -679,9 +707,21 @@
                              ? selectedTime
                              : k === "duration"
                                ? selectedDuration
-                               : total;
+                               : payable;
                }
            });
+
+           // Surface min-amount issues next to the coupon picker when a code is selected.
+           if (couponCode && window.BookingCoupon && typeof BookingCoupon.setMinHint === "function") {
+               const info = BookingCoupon.getDiscountInfo();
+               if (info.discount > 0 && listTotal < (info.min || 0)) {
+                   BookingCoupon.setMinHint(
+                       `Session total must be at least ₹${Number(info.min).toLocaleString("en-IN")} to use this coupon.`
+                   );
+               } else {
+                   BookingCoupon.setMinHint(null);
+               }
+           }
        }
 
        function renderWeeklySummary(summary, hasSchedule) {
@@ -1043,8 +1083,22 @@
                    date: selectedDate,
                    time: selectedTime,
                    duration: selectedDuration,
-                   amount: selectedDuration * ratePerMin,
+                   amount: (() => {
+                       const listTotal = selectedDuration * ratePerMin;
+                       let discount = 0;
+                       if (window.BookingCoupon?.getDiscountInfo) {
+                           const info = BookingCoupon.getDiscountInfo();
+                           if (info.discount > 0 && listTotal >= (info.min || 0)) {
+                               discount = Math.min(info.discount, listTotal);
+                           }
+                       }
+                       return Math.max(0, Math.round((listTotal - discount) * 100) / 100);
+                   })(),
                };
+           },
+
+           refreshSummary() {
+               updateSummary();
            },
        };
    })();
@@ -1527,4 +1581,144 @@
            })
            .catch(() => showToast("error", "Could not copy."));
    };
+
+   /* ── Booking coupon picker ───────────────────────────────── */
+   window.BookingCoupon = (function () {
+       let activeDiscount = 0;
+       let activeMin = 0;
+
+       function els() {
+           return {
+               root: document.querySelector("[data-coupon-picker]"),
+               hidden: document.getElementById("booking-coupon"),
+               hint: document.getElementById("coupon-hint"),
+           };
+       }
+
+       function cards() {
+           return Array.from(document.querySelectorAll(".coupon-card"));
+       }
+
+       function refreshTotals() {
+           if (window.BookingWidget && typeof BookingWidget.refreshSummary === "function") {
+               BookingWidget.refreshSummary();
+           }
+       }
+
+       function setHint(msg, isError) {
+           const { hint } = els();
+           if (!hint) return;
+           if (!msg) {
+               hint.hidden = true;
+               hint.textContent = "";
+               hint.classList.remove("is-error");
+               return;
+           }
+           hint.hidden = false;
+           hint.textContent = msg;
+           hint.classList.toggle("is-error", !!isError);
+       }
+
+       function syncCards(code) {
+           const active = (code || "").trim().toUpperCase();
+           cards().forEach((card) => {
+               const match = (card.dataset.code || "").toUpperCase() === active;
+               card.classList.toggle("is-selected", match);
+               card.setAttribute("aria-selected", match ? "true" : "false");
+           });
+       }
+
+       function apply(code) {
+           const { hidden } = els();
+           const raw = (code || "").trim();
+           if (!raw) {
+               clear();
+               return false;
+           }
+
+           const match = cards().find(
+               (c) => (c.dataset.code || "").toUpperCase() === raw.toUpperCase()
+           );
+           if (!match) {
+               setHint("This coupon is not available.", true);
+               return false;
+           }
+
+           const finalCode = match.dataset.code;
+           activeDiscount = Number(match.dataset.discount || 0);
+           activeMin = Number(match.dataset.min || 0);
+
+           if (hidden) hidden.value = finalCode;
+           syncCards(finalCode);
+           setHint(null);
+           refreshTotals();
+           return true;
+       }
+
+       function clear() {
+           const { hidden } = els();
+           activeDiscount = 0;
+           activeMin = 0;
+           if (hidden) hidden.value = "";
+           syncCards("");
+           setHint(null);
+           refreshTotals();
+       }
+
+       function getCode() {
+           return (document.getElementById("booking-coupon")?.value || "").trim();
+       }
+
+       function getDiscountInfo() {
+           const code = getCode();
+           if (!code) {
+               return { code: "", discount: 0, min: 0 };
+           }
+           const match = cards().find(
+               (c) => (c.dataset.code || "").toUpperCase() === code.toUpperCase()
+           );
+           if (match) {
+               return {
+                   code,
+                   discount: Number(match.dataset.discount || 0),
+                   min: Number(match.dataset.min || 0),
+               };
+           }
+           return { code, discount: activeDiscount, min: activeMin };
+       }
+
+       function setMinHint(msg) {
+           const { hint } = els();
+           if (!hint) return;
+           if (msg) {
+               setHint(msg, true);
+           } else if (hint.classList.contains("is-error") && /at least ₹/.test(hint.textContent || "")) {
+               setHint(null);
+           }
+       }
+
+       function init() {
+           const { root } = els();
+           if (!root || root.dataset.ready === "1") return;
+           root.dataset.ready = "1";
+
+           cards().forEach((card) => {
+               card.addEventListener("click", () => {
+                   if (card.classList.contains("is-selected")) {
+                       clear();
+                       return;
+                   }
+                   apply(card.dataset.code);
+               });
+           });
+       }
+
+       if (document.readyState === "loading") {
+           document.addEventListener("DOMContentLoaded", init);
+       } else {
+           init();
+       }
+
+       return { init, apply, clear, getCode, getDiscountInfo, setMinHint };
+   })();
    

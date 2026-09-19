@@ -249,22 +249,7 @@
                             <textarea name="agenda" class="form-input" rows="3" id="booking-agenda"
                                       placeholder="Any additional context..."></textarea>
                         </div>
-                        @auth
-                        @php $availableCoupons = app(\App\Services\OfferService::class)->availableCouponsFor(auth()->user()); @endphp
-                        @if($availableCoupons->isNotEmpty())
-                        <div class="form-group" style="margin-top:14px;margin-bottom:0;">
-                            <label class="form-label">Coupon (optional)</label>
-                            <select class="form-input" id="booking-coupon">
-                                <option value="">No coupon</option>
-                                @foreach($availableCoupons as $coupon)
-                                <option value="{{ $coupon->coupon_code }}">
-                                    {{ $coupon->title }} — ₹{{ number_format((float) $coupon->amount, 0) }} off (min ₹{{ number_format((float) $coupon->min_session_amount, 0) }})
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        @endif
-                        @endauth
+                        @include('frontend.partials.booking-coupon-picker')
                     </div>
                 </div>
 
@@ -276,6 +261,10 @@
                         <div class="booking-summary-row"><span>Time</span><strong id="bk-time">—</strong></div>
                         <div class="booking-summary-row"><span>Duration</span><strong id="bk-duration">30 min</strong></div>
                         <div class="booking-summary-row"><span>Rate</span><strong id="bk-rate">—</strong></div>
+                        <div class="booking-summary-row"><span>Subtotal</span><strong id="bk-subtotal">—</strong></div>
+                        <div class="booking-summary-row booking-summary-row--discount" id="bk-discount-row" hidden>
+                            <span>Coupon</span><strong id="bk-discount">—</strong>
+                        </div>
                         <div class="booking-summary-row booking-summary-row--total"><span>Total</span><strong id="bk-total">—</strong></div>
                     </div>
 
@@ -322,6 +311,7 @@ function openBookingModal(mentorId, mentorName, ratePerMin) {
     document.getElementById('booking-mentor-name').textContent = `Book: ${mentorName}`;
     document.getElementById('bk-mentor').textContent = mentorName;
     document.getElementById('bk-rate').textContent = `₹${ratePerMin}/min`;
+    if (typeof BookingCoupon !== 'undefined' && BookingCoupon.clear) BookingCoupon.clear();
     openModal('booking-modal');
     // Init after modal is open so date/time grids are interactive
     setTimeout(() => BookingWidget.init(ratePerMin, mentorId), 0);
@@ -340,9 +330,11 @@ function confirmBooking(paymentMethod) {
     data.mentor_id = document.getElementById('booking-mentor-id').value;
     data.title     = document.getElementById('booking-topic')?.value?.trim() || '';
     data.agenda    = document.getElementById('booking-agenda')?.value || '';
-    const couponEl = document.getElementById('booking-coupon');
-    if (couponEl && couponEl.value) {
-        data.coupon_code = couponEl.value;
+    const couponCode = (typeof BookingCoupon !== 'undefined' && BookingCoupon.getCode)
+        ? BookingCoupon.getCode()
+        : (document.getElementById('booking-coupon')?.value || '').trim();
+    if (couponCode) {
+        data.coupon_code = couponCode;
     }
     if (!data.title) {
         showToast('error', 'Please enter a topic for the session.');
