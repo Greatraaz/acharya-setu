@@ -26,7 +26,6 @@ class Plan extends Model
         'duration',
         'limits',
         'benefits',
-        'progress_report_enabled',
         'badge_label',
         'badge_color',
         'trial_days',
@@ -46,7 +45,6 @@ class Plan extends Model
         'cgst_percent'             => 'float',
         'sgst_percent'             => 'float',
         'igst_percent'             => 'float',
-        'progress_report_enabled'  => 'boolean',
         'is_active'                => 'boolean',
         'is_featured'              => 'boolean',
         'trial_days'               => 'integer',
@@ -57,25 +55,11 @@ class Plan extends Model
         'formatted_price_monthly',
         'formatted_price_yearly',
         'yearly_savings_percent',
-        'sessions_per_month',
     ];
 
     public function getPlanNameAttribute(): ?string
     {
         return $this->attributes['name'] ?? null;
-    }
-
-    public function getSessionsPerMonthAttribute(): ?int
-    {
-        $limits = $this->limits;
-        if (is_string($limits)) {
-            $limits = json_decode($limits, true) ?: [];
-        }
-        if (! is_array($limits) || ! array_key_exists('sessions', $limits) || $limits['sessions'] === '' || $limits['sessions'] === null) {
-            return null;
-        }
-
-        return (int) $limits['sessions'];
     }
 
     /**
@@ -629,9 +613,9 @@ class Plan extends Model
     public function toPublicArray(?array $checkout = null, string $billing = 'monthly'): array
     {
         $billing = self::normalizeBilling($billing);
-        $sessions = $this->sessions_per_month;
         $pricing = $this->pricingBreakdown($billing);
         $benefits = $this->benefitSummary($billing);
+        $limits = is_array($this->limits) ? $this->limits : [];
 
         $payload = [
             'id'                      => $this->id,
@@ -652,21 +636,14 @@ class Plan extends Model
             'features'                => $this->featuresListFor($billing),
             'features_monthly'        => $this->featuresListFor('monthly'),
             'features_yearly'         => $this->featuresListFor('yearly'),
-            'sessions_per_month'      => $sessions,
-            'progress_report_enabled' => (bool) $this->progress_report_enabled,
             'benefits'                => $benefits,
             'benefit_summary'         => $benefits,
             'benefits_monthly'        => $this->benefitSummary('monthly'),
             'benefits_yearly'         => $this->benefitSummary('yearly'),
             'benefits_all'            => $this->resolvedBenefits(),
             'limits'                  => [
-                'sessions' => $sessions,
-                'free_session_minutes' => is_array($this->limits)
-                    ? ($this->limits['free_session_minutes'] ?? null)
-                    : null,
-                'free_session_max_duration' => is_array($this->limits)
-                    ? ($this->limits['free_session_max_duration'] ?? null)
-                    : null,
+                'free_session_minutes' => $limits['free_session_minutes'] ?? null,
+                'free_session_max_duration' => $limits['free_session_max_duration'] ?? null,
             ],
             'tax'                     => [
                 'cgst_percent' => Plan::filledTaxPercent($this->cgst_percent),

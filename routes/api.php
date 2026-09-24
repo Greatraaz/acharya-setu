@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\CareerServiceController as ApiCareerServiceControll
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Admin\SubscriptionInvoiceController as AdminSubscriptionInvoice;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
+use App\Http\Controllers\Api\Mentee\ConfigController as MenteeConfig;
 use App\Http\Controllers\Api\Mentee\CurriculumController as MenteeCurriculum;
 use App\Http\Controllers\Api\Mentee\MentorRequestController as MenteeMentorRequest;
 use App\Http\Controllers\Api\Mentee\ProgressController as MenteeProgress;
@@ -147,6 +148,9 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
      **********************************************************/
     Route::middleware('mentee')->prefix('mentee')->name('api.mentee.')->group(function () {
         Route::delete('account', [MenteeOnboarding::class, 'destroyAccount'])->name('account.destroy');
+
+        // Bootstrap / home config (plan, wallet, entitlements, career options, app settings)
+        Route::get('config', [MenteeConfig::class, 'show'])->name('config');
 
         // ── Mentee Onboarding ─────────────────────────────────────────
         Route::prefix('onboarding')->name('onboarding.')->group(function () {

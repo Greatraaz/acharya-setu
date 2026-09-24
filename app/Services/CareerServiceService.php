@@ -38,10 +38,12 @@ class CareerServiceService
         $included = $months !== null;
         $used = 0;
         $windowStarts = null;
+        $nextFreeAt = null;
+        $lastFreeAt = null;
 
         if ($included) {
             $windowStarts = Carbon::now()->subMonths($months);
-            $used = CareerServiceRequest::query()
+            $freeRequests = CareerServiceRequest::query()
                 ->where('user_id', $user->id)
                 ->where('type', $type)
                 ->where('is_paid_addon', false)
@@ -50,13 +52,25 @@ class CareerServiceService
                     CareerServiceRequest::STATUS_COMPLETED,
                 ])
                 ->where('created_at', '>=', $windowStarts)
-                ->count();
+                ->orderBy('created_at')
+                ->get(['id', 'created_at']);
+
+            $used = $freeRequests->count();
+            $blocking = $freeRequests->first();
+            if ($blocking && $used >= 1) {
+                $lastFreeAt = $blocking->created_at->copy();
+                $nextFreeAt = $lastFreeAt->copy()->addMonths($months);
+            }
         }
 
         $remaining = $included ? max(0, 1 - $used) : 0;
         $isFree = $included && $remaining > 0;
         $payable = $isFree ? 0.0 : $amount;
         $walletBalance = round((float) $user->wallet_balance, 2);
+
+        if ($isFree) {
+            $nextFreeAt = null;
+        }
 
         return [
             'type'        => $type,
@@ -71,8 +85,22 @@ class CareerServiceService
                 'months'           => $months,
                 'used'             => $used,
                 'remaining'        => $remaining,
+                'included_limit'   => $included ? 1 : 0,
+                'payment_required' => ! $isFree,
+                'status'           => ! $included
+                    ? 'addon'
+                    : ($remaining > 0 ? 'available' : ($nextFreeAt ? 'next_free' : 'used')),
                 'window_starts_at' => $windowStarts?->toDateTimeString(),
-                'label'            => $this->entitlementLabel($planSlug, $type, $included, $remaining, $months),
+                'last_used_at'     => $lastFreeAt?->toDateTimeString(),
+                'next_free_at'     => $remaining > 0 ? null : $nextFreeAt?->toDateTimeString(),
+                'label'            => $this->entitlementLabel(
+                    $planSlug,
+                    $type,
+                    $included,
+                    $remaining,
+                    $months,
+                    $nextFreeAt
+                ),
             ],
         ];
     }
@@ -563,8 +591,14 @@ class CareerServiceService
         return $type === CareerServiceRequest::TYPE_LINKEDIN ? 'LinkedIn optimisation' : 'Resume development';
     }
 
-    private function entitlementLabel(?string $planSlug, string $type, bool $included, int $remaining, ?int $months): string
-    {
+    private function entitlementLabel(
+        ?string $planSlug,
+        string $type,
+        bool $included,
+        int $remaining,
+        ?int $months,
+        ?Carbon $nextFreeAt = null,
+    ): string {
         $label = $this->typeLabel($type);
         if (! $included) {
             return $label.' is a paid add-on on your current plan.';
@@ -572,7 +606,12 @@ class CareerServiceService
         if ($remaining > 0) {
             return "Included in your plan: 1 {$label} every {$months} months (available now).";
         }
+        if ($nextFreeAt) {
+            return "You've used your free {$label}. Next free benefit on "
+                .$nextFreeAt->timezone('Asia/Kolkata')->format('d M Y')
+                .'. Extra requests require payment.';
+        }
 
-        return "Your free {$label} entitlement for this {$months}-month window is used. You can request again as a paid add-on.";
+        return "Your free {$label} entitlement for this {$months}-month window is used. Extra requests require payment.";
     }
 }

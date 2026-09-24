@@ -42,10 +42,15 @@ Base path: `/api/v1/mentee/career-services`
       "entitlement": {
         "included": true,
         "months": 6,
-        "used": 0,
-        "remaining": 1,
+        "used": 1,
+        "remaining": 0,
+        "included_limit": 1,
+        "payment_required": true,
+        "status": "next_free",
         "window_starts_at": "...",
-        "label": "Included in your plan: 1 Resume development every 6 months (available now)."
+        "last_used_at": "...",
+        "next_free_at": "2027-03-24 10:00:00",
+        "label": "You've used your free Resume development. Next free benefit on 24 Mar 2027. Extra requests require payment."
       }
     },
     "linkedin": { "...same shape..." }

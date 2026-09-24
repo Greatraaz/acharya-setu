@@ -30,7 +30,6 @@ class SubscriptionPlansSeeder extends Seeder
                     'free_session_minutes' => $row['free_session_minutes'],
                     'free_session_max_duration' => $row['free_session_max_duration'],
                 ],
-                'progress_report_enabled' => true,
                 'benefits'                => $row['benefits'],
             ];
 

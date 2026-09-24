@@ -408,8 +408,7 @@ class PlanController extends Controller
                 'expires_at'      => $subscription->expires_at?->toDateTimeString(),
                 'days_remaining'  => $subscription->daysRemaining(),
                 'entitlements'    => [
-                    'progress_report_enabled' => (bool) ($subscription->plan?->progress_report_enabled),
-                    'sessions'                => $user->planSessionAllowance(),
+                    'sessions' => $user->planSessionAllowance(),
                 ],
             ],
         ], 200);
@@ -449,7 +448,6 @@ class PlanController extends Controller
                         'next_booking_free'   => false,
                         'resets_at'           => $periodEnd->copy()->toDateTimeString(),
                     ],
-                    'progress_report_enabled' => false,
                 ],
             ], 200);
         }
@@ -482,10 +480,8 @@ class PlanController extends Controller
                     'expires_at'      => $subscription->expires_at?->toDateTimeString(),
                     'days_remaining'  => $subscription->daysRemaining(),
                     'plan'            => [
-                        'id'                      => $subscription->plan?->id,
-                        'name'                    => $subscription->plan?->name ?? $subscription->plan?->plan_name,
-                        'sessions_per_month'      => $subscription->plan?->sessions_per_month,
-                        'progress_report_enabled' => (bool) ($subscription->plan?->progress_report_enabled),
+                        'id'   => $subscription->plan?->id,
+                        'name' => $subscription->plan?->name ?? $subscription->plan?->plan_name,
                     ],
                 ],
                 'period'                  => [
@@ -507,7 +503,6 @@ class PlanController extends Controller
                     'next_booking_free'    => $nextFree,
                     'resets_at'            => $periodEnd->copy()->toDateTimeString(),
                 ],
-                'progress_report_enabled' => (bool) ($subscription->plan?->progress_report_enabled),
             ],
         ], 200);
     }

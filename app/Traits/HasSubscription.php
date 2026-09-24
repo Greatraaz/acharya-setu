@@ -118,12 +118,20 @@ trait HasSubscription
             $covered = $requestedDuration === null
                 || ($maxSession === null || $requestedDuration <= $maxSession);
 
+            [$periodStart, $periodEnd] = $this->planUsageWindow();
+
             return array_merge($base, [
                 'covered'           => $covered,
                 'minutes_limit'     => -1,
                 'minutes_used'      => $used,
                 'minutes_remaining' => null,
                 'unlimited'         => true,
+                'payment_required'  => false,
+                'next_free_at'      => null,
+                'period'            => [
+                    'starts_at' => $periodStart->toDateTimeString(),
+                    'ends_at'   => $periodEnd->toDateTimeString(),
+                ],
                 'limit'             => -1,
                 'used'              => $used,
                 'remaining'         => null,
@@ -138,12 +146,25 @@ trait HasSubscription
                 && in_array($requestedDuration, ConsultationSession::BOOKING_DURATIONS, true);
         }
 
+        [$periodStart, $periodEnd] = $this->planUsageWindow();
+        $subEnd = $subscription->expires_at?->copy()->timezone('Asia/Kolkata');
+        $nextFreeAt = null;
+        if ($remaining <= 0 && $periodEnd && $subEnd && $periodEnd->lt($subEnd)) {
+            $nextFreeAt = $periodEnd->copy();
+        }
+
         return array_merge($base, [
             'covered'           => $covered,
             'minutes_limit'     => $minutesLimit,
             'minutes_used'      => $used,
             'minutes_remaining' => $remaining,
             'unlimited'         => false,
+            'payment_required'  => $remaining <= 0,
+            'next_free_at'      => $nextFreeAt?->toDateTimeString(),
+            'period'            => [
+                'starts_at' => $periodStart->toDateTimeString(),
+                'ends_at'   => $periodEnd->toDateTimeString(),
+            ],
             'limit'             => $minutesLimit,
             'used'              => $used,
             'remaining'         => $remaining,
@@ -207,16 +228,11 @@ trait HasSubscription
      */
     public function canAccessProgressReport(): bool
     {
-        $subscription = $this->activeSubscription();
-        if (! $subscription?->plan) {
-            return false;
-        }
-
-        return (bool) ($subscription->plan->progress_report_enabled ?? false);
+        return (bool) $this->activeSubscription()?->plan;
     }
 
     /**
-     * Free (plan-covered) minutes already used in the current subscription period.
+     * Free (plan-covered) minutes already used in the current monthly benefit bucket.
      */
     public function freeSessionMinutesUsed(): int
     {
@@ -244,23 +260,51 @@ trait HasSubscription
     }
 
     /**
+     * Current free-minute benefit window.
+     *
+     * Free counselling is marketed as "X min / month", so yearly subscriptions are
+     * split into monthly buckets anchored to subscription starts_at. That lets the
+     * dashboard show used/left and when the next free benefit unlocks.
+     *
      * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}
      */
     public function planUsageWindow(): array
     {
         $subscription = $this->activeSubscription();
-
-        if ($subscription?->starts_at) {
-            $start = $subscription->starts_at->copy()->timezone('Asia/Kolkata');
-            $end = ($subscription->expires_at ?? Carbon::now('Asia/Kolkata'))
-                ->copy()
-                ->timezone('Asia/Kolkata');
-
-            return [$start, $end];
-        }
-
         $now = Carbon::now('Asia/Kolkata');
 
-        return [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()];
+        if (! $subscription?->starts_at) {
+            return [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()];
+        }
+
+        $subStart = $subscription->starts_at->copy()->timezone('Asia/Kolkata');
+        $subEnd = ($subscription->expires_at ?? $now->copy()->addMonth())
+            ->copy()
+            ->timezone('Asia/Kolkata');
+
+        // Walk monthly buckets from subscription start until we find the one containing now.
+        $periodStart = $subStart->copy();
+        $periodEnd = $subStart->copy()->addMonth();
+
+        while ($periodEnd->lte($now) && $periodEnd->lt($subEnd)) {
+            $periodStart = $periodEnd->copy();
+            $periodEnd = $periodStart->copy()->addMonth();
+        }
+
+        if ($periodEnd->gt($subEnd)) {
+            $periodEnd = $subEnd->copy();
+        }
+
+        // Guard: if somehow before the sub starts, use the first bucket.
+        if ($now->lt($subStart)) {
+            $firstEnd = $subStart->copy()->addMonth();
+            if ($firstEnd->gt($subEnd)) {
+                $firstEnd = $subEnd->copy();
+            }
+
+            return [$subStart->copy(), $firstEnd];
+        }
+
+        return [$periodStart, $periodEnd];
     }
 }
