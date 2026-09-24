@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\WellnessController;
 use App\Http\Controllers\Api\ReferralsController;
 use App\Http\Controllers\Api\AssignmentsController;
 use App\Http\Controllers\Api\PlanController;
+use App\Http\Controllers\Api\CareerServiceController as ApiCareerServiceController;
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Admin\SubscriptionInvoiceController as AdminSubscriptionInvoice;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
@@ -30,6 +31,7 @@ use App\Http\Controllers\Api\Mentee\MentorRequestController as MenteeMentorReque
 use App\Http\Controllers\Api\Mentee\ProgressController as MenteeProgress;
 use App\Http\Controllers\Api\Mentee\InvoiceController as MenteeInvoice;
 use App\Http\Controllers\Api\Mentee\SessionInvoiceController as MenteeSessionInvoice;
+use App\Http\Controllers\Api\Mentee\CareerServiceInvoiceController as MenteeCareerServiceInvoice;
 use App\Http\Controllers\Api\Mentee\CouponController as MenteeCoupon;
 use App\Http\Controllers\Api\Mentee\AssessmentController;
 use App\Http\Controllers\Api\Mentor\OnboardingController as MentorOnboarding;
@@ -131,6 +133,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('/invoices/{id}/download',      [AdminSubscriptionInvoice::class, 'downloadInvoice'])->whereNumber('id');
         Route::get('/session-invoices',            [AdminSubscriptionInvoice::class, 'sessionInvoices']);
         Route::get('/session-invoices/{id}/download', [AdminSubscriptionInvoice::class, 'downloadSessionInvoice'])->whereNumber('id');
+        Route::get('/career-service-invoices',     [AdminSubscriptionInvoice::class, 'careerServiceInvoices']);
+        Route::get('/career-service-invoices/{id}/download', [AdminSubscriptionInvoice::class, 'downloadCareerServiceInvoice'])->whereNumber('id');
         Route::get('/assessments',                 [AdminController::class, 'assessments']);
         Route::post('/assessments',                [AdminController::class, 'createAssessment']);
         Route::get('/channels',                    [AdminController::class, 'communityChannels']);
@@ -288,6 +292,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('/subscription/cancel', [PlanController::class, 'cancelSubscription']);
         });
 
+        // Career services (resume / LinkedIn)
+        Route::prefix('career-services')->group(function () {
+            Route::get('/options', [ApiCareerServiceController::class, 'options']);
+            Route::get('/', [ApiCareerServiceController::class, 'index']);
+            Route::post('/', [ApiCareerServiceController::class, 'store']);
+            Route::get('/{id}', [ApiCareerServiceController::class, 'show'])->whereNumber('id');
+            Route::post('/{id}/pay', [ApiCareerServiceController::class, 'pay'])->whereNumber('id');
+            Route::post('/{id}/verify', [ApiCareerServiceController::class, 'verify'])->whereNumber('id');
+        });
+
         // Plan invoices
         Route::get('invoices', [MenteeInvoice::class, 'index']);
         Route::get('invoices/{invoice}', [MenteeInvoice::class, 'show'])->whereNumber('invoice');
@@ -297,6 +311,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('session-invoices', [MenteeSessionInvoice::class, 'index']);
         Route::get('session-invoices/{invoice}', [MenteeSessionInvoice::class, 'show'])->whereNumber('invoice');
         Route::get('session-invoices/{invoice}/download', [MenteeSessionInvoice::class, 'download'])->whereNumber('invoice');
+
+        Route::get('career-service-invoices', [MenteeCareerServiceInvoice::class, 'index']);
+        Route::get('career-service-invoices/{invoice}', [MenteeCareerServiceInvoice::class, 'show'])->whereNumber('invoice');
+        Route::get('career-service-invoices/{invoice}/download', [MenteeCareerServiceInvoice::class, 'download'])->whereNumber('invoice');
 
         // Coupons / offers (selected mentees)
         Route::get('coupons', [MenteeCoupon::class, 'index']);

@@ -31,9 +31,13 @@ class PlanController extends Controller
             ->first();
 
         $checkout = app(PlanCheckoutService::class);
-        $quotes = $plans->mapWithKeys(
-            fn (Plan $plan) => [$plan->id => $checkout->quote($plan, $current)]
+        $quotesMonthly = $plans->mapWithKeys(
+            fn (Plan $plan) => [$plan->id => $checkout->quote($plan, $current, 'monthly')]
         );
+        $quotesYearly = $plans->mapWithKeys(
+            fn (Plan $plan) => [$plan->id => $checkout->quote($plan, $current, 'yearly')]
+        );
+        $quotes = $quotesMonthly;
 
         $search = trim((string) $request->input('search', $request->input('q', '')));
 
@@ -48,7 +52,15 @@ class PlanController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('frontend.mentee.plans', compact('plans', 'current', 'quotes', 'history', 'search'));
+        return view('frontend.mentee.plans', compact(
+            'plans',
+            'current',
+            'quotes',
+            'quotesMonthly',
+            'quotesYearly',
+            'history',
+            'search'
+        ));
     }
 
     /**
@@ -79,8 +91,9 @@ class PlanController extends Controller
         }
 
         $checkout = app(PlanCheckoutService::class);
+        $billing = Plan::normalizeBilling($request->input('billing', 'monthly'));
         $isUpgrade = $checkout->isPaidActive($current) && (int) $current->plan_id !== (int) $plan->id;
-        $quote = $checkout->quote($plan, $isUpgrade ? $current : null);
+        $quote = $checkout->quote($plan, $isUpgrade ? $current : null, $billing);
         $pricing = $quote['pricing'];
         $price = (float) $quote['payable'];
 
@@ -143,6 +156,7 @@ class PlanController extends Controller
                         'discount_amount'  => (string) ($pricing['discount_amount'] ?? 0),
                         'credit_amount'    => (string) ($quote['credit']['amount'] ?? 0),
                         'payable'          => (string) $price,
+                        'billing'          => $billing,
                     ],
                 ]);
 
@@ -415,7 +429,9 @@ class PlanController extends Controller
             'payment_reference' => $paymentReference,
             'status'            => 'active',
             'starts_at'         => $startsAt,
-            'expires_at'        => $startsAt->copy()->addDays($plan->billingDays()),
+            'expires_at'        => $startsAt->copy()->addDays(
+                $plan->billingDaysFor($quote['billing'] ?? ($quote['pricing']['billing'] ?? 'monthly'))
+            ),
             'meta'              => $checkout->storeSnapshot($placeholder, $plan, $quote),
         ]);
     }

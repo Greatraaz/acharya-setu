@@ -99,6 +99,8 @@ class PlanController extends Controller
             'benefits'                => 'nullable|array',
             'benefits.*.label'        => 'nullable|string|max:120',
             'benefits.*.value'        => 'nullable|string|max:255',
+            'benefits.*.monthly'      => 'nullable',
+            'benefits.*.yearly'       => 'nullable',
             'trial_days'              => 'nullable|integer|min:0',
             'is_active'               => 'nullable|boolean',
             'is_featured'             => 'nullable|boolean',

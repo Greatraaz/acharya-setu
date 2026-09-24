@@ -30,6 +30,7 @@ use App\Http\Controllers\Mentor\PortalController       as MentorPortalController
 use App\Http\Controllers\Mentor\AssessmentController         as MentorAssessmentController;
 use App\Http\Controllers\Mentor\AssessmentQuestionController as MentorAssessmentQuestionController;
 use App\Http\Controllers\Mentor\CurriculumController  as MentorCurriculumController;
+use App\Http\Controllers\Mentor\MentorVideoController as MentorMentorVideoController;
 
 use App\Http\Controllers\Mentee\OnboardingController   as MenteeOnboardingController;
 use App\Http\Controllers\Mentee\DashboardController    as MenteeDashboardController;
@@ -45,6 +46,9 @@ use App\Http\Controllers\Mentee\QuizController as MenteeQuizController;
 use App\Http\Controllers\Mentee\CommunityController as MenteeCommunityController;
 use App\Http\Controllers\Mentee\JobController as MenteeJobController;
 use App\Http\Controllers\Mentee\MentorRequestController as MenteeMentorRequestController;
+use App\Http\Controllers\Mentee\CareerServiceController as MenteeCareerServiceController;
+use App\Http\Controllers\Mentee\CareerServiceInvoiceController as MenteeCareerServiceInvoiceController;
+use App\Http\Controllers\Mentee\MentorVideoController as MenteeMentorVideoController;
 use App\Http\Controllers\Mentor\MentorRequestController as MentorMentorRequestController;
 
 // ── Admin controllers (already exist in your backend) ───────
@@ -77,6 +81,9 @@ use App\Http\Controllers\Admin\AssessmentQuestionController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\OfferController;
+use App\Http\Controllers\Admin\CareerServiceController as AdminCareerServiceController;
+use App\Http\Controllers\Admin\CareerServiceInvoiceController as AdminCareerServiceInvoiceController;
+use App\Http\Controllers\Admin\MentorVideoController as AdminMentorVideoController;
 use App\Http\Controllers\Admin\WhitePaperController;
 use App\Http\Controllers\Admin\CaseStudyController;
 use App\Http\Controllers\Admin\TestimonialController;
@@ -207,8 +214,9 @@ Route::middleware('guest')->group(function () {
     Route::post('/reset-password',          [ForgotPasswordController::class, 'resetPassword'])->name('password.update');
 });
 
-// ── Logout (auth required) ───────────────────────────────────
-Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+// ── Logout (works even if session already expired) ───────────
+Route::match(['get', 'post'], '/logout', [LoginController::class, 'logout'])->name('logout');
+Route::match(['get', 'post'], '/admin/logout', [AdminController::class, 'logout'])->name('admin.logout');
 
 /*
 |=============================================================
@@ -332,6 +340,15 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::put('/assessments/{assessment}',       [MentorAssessmentController::class, 'update'])->name('assessments.update');
     Route::delete('/assessments/{assessment}',    [MentorAssessmentController::class, 'destroy'])->name('assessments.destroy');
 
+    // Mentor videos (shared with mentees — not curriculum)
+    Route::get('/videos',              [MentorMentorVideoController::class, 'index'])->name('videos.index');
+    Route::get('/videos/create',       [MentorMentorVideoController::class, 'create'])->name('videos.create');
+    Route::post('/videos',             [MentorMentorVideoController::class, 'store'])->name('videos.store');
+    Route::get('/videos/{video}',      [MentorMentorVideoController::class, 'show'])->name('videos.show')->whereNumber('video');
+    Route::get('/videos/{video}/edit', [MentorMentorVideoController::class, 'edit'])->name('videos.edit')->whereNumber('video');
+    Route::put('/videos/{video}',      [MentorMentorVideoController::class, 'update'])->name('videos.update')->whereNumber('video');
+    Route::delete('/videos/{video}',   [MentorMentorVideoController::class, 'destroy'])->name('videos.destroy')->whereNumber('video');
+
     Route::get('/assessment-questions',                              [MentorAssessmentQuestionController::class, 'index'])->name('assessment-questions.index');
     Route::get('/assessment-questions/create',                       [MentorAssessmentQuestionController::class, 'create'])->name('assessment-questions.create');
     Route::post('/assessment-questions',                             [MentorAssessmentQuestionController::class, 'store'])->name('assessment-questions.store');
@@ -417,6 +434,21 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::post('/plans/{plan}/subscribe',   [MenteePlanController::class, 'subscribe'])->name('plans.subscribe');
     Route::post('/plans/{plan}/verify',      [MenteePlanController::class, 'verify'])   ->name('plans.verify');
     Route::post('/plans/cancel',             [MenteePlanController::class, 'cancel'])   ->name('plans.cancel');
+
+    // Career services (resume / LinkedIn)
+    Route::get( '/career-services',                    [MenteeCareerServiceController::class, 'index'])->name('career-services.index');
+    Route::get( '/career-services/create',             [MenteeCareerServiceController::class, 'create'])->name('career-services.create');
+    Route::post('/career-services',                    [MenteeCareerServiceController::class, 'store'])->name('career-services.store');
+    Route::get( '/career-services/{careerService}',    [MenteeCareerServiceController::class, 'show'])->name('career-services.show');
+    Route::post('/career-services/{careerService}/verify', [MenteeCareerServiceController::class, 'verify'])->name('career-services.verify');
+    Route::post('/career-services/{careerService}/pay', [MenteeCareerServiceController::class, 'pay'])->name('career-services.pay');
+    Route::get( '/career-service-invoices/{invoice}/download', [MenteeCareerServiceInvoiceController::class, 'download'])->name('career-service-invoices.download');
+
+    // Mentor-shared videos (not curriculum)
+    Route::get( '/mentor-videos',                    [MenteeMentorVideoController::class, 'index'])->name('mentor-videos.index');
+    Route::get( '/mentor-videos/{video}',            [MenteeMentorVideoController::class, 'show'])->name('mentor-videos.show')->whereNumber('video');
+    Route::post('/mentor-videos/files/{file}/watched', [MenteeMentorVideoController::class, 'markWatched'])->name('mentor-videos.watched')->whereNumber('file');
+
     Route::post('/subscriptions/{subscription}/invoice', [MenteeInvoiceController::class, 'generate'])->name('subscriptions.invoice');
     Route::get( '/invoices/{invoice}',          [MenteeInvoiceController::class, 'show'])     ->name('invoices.show');
     Route::get( '/invoices/{invoice}/print',    [MenteeInvoiceController::class, 'print'])    ->name('invoices.print');
@@ -501,7 +533,6 @@ Route::middleware('auth')->group(function () {
 Route::get( '/admin',       [AdminController::class, 'showLogin'])->name('admin');
 Route::get( '/admin/login', [AdminController::class, 'showLogin'])->name('admin.login');
 Route::post('/admin/login', [AdminController::class, 'login'])    ->name('admin.login.post');
-Route::post('/admin/logout',[AdminController::class, 'logout'])   ->name('admin.logout');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
 
@@ -586,6 +617,21 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('blogs/export/pdf', [BlogController::class, 'exportPdf'])->name('blogs.export.pdf');
     Route::resource('blogs', BlogController::class)->except(['show']);
     Route::resource('offers', OfferController::class)->except(['show']);
+
+    Route::get('/career-services', [AdminCareerServiceController::class, 'index'])->name('career-services.index');
+    Route::get('/career-services/{careerService}', [AdminCareerServiceController::class, 'show'])->name('career-services.show');
+    Route::post('/career-services/{careerService}/complete', [AdminCareerServiceController::class, 'complete'])->name('career-services.complete');
+    Route::get('career-service-invoices/{invoice}/download', [AdminCareerServiceInvoiceController::class, 'download'])->name('career-service-invoices.download');
+    Route::post('career-services/{careerService}/invoice', [AdminCareerServiceInvoiceController::class, 'generate'])->name('career-service-invoices.generate');
+
+    Route::get('mentor-videos', [AdminMentorVideoController::class, 'index'])->name('mentor-videos.index');
+    Route::get('mentor-videos/create', [AdminMentorVideoController::class, 'create'])->name('mentor-videos.create');
+    Route::post('mentor-videos', [AdminMentorVideoController::class, 'store'])->name('mentor-videos.store');
+    Route::get('mentor-videos/{mentorVideo}', [AdminMentorVideoController::class, 'show'])->name('mentor-videos.show')->whereNumber('mentorVideo');
+    Route::get('mentor-videos/{mentorVideo}/edit', [AdminMentorVideoController::class, 'edit'])->name('mentor-videos.edit')->whereNumber('mentorVideo');
+    Route::put('mentor-videos/{mentorVideo}', [AdminMentorVideoController::class, 'update'])->name('mentor-videos.update')->whereNumber('mentorVideo');
+    Route::delete('mentor-videos/{mentorVideo}', [AdminMentorVideoController::class, 'destroy'])->name('mentor-videos.destroy')->whereNumber('mentorVideo');
+
     Route::resource('white-papers', WhitePaperController::class)->except(['show']);
     Route::resource('case-studies', CaseStudyController::class)->except(['show']);
     Route::resource('testimonials', TestimonialController::class)->except(['show']);

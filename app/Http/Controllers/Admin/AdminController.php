@@ -53,7 +53,7 @@ class AdminController extends Controller
         $credentials['role'] = 'admin';
         */
 
-        if (!Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
+        if (!Auth::guard('web')->attempt($credentials, true)) {
 
             return response()->json([
                 'status'  => 401,
@@ -87,7 +87,9 @@ class AdminController extends Controller
      */
     public function logout(Request $request)
     {
-        Auth::guard('web')->logout();
+        if (Auth::guard('web')->check()) {
+            Auth::guard('web')->logout();
+        }
 
         $request->session()->forget(['admin_authenticated', 'admin_email', 'admin_login_at']);
         $request->session()->invalidate();

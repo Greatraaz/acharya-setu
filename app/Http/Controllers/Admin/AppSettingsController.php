@@ -230,6 +230,10 @@ class AppSettingsController extends Controller
             'payment' => [
                 'default_currency' => 'nullable|string|size:3',
             ],
+            'career-addons' => [
+                'addon_resume_price'   => 'required|numeric|min:1|max:999999',
+                'addon_linkedin_price' => 'required|numeric|min:1|max:999999',
+            ],
             default => [],
         };
 

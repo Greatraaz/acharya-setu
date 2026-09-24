@@ -229,6 +229,16 @@ class AppSetting extends Model
         ];
     }
 
+    /** Career service paid add-on prices (resume / LinkedIn). */
+    public static function careerAddons(): array
+    {
+        return [
+            'resume_price'   => round((float) static::get('addon_resume_price', 499), 2),
+            'linkedin_price' => round((float) static::get('addon_linkedin_price', 499), 2),
+            'currency'       => 'INR',
+        ];
+    }
+
     /** Seller / invoice billing details */
     public static function billing(): array
     {

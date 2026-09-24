@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CareerServiceInvoice;
 use App\Models\PlanInvoice;
 use App\Models\SessionInvoice;
 use App\Models\WalletTransaction;
+use App\Services\CareerServiceInvoiceService;
 use App\Services\WalletService;
 use App\Support\SessionPayoutBreakdown;
 use Illuminate\Http\Request;
@@ -19,7 +21,7 @@ class TransactionController extends Controller
     public function index(Request $request)
     {
         $tab = $request->input('tab', 'wallet');
-        if (! in_array($tab, ['wallet', 'sessions', 'plans'], true)) {
+        if (! in_array($tab, ['wallet', 'sessions', 'plans', 'career'], true)) {
             $tab = 'wallet';
         }
 
@@ -33,8 +35,10 @@ class TransactionController extends Controller
         $walletSummary = null;
         $sessionInvoices = null;
         $planInvoices = null;
+        $careerInvoices = null;
         $sessionSummary = null;
         $planSummary = null;
+        $careerSummary = null;
 
         if ($tab === 'wallet') {
             $walletTransactions = $this->walletService->allTransactions($filters, 25);
@@ -49,6 +53,13 @@ class TransactionController extends Controller
             [$planInvoices, $planSummary] = $this->planInvoiceListing($request);
         }
 
+        if ($tab === 'career') {
+            if (Schema::hasTable('career_service_invoices')) {
+                app(CareerServiceInvoiceService::class)->backfillMissing('system');
+            }
+            [$careerInvoices, $careerSummary] = $this->careerInvoiceListing($request);
+        }
+
         return view('admin.transactions.index', compact(
             'tab',
             'filters',
@@ -57,7 +68,9 @@ class TransactionController extends Controller
             'sessionInvoices',
             'sessionSummary',
             'planInvoices',
-            'planSummary'
+            'planSummary',
+            'careerInvoices',
+            'careerSummary'
         ));
     }
 
@@ -119,6 +132,22 @@ class TransactionController extends Controller
                             optional($inv->invoice_date)->format('Y-m-d'),
                             $inv->user?->name,
                             $inv->plan_name,
+                            $inv->total_amount,
+                            $inv->payment_reference,
+                            $inv->status,
+                        ]);
+                    }
+                });
+            } elseif ($tab === 'career') {
+                fputcsv($out, ['Invoice #', 'Date', 'User', 'Service', 'Method', 'Total', 'Reference', 'Status']);
+                $this->careerInvoiceQuery($request)->with('user:id,name')->orderByDesc('id')->chunk(200, function ($rows) use ($out) {
+                    foreach ($rows as $inv) {
+                        fputcsv($out, [
+                            $inv->invoice_number,
+                            optional($inv->invoice_date)->format('Y-m-d'),
+                            $inv->user?->name,
+                            $inv->serviceLabel(),
+                            $inv->paymentMethodLabel(),
                             $inv->total_amount,
                             $inv->payment_reference,
                             $inv->status,
@@ -286,6 +315,72 @@ class TransactionController extends Controller
                     ->orWhere('billing_name', 'like', "%{$term}%")
                     ->orWhere('billing_email', 'like', "%{$term}%");
             });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('invoice_date', '>=', $request->input('from_date'));
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('invoice_date', '<=', $request->input('to_date'));
+        }
+
+        return $query;
+    }
+
+    private function careerInvoiceListing(Request $request): array
+    {
+        if (! Schema::hasTable('career_service_invoices')) {
+            return [collect(), ['count' => 0, 'total' => 0, 'paid' => 0, 'plan' => 0]];
+        }
+
+        $query = $this->careerInvoiceQuery($request);
+        $summaryRow = (clone $query)
+            ->selectRaw("
+                COUNT(*) as c,
+                COALESCE(SUM(total_amount),0) as total,
+                COALESCE(SUM(CASE WHEN payment_method = 'razorpay' THEN total_amount ELSE 0 END),0) as paid,
+                COALESCE(SUM(CASE WHEN payment_method = 'plan' THEN 1 ELSE 0 END),0) as plan_count
+            ")
+            ->first();
+
+        $summary = [
+            'count' => (int) ($summaryRow->c ?? 0),
+            'total' => (float) ($summaryRow->total ?? 0),
+            'paid'  => (float) ($summaryRow->paid ?? 0),
+            'plan'  => (int) ($summaryRow->plan_count ?? 0),
+        ];
+
+        $invoices = $query->with(['user:id,name,email'])
+            ->latest('id')
+            ->paginate(25)
+            ->withQueryString();
+
+        return [$invoices, $summary];
+    }
+
+    private function careerInvoiceQuery(Request $request)
+    {
+        $query = CareerServiceInvoice::query();
+
+        if ($request->filled('search')) {
+            $term = trim((string) $request->input('search'));
+            $query->where(function ($q) use ($term) {
+                $q->where('invoice_number', 'like', "%{$term}%")
+                    ->orWhere('payment_reference', 'like', "%{$term}%")
+                    ->orWhere('description', 'like', "%{$term}%")
+                    ->orWhere('billing_name', 'like', "%{$term}%")
+                    ->orWhere('billing_email', 'like', "%{$term}%")
+                    ->orWhere('service_type', 'like', "%{$term}%");
+            });
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->input('payment_method'));
         }
 
         if ($request->filled('status')) {

@@ -24,9 +24,10 @@ class PlanCheckoutService
      *   credit: array<string, mixed>
      * }
      */
-    public function quote(Plan $plan, ?UserSubscription $current = null): array
+    public function quote(Plan $plan, ?UserSubscription $current = null, string $billing = 'monthly'): array
     {
-        $pricing = $plan->pricingBreakdown('monthly');
+        $billing = Plan::normalizeBilling($billing);
+        $pricing = $plan->pricingBreakdown($billing);
         $planTotal = round((float) $pricing['total'], 2);
         $credit = $this->unusedCredit($current, $plan);
         $creditAmount = round((float) $credit['amount'], 2);
@@ -37,6 +38,7 @@ class PlanCheckoutService
             'plan_total' => $planTotal,
             'payable'    => $payable,
             'currency'   => $pricing['currency'] ?? 'INR',
+            'billing'    => $billing,
             'pricing'    => $pricing,
             'credit'     => $credit,
         ];
@@ -127,13 +129,16 @@ class PlanCheckoutService
 
     public function snapshot(Plan $plan, array $quote): array
     {
+        $billing = Plan::normalizeBilling($quote['billing'] ?? ($quote['pricing']['billing'] ?? 'monthly'));
+
         return [
             'plan_id'    => (int) $plan->id,
             'is_upgrade' => (bool) ($quote['is_upgrade'] ?? false),
             'plan_total' => (float) ($quote['plan_total'] ?? 0),
             'payable'    => (float) ($quote['payable'] ?? 0),
             'currency'   => $quote['currency'] ?? 'INR',
-            'pricing'    => $quote['pricing'] ?? $plan->pricingBreakdown('monthly'),
+            'billing'    => $billing,
+            'pricing'    => $quote['pricing'] ?? $plan->pricingBreakdown($billing),
             'credit'     => $quote['credit'] ?? [],
             'quoted_at'  => now()->toDateTimeString(),
         ];
@@ -148,13 +153,15 @@ class PlanCheckoutService
             && (int) ($checkout['plan_id'] ?? 0) === (int) $plan->id
             && array_key_exists('payable', $checkout)
         ) {
-            $pricing = $checkout['pricing'] ?? $plan->pricingBreakdown('monthly');
+            $billing = Plan::normalizeBilling($checkout['billing'] ?? ($checkout['pricing']['billing'] ?? 'monthly'));
+            $pricing = $checkout['pricing'] ?? $plan->pricingBreakdown($billing);
 
             return [
                 'is_upgrade' => (bool) ($checkout['is_upgrade'] ?? false),
                 'plan_total' => (float) ($checkout['plan_total'] ?? $pricing['total'] ?? 0),
                 'payable'    => (float) $checkout['payable'],
                 'currency'   => $checkout['currency'] ?? ($pricing['currency'] ?? 'INR'),
+                'billing'    => $billing,
                 'pricing'    => $pricing,
                 'credit'     => $checkout['credit'] ?? $this->unusedCredit(null, $plan),
             ];
@@ -178,7 +185,8 @@ class PlanCheckoutService
         array $payment = []
     ): UserSubscription {
         $startsAt = Carbon::now();
-        $expiresAt = $startsAt->copy()->addDays($plan->billingDays());
+        $billing = Plan::normalizeBilling($quote['billing'] ?? ($quote['pricing']['billing'] ?? 'monthly'));
+        $expiresAt = $startsAt->copy()->addDays($plan->billingDaysFor($billing));
 
         $subscription->update([
             'plan_id'             => $plan->id,

@@ -7,7 +7,7 @@ No coupon code is required.
 ## Formula
 
 ```
-original_base     = plan.price_monthly
+original_base     = billing=yearly ? plan.price_yearly : plan.price_monthly
 discount_amount   = original_base × discount_percent / 100     // only if discount is active
 base              = original_base − discount_amount            // taxable value
 tax               = base × (CGST% + SGST% + IGST%) / 100
@@ -16,6 +16,30 @@ payable           = max(0, plan_total − unused_day_credit)     // send this to
 ```
 
 If `discount_percent` is 0, or today’s date is after `discount_expires_at`, `discount.is_active` is `false` and the full list price is used as the plan total.
+
+### Billing period (`monthly` | `yearly`)
+
+Pass `billing` on list/show/subscribe:
+
+| Endpoint | How |
+|----------|-----|
+| `GET /api/v1/plans?billing=yearly` | Filters primary `pricing` / `benefits` / `features` / `checkout` to yearly |
+| `GET /api/v1/plans/{id}?billing=yearly` | Same |
+| `POST /api/v1/plans/{id}/subscribe` body `{ "billing": "yearly" }` | Charges yearly price; subscription lasts **365 days** |
+
+Each plan also always includes:
+
+- `pricing_monthly` / `pricing_yearly`
+- `benefits_monthly` / `benefits_yearly` / `benefits_all`
+- `features_monthly` / `features_yearly`
+
+Benefit rows:
+
+```json
+{ "label": "Career counselling", "value": "30 min / month", "monthly": true, "yearly": true }
+```
+
+Admin marks which period each benefit appears in. Missing flags default to `true` (shown on both).
 
 ---
 
@@ -107,7 +131,7 @@ Public. Same `checkout` note as list.
 | `tax_total` | Sum of `taxes[].amount` |
 | `total` | New plan price after discount + GST. **Not** the Razorpay amount on upgrade — use `checkout.payable` |
 | `currency` | e.g. `INR` |
-| `billing` | `monthly` |
+| `billing` | `monthly` or `yearly` (matches request / active toggle) |
 
 If admin fills only IGST, `taxes` has IGST only — do not show CGST or SGST. If all three are filled, all three are applied and listed.
 

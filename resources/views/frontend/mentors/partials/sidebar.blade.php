@@ -42,6 +42,9 @@
     </a>
 
     <div class="sidebar-section-label">Content</div>
+    <a href="{{ route('mentor.videos.index') }}" class="sidebar-item @if(request()->routeIs('mentor.videos*')) active @endif">
+        <span class="si-icon">🎬</span> Videos
+    </a>
     <a href="{{ route('mentor.community') }}" class="sidebar-item @if(request()->routeIs('mentor.community*')) active @endif">
         <span class="si-icon">💬</span> Community
     </a>

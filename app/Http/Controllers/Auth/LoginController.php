@@ -26,7 +26,7 @@ class LoginController extends Controller
             'password' => 'required',
         ]);
 
-        if (! Auth::guard('web')->attempt($request->only('email','password'), $request->boolean('remember'))) {
+        if (! Auth::guard('web')->attempt($request->only('email','password'), true)) {
             $msg = 'These credentials do not match our records.';
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['message' => $msg], 422);
@@ -52,10 +52,20 @@ class LoginController extends Controller
     // Logout
     public function logout(Request $request)
     {
-        Auth::guard('web')->logout();
+        $role = Auth::guard('web')->user()?->role;
+
+        if (Auth::guard('web')->check()) {
+            Auth::guard('web')->logout();
+        }
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect()->route('home');
+
+        if ($role === 'admin') {
+            return redirect()->route('admin.login');
+        }
+
+        return redirect()->route('login');
     }
 
     // Account settings update (shared for mentor+mentee)

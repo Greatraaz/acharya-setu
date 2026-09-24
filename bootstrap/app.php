@@ -36,13 +36,22 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (
-        \Illuminate\Auth\AuthenticationException $e,
-        $request
+            \Illuminate\Auth\AuthenticationException $e,
+            $request
         ) {
-            return response()->json([
-                'status' => false,
-                'statusCode' => 401,
-                'message' => 'Unauthenticated.'
-            ], 401);
+            if ($request->is('api/*') || $request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'status'     => false,
+                    'statusCode' => 401,
+                    'message'    => 'Unauthenticated.',
+                ], 401);
+            }
+
+            // Expired / missing web session → role-appropriate login (not home / not 404).
+            if ($request->is('admin') || $request->is('admin/*')) {
+                return redirect()->route('admin.login');
+            }
+
+            return redirect()->route('login');
         });
     })->create();

@@ -8,6 +8,7 @@ use App\Observers\ConsultationSessionObserver;
 use App\Services\PublicFileStorage;
 use Carbon\Carbon;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
         $tz = config('app.timezone', 'Asia/Kolkata');
         date_default_timezone_set($tz);
         Carbon::setLocale(config('app.locale', 'en'));
+
+        // Keep "remember me" cookies aligned with 1-week session lifetime.
+        Auth::guard('web')->setRememberDuration((int) config('session.lifetime', 10080));
 
         try {
             PublicFileStorage::ensureStorageReady();

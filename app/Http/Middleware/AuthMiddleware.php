@@ -18,7 +18,11 @@ class AuthMiddleware
     {
         
         if (!Auth::check()) {
-            return redirect()->route('admin.login');
+            if ($request->is('admin') || $request->is('admin/*')) {
+                return redirect()->route('admin.login');
+            }
+
+            return redirect()->route('login');
         }
 
         return $next($request);

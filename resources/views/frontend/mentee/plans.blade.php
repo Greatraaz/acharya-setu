@@ -55,32 +55,43 @@
             <p style="font-size:13px;color:var(--text-2);">Check back soon — plans will appear here once published.</p>
         </div>
         @else
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:28px;">
+        <div class="plan-billing-toggle" role="tablist" aria-label="Billing period">
+            <button type="button" class="plan-billing-toggle__btn is-active" data-billing-toggle="monthly" role="tab" aria-selected="true">Monthly</button>
+            <button type="button" class="plan-billing-toggle__btn" data-billing-toggle="yearly" role="tab" aria-selected="false">Yearly</button>
+        </div>
+
+        <div class="plan-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:28px;">
             @foreach($plans as $plan)
             @php
-                $pricing = $plan->pricingBreakdown('monthly');
-                $quote = $quotes[$plan->id] ?? null;
-                $isUpgrade = (bool) ($quote['is_upgrade'] ?? false);
-                $credit = $quote['credit'] ?? [];
-                $creditAmount = (float) ($credit['amount'] ?? 0);
-                $price = (float) ($quote['payable'] ?? $pricing['total']);
-                $planTotal = (float) ($quote['plan_total'] ?? $pricing['total']);
-                $basePrice = (float) $pricing['base'];
-                $isCurrent = $currentPlanId && (int) $currentPlanId === (int) $plan->id;
-                $benefits = $plan->benefitSummary();
+                $periods = [];
+                foreach (['monthly' => $quotesMonthly, 'yearly' => $quotesYearly] as $billingKey => $quoteMap) {
+                    $pricing = $plan->pricingBreakdown($billingKey);
+                    $quote = $quoteMap[$plan->id] ?? null;
+                    $isUpgrade = (bool) ($quote['is_upgrade'] ?? false);
+                    $credit = $quote['credit'] ?? [];
+                    $creditAmount = (float) ($credit['amount'] ?? 0);
+                    $price = (float) ($quote['payable'] ?? $pricing['total']);
+                    $planTotal = (float) ($quote['plan_total'] ?? $pricing['total']);
+                    $isCurrent = $currentPlanId && (int) $currentPlanId === (int) $plan->id;
+                    $benefits = $plan->benefitSummary($billingKey);
+                    $discountActive = ! empty($pricing['discount_active']) && (float) ($pricing['discount_percent'] ?? 0) > 0;
+                    $discountPct = $discountActive
+                        ? rtrim(rtrim(number_format((float) $pricing['discount_percent'], 2, '.', ''), '0'), '.')
+                        : null;
+                    $listTotal = (float) ($pricing['original_total'] ?? $pricing['original_base'] ?? 0);
+                    $strikePrice = $discountActive
+                        ? $listTotal
+                        : (($isUpgrade && $planTotal > $price) ? $planTotal : 0);
+                    $periods[$billingKey] = compact(
+                        'pricing', 'quote', 'isUpgrade', 'credit', 'creditAmount', 'price', 'planTotal',
+                        'isCurrent', 'benefits', 'discountActive', 'discountPct', 'strikePrice'
+                    );
+                }
                 $accent = $plan->color ?: '#f59e0b';
                 $badge = $plan->badgePalette();
                 $offer = $plan->publicDiscount();
-                $discountActive = ! empty($pricing['discount_active']) && (float) ($pricing['discount_percent'] ?? 0) > 0;
-                $discountPct = $discountActive
-                    ? rtrim(rtrim(number_format((float) $pricing['discount_percent'], 2, '.', ''), '0'), '.')
-                    : null;
-                $listTotal = (float) ($pricing['original_total'] ?? $pricing['original_base'] ?? 0);
-                $strikePrice = $discountActive
-                    ? $listTotal
-                    : (($isUpgrade && $planTotal > $price) ? $planTotal : 0);
             @endphp
-            <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px;position:relative;{{ $plan->is_featured ? 'border-color:'.$accent.';box-shadow:0 0 0 1px '.$accent.'33;' : '' }}">
+            <div class="card plan-period-card" style="padding:20px;display:flex;flex-direction:column;gap:12px;position:relative;{{ $plan->is_featured ? 'border-color:'.$accent.';box-shadow:0 0 0 1px '.$accent.'33;' : '' }}">
                 @if($plan->is_featured || $plan->badge_label)
                 <div style="position:absolute;top:12px;right:12px;font-size:10px;font-weight:700;padding:4px 8px;border-radius:999px;background:{{ $badge['bg'] }};color:{{ $badge['text'] }};">
                     {{ $plan->badge_label ?: 'Featured' }}
@@ -97,82 +108,94 @@
                     @endif
                 </div>
 
-                <div>
-                    @if($price <= 0)
-                    <div style="font-size:28px;font-weight:800;color:var(--success);">{{ $isUpgrade ? 'No extra cost' : 'Free' }}</div>
-                    @else
-                    <div class="plan-price-row">
-                        <span style="font-size:28px;font-weight:800;color:var(--text);line-height:1;">₹{{ number_format($price, 0) }}</span>
-                        <span class="plan-price-period">/mo</span>
-                        @if($discountActive)
-                        <span class="plan-discount-badge">{{ $discountPct }}% off</span>
-                        @endif
-                    </div>
-                    @if($strikePrice > $price || $discountActive)
-                    <div style="font-size:12px;color:var(--text-3);margin-top:6px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
-                        @if($strikePrice > $price)
-                        <span style="text-decoration:line-through;">₹{{ number_format($strikePrice, 0) }}</span>
-                        @endif
-                        @if($discountActive)
-                        <span style="color:#15803d;font-weight:700;">Save ₹{{ number_format((float) $pricing['discount_amount'], 0) }}</span>
-                        @if(!empty($offer['expires_at']))
-                        <span>until {{ \Carbon\Carbon::parse($offer['expires_at'])->format('d M Y') }}</span>
-                        @endif
-                        @endif
-                    </div>
-                    @endif
-                    @if($isUpgrade && $creditAmount > 0)
-                    <div style="font-size:12px;color:#15803d;font-weight:700;margin-top:4px;">
-                        ₹{{ number_format($creditAmount, 0) }} unused-day credit applied
-                    </div>
-                    @endif
-                    @if($pricing['tax_total'] > 0)
-                    <div style="font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.45;">
-                        @if($discountActive)
-                        List ₹{{ number_format((float) $pricing['original_base'], 0) }}
-                        − {{ $discountPct }}% (₹{{ number_format((float) $pricing['discount_amount'], 2) }})
-                        = ₹{{ number_format($basePrice, 0) }}
+                @foreach(['monthly', 'yearly'] as $billingKey)
+                @php $p = $periods[$billingKey]; @endphp
+                <div class="plan-period-block" data-billing="{{ $billingKey }}" @if($billingKey !== 'monthly') hidden @endif>
+                    <div>
+                        @if($p['price'] <= 0)
+                        <div style="font-size:28px;font-weight:800;color:var(--success);">{{ $p['isUpgrade'] ? 'No extra cost' : 'Free' }}</div>
                         @else
-                        Base ₹{{ number_format($basePrice, 0) }}
+                        <div class="plan-price-row">
+                            <span style="font-size:28px;font-weight:800;color:var(--text);line-height:1;">₹{{ number_format($p['price'], 0) }}</span>
+                            <span class="plan-price-period">/{{ $billingKey === 'yearly' ? 'yr' : 'mo' }}</span>
+                            @if($p['discountActive'])
+                            <span class="plan-discount-badge">{{ $p['discountPct'] }}% off</span>
+                            @endif
+                        </div>
+                        @if($p['strikePrice'] > $p['price'] || $p['discountActive'])
+                        <div style="font-size:12px;color:var(--text-3);margin-top:6px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+                            @if($p['strikePrice'] > $p['price'])
+                            <span style="text-decoration:line-through;">₹{{ number_format($p['strikePrice'], 0) }}</span>
+                            @endif
+                            @if($p['discountActive'])
+                            <span style="color:#15803d;font-weight:700;">Save ₹{{ number_format((float) $p['pricing']['discount_amount'], 0) }}</span>
+                            @if(!empty($offer['expires_at']))
+                            <span>until {{ \Carbon\Carbon::parse($offer['expires_at'])->format('d M Y') }}</span>
+                            @endif
+                            @endif
+                        </div>
                         @endif
-                        @foreach(($pricing['taxes'] ?? []) as $taxLine)
-                        + {{ $taxLine['code'] }} {{ rtrim(rtrim(number_format((float) $taxLine['percent'], 2, '.', ''), '0'), '.') }}% (₹{{ number_format((float) $taxLine['amount'], 2) }})
+                        @if($p['isUpgrade'] && $p['creditAmount'] > 0)
+                        <div style="font-size:12px;color:#15803d;font-weight:700;margin-top:4px;">
+                            ₹{{ number_format($p['creditAmount'], 0) }} unused-day credit applied
+                        </div>
+                        @endif
+                        @if($p['pricing']['tax_total'] > 0)
+                        <div style="font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.45;">
+                            @if($p['discountActive'])
+                            List ₹{{ number_format((float) $p['pricing']['original_base'], 0) }}
+                            − {{ $p['discountPct'] }}% (₹{{ number_format((float) $p['pricing']['discount_amount'], 2) }})
+                            = ₹{{ number_format((float) $p['pricing']['base'], 0) }}
+                            @else
+                            Base ₹{{ number_format((float) $p['pricing']['base'], 0) }}
+                            @endif
+                            @foreach(($p['pricing']['taxes'] ?? []) as $taxLine)
+                            + {{ $taxLine['code'] }} {{ rtrim(rtrim(number_format((float) $taxLine['percent'], 2, '.', ''), '0'), '.') }}% (₹{{ number_format((float) $taxLine['amount'], 2) }})
+                            @endforeach
+                        </div>
+                        @endif
+                        @endif
+                        <div style="font-size:11px;color:var(--text-3);margin-top:4px;">
+                            {{ $plan->billingDaysFor($billingKey) }}-day billing cycle{{ $p['isUpgrade'] ? ' · starts today' : '' }}
+                        </div>
+                        @if($p['isUpgrade'] && (int) ($p['credit']['remaining_days'] ?? 0) > 0)
+                        <div style="font-size:11px;color:#15803d;margin-top:4px;line-height:1.45;">
+                            {{ (int) $p['credit']['remaining_days'] }} unused day{{ (int) $p['credit']['remaining_days'] === 1 ? '' : 's' }} of {{ $p['credit']['from_plan_name'] ?? 'your current plan' }} credited at ₹{{ number_format((float) ($p['credit']['daily_rate'] ?? 0), 2) }}/day.
+                            Benefits reset with this plan.
+                        </div>
+                        @endif
+                    </div>
+
+                    @if(count($p['benefits']))
+                    <ul style="list-style:none;padding:0;margin:12px 0 0;display:grid;gap:8px;">
+                        @foreach($p['benefits'] as $row)
+                        <li style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-2);line-height:1.4;">
+                            <span style="color:{{ $accent }};font-weight:700;">✓</span>
+                            <span>{{ $row['label'] }}{{ $row['value'] !== '' ? ': '.$row['value'] : '' }}</span>
+                        </li>
                         @endforeach
+                    </ul>
+                    @else
+                    <p style="font-size:12px;color:var(--text-3);margin:12px 0 0;">No {{ $billingKey }} benefits listed for this plan.</p>
+                    @endif
+
+                    <div style="margin-top:12px;">
+                        @if($p['isCurrent'])
+                        <button type="button" class="btn btn-ghost" disabled style="width:100%;opacity:.7;">Current plan</button>
+                        @else
+                        <button type="button"
+                                class="btn btn-primary"
+                                style="width:100%;{{ $plan->is_featured ? 'background:'.$accent.';border-color:'.$accent.';' : '' }}"
+                                data-plan-id="{{ $plan->id }}"
+                                data-plan-name="{{ e($plan->name) }}"
+                                data-billing="{{ $billingKey }}"
+                                onclick="subscribePlan(this)">
+                            {{ $current ? ($p['price'] <= 0 ? 'Switch at no extra cost' : 'Upgrade · ₹'.number_format($p['price'], 0)) : ($p['price'] <= 0 ? 'Activate free' : 'Subscribe') }}
+                        </button>
+                        @endif
                     </div>
-                    @endif
-                    @endif
-                    <div style="font-size:11px;color:var(--text-3);margin-top:4px;">{{ $plan->billingDays() }}-day billing cycle{{ $isUpgrade ? ' · starts today' : '' }}</div>
-                    @if($isUpgrade && (int) ($credit['remaining_days'] ?? 0) > 0)
-                    <div style="font-size:11px;color:#15803d;margin-top:4px;line-height:1.45;">
-                        {{ (int) $credit['remaining_days'] }} unused day{{ (int) $credit['remaining_days'] === 1 ? '' : 's' }} of {{ $credit['from_plan_name'] ?? 'your current plan' }} credited at ₹{{ number_format((float) ($credit['daily_rate'] ?? 0), 2) }}/day.
-                        Benefits reset with this plan.
-                    </div>
-                    @endif
                 </div>
-
-                @if(count($benefits))
-                <ul style="list-style:none;padding:0;margin:0;display:grid;gap:8px;flex:1;">
-                    @foreach($benefits as $row)
-                    <li style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-2);line-height:1.4;">
-                        <span style="color:{{ $accent }};font-weight:700;">✓</span>
-                        <span>{{ $row['label'] }}{{ $row['value'] !== '' ? ': '.$row['value'] : '' }}</span>
-                    </li>
-                    @endforeach
-                </ul>
-                @endif
-
-                @if($isCurrent)
-                <button type="button" class="btn btn-ghost" disabled style="width:100%;opacity:.7;">Current plan</button>
-                @else
-                <button type="button"
-                        class="btn btn-primary"
-                        style="width:100%;{{ $plan->is_featured ? 'background:'.$accent.';border-color:'.$accent.';' : '' }}"
-                        data-plan-id="{{ $plan->id }}"
-                        data-plan-name="{{ e($plan->name) }}"
-                        onclick="subscribePlan(this)">
-                    {{ $current ? ($price <= 0 ? 'Switch at no extra cost' : 'Upgrade · ₹'.number_format($price, 0)) : ($price <= 0 ? 'Activate free' : 'Subscribe') }}
-                </button>
-                @endif
+                @endforeach
             </div>
             @endforeach
         </div>
@@ -275,11 +298,32 @@
 @push('scripts')
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+(function initPlanBillingToggle() {
+    const buttons = document.querySelectorAll('[data-billing-toggle]');
+    if (!buttons.length) return;
+
+    function setBilling(billing) {
+        buttons.forEach((btn) => {
+            const active = btn.getAttribute('data-billing-toggle') === billing;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        document.querySelectorAll('.plan-period-block').forEach((block) => {
+            block.hidden = block.getAttribute('data-billing') !== billing;
+        });
+    }
+
+    buttons.forEach((btn) => {
+        btn.addEventListener('click', () => setBilling(btn.getAttribute('data-billing-toggle')));
+    });
+})();
+
 function subscribePlan(btn) {
     const planId = btn.getAttribute('data-plan-id');
     const planName = btn.getAttribute('data-plan-name') || 'plan';
+    const billing = btn.getAttribute('data-billing') || 'monthly';
 
-    AjaxPost(`{{ url('/mentee/plans') }}/${planId}/subscribe`, {}, {
+    AjaxPost(`{{ url('/mentee/plans') }}/${planId}/subscribe`, { billing }, {
         btn,
         loader: true,
         onSuccess: (order) => {

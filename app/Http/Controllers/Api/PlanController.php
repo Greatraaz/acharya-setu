@@ -24,14 +24,19 @@ class PlanController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $billing = Plan::normalizeBilling($request->query('billing', 'monthly'));
         $checkout = app(PlanCheckoutService::class);
         $current = $this->paidActiveForRequest($request);
         $plans = Plan::active()->orderBy('price_monthly', 'asc')->get()
-            ->map(fn (Plan $plan) => $plan->toPublicArray($checkout->quote($plan, $current)));
+            ->map(fn (Plan $plan) => $plan->toPublicArray(
+                $checkout->quote($plan, $current, $billing),
+                $billing
+            ));
 
         return response()->json([
             'status'  => true,
             'message' => 'Plans fetched successfully.',
+            'billing' => $billing,
             'data'    => $plans,
         ], 200);
     }
@@ -52,11 +57,15 @@ class PlanController extends Controller
             ], 404);
         }
 
+        $billing = Plan::normalizeBilling($request->query('billing', 'monthly'));
+
         return response()->json([
             'status'  => true,
             'message' => 'Plan fetched successfully.',
+            'billing' => $billing,
             'data'    => $plan->toPublicArray(
-                app(PlanCheckoutService::class)->quote($plan, $this->paidActiveForRequest($request))
+                app(PlanCheckoutService::class)->quote($plan, $this->paidActiveForRequest($request), $billing),
+                $billing
             ),
         ], 200);
     }
@@ -96,8 +105,9 @@ class PlanController extends Controller
         }
 
         $checkout = app(PlanCheckoutService::class);
+        $billing = Plan::normalizeBilling($request->input('billing', 'monthly'));
         $isUpgrade = $checkout->isPaidActive($current) && (int) $current->plan_id !== (int) $plan->id;
-        $quote = $checkout->quote($plan, $isUpgrade ? $current : null);
+        $quote = $checkout->quote($plan, $isUpgrade ? $current : null, $billing);
         $pricing = $quote['pricing'];
         $price = (float) $quote['payable'];
 
@@ -174,6 +184,7 @@ class PlanController extends Controller
                         'discount_amount'   => (string) ($pricing['discount_amount'] ?? 0),
                         'credit_amount'     => (string) ($quote['credit']['amount'] ?? 0),
                         'payable'           => (string) $price,
+                        'billing'           => $billing,
                     ],
                 ]);
 
@@ -710,7 +721,9 @@ class PlanController extends Controller
             'payment_reference' => $paymentReference,
             'status'            => 'active',
             'starts_at'         => $startsAt,
-            'expires_at'        => $startsAt->copy()->addDays($plan->billingDays()),
+            'expires_at'        => $startsAt->copy()->addDays(
+                $plan->billingDaysFor($quote['billing'] ?? ($quote['pricing']['billing'] ?? 'monthly'))
+            ),
             'meta'              => $checkout->storeSnapshot($placeholder, $plan, $quote),
         ]);
 

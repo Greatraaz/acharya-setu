@@ -106,7 +106,7 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'status'  => true,
-            'token'   => $user->createToken('api')->plainTextToken,
+            'token'   => $user->createToken('api', ['*'], now()->addWeek())->plainTextToken,
             'user'    => $user->only(self::USER_FIELDS),
         ], 201);
     }
@@ -140,7 +140,7 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'status'  => true,
-            'token'   => $user->createToken('api')->plainTextToken,
+            'token'   => $user->createToken('api', ['*'], now()->addWeek())->plainTextToken,
             'user'    => $user->only(self::USER_FIELDS),
         ], 200);
     }

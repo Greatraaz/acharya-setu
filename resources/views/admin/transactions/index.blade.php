@@ -14,7 +14,7 @@
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
             <h1 class="text-xl font-semibold text-gray-900">All Transactions</h1>
-            <p class="text-sm text-gray-500 mt-0.5">Wallet ledger, session payments, and plan invoices across the platform.</p>
+            <p class="text-sm text-gray-500 mt-0.5">Wallet ledger, session payments, plan invoices, and career service invoices.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
             <a href="{{ route('admin.transactions.export', array_merge($qs, ['tab' => $tab])) }}"
@@ -35,9 +35,10 @@
             'wallet'   => 'Wallet Ledger',
             'sessions' => 'Session Payments',
             'plans'    => 'Plan Invoices',
+            'career'   => 'Career Services',
         ] as $key => $label)
             <a href="{{ route('admin.transactions.index', ['tab' => $key]) }}"
-               class="flex-1 min-w-[140px] text-center text-sm font-medium px-3 py-2.5 rounded-xl transition-colors
+               class="flex-1 min-w-[120px] text-center text-sm font-medium px-3 py-2.5 rounded-xl transition-colors
                {{ $tab === $key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50' }}">
                 {{ $label }}
             </a>
@@ -48,8 +49,10 @@
         @include('admin.transactions.partials.wallet-tab')
     @elseif($tab === 'sessions')
         @include('admin.transactions.partials.sessions-tab')
-    @else
+    @elseif($tab === 'plans')
         @include('admin.transactions.partials.plans-tab')
+    @else
+        @include('admin.transactions.partials.career-tab')
     @endif
 
 </div>

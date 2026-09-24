@@ -211,4 +211,47 @@ class SubscriptionInvoiceController extends Controller
 
         return app(\App\Services\SessionInvoicePdfService::class)->download($invoice);
     }
+
+    public function careerServiceInvoices(Request $request): JsonResponse
+    {
+        if (\Illuminate\Support\Facades\Schema::hasTable('career_service_invoices')) {
+            app(\App\Services\CareerServiceInvoiceService::class)->backfillMissing('system');
+        }
+
+        $query = \App\Models\CareerServiceInvoice::with(['user:id,name,email'])
+            ->latest('invoice_date')
+            ->latest('id');
+
+        if ($request->filled('q')) {
+            $q = trim($request->q);
+            $query->where(function ($builder) use ($q) {
+                $builder->where('invoice_number', 'like', "%{$q}%")
+                    ->orWhere('billing_email', 'like', "%{$q}%")
+                    ->orWhere('description', 'like', "%{$q}%")
+                    ->orWhere('service_type', 'like', "%{$q}%");
+            });
+        }
+
+        $page = $query->paginate((int) $request->get('per_page', 20));
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Career service invoices fetched successfully.',
+            'data'       => collect($page->items())->map->toPublicArray()->values(),
+            'meta'       => [
+                'current_page' => $page->currentPage(),
+                'last_page'    => $page->lastPage(),
+                'per_page'     => $page->perPage(),
+                'total'        => $page->total(),
+            ],
+        ]);
+    }
+
+    public function downloadCareerServiceInvoice(int $id): Response
+    {
+        $invoice = \App\Models\CareerServiceInvoice::findOrFail($id);
+
+        return app(\App\Services\CareerServiceInvoicePdfService::class)->download($invoice);
+    }
 }

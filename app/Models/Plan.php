@@ -127,24 +127,27 @@ class Plan extends Model
     /**
      * Default benefit rows for a new plan. Labels are editable and shown on the frontend.
      *
-     * @return array<int, array{label: string, value: string}>
+     * @return array<int, array{label: string, value: string, monthly: bool, yearly: bool}>
      */
     public static function defaultBenefits(): array
     {
-        return [
-            ['label' => 'Career counselling', 'value' => ''],
-            ['label' => 'In-house mentor allowance', 'value' => ''],
-            ['label' => 'Senior marketplace mentor credit', 'value' => ''],
-            ['label' => 'Resume development', 'value' => ''],
-            ['label' => 'LinkedIn/profile optimisation', 'value' => ''],
-            ['label' => 'Mock interview', 'value' => ''],
-            ['label' => 'Group clinics/webinars', 'value' => ''],
-            ['label' => 'Goal roadmap', 'value' => ''],
-            ['label' => 'Priority booking', 'value' => ''],
-            ['label' => 'Extra marketplace sessions', 'value' => ''],
-            ['label' => 'Progress reports', 'value' => ''],
-            ['label' => 'Support', 'value' => ''],
-        ];
+        return array_map(
+            fn (array $row) => $row + ['monthly' => true, 'yearly' => true],
+            [
+                ['label' => 'Career counselling', 'value' => ''],
+                ['label' => 'In-house mentor allowance', 'value' => ''],
+                ['label' => 'Senior marketplace mentor credit', 'value' => ''],
+                ['label' => 'Resume development', 'value' => ''],
+                ['label' => 'LinkedIn/profile optimisation', 'value' => ''],
+                ['label' => 'Mock interview', 'value' => ''],
+                ['label' => 'Group clinics/webinars', 'value' => ''],
+                ['label' => 'Goal roadmap', 'value' => ''],
+                ['label' => 'Priority booking', 'value' => ''],
+                ['label' => 'Extra marketplace sessions', 'value' => ''],
+                ['label' => 'Progress reports', 'value' => ''],
+                ['label' => 'Support', 'value' => ''],
+            ]
+        );
     }
 
     /**
@@ -244,7 +247,7 @@ class Plan extends Model
 
     /**
      * @param  array<int|string, mixed>|null  $raw
-     * @return array<int, array{label: string, value: string}>
+     * @return array<int, array{label: string, value: string, monthly: bool, yearly: bool}>
      */
     public static function normalizeBenefits(?array $raw): array
     {
@@ -265,12 +268,32 @@ class Plan extends Model
                 continue;
             }
             $rows[] = [
-                'label' => mb_substr($label, 0, 120),
-                'value' => mb_substr($value, 0, 255),
+                'label'   => mb_substr($label, 0, 120),
+                'value'   => mb_substr($value, 0, 255),
+                'monthly' => self::benefitPeriodFlag($row['monthly'] ?? true),
+                'yearly'  => self::benefitPeriodFlag($row['yearly'] ?? true),
             ];
         }
 
         return $rows;
+    }
+
+    public static function benefitPeriodFlag(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if ($value === null || $value === '') {
+            return true;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    public static function normalizeBilling(?string $billing): string
+    {
+        return strtolower((string) $billing) === 'yearly' ? 'yearly' : 'monthly';
     }
 
     /**
@@ -319,41 +342,44 @@ class Plan extends Model
         $booking = $b['priority_booking'] ?? [];
         $market = $b['marketplace_sessions'] ?? [];
 
-        return [
-            ['label' => 'Career counselling', 'value' => $career],
-            ['label' => 'In-house mentor allowance', 'value' => $inHouseMins > 0 ? $inHouseMins.' min / month' : 'None'],
-            ['label' => 'Senior marketplace mentor credit', 'value' => $creditValue],
-            ['label' => 'Resume development', 'value' => $addonOrEvery($b['resume_development'] ?? [])],
-            ['label' => 'LinkedIn/profile optimisation', 'value' => $addonOrEvery($b['linkedin_optimisation'] ?? [])],
-            ['label' => 'Mock interview', 'value' => $mockValue],
-            ['label' => 'Group clinics/webinars', 'value' => $clinicValue],
-            ['label' => 'Goal roadmap', 'value' => match ($b['goal_roadmap']['cadence'] ?? 'template') {
-                'monthly'   => 'Monthly guided review',
-                'quarterly' => 'Quarterly guided review',
-                'none'      => 'None',
-                default     => 'Digital template',
-            }],
-            ['label' => 'Priority booking', 'value' => ($booking['tier'] ?? 'standard') === 'earlier'
-                ? 'Earlier access window, e.g. +'.(int) ($booking['hours'] ?? 0).'h'
-                : 'Standard'],
-            ['label' => 'Extra marketplace sessions', 'value' => ($market['mode'] ?? 'standard') === 'discount'
-                ? 'Configurable member discount, e.g. '.rtrim(rtrim(number_format((float) ($market['discount_percent'] ?? 0), 2, '.', ''), '0'), '.').'%'
-                : 'Standard public rate'],
-            ['label' => 'Progress reports', 'value' => match ($b['progress_reports']['tier'] ?? 'basic') {
-                'monthly_quarterly' => 'Monthly + quarterly consolidated',
-                'monthly'           => 'Monthly',
-                default             => 'Basic',
-            }],
-            ['label' => 'Support', 'value' => match ($b['support']['tier'] ?? 'standard') {
-                'concierge' => 'Priority / concierge queue',
-                'priority'  => 'Priority',
-                default     => 'Standard',
-            }],
-        ];
+        return array_map(
+            fn (array $row) => $row + ['monthly' => true, 'yearly' => true],
+            [
+                ['label' => 'Career counselling', 'value' => $career],
+                ['label' => 'In-house mentor allowance', 'value' => $inHouseMins > 0 ? $inHouseMins.' min / month' : 'None'],
+                ['label' => 'Senior marketplace mentor credit', 'value' => $creditValue],
+                ['label' => 'Resume development', 'value' => $addonOrEvery($b['resume_development'] ?? [])],
+                ['label' => 'LinkedIn/profile optimisation', 'value' => $addonOrEvery($b['linkedin_optimisation'] ?? [])],
+                ['label' => 'Mock interview', 'value' => $mockValue],
+                ['label' => 'Group clinics/webinars', 'value' => $clinicValue],
+                ['label' => 'Goal roadmap', 'value' => match ($b['goal_roadmap']['cadence'] ?? 'template') {
+                    'monthly'   => 'Monthly guided review',
+                    'quarterly' => 'Quarterly guided review',
+                    'none'      => 'None',
+                    default     => 'Digital template',
+                }],
+                ['label' => 'Priority booking', 'value' => ($booking['tier'] ?? 'standard') === 'earlier'
+                    ? 'Earlier access window, e.g. +'.(int) ($booking['hours'] ?? 0).'h'
+                    : 'Standard'],
+                ['label' => 'Extra marketplace sessions', 'value' => ($market['mode'] ?? 'standard') === 'discount'
+                    ? 'Configurable member discount, e.g. '.rtrim(rtrim(number_format((float) ($market['discount_percent'] ?? 0), 2, '.', ''), '0'), '.').'%'
+                    : 'Standard public rate'],
+                ['label' => 'Progress reports', 'value' => match ($b['progress_reports']['tier'] ?? 'basic') {
+                    'monthly_quarterly' => 'Monthly + quarterly consolidated',
+                    'monthly'           => 'Monthly',
+                    default             => 'Basic',
+                }],
+                ['label' => 'Support', 'value' => match ($b['support']['tier'] ?? 'standard') {
+                    'concierge' => 'Priority / concierge queue',
+                    'priority'  => 'Priority',
+                    default     => 'Standard',
+                }],
+            ]
+        );
     }
 
     /**
-     * @return array<int, array{label: string, value: string}>
+     * @return array<int, array{label: string, value: string, monthly: bool, yearly: bool}>
      */
     public function resolvedBenefits(): array
     {
@@ -363,14 +389,33 @@ class Plan extends Model
     }
 
     /**
-     * @return array<int, array{label: string, value: string}>
+     * @return array<int, array{label: string, value: string, monthly: bool, yearly: bool}>
      */
-    public function benefitSummary(): array
+    public function benefitSummary(?string $billing = null): array
     {
-        return array_values(array_filter(
+        $rows = array_values(array_filter(
             $this->resolvedBenefits(),
             fn (array $row) => $row['label'] !== '' || $row['value'] !== ''
         ));
+
+        $billing = $billing !== null ? self::normalizeBilling($billing) : null;
+        if ($billing === null) {
+            return $rows;
+        }
+
+        return array_values(array_filter(
+            $rows,
+            fn (array $row) => ! empty($row[$billing])
+        ));
+    }
+
+    public function billingDaysFor(string $billing = 'monthly'): int
+    {
+        if (self::normalizeBilling($billing) === 'yearly') {
+            return 365;
+        }
+
+        return $this->billingDays();
     }
 
     public function hasActiveDiscount(): bool
@@ -560,7 +605,12 @@ class Plan extends Model
 
     public function getFeaturesListAttribute(): array
     {
-        return collect($this->benefitSummary())
+        return $this->featuresListFor('monthly');
+    }
+
+    public function featuresListFor(string $billing = 'monthly'): array
+    {
+        return collect($this->benefitSummary($billing))
             ->map(function (array $row) {
                 $label = trim((string) ($row['label'] ?? ''));
                 $value = trim((string) ($row['value'] ?? ''));
@@ -576,9 +626,12 @@ class Plan extends Model
     }
 
     /** Public payload for web/API plan cards. */
-    public function toPublicArray(?array $checkout = null): array
+    public function toPublicArray(?array $checkout = null, string $billing = 'monthly'): array
     {
+        $billing = self::normalizeBilling($billing);
         $sessions = $this->sessions_per_month;
+        $pricing = $this->pricingBreakdown($billing);
+        $benefits = $this->benefitSummary($billing);
 
         $payload = [
             'id'                      => $this->id,
@@ -586,18 +639,26 @@ class Plan extends Model
             'plan_name'               => $this->name,
             'slug'                    => $this->slug,
             'description'             => $this->description,
-            'price'                   => (float) ($this->price_monthly ?? 0),
+            'price'                   => (float) ($billing === 'yearly' ? ($this->price_yearly ?? 0) : ($this->price_monthly ?? 0)),
             'price_monthly'           => (float) ($this->price_monthly ?? 0),
             'price_yearly'            => (float) ($this->price_yearly ?? 0),
             'currency'                => $this->currency ?? 'INR',
-            'duration'                => $this->billingDays(),
+            'duration'                => $this->billingDaysFor($billing),
+            'billing'                 => $billing,
             'discount'                => $this->publicDiscount(),
-            'pricing'                 => $this->pricingBreakdown('monthly'),
-            'features'                => $this->features_list,
+            'pricing'                 => $pricing,
+            'pricing_monthly'         => $this->pricingBreakdown('monthly'),
+            'pricing_yearly'          => $this->pricingBreakdown('yearly'),
+            'features'                => $this->featuresListFor($billing),
+            'features_monthly'        => $this->featuresListFor('monthly'),
+            'features_yearly'         => $this->featuresListFor('yearly'),
             'sessions_per_month'      => $sessions,
             'progress_report_enabled' => (bool) $this->progress_report_enabled,
-            'benefits'                => $this->resolvedBenefits(),
-            'benefit_summary'         => $this->benefitSummary(),
+            'benefits'                => $benefits,
+            'benefit_summary'         => $benefits,
+            'benefits_monthly'        => $this->benefitSummary('monthly'),
+            'benefits_yearly'         => $this->benefitSummary('yearly'),
+            'benefits_all'            => $this->resolvedBenefits(),
             'limits'                  => [
                 'sessions' => $sessions,
                 'free_session_minutes' => is_array($this->limits)
@@ -623,9 +684,10 @@ class Plan extends Model
         if ($checkout !== null) {
             $payload['checkout'] = [
                 'is_upgrade' => (bool) ($checkout['is_upgrade'] ?? false),
-                'plan_total' => (float) ($checkout['plan_total'] ?? $payload['pricing']['total']),
-                'payable'    => (float) ($checkout['payable'] ?? $payload['pricing']['total']),
+                'plan_total' => (float) ($checkout['plan_total'] ?? $pricing['total']),
+                'payable'    => (float) ($checkout['payable'] ?? $pricing['total']),
                 'currency'   => $checkout['currency'] ?? $payload['currency'],
+                'billing'    => $checkout['billing'] ?? $billing,
                 'credit'     => $checkout['credit'] ?? null,
             ];
         }

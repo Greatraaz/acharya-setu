@@ -204,6 +204,7 @@
             ],
             'Payments' => [
                 ['payment','Payment Gateways','M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1H0V4zm0 3h16v5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V7zm3 2a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1H3zm2.5 0a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5z'],
+                ['career-addons','Career Add-ons','M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zM4 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4z'],
             ],
             'Messaging' => [
                 ['sms','SMS Gateways','M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2.414a1 1 0 0 0-.707.293L.854 13.146A.5.5 0 0 1 0 12.793V2z'],
@@ -580,6 +581,40 @@
                                 <input type="{{ str_contains($k,'secret') ? 'password' : 'text' }}" name="{{ $k }}" class="form-input font-mono text-sm" value="{{ str_contains($k,'secret') ? '' : config_val($k) }}" placeholder="{{ $l }}">
                             </div>
                             @endforeach
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        {{-- ===== CAREER ADD-ON PRICES ===== --}}
+        <div id="tab-career-addons" class="tab-section">
+            <form action="{{ route('admin.settings.update') }}" method="POST">
+                @csrf
+                <input type="hidden" name="section" value="career-addons">
+                <div class="settings-tab-header flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-800">Career Add-on Prices</h2>
+                        <p class="text-sm text-gray-500">Prices charged when Essential mentees (or Growth/Premium after using their free entitlement) request resume or LinkedIn review.</p>
+                    </div>
+                    <button type="submit" class="save-btn">Save Changes</button>
+                </div>
+
+                <div class="section-card">
+                    <h3>Paid add-on fees (INR)</h3>
+                    <p class="section-desc">Growth includes 1 resume + 1 LinkedIn every 6 months. Premium every 3 months. Extra requests use these prices.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Resume development price</label>
+                            <input type="number" name="addon_resume_price" min="1" step="1"
+                                   value="{{ old('addon_resume_price', config_val('addon_resume_price', 499)) }}"
+                                   class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">LinkedIn optimisation price</label>
+                            <input type="number" name="addon_linkedin_price" min="1" step="1"
+                                   value="{{ old('addon_linkedin_price', config_val('addon_linkedin_price', 499)) }}"
+                                   class="form-input" required>
                         </div>
                     </div>
                 </div>

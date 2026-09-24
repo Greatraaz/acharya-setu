@@ -24,16 +24,23 @@ class RoleMiddleware
      */
     public function handle(Request $request, Closure $next, ...$roles)
     {
-        $user = $request->user();
-
-        if (! $user) {
-            // If user is not authenticated, redirect to login (per original logic: admin.login)
-            return redirect()->route('admin.login');
-        }
-
         // Normalize roles: if passed as comma-separated single argument, explode it
         if (count($roles) === 1 && is_string($roles[0]) && str_contains($roles[0], ',')) {
             $roles = array_map('trim', explode(',', $roles[0]));
+        }
+
+        $user = $request->user();
+
+        if (! $user) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+
+            if ($request->is('admin') || $request->is('admin/*') || in_array('admin', $roles, true)) {
+                return redirect()->route('admin.login');
+            }
+
+            return redirect()->route('login');
         }
 
         if (! in_array($user->role, $roles)) {

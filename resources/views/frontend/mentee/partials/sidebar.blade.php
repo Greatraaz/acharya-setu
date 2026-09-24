@@ -32,6 +32,9 @@
     <a href="{{ route('mentee.quizzes.index') }}" class="sidebar-item @if(request()->routeIs('mentee.quizzes*')) active @endif">
         <span class="si-icon">🧠</span> Quizzes
     </a>
+    <a href="{{ route('mentee.mentor-videos.index') }}" class="sidebar-item @if(request()->routeIs('mentee.mentor-videos*')) active @endif">
+        <span class="si-icon">🎬</span> Videos
+    </a>
     {{-- <a href="{{ route('mentee.wellness.index') }}" class="sidebar-item @if(request()->routeIs('mentee.wellness*')) active @endif">
         <span class="si-icon">🏥</span> Wellness Survey
     </a> --}}
@@ -47,6 +50,9 @@
     <div class="sidebar-section-label">Account</div>
     <a href="{{ route('mentee.plans') }}" class="sidebar-item @if(request()->routeIs('mentee.plans*')) active @endif">
         <span class="si-icon">⭐</span> Plans
+    </a>
+    <a href="{{ route('mentee.career-services.index') }}" class="sidebar-item @if(request()->routeIs('mentee.career-services*')) active @endif">
+        <span class="si-icon">📄</span> Career Services
     </a>
     <a href="{{ route('mentee.wallet') }}" class="sidebar-item @if(request()->routeIs('mentee.wallet*')) active @endif">
         <span class="si-icon">💰</span> Wallet
