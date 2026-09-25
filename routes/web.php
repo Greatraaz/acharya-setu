@@ -49,7 +49,6 @@ use App\Http\Controllers\Mentee\JobController as MenteeJobController;
 use App\Http\Controllers\Mentee\MentorRequestController as MenteeMentorRequestController;
 use App\Http\Controllers\Mentee\CareerServiceController as MenteeCareerServiceController;
 use App\Http\Controllers\Mentee\MockInterviewController as MenteeMockInterviewController;
-use App\Http\Controllers\Mentor\MockInterviewController as MentorMockInterviewController;
 use App\Http\Controllers\Mentee\CareerServiceInvoiceController as MenteeCareerServiceInvoiceController;
 use App\Http\Controllers\Mentee\MentorVideoController as MenteeMentorVideoController;
 use App\Http\Controllers\Mentor\MentorRequestController as MentorMentorRequestController;
@@ -297,10 +296,6 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::match(['patch', 'post'], '/sessions/{id}/meeting-link', [MentorSessionController::class, 'updateMeetingLink'])
         ->name('sessions.meeting-link');
 
-    // Mock interviews assigned by admin
-    Route::get('/mock-interviews', [MentorMockInterviewController::class, 'index'])->name('mock-interviews.index');
-    Route::get('/mock-interviews/{mockInterview}', [MentorMockInterviewController::class, 'show'])->name('mock-interviews.show')->whereNumber('mockInterview');
-
     // Availability
     Route::get( '/availability',       [MentorAvailabilityController::class, 'show'])  ->name('availability');
     Route::post('/availability',       [MentorAvailabilityController::class, 'update'])->name('availability.update');
@@ -539,7 +534,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/sessions/{id}/my-note', [SessionCallController::class, 'myNote'])->name('sessions.my-note.show')->whereNumber('id');
     Route::put('/sessions/{id}/my-note', [SessionCallController::class, 'saveMyNote'])->name('sessions.my-note.save')->whereNumber('id');
 
-    // Mock interview Agora call — mentee + assigned mentor
+    // Mock interview Agora call — mentee + admin
     Route::get('/mock-interviews/{id}/call', [MockInterviewCallController::class, 'show'])->name('mock-interviews.call')->whereNumber('id');
     Route::get('/mock-interviews/{id}/video-token', [MockInterviewCallController::class, 'token'])->name('mock-interviews.video-token')->whereNumber('id');
     Route::post('/mock-interviews/{id}/call/end', [MockInterviewCallController::class, 'end'])->name('mock-interviews.call.end')->whereNumber('id');

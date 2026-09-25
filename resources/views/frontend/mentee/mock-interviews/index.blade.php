@@ -13,7 +13,7 @@
         <div class="dash-header flex-between" style="gap:12px;flex-wrap:wrap;">
             <div>
                 <div class="dash-title">Mock Interviews</div>
-                <div class="dash-subtitle">Practice interviews with Vedrix mentors — book a slot that works for you.</div>
+                <div class="dash-subtitle">Practice interviews with Vedrix — book a slot that works for you.</div>
             </div>
         </div>
 
@@ -80,7 +80,7 @@
                             </td>
                             <td style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
                                 @if($req->canJoinCall())
-                                    <a href="{{ route('mock-interviews.call', $req->id) }}" class="btn btn-primary btn-sm">🎥 Join</a>
+                                    <a href="{{ route('mock-interviews.call', $req->id) }}" class="btn btn-primary btn-sm">Join interview</a>
                                 @endif
                                 <a href="{{ route('mentee.mock-interviews.show', $req) }}" class="btn btn-ghost btn-sm">View</a>
                             </td>

@@ -94,16 +94,15 @@ Success → `status: submitted` (awaiting admin confirmation).
 
 ## Agora video call
 
-After admin **confirms** (must assign a mentor), an Agora channel is created (`meeting_channel` / `meeting_link`).
+After admin **confirms**, an Agora channel is created (`meeting_channel` / `meeting_link`). The confirming admin hosts the interview (no mentor assignment).
 
-Mentee and assigned mentor can join when `meeting.can_join` is true (from 15 minutes before `preferred_at` until the duration ends).
+Mentee and admin can join when `meeting.can_join` is true (anytime after confirmation until the preferred slot + duration ends).
 
 ### App
 
-`GET /api/v1/mentee/mock-interviews/{id}/agora-token`  
-`GET /api/v1/mentor/mock-interviews/{id}/agora-token`
+`GET /api/v1/mentee/mock-interviews/{id}/agora-token`
 
-Same response shape as session Agora tokens (`app_id`, `channel`, `token`, `uid`, `peer`, `session`).
+Same response shape as session Agora tokens (`app_id`, `channel`, `token`, `uid`, `peer`, `session`). Response `role` is `mentee` or `admin`. Public payloads expose `interviewer` (admin) instead of `mentor`.
 
 `data.meeting` on show/list:
 
@@ -119,14 +118,14 @@ Same response shape as session Agora tokens (`app_id`, `channel`, `token`, `uid`
 
 ### Website
 
-- Mentee / mentor: **Join Agora call** on the detail page → `/mock-interviews/{id}/call` (same UI as session calls)
+- Mentee / admin: **Join Agora call** on the detail page → `/mock-interviews/{id}/call` (same UI as session calls)
 
 ---
 
 ## Admin (web)
 
 - List / show under **Mock Interviews**
-- **Confirm** — assign mentor + notes → `confirmed`
+- **Confirm** — notes optional → `confirmed` (creates Agora channel; admin hosts)
 - **Complete** — feedback required → `completed`
 - **Cancel** → `cancelled`
 

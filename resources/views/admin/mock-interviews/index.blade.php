@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="space-y-4">
-    <p class="text-sm text-gray-500">Review mock interview requests, assign mentors, and share feedback with mentees.</p>
+    <p class="text-sm text-gray-500">Review mock interview requests, confirm slots, and share feedback with mentees.</p>
 
     @if(session('success'))
     <div class="bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded-xl">{{ session('success') }}</div>

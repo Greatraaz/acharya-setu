@@ -443,13 +443,6 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}',     [SessionsController::class, 'destroy'])->name('destroy');
         });
 
-        // Mock interviews assigned to this mentor
-        Route::prefix('mock-interviews')->group(function () {
-            Route::get('/', [ApiMockInterviewController::class, 'index']);
-            Route::get('/{id}', [ApiMockInterviewController::class, 'show'])->whereNumber('id');
-            Route::get('/{id}/agora-token', [ApiMockInterviewController::class, 'agoraToken'])->whereNumber('id');
-        });
-
         // Assessments (mentor CRUD)
         Route::prefix('assessments')->name('assessments.')->group(function () {
             Route::get('/',              [MentorAssessment::class, 'index'])->name('index');

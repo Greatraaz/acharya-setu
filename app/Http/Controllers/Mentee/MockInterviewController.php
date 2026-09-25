@@ -14,7 +14,7 @@ class MockInterviewController extends Controller
     {
         $user = auth()->user();
         $requests = MockInterviewRequest::query()
-            ->with('mentor')
+            ->with('assigner')
             ->where('user_id', $user->id)
             ->latest()
             ->paginate(10);
@@ -73,7 +73,7 @@ class MockInterviewController extends Controller
     {
         abort_unless((int) $mockInterview->user_id === (int) auth()->id(), 404);
 
-        $mockInterview->load('mentor');
+        $mockInterview->load('assigner');
 
         return view('frontend.mentee.mock-interviews.show', [
             'item' => $mockInterview,

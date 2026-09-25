@@ -131,7 +131,7 @@ class AgoraService
             'channel'      => $request->meeting_channel,
             'token'        => $token,
             'uid'          => $uid,
-            'role'         => (int) $request->mentor_id === (int) $user->id ? 'mentor' : 'mentee',
+            'role'         => $request->isHost($user) ? 'admin' : 'mentee',
             'expires_at'   => $expireTs,
             'call_log_id'  => $log->id,
             'peer'         => $this->mockPeerPayload($request, $user),
@@ -203,7 +203,7 @@ class AgoraService
         $participant?->markLeft();
 
         $stillIn = $log->participants()->whereNull('left_at')->exists();
-        $shouldEndLog = ! $stillIn || (int) $request->mentor_id === (int) $user->id;
+        $shouldEndLog = ! $stillIn || $request->isHost($user);
 
         if ($shouldEndLog) {
             $log->markEnded($reason);
@@ -258,7 +258,7 @@ class AgoraService
 
     public function assertMockParticipant(User $user, MockInterviewRequest $request): void
     {
-        if ((int) $request->mentor_id !== (int) $user->id && (int) $request->user_id !== (int) $user->id) {
+        if (! $request->isParticipant($user)) {
             throw new HttpException(403, 'You are not part of this mock interview.');
         }
     }
@@ -332,7 +332,7 @@ class AgoraService
 
         if (! $log) {
             $log = VideoCallLog::create([
-                'host_id'        => $request->mentor_id,
+                'host_id'        => $request->assigned_by ?: $user->id,
                 'participant_id' => $request->user_id,
                 'channel_name'   => $request->meeting_channel,
                 'session_id'     => $sessionKey,
@@ -359,7 +359,7 @@ class AgoraService
             $log->participants()->create([
                 'user_id'      => $user->id,
                 'display_name' => $user->name,
-                'role'         => (int) $user->id === (int) $request->mentor_id ? 'host' : 'participant',
+                'role'         => $request->isHost($user) ? 'host' : 'participant',
                 'joined_at'    => now(),
             ]);
         }
@@ -382,9 +382,9 @@ class AgoraService
 
     private function mockPeerPayload(MockInterviewRequest $request, User $user): array
     {
-        $peer = (int) $request->mentor_id === (int) $user->id
+        $peer = $request->isHost($user)
             ? $request->user
-            : $request->mentor;
+            : $request->assigner;
 
         return [
             'id'         => $peer?->id,

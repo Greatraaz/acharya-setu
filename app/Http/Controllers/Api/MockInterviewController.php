@@ -37,19 +37,11 @@ class MockInterviewController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = MockInterviewRequest::query()->with(['mentor', 'user']);
-
-        if ($user->role === 'mentor') {
-            $query->where('mentor_id', $user->id)
-                ->whereIn('status', [
-                    MockInterviewRequest::STATUS_CONFIRMED,
-                    MockInterviewRequest::STATUS_COMPLETED,
-                ]);
-        } else {
-            $query->where('user_id', $user->id);
-        }
-
-        $items = $query->latest()->paginate(20);
+        $items = MockInterviewRequest::query()
+            ->with(['assigner', 'user'])
+            ->where('user_id', $user->id)
+            ->latest()
+            ->paginate(20);
 
         return response()->json([
             'status'  => true,
@@ -67,11 +59,9 @@ class MockInterviewController extends Controller
     {
         $user = $request->user();
         $item = MockInterviewRequest::query()
-            ->with('mentor')
+            ->with('assigner')
             ->where('id', $id)
-            ->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)->orWhere('mentor_id', $user->id);
-            })
+            ->where('user_id', $user->id)
             ->first();
 
         if (! $item) {
@@ -89,14 +79,11 @@ class MockInterviewController extends Controller
     {
         $user = $request->user();
         $item = MockInterviewRequest::query()
-            ->with(['mentor:id,name,avatar_url', 'user:id,name,avatar_url'])
+            ->with(['assigner:id,name,avatar_url', 'user:id,name,avatar_url'])
             ->where('id', $id)
-            ->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)->orWhere('mentor_id', $user->id);
-            })
             ->first();
 
-        if (! $item) {
+        if (! $item || ! $item->isParticipant($user)) {
             return response()->json(['status' => false, 'statuscode' => 404, 'message' => 'Request not found.'], 404);
         }
 

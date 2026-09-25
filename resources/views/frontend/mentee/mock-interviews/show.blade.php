@@ -63,14 +63,15 @@
                     <div class="cs-wait__pulse" aria-hidden="true"></div>
                     <div>
                         <strong>Confirmed</strong>
-                        <p>Your mock interview is scheduled on Agora with {{ $item->mentor->name ?? 'your mentor' }}.</p>
+                        <p>Your mock interview is confirmed. A Vedrix admin will conduct the session.</p>
                         @if($item->confirmed_at)
                         <p class="cs-panel__hint" style="margin:8px 0 0;">Confirmed {{ $item->confirmed_at->timezone($tz)->format('d M Y, h:i A') }}</p>
                         @endif
                         @if($item->canJoinCall())
-                            <a href="{{ route('mock-interviews.call', $item->id) }}" class="btn btn-primary" style="margin-top:12px;display:inline-flex;">🎥 Join Agora call</a>
+                            <a href="{{ route('mock-interviews.call', $item->id) }}" class="btn btn-primary" style="margin-top:12px;display:inline-flex;">Join interview</a>
+                            <p class="cs-panel__hint" style="margin:10px 0 0;">Preferred: {{ $item->preferred_at?->timezone($tz)->format('d M Y, h:i A') }} · {{ $item->duration_minutes }} min</p>
                         @else
-                            <p class="cs-panel__hint" style="margin:10px 0 0;">Join opens 15 minutes before {{ $item->preferred_at?->timezone($tz)->format('d M Y, h:i A') }}.</p>
+                            <p class="cs-panel__hint" style="margin:10px 0 0;">This interview window has ended.</p>
                         @endif
                     </div>
                 </div>
@@ -96,20 +97,20 @@
             </div>
             @endif
 
-            @if($item->mentor)
+            @if($item->assigner)
             <div class="card cs-panel cs-panel--tight">
                 <div class="cs-panel__head">Interviewer</div>
                 <div style="display:flex;align-items:center;gap:12px;margin-top:8px;">
-                    @if($item->mentor->avatar_url)
-                    <img src="{{ $item->mentor->avatar_url }}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">
+                    @if($item->assigner->avatar_url)
+                    <img src="{{ $item->assigner->avatar_url }}" alt="" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">
                     @else
                     <div style="width:44px;height:44px;border-radius:50%;background:var(--bg-3);display:flex;align-items:center;justify-content:center;font-weight:700;">
-                        {{ strtoupper(substr($item->mentor->name ?? 'M', 0, 1)) }}
+                        {{ strtoupper(substr($item->assigner->name ?? 'A', 0, 1)) }}
                     </div>
                     @endif
                     <div>
-                        <div style="font-weight:700;">{{ $item->mentor->name }}</div>
-                        <div style="font-size:12px;color:var(--text-3);">Mentor</div>
+                        <div style="font-weight:700;">{{ $item->assigner->name }}</div>
+                        <div style="font-size:12px;color:var(--text-3);">Vedrix Admin</div>
                     </div>
                 </div>
             </div>

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MockInterviewRequest;
-use App\Models\User;
 use App\Services\MockInterviewService;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
@@ -16,7 +15,7 @@ class MockInterviewController extends Controller
         $search = trim((string) $request->input('search', ''));
         $status = trim((string) $request->input('status', ''));
 
-        $items = MockInterviewRequest::with(['user', 'mentor'])
+        $items = MockInterviewRequest::with(['user', 'assigner'])
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('id', $search)
@@ -37,24 +36,16 @@ class MockInterviewController extends Controller
 
     public function show(MockInterviewRequest $mockInterview)
     {
-        $mockInterview->load(['user', 'mentor', 'reviewer', 'assigner']);
-
-        $mentors = User::query()
-            ->where('role', 'mentor')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name', 'email']);
+        $mockInterview->load(['user', 'reviewer', 'assigner']);
 
         return view('admin.mock-interviews.show', [
-            'item'    => $mockInterview,
-            'mentors' => $mentors,
+            'item' => $mockInterview,
         ]);
     }
 
     public function confirm(Request $request, MockInterviewRequest $mockInterview, MockInterviewService $services)
     {
         $data = $request->validate([
-            'mentor_id'   => 'required|exists:users,id',
             'admin_notes' => 'nullable|string|max:5000',
         ]);
 
@@ -62,7 +53,6 @@ class MockInterviewController extends Controller
             $services->confirm(
                 $mockInterview,
                 $request->user(),
-                isset($data['mentor_id']) ? (int) $data['mentor_id'] : null,
                 $data['admin_notes'] ?? null,
             );
         } catch (InvalidArgumentException $e) {

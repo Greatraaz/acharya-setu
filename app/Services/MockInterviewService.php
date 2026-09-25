@@ -493,21 +493,10 @@ class MockInterviewService
     public function confirm(
         MockInterviewRequest $request,
         User $admin,
-        ?int $mentorId = null,
         ?string $notes = null,
     ): MockInterviewRequest {
         if ($request->status !== MockInterviewRequest::STATUS_SUBMITTED) {
             throw new InvalidArgumentException('Only submitted requests can be confirmed.');
-        }
-
-        $mentorId = $mentorId ?: $request->mentor_id;
-        if (! $mentorId) {
-            throw new InvalidArgumentException('Assign a mentor before confirming so the Agora meeting can start.');
-        }
-
-        $mentor = User::query()->where('id', $mentorId)->where('role', 'mentor')->first();
-        if (! $mentor) {
-            throw new InvalidArgumentException('Selected mentor is invalid.');
         }
 
         $channel = $request->meeting_channel ?: strtoupper(Str::random(10));
@@ -515,7 +504,7 @@ class MockInterviewService
         $updates = [
             'status'           => MockInterviewRequest::STATUS_CONFIRMED,
             'confirmed_at'     => now(),
-            'mentor_id'        => $mentor->id,
+            'mentor_id'        => null,
             'assigned_by'      => $admin->id,
             'assigned_at'      => now(),
             'meeting_channel'  => $channel,
@@ -529,7 +518,7 @@ class MockInterviewService
 
         $request->update($updates);
 
-        return $request->fresh(['user', 'mentor', 'assigner']);
+        return $request->fresh(['user', 'assigner']);
     }
 
     public function complete(MockInterviewRequest $request, User $admin, ?string $feedback = null): MockInterviewRequest
@@ -549,7 +538,7 @@ class MockInterviewService
             'completed_at' => now(),
         ]);
 
-        return $request->fresh(['user', 'mentor', 'reviewer']);
+        return $request->fresh(['user', 'assigner', 'reviewer']);
     }
 
     public function cancel(MockInterviewRequest $request): MockInterviewRequest

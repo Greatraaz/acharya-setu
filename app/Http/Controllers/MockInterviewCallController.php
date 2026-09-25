@@ -16,7 +16,7 @@ class MockInterviewCallController extends Controller
     public function show(int $id)
     {
         $user = auth()->user();
-        $item = $this->owned($id, $user->id)->load(['mentor', 'user']);
+        $item = $this->accessible($id, $user)->load(['assigner', 'user']);
         $this->agora->assertMockParticipant($user, $item);
 
         if (! $item->canJoinCall()) {
@@ -25,11 +25,11 @@ class MockInterviewCallController extends Controller
                 : 'This mock interview is not available to join yet.';
 
             return redirect()
-                ->to($this->backUrl($user->role, $item->id))
+                ->to($this->backUrl($user, $item->id))
                 ->with('error', $message);
         }
 
-        $peer = (int) $item->mentor_id === (int) $user->id ? $item->user : $item->mentor;
+        $peer = $item->isHost($user) ? $item->user : $item->assigner;
 
         // Reuse the session Agora room UI with a lightweight session-shaped object.
         $session = (object) [
@@ -42,20 +42,20 @@ class MockInterviewCallController extends Controller
             'session'        => $session,
             'peer'           => $peer,
             'role'           => $user->role,
-            'isMentee'       => (int) $item->user_id === (int) $user->id,
+            'isMentee'       => $item->isMentee($user),
             'scheduledEndTs' => $item->scheduledEnd()?->getTimestamp(),
             'serverNowTs'    => now()->getTimestamp(),
             'tokenUrl'       => route('mock-interviews.video-token', $item->id),
             'endUrl'         => route('mock-interviews.call.end', $item->id),
             'notesUrl'       => route('mock-interviews.notes.show', $item->id),
-            'backUrl'        => $this->backUrl($user->role, $item->id),
+            'backUrl'        => $this->backUrl($user, $item->id),
         ]);
     }
 
     public function token(int $id)
     {
         $user = auth()->user();
-        $item = $this->owned($id, $user->id)->load(['mentor:id,name,avatar_url', 'user:id,name,avatar_url']);
+        $item = $this->accessible($id, $user)->load(['assigner:id,name,avatar_url', 'user:id,name,avatar_url']);
 
         try {
             return response()->json($this->agora->issueMockInterviewToken($user, $item));
@@ -67,7 +67,7 @@ class MockInterviewCallController extends Controller
     public function end(Request $request, int $id)
     {
         $user = auth()->user();
-        $item = $this->owned($id, $user->id);
+        $item = $this->accessible($id, $user);
 
         $this->agora->endMockInterviewCall($user, $item, $request->input('reason', 'normal'));
         $item->refresh();
@@ -83,14 +83,14 @@ class MockInterviewCallController extends Controller
     /** Notes stub so the shared call UI does not 404. */
     public function myNote(int $id)
     {
-        $this->owned($id, auth()->id());
+        $this->accessible($id, auth()->user());
 
         return response()->json(['content' => '', 'updated_at' => null]);
     }
 
     public function saveMyNote(Request $request, int $id)
     {
-        $this->owned($id, auth()->id());
+        $this->accessible($id, auth()->user());
         $request->validate(['content' => 'nullable|string|max:65535']);
 
         return response()->json([
@@ -100,20 +100,23 @@ class MockInterviewCallController extends Controller
         ]);
     }
 
-    private function owned(int $id, int $userId): MockInterviewRequest
+    private function accessible(int $id, $user): MockInterviewRequest
     {
-        return MockInterviewRequest::query()
-            ->where('id', $id)
-            ->where(function ($q) use ($userId) {
-                $q->where('user_id', $userId)->orWhere('mentor_id', $userId);
-            })
-            ->firstOrFail();
+        $item = MockInterviewRequest::query()->where('id', $id)->firstOrFail();
+
+        if (! $item->isParticipant($user)) {
+            abort(404);
+        }
+
+        return $item;
     }
 
-    private function backUrl(string $role, int $id): string
+    private function backUrl($user, int $id): string
     {
-        return $role === 'mentor'
-            ? route('mentor.mock-interviews.show', $id)
-            : route('mentee.mock-interviews.show', $id);
+        if (($user->role ?? null) === 'admin') {
+            return route('admin.mock-interviews.show', $id);
+        }
+
+        return route('mentee.mock-interviews.show', $id);
     }
 }

@@ -87,9 +87,35 @@ class MockInterviewRequest extends Model
         return $this->belongsTo(User::class, 'mentor_id');
     }
 
+    /** Admin who confirmed / hosts the interview. */
     public function assigner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by');
+    }
+
+    public function interviewer(): BelongsTo
+    {
+        return $this->assigner();
+    }
+
+    public function isMentee(User $user): bool
+    {
+        return (int) $this->user_id === (int) $user->id;
+    }
+
+    /** Any admin may host; preferred host is the confirming admin. */
+    public function isHost(User $user): bool
+    {
+        if (($user->role ?? null) === 'admin') {
+            return true;
+        }
+
+        return (int) ($this->assigned_by ?? 0) === (int) $user->id;
+    }
+
+    public function isParticipant(User $user): bool
+    {
+        return $this->isMentee($user) || $this->isHost($user);
     }
 
     public function reviewer(): BelongsTo
@@ -131,20 +157,8 @@ class MockInterviewRequest extends Model
             return false;
         }
 
-        $end = $this->scheduledEnd();
-        if (! $end) {
-            return true;
-        }
-
-        // Allow joining from 15 minutes before preferred time until the window ends.
-        $start = $this->scheduledStart()?->copy()->subMinutes(15);
-        $now = now('Asia/Kolkata');
-
-        if ($start && $now->lt($start)) {
-            return false;
-        }
-
-        return $now->lt($end->copy()->timezone('Asia/Kolkata'));
+        // Join anytime after confirmation until the scheduled window ends.
+        return ! $this->callWindowEnded();
     }
 
     public function callWindowEnded(): bool
@@ -160,13 +174,14 @@ class MockInterviewRequest extends Model
     public function canJoinCall(): bool
     {
         return $this->status === self::STATUS_CONFIRMED
-            && (int) ($this->mentor_id ?? 0) > 0
             && filled($this->meeting_channel)
             && $this->isWithinCallWindow();
     }
 
     public function toPublicArray(): array
     {
+        $interviewer = $this->assigner;
+
         return [
             'id'                => $this->id,
             'status'            => $this->status,
@@ -177,10 +192,11 @@ class MockInterviewRequest extends Model
             'timezone'          => $this->timezone ?: 'Asia/Kolkata',
             'target_role'       => $this->target_role,
             'mentee_notes'      => $this->mentee_notes,
-            'mentor'            => $this->mentor ? [
-                'id'         => $this->mentor->id,
-                'name'       => $this->mentor->name,
-                'avatar_url' => $this->mentor->avatar_url,
+            'interviewer'       => $interviewer ? [
+                'id'         => $interviewer->id,
+                'name'       => $interviewer->name,
+                'avatar_url' => $interviewer->avatar_url,
+                'role'       => 'admin',
             ] : null,
             'is_paid_addon'     => (bool) $this->is_paid_addon,
             'amount'            => (float) $this->amount,

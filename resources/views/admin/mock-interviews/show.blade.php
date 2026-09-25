@@ -107,13 +107,13 @@
                     @endif
                 </div>
 
-                @if($item->mentor)
+                @if($item->status === 'confirmed' && $item->confirmed_at)
                 <div class="rounded-xl border border-gray-200 bg-slate-50 px-4 py-3.5">
-                    <div class="text-sm font-semibold text-gray-900">Assigned mentor</div>
-                    <div class="text-sm text-gray-700 mt-1">{{ $item->mentor->name }} · {{ $item->mentor->email }}</div>
-                    @if($item->confirmed_at)
-                    <div class="text-xs text-gray-500 mt-2">Confirmed {{ $item->confirmed_at->format('d M Y, h:i A') }}</div>
-                    @endif
+                    <div class="text-sm font-semibold text-gray-900">Confirmed</div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        {{ $item->confirmed_at->format('d M Y, h:i A') }}
+                        @if($item->assigner) · by {{ $item->assigner->name }} @endif
+                    </div>
                 </div>
                 @endif
 
@@ -134,31 +134,41 @@
             @if($item->status === 'submitted')
             <div class="bg-white border border-gray-200 rounded-2xl p-5">
                 <h3 class="text-sm font-semibold text-gray-900 mb-1">Confirm booking</h3>
-                <p class="text-sm text-gray-500 mb-4 leading-relaxed">Assign a mentor and confirm the slot. Optional notes are visible to the mentee.</p>
+                <p class="text-sm text-gray-500 mb-4 leading-relaxed">Confirm the slot. You will conduct this mock interview with the mentee on Agora. Optional notes are visible to the mentee.</p>
                 <form method="POST" action="{{ route('admin.mock-interviews.confirm', $item) }}" class="space-y-4">
                     @csrf
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentor <span class="text-red-500">*</span></label>
-                        <select name="mentor_id" required class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
-                            <option value="">— Select mentor —</option>
-                            @foreach($mentors as $mentor)
-                            <option value="{{ $mentor->id }}" @selected((int) old('mentor_id', $item->mentor_id) === (int) $mentor->id)>{{ $mentor->name }} ({{ $mentor->email }})</option>
-                            @endforeach
-                        </select>
-                        <p class="text-xs text-gray-400 mt-1">Required — creates an Agora channel so mentee and mentor can join the call.</p>
-                        @error('mentor_id') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
-                    </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Notes for mentee (optional)</label>
                         <textarea name="admin_notes" rows="3"
                                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                  placeholder="Session link, prep tips…">{{ old('admin_notes', $item->admin_notes) }}</textarea>
+                                  placeholder="Prep tips, what to expect…">{{ old('admin_notes', $item->admin_notes) }}</textarea>
                     </div>
                     <button type="submit"
                             class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition">
                         Confirm mock interview
                     </button>
                 </form>
+            </div>
+            @endif
+
+            @if($item->status === 'confirmed')
+            <div class="bg-white border border-blue-100 rounded-2xl p-5">
+                <h3 class="text-sm font-semibold text-gray-900 mb-1">Live interview</h3>
+                <p class="text-sm text-gray-500 mb-4 leading-relaxed">
+                    Preferred slot: {{ $item->preferred_at?->timezone($tz)->format('d M Y, h:i A') }} · {{ $item->duration_minutes }} min.
+                    You can join anytime until the slot ends.
+                </p>
+                @if($item->canJoinCall())
+                <a href="{{ route('mock-interviews.call', $item->id) }}"
+                   class="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-3 rounded-xl transition">
+                    Join interview
+                </a>
+                @else
+                <p class="text-xs text-gray-500">This interview window has ended.</p>
+                @endif
+                @if($item->meeting_channel)
+                <p class="text-xs text-gray-400 mt-3">Channel: {{ $item->meeting_channel }}</p>
+                @endif
             </div>
             @endif
 
@@ -229,7 +239,7 @@
             @endif
 
             <div class="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs text-slate-500 leading-relaxed">
-                Tip: confirm the slot and assign a mentor before the preferred time. After the session, add detailed feedback so the mentee can improve.
+                Tip: confirm the slot before the preferred time, join the Agora call as admin, then add detailed feedback so the mentee can improve.
             </div>
         </div>
     </div>
