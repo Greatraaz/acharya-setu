@@ -1,0 +1,246 @@
+{
+    "info": {
+        "name": "Mentee Mock Interviews",
+        "description": "Mock interview booking APIs.\nSet baseUrl (…/api/v1), menteeToken, mockInterviewRequestId.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{menteeToken}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "Options / quote",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Accept",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{menteeToken}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/mentee/mock-interviews/options?duration=60",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "mentee",
+                        "mock-interviews",
+                        "options"
+                    ]
+                },
+                "description": "Pass duration=30|45|60|90"
+            },
+            "response": []
+        },
+        {
+            "name": "List my mock interviews",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Accept",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{menteeToken}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/mentee/mock-interviews",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "mentee",
+                        "mock-interviews"
+                    ]
+                },
+                "description": ""
+            },
+            "response": []
+        },
+        {
+            "name": "Submit mock interview (free or paid)",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Accept",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{menteeToken}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/mentee/mock-interviews",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "mentee",
+                        "mock-interviews"
+                    ]
+                },
+                "description": "Omit payment_method when free. For paid without method, API returns payment_choice and request=null — resubmit with method.",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"duration_minutes\": 60,\n    \"preferred_at\": \"2026-10-01 15:00:00\",\n    \"timezone\": \"Asia/Kolkata\",\n    \"target_role\": \"Software Engineer\",\n    \"mentee_notes\": \"Focus on system design.\",\n    \"payment_method\": \"wallet\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Show mock interview",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Accept",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{menteeToken}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewRequestId}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "mentee",
+                        "mock-interviews",
+                        "{{mockInterviewRequestId}}"
+                    ]
+                },
+                "description": ""
+            },
+            "response": []
+        },
+        {
+            "name": "Pay mock interview",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Accept",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{menteeToken}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewRequestId}}/pay",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "mentee",
+                        "mock-interviews",
+                        "{{mockInterviewRequestId}}",
+                        "pay"
+                    ]
+                },
+                "description": "",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"payment_method\": \"razorpay\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Verify Razorpay payment",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Accept",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{menteeToken}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewRequestId}}/verify",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "mentee",
+                        "mock-interviews",
+                        "{{mockInterviewRequestId}}",
+                        "verify"
+                    ]
+                },
+                "description": "",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"razorpay_order_id\": \"order_xxx\",\n    \"razorpay_payment_id\": \"pay_xxx\",\n    \"razorpay_signature\": \"sig_xxx\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+            "response": []
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost/acharyasetu/api/v1"
+        },
+        {
+            "key": "menteeToken",
+            "value": ""
+        },
+        {
+            "key": "mockInterviewRequestId",
+            "value": "1"
+        }
+    ]
+}

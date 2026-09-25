@@ -168,66 +168,66 @@ class PlanBenefitConsumptionService
     }
 
     /**
-     * Mock interview cadence from plan catalog (usage tracking not live yet).
+     * Mock interview entitlement + consumption from MockInterviewService.
      *
      * @return array<string, mixed>
      */
     private function mockInterviewItem(User $user, string $billing): array
     {
-        $subscription = $user->activeSubscription();
-        $slug = $subscription?->plan?->slug;
+        $quote = app(MockInterviewService::class)->quote($user, 60);
+        $ent = $quote['entitlement'] ?? [];
 
-        // Matches starter catalog marketing rules.
-        $cadenceMonths = match ($slug) {
-            'premium' => 1,
-            'growth'  => 3,
-            default   => null,
+        $included = (bool) ($ent['included'] ?? false);
+        $used = (int) ($ent['used'] ?? 0);
+        $remaining = (int) ($ent['remaining'] ?? 0);
+        $months = $ent['months'] ?? null;
+        $nextFreeAt = isset($ent['next_free_at']) && $ent['next_free_at']
+            ? Carbon::parse($ent['next_free_at'])->timezone('Asia/Kolkata')
+            : null;
+        $paymentRequired = ! (bool) ($quote['is_free'] ?? false);
+
+        $status = $this->status(
+            included: $included,
+            remaining: $remaining,
+            nextFreeAt: $nextFreeAt,
+            billing: $billing,
+            unlimited: false,
+        );
+
+        $label = 'Mock interview';
+        $message = $ent['label'] ?? match ($status) {
+            'addon' => 'Mock interview is a paid add-on on your current plan.',
+            'available' => "You have {$remaining} free mock interview left.",
+            'next_free' => "You've used your free mock interview. Next free on "
+                .($nextFreeAt?->format('d M Y') ?? '—').'. Extra bookings require payment.',
+            'used' => "You've used your free mock interview for this window. Extra bookings require payment.",
+            default => $label,
         };
 
-        $included = $cadenceMonths !== null;
-        $label = 'Mock interview';
-
-        if (! $included) {
-            return [
-                'key'              => 'mock_interview',
-                'label'            => $label,
-                'included'         => false,
-                'tracking_enabled' => false,
-                'unit'             => 'sessions',
-                'included_limit'   => 0,
-                'used'             => 0,
-                'remaining'        => 0,
-                'unlimited'        => false,
-                'payment_required' => true,
-                'status'           => 'addon',
-                'next_free_at'     => null,
-                'cadence_months'   => null,
-                'period'           => null,
-                'message'          => 'Mock interview is a paid add-on on your current plan.',
-            ];
-        }
-
         return [
-            'key'              => 'mock_interview',
-            'label'            => $label,
-            'included'         => true,
-            'tracking_enabled' => false,
-            'unit'             => 'sessions',
-            'included_limit'   => 1,
-            'used'             => null,
-            'remaining'        => null,
-            'unlimited'        => false,
-            'payment_required' => false,
-            'status'           => 'available',
-            'next_free_at'     => null,
-            'cadence_months'   => $cadenceMonths,
-            'period'           => [
-                'label'  => $cadenceMonths === 1 ? 'per_month' : 'per_quarter',
-                'months' => $cadenceMonths,
+            'key'               => 'mock_interview',
+            'label'             => $label,
+            'included'          => $included,
+            'tracking_enabled'  => true,
+            'unit'              => 'sessions',
+            'included_limit'    => $included ? 1 : 0,
+            'used'              => $used,
+            'remaining'         => $remaining,
+            'unlimited'         => false,
+            'payment_required'  => $paymentRequired,
+            'status'            => $status,
+            'next_free_at'      => $remaining > 0 ? null : $nextFreeAt?->toDateTimeString(),
+            'cadence_months'    => $months,
+            'rate_per_minute'   => (float) ($quote['rate_per_minute'] ?? 0),
+            'amount_sample_60'  => (float) ($quote['amount'] ?? 0),
+            'is_free'           => (bool) ($quote['is_free'] ?? false),
+            'period'            => [
+                'label'     => $months === 1 ? 'per_month' : ($months === 3 ? 'per_quarter' : 'rolling_window'),
+                'months'    => $months,
+                'starts_at' => $ent['window_starts_at'] ?? null,
+                'ends_at'   => $nextFreeAt?->toDateTimeString(),
             ],
-            'message'          => $cadenceMonths === 1
-                ? 'Plan includes 1 free mock interview per month. Usage tracking will appear here once booked.'
-                : 'Plan includes 1 free mock interview per quarter. Usage tracking will appear here once booked.',
+            'message'           => $message,
         ];
     }
 

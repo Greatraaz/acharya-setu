@@ -14,6 +14,9 @@
         <span class="si-icon">📅</span> My Sessions
         @if($pendingCount > 0)<span class="si-badge">{{ $pendingCount }}</span>@endif
     </a>
+    <a href="{{ route('mentor.mock-interviews.index') }}" class="sidebar-item @if(request()->routeIs('mentor.mock-interviews*')) active @endif">
+        <span class="si-icon">🎤</span> Mock Interviews
+    </a>
     <a href="{{ route('mentor.availability') }}" class="sidebar-item @if(request()->routeIs('mentor.availability*')) active @endif">
         <span class="si-icon">⏰</span> Set Availability
     </a>

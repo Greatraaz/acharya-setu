@@ -127,6 +127,13 @@ Single bootstrap endpoint for the mentee app. Call after login (or on app launch
       "resume": { "is_free": false, "amount": 499, "entitlement": { "…" }, "payment": { "…" } },
       "linkedin": { "…" }
     },
+    "mock_interviews": {
+      "rate_per_minute": 15,
+      "duration_minutes": 60,
+      "amount": 900,
+      "is_free": true,
+      "entitlement": { "included": true, "remaining": 1, "months": 3 }
+    },
     "mentor": { "id": 12, "name": "…", "email": "…", "avatar_url": "…" },
     "app": {
       "name": "Vedrix",
@@ -135,7 +142,11 @@ Single bootstrap endpoint for the mentee app. Call after login (or on app launch
       "timezone": "Asia/Kolkata",
       "maintenance_mode": false,
       "razorpay": { "enabled": true, "mode": "test", "key": "rzp_test_…" },
-      "career_addons": { "resume_price": 499, "linkedin_price": 499 }
+      "career_addons": {
+        "resume_price": 499,
+        "linkedin_price": 499,
+        "mock_interview_per_minute": 15
+      }
     },
     "flags": {
       "onboarding_required": false,

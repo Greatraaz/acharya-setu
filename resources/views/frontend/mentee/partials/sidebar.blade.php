@@ -54,6 +54,9 @@
     <a href="{{ route('mentee.career-services.index') }}" class="sidebar-item @if(request()->routeIs('mentee.career-services*')) active @endif">
         <span class="si-icon">📄</span> Career Services
     </a>
+    <a href="{{ route('mentee.mock-interviews.index') }}" class="sidebar-item @if(request()->routeIs('mentee.mock-interviews*')) active @endif">
+        <span class="si-icon">🎤</span> Mock Interviews
+    </a>
     <a href="{{ route('mentee.wallet') }}" class="sidebar-item @if(request()->routeIs('mentee.wallet*')) active @endif">
         <span class="si-icon">💰</span> Wallet
         <span style="margin-left:auto;font-size:11px;color:var(--brand);">₹{{ number_format(auth()->user()->wallet_balance ?? 0, 0) }}</span>

@@ -87,6 +87,8 @@ class ConfigController extends Controller
                     'linkedin' => $careerServices->quote($user, 'linkedin'),
                 ],
 
+                'mock_interviews' => app(\App\Services\MockInterviewService::class)->quote($user, 60),
+
                 'mentor' => $user->assignedMentor ? [
                     'id'         => $user->assignedMentor->id,
                     'name'       => $user->assignedMentor->name,

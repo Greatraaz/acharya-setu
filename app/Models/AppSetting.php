@@ -229,13 +229,14 @@ class AppSetting extends Model
         ];
     }
 
-    /** Career service paid add-on prices (resume / LinkedIn). */
+    /** Career + mock interview paid add-on prices. */
     public static function careerAddons(): array
     {
         return [
-            'resume_price'   => round((float) static::get('addon_resume_price', 499), 2),
-            'linkedin_price' => round((float) static::get('addon_linkedin_price', 499), 2),
-            'currency'       => 'INR',
+            'resume_price'              => round((float) static::get('addon_resume_price', 499), 2),
+            'linkedin_price'            => round((float) static::get('addon_linkedin_price', 499), 2),
+            'mock_interview_per_minute' => round((float) static::get('addon_mock_interview_rate_per_minute', 15), 2),
+            'currency'                  => 'INR',
         ];
     }
 

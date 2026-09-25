@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\ReferralsController;
 use App\Http\Controllers\Api\AssignmentsController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\CareerServiceController as ApiCareerServiceController;
+use App\Http\Controllers\Api\MockInterviewController as ApiMockInterviewController;
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Admin\SubscriptionInvoiceController as AdminSubscriptionInvoice;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
@@ -306,6 +307,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('/{id}/verify', [ApiCareerServiceController::class, 'verify'])->whereNumber('id');
         });
 
+        Route::prefix('mock-interviews')->group(function () {
+            Route::get('/options', [ApiMockInterviewController::class, 'options']);
+            Route::get('/', [ApiMockInterviewController::class, 'index']);
+            Route::post('/', [ApiMockInterviewController::class, 'store']);
+            Route::get('/{id}', [ApiMockInterviewController::class, 'show'])->whereNumber('id');
+            Route::get('/{id}/agora-token', [ApiMockInterviewController::class, 'agoraToken'])->whereNumber('id');
+            Route::post('/{id}/pay', [ApiMockInterviewController::class, 'pay'])->whereNumber('id');
+            Route::post('/{id}/verify', [ApiMockInterviewController::class, 'verify'])->whereNumber('id');
+        });
+
         // Plan invoices
         Route::get('invoices', [MenteeInvoice::class, 'index']);
         Route::get('invoices/{invoice}', [MenteeInvoice::class, 'show'])->whereNumber('invoice');
@@ -430,6 +441,13 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}/notes/{noteId}', [SessionsController::class, 'destroyNote'])->name('notes.destroy')->whereNumber('id')->whereNumber('noteId');
             Route::patch('/{id}',      [SessionsController::class, 'update'])->name('update');
             Route::delete('/{id}',     [SessionsController::class, 'destroy'])->name('destroy');
+        });
+
+        // Mock interviews assigned to this mentor
+        Route::prefix('mock-interviews')->group(function () {
+            Route::get('/', [ApiMockInterviewController::class, 'index']);
+            Route::get('/{id}', [ApiMockInterviewController::class, 'show'])->whereNumber('id');
+            Route::get('/{id}/agora-token', [ApiMockInterviewController::class, 'agoraToken'])->whereNumber('id');
         });
 
         // Assessments (mentor CRUD)

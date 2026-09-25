@@ -23,6 +23,7 @@
                 ['admin.wallet.index',       '💰', 'Wallet'],
                 ['admin.offers.index',       '🎁', 'Offers'],
                 ['admin.career-services.index', '📄', 'Career Services'],
+                ['admin.mock-interviews.index', '🎤', 'Mock Interviews'],
                 ['admin.mentor-videos.index', '🎬', 'Mentor Videos'],
                 ['admin.withdrawals.index',  '🏦', 'Withdrawals'],
                 ['admin.call-logs.index',  '📞', 'Call Records'],

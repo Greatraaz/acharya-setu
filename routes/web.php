@@ -19,6 +19,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\SessionCallController;
+use App\Http\Controllers\MockInterviewCallController;
 
 use App\Http\Controllers\Mentor\OnboardingController   as MentorOnboardingController;
 use App\Http\Controllers\Mentor\DashboardController    as MentorDashboardController;
@@ -47,6 +48,8 @@ use App\Http\Controllers\Mentee\CommunityController as MenteeCommunityController
 use App\Http\Controllers\Mentee\JobController as MenteeJobController;
 use App\Http\Controllers\Mentee\MentorRequestController as MenteeMentorRequestController;
 use App\Http\Controllers\Mentee\CareerServiceController as MenteeCareerServiceController;
+use App\Http\Controllers\Mentee\MockInterviewController as MenteeMockInterviewController;
+use App\Http\Controllers\Mentor\MockInterviewController as MentorMockInterviewController;
 use App\Http\Controllers\Mentee\CareerServiceInvoiceController as MenteeCareerServiceInvoiceController;
 use App\Http\Controllers\Mentee\MentorVideoController as MenteeMentorVideoController;
 use App\Http\Controllers\Mentor\MentorRequestController as MentorMentorRequestController;
@@ -82,6 +85,7 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\OfferController;
 use App\Http\Controllers\Admin\CareerServiceController as AdminCareerServiceController;
+use App\Http\Controllers\Admin\MockInterviewController as AdminMockInterviewController;
 use App\Http\Controllers\Admin\CareerServiceInvoiceController as AdminCareerServiceInvoiceController;
 use App\Http\Controllers\Admin\MentorVideoController as AdminMentorVideoController;
 use App\Http\Controllers\Admin\WhitePaperController;
@@ -293,6 +297,10 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::match(['patch', 'post'], '/sessions/{id}/meeting-link', [MentorSessionController::class, 'updateMeetingLink'])
         ->name('sessions.meeting-link');
 
+    // Mock interviews assigned by admin
+    Route::get('/mock-interviews', [MentorMockInterviewController::class, 'index'])->name('mock-interviews.index');
+    Route::get('/mock-interviews/{mockInterview}', [MentorMockInterviewController::class, 'show'])->name('mock-interviews.show')->whereNumber('mockInterview');
+
     // Availability
     Route::get( '/availability',       [MentorAvailabilityController::class, 'show'])  ->name('availability');
     Route::post('/availability',       [MentorAvailabilityController::class, 'update'])->name('availability.update');
@@ -444,6 +452,13 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::post('/career-services/{careerService}/pay', [MenteeCareerServiceController::class, 'pay'])->name('career-services.pay');
     Route::get( '/career-service-invoices/{invoice}/download', [MenteeCareerServiceInvoiceController::class, 'download'])->name('career-service-invoices.download');
 
+    Route::get( '/mock-interviews', [MenteeMockInterviewController::class, 'index'])->name('mock-interviews.index');
+    Route::get( '/mock-interviews/create', [MenteeMockInterviewController::class, 'create'])->name('mock-interviews.create');
+    Route::post('/mock-interviews', [MenteeMockInterviewController::class, 'store'])->name('mock-interviews.store');
+    Route::get( '/mock-interviews/{mockInterview}', [MenteeMockInterviewController::class, 'show'])->name('mock-interviews.show')->whereNumber('mockInterview');
+    Route::post('/mock-interviews/{mockInterview}/pay', [MenteeMockInterviewController::class, 'pay'])->name('mock-interviews.pay')->whereNumber('mockInterview');
+    Route::post('/mock-interviews/{mockInterview}/verify', [MenteeMockInterviewController::class, 'verify'])->name('mock-interviews.verify')->whereNumber('mockInterview');
+
     // Mentor-shared videos (not curriculum)
     Route::get( '/mentor-videos',                    [MenteeMentorVideoController::class, 'index'])->name('mentor-videos.index');
     Route::get( '/mentor-videos/{video}',            [MenteeMentorVideoController::class, 'show'])->name('mentor-videos.show')->whereNumber('video');
@@ -523,6 +538,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{id}/call/end', [SessionCallController::class, 'end'])->name('sessions.call.end')->whereNumber('id');
     Route::get('/sessions/{id}/my-note', [SessionCallController::class, 'myNote'])->name('sessions.my-note.show')->whereNumber('id');
     Route::put('/sessions/{id}/my-note', [SessionCallController::class, 'saveMyNote'])->name('sessions.my-note.save')->whereNumber('id');
+
+    // Mock interview Agora call — mentee + assigned mentor
+    Route::get('/mock-interviews/{id}/call', [MockInterviewCallController::class, 'show'])->name('mock-interviews.call')->whereNumber('id');
+    Route::get('/mock-interviews/{id}/video-token', [MockInterviewCallController::class, 'token'])->name('mock-interviews.video-token')->whereNumber('id');
+    Route::post('/mock-interviews/{id}/call/end', [MockInterviewCallController::class, 'end'])->name('mock-interviews.call.end')->whereNumber('id');
+    Route::get('/mock-interviews/{id}/notes', [MockInterviewCallController::class, 'myNote'])->name('mock-interviews.notes.show')->whereNumber('id');
+    Route::put('/mock-interviews/{id}/notes', [MockInterviewCallController::class, 'saveMyNote'])->name('mock-interviews.notes.save')->whereNumber('id');
 });
 
 /*
@@ -623,6 +645,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('/career-services/{careerService}/complete', [AdminCareerServiceController::class, 'complete'])->name('career-services.complete');
     Route::get('career-service-invoices/{invoice}/download', [AdminCareerServiceInvoiceController::class, 'download'])->name('career-service-invoices.download');
     Route::post('career-services/{careerService}/invoice', [AdminCareerServiceInvoiceController::class, 'generate'])->name('career-service-invoices.generate');
+
+    Route::get('/mock-interviews', [AdminMockInterviewController::class, 'index'])->name('mock-interviews.index');
+    Route::get('/mock-interviews/{mockInterview}', [AdminMockInterviewController::class, 'show'])->name('mock-interviews.show')->whereNumber('mockInterview');
+    Route::post('/mock-interviews/{mockInterview}/confirm', [AdminMockInterviewController::class, 'confirm'])->name('mock-interviews.confirm')->whereNumber('mockInterview');
+    Route::post('/mock-interviews/{mockInterview}/complete', [AdminMockInterviewController::class, 'complete'])->name('mock-interviews.complete')->whereNumber('mockInterview');
+    Route::post('/mock-interviews/{mockInterview}/cancel', [AdminMockInterviewController::class, 'cancel'])->name('mock-interviews.cancel')->whereNumber('mockInterview');
 
     Route::get('mentor-videos', [AdminMentorVideoController::class, 'index'])->name('mentor-videos.index');
     Route::get('mentor-videos/create', [AdminMentorVideoController::class, 'create'])->name('mentor-videos.create');

@@ -595,14 +595,14 @@
                 <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-800">Career Add-on Prices</h2>
-                        <p class="text-sm text-gray-500">Prices charged when Essential mentees (or Growth/Premium after using their free entitlement) request resume or LinkedIn review.</p>
+                        <p class="text-sm text-gray-500">Prices for resume, LinkedIn, and paid mock interviews when not covered by the plan entitlement.</p>
                     </div>
                     <button type="submit" class="save-btn">Save Changes</button>
                 </div>
 
                 <div class="section-card">
                     <h3>Paid add-on fees (INR)</h3>
-                    <p class="section-desc">Growth includes 1 resume + 1 LinkedIn every 6 months. Premium every 3 months. Extra requests use these prices.</p>
+                    <p class="section-desc">Growth includes 1 resume + 1 LinkedIn every 6 months. Premium every 3 months. Mock interviews: Growth 1/quarter, Premium 1/month (up to 60 min). Extra requests use these prices.</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Resume development price</label>
@@ -615,6 +615,13 @@
                             <input type="number" name="addon_linkedin_price" min="1" step="1"
                                    value="{{ old('addon_linkedin_price', config_val('addon_linkedin_price', 499)) }}"
                                    class="form-input" required>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Mock interview rate (per minute)</label>
+                            <input type="number" name="addon_mock_interview_rate_per_minute" min="1" step="1"
+                                   value="{{ old('addon_mock_interview_rate_per_minute', config_val('addon_mock_interview_rate_per_minute', 15)) }}"
+                                   class="form-input" required>
+                            <p class="text-xs text-gray-400 mt-1">Charged as rate × duration (30 / 45 / 60 / 90 min). Example: ₹15/min × 60 = ₹900.</p>
                         </div>
                     </div>
                 </div>
