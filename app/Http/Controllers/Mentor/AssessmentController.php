@@ -27,7 +27,7 @@ class AssessmentController extends Controller
             ]);
         }
 
-        $assessments = $this->assessments->listWithStatsPaginated(20, $request);
+        $assessments = $this->assessments->listWithStatsPaginated(20, $request, auth()->user());
         $menteeCount = \App\Models\ConsultationSession::where('mentor_id', auth()->id())
             ->distinct()
             ->count('mentee_id');
@@ -61,6 +61,7 @@ class AssessmentController extends Controller
 
     public function show(Assessment $assessment)
     {
+        $this->assessments->assertMentorOwns($assessment, auth()->user());
         $assessment->load(['scoreBands', 'questions']);
         $questions = $assessment->questions;
         $completions = Schema::hasTable('assessment_progress')
@@ -77,6 +78,7 @@ class AssessmentController extends Controller
 
     public function edit(Assessment $assessment)
     {
+        $this->assessments->assertMentorOwns($assessment, auth()->user());
         $assessment->load(['scoreBands', 'assignedMentees:id,name,email']);
         $bands = $this->bandsForForm($assessment);
         $assigneeMentees = $this->assessments->assigneeOptionsForActor(auth()->user());
@@ -86,6 +88,7 @@ class AssessmentController extends Controller
 
     public function update(Request $request, Assessment $assessment)
     {
+        $this->assessments->assertMentorOwns($assessment, auth()->user());
         $this->assessments->validatedAssessment($request, $assessment->id, auth()->user());
         $payload = $this->storeMedia($request, $assessment);
         $request->merge($payload);
@@ -98,6 +101,7 @@ class AssessmentController extends Controller
 
     public function destroy(Assessment $assessment)
     {
+        $this->assessments->assertMentorOwns($assessment, auth()->user());
         PublicFileStorage::deleteByUrl($assessment->image);
         PublicFileStorage::deleteByUrl($assessment->icon);
         $this->assessments->delete($assessment);

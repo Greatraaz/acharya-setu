@@ -99,6 +99,21 @@ class Assessment extends Model
         return $this->assignedMentees()->where('users.id', $mentee->id)->exists();
     }
 
+    public function isOwnedByMentor(User $mentor): bool
+    {
+        return $mentor->isMentor() && (int) $this->created_by === (int) $mentor->id;
+    }
+
+    /**
+     * Mentors only manage assessments they created.
+     */
+    public function scopeOwnedByMentor(Builder $query, User|int $mentor): Builder
+    {
+        $mentorId = $mentor instanceof User ? (int) $mentor->id : (int) $mentor;
+
+        return $query->where('created_by', $mentorId);
+    }
+
     /**
      * Assessments assigned to this mentee (all-audience or explicit assignment).
      */

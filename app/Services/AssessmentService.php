@@ -20,13 +20,13 @@ class AssessmentService
         return Schema::hasTable('assessments');
     }
 
-    public function listWithStats(): Collection
+    public function listWithStats(?User $actor = null): Collection
     {
         if (! $this->tableExists()) {
             return collect();
         }
 
-        return $this->statsQuery()
+        return $this->statsQuery($actor)
             ->get()
             ->map(function (Assessment $assessment) {
                 $assessment->question_count = (int) $assessment->questions_count;
@@ -35,13 +35,13 @@ class AssessmentService
             });
     }
 
-    public function listWithStatsPaginated(int $perPage = 20, ?Request $request = null)
+    public function listWithStatsPaginated(int $perPage = 20, ?Request $request = null, ?User $actor = null)
     {
         if (! $this->tableExists()) {
             return Assessment::query()->whereRaw('1 = 0')->paginate($perPage);
         }
 
-        return $this->applyListFilters($this->statsQuery(), $request)
+        return $this->applyListFilters($this->statsQuery($actor), $request)
             ->paginate($perPage)
             ->withQueryString()
             ->through(function (Assessment $assessment) {
@@ -51,15 +51,38 @@ class AssessmentService
             });
     }
 
-    private function statsQuery()
+    private function statsQuery(?User $actor = null)
     {
-        return Assessment::query()
+        $query = Assessment::query()
             ->withCount(['questions'])
             ->withCount([
                 'progress as completion_count' => fn ($q) =>
                     $q->whereNotNull('completed_at'),
             ])
             ->latest();
+
+        if ($actor && $actor->isMentor()) {
+            $query->ownedByMentor($actor);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Mentors may only view/edit assessments they created.
+     */
+    public function findForMentorOrFail(int $id, User $mentor): Assessment
+    {
+        return Assessment::query()
+            ->ownedByMentor($mentor)
+            ->findOrFail($id);
+    }
+
+    public function assertMentorOwns(Assessment $assessment, User $mentor): void
+    {
+        if (! $assessment->isOwnedByMentor($mentor)) {
+            abort(404);
+        }
     }
 
     private function applyListFilters($query, ?Request $request)

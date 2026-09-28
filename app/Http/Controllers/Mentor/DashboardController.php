@@ -154,6 +154,7 @@ class DashboardController extends Controller
 
         if ($assessmentService->tableExists()) {
             $assessments = Assessment::query()
+                ->ownedByMentor($mentor)
                 ->withCount('questions')
                 ->withCount([
                     'progress as completion_count' => fn ($q) => $q->whereNotNull('completed_at'),

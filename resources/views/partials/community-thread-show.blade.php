@@ -63,41 +63,94 @@
 
         {{-- Header --}}
         <div class="community-thread__header">
-            <div class="community-thread__header-info">
-                @include('partials.community-channel-thumb', ['channel' => $channel, 'size' => 'md'])
-                <div>
-                    <div class="community-thread__header-title"># {{ $channel->name }}</div>
-                    @if($channel->description)
-                    <div class="community-thread__header-desc">{{ $channel->description }}</div>
+            <div class="community-thread__header-top">
+                <div class="community-thread__header-info">
+                    @include('partials.community-channel-thumb', ['channel' => $channel, 'size' => 'md'])
+                    <div class="community-thread__header-text">
+                        <div class="community-thread__header-title"># {{ $channel->name }}</div>
+                        @if($channel->description)
+                        <div class="community-thread__header-desc community-thread__header-desc--desktop">{{ $channel->description }}</div>
+                        @endif
+                    </div>
+                </div>
+                <div class="community-thread__header-actions community-thread__header-actions--desktop">
+                    <button type="button"
+                            class="community-btn community-btn--ghost community-btn--sm community-thread__members-toggle"
+                            id="community-members-toggle"
+                            aria-expanded="false"
+                            aria-controls="community-members-panel">
+                        Members · {{ ($members ?? collect())->count() }}
+                    </button>
+
+                    @if(!$channel->isMember(Auth::user()))
+                        @if($channel->isRemoved(Auth::user()))
+                        <span class="community-thread__header-note community-thread__header-note--warning">
+                            Removed — wait for a mentor invite to rejoin
+                        </span>
+                        @elseif($channel->type === 'public')
+                        <form method="POST" action="{{ route($r.'.join', $channel->slug) }}">
+                            @csrf
+                            <button type="submit" class="community-btn community-btn--primary community-btn--sm">Join channel</button>
+                        </form>
+                        @else
+                        <span class="community-thread__header-note">Private — invite only</span>
+                        @endif
+                    @elseif((int) $channel->created_by !== (int) Auth::id())
+                    <form method="POST" action="{{ route($r.'.leave', $channel->slug) }}">
+                        @csrf
+                        <button type="submit" class="community-btn community-btn--ghost community-btn--sm">Leave</button>
+                    </form>
+                    @endif
+
+                    @if((int) $channel->created_by === (int) Auth::id() || Auth::user()->isAdmin())
+                    <form method="POST" action="{{ route($r.'.destroy', $channel->slug) }}"
+                          onsubmit="return confirm('Permanently delete #{{ $channel->name }} and all messages? This cannot be undone.')">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="community-btn community-btn--danger community-btn--sm">Delete channel</button>
+                    </form>
                     @endif
                 </div>
             </div>
-            <div class="community-thread__header-actions">
+
+            @if($channel->description)
+            <p class="community-thread__header-desc community-thread__header-desc--mobile">{{ $channel->description }}</p>
+            @endif
+
+            <div class="community-thread__header-actions community-thread__header-actions--mobile">
+                <button type="button"
+                        class="community-btn community-btn--ghost community-btn--sm community-thread__members-toggle"
+                        id="community-members-toggle-mobile"
+                        aria-expanded="false"
+                        aria-controls="community-members-panel">
+                    Members · {{ ($members ?? collect())->count() }}
+                </button>
+
                 @if(!$channel->isMember(Auth::user()))
                     @if($channel->isRemoved(Auth::user()))
-                    <span class="text-xs" style="color:var(--warning,#d97706);background:var(--warning-muted,rgba(245,158,11,.12));padding:8px 12px;border-radius:8px;">
-                        Removed — wait for a mentor invite to rejoin
+                    <span class="community-thread__header-note community-thread__header-note--warning">
+                        Removed — wait for invite
                     </span>
                     @elseif($channel->type === 'public')
-                    <form method="POST" action="{{ route($r.'.join', $channel->slug) }}">
+                    <form method="POST" action="{{ route($r.'.join', $channel->slug) }}" class="community-thread__header-action-form">
                         @csrf
                         <button type="submit" class="community-btn community-btn--primary community-btn--sm">Join channel</button>
                     </form>
                     @else
-                    <span class="text-xs" style="color:var(--ct-text-faint);">Private — invite only</span>
+                    <span class="community-thread__header-note">Private — invite only</span>
                     @endif
                 @elseif((int) $channel->created_by !== (int) Auth::id())
-                <form method="POST" action="{{ route($r.'.leave', $channel->slug) }}">
+                <form method="POST" action="{{ route($r.'.leave', $channel->slug) }}" class="community-thread__header-action-form">
                     @csrf
-                    <button type="submit" class="community-btn community-btn--ghost community-btn--sm">Leave</button>
+                    <button type="submit" class="community-btn community-btn--ghost community-btn--sm community-thread__leave-btn">Leave</button>
                 </form>
                 @endif
 
                 @if((int) $channel->created_by === (int) Auth::id() || Auth::user()->isAdmin())
                 <form method="POST" action="{{ route($r.'.destroy', $channel->slug) }}"
+                      class="community-thread__header-action-form"
                       onsubmit="return confirm('Permanently delete #{{ $channel->name }} and all messages? This cannot be undone.')">
                     @csrf @method('DELETE')
-                    <button type="submit" class="community-btn community-btn--danger community-btn--sm">Delete channel</button>
+                    <button type="submit" class="community-btn community-btn--danger community-btn--sm">Delete</button>
                 </form>
                 @endif
             </div>
@@ -214,15 +267,24 @@
     </div>
 
     {{-- Members --}}
-    <aside class="community-thread__members">
-        <div class="community-thread__sidebar-head">
-            Members
-            <div style="font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--ct-text-muted);margin-top:2px;">
-                {{ ($members ?? collect())->count() }} people
+    <div class="community-thread__members-backdrop" id="community-members-backdrop" hidden></div>
+    <aside class="community-thread__members" id="community-members-panel" aria-label="Channel members">
+        <div class="community-thread__sidebar-head community-thread__members-head">
+            <div>
+                Members
+                <div style="font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--ct-text-muted);margin-top:2px;">
+                    {{ ($members ?? collect())->count() }} people
+                </div>
             </div>
+            <button type="button"
+                    class="community-thread__members-close"
+                    id="community-members-close"
+                    aria-label="Close members">
+                ×
+            </button>
         </div>
         <div class="community-thread__nav" style="padding-top:4px;">
-            @foreach(($members ?? collect())->groupBy(fn($m) => $m->pivot->role) as $role => $group)
+            @forelse(($members ?? collect())->groupBy(fn($m) => $m->pivot->role) as $role => $group)
                 <p style="padding:8px 12px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ct-text-faint);">
                     {{ $role }} — {{ $group->count() }}
                 </p>
@@ -244,7 +306,9 @@
                     @endif
                 </div>
                 @endforeach
-            @endforeach
+            @empty
+                <p style="padding:16px 12px;font-size:12px;color:var(--ct-text-faint);">No members yet.</p>
+            @endforelse
         </div>
 
         @if($channel->isAdmin(Auth::user()) || Auth::user()->isAdmin() || $channel->created_by === Auth::id())
@@ -549,10 +613,58 @@ document.addEventListener('click', () => CommunityMsgMenu.closeAll());
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') CommunityMsgMenu.closeAll();
 });
-window.addEventListener('resize', () => CommunityMsgMenu.closeAll());
+window.addEventListener('resize', () => {
+    CommunityMsgMenu.closeAll();
+    if (window.matchMedia('(min-width: 1280px)').matches) {
+        window.CommunityMembersPanel?.close();
+    }
+});
+
+window.CommunityMembersPanel = {
+    panel: null,
+    backdrop: null,
+    toggleBtns: [],
+
+    init() {
+        this.panel = document.getElementById('community-members-panel');
+        this.backdrop = document.getElementById('community-members-backdrop');
+        this.toggleBtns = [
+            document.getElementById('community-members-toggle'),
+            document.getElementById('community-members-toggle-mobile'),
+        ].filter(Boolean);
+        if (!this.panel) return;
+
+        this.toggleBtns.forEach((btn) => {
+            btn.addEventListener('click', () => this.open());
+        });
+        document.getElementById('community-members-close')?.addEventListener('click', () => this.close());
+        this.backdrop?.addEventListener('click', () => this.close());
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.close();
+        });
+    },
+
+    open() {
+        if (!this.panel || window.matchMedia('(min-width: 1280px)').matches) return;
+        this.panel.classList.add('is-open');
+        this.backdrop?.classList.add('is-open');
+        if (this.backdrop) this.backdrop.hidden = false;
+        this.toggleBtns.forEach((btn) => btn.setAttribute('aria-expanded', 'true'));
+        document.body.style.overflow = 'hidden';
+    },
+
+    close() {
+        this.panel?.classList.remove('is-open');
+        this.backdrop?.classList.remove('is-open');
+        if (this.backdrop) this.backdrop.hidden = true;
+        this.toggleBtns.forEach((btn) => btn.setAttribute('aria-expanded', 'false'));
+        document.body.style.overflow = '';
+    }
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
     window.CommunityFeed.init();
+    window.CommunityMembersPanel.init();
 
     if (await focusMessageFromQuery()) {
         return;

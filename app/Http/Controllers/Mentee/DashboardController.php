@@ -162,6 +162,7 @@ class DashboardController extends Controller
 
         try {
             $query = Assessment::query()
+                ->visibleToMentee(auth()->user())
                 ->where('status', 'active')
                 ->has('questions')
                 ->latest();

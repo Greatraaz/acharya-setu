@@ -14,7 +14,7 @@ class AssessmentController extends Controller
     {
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         if (! $this->assessments->tableExists()) {
             return response()->json([
@@ -25,7 +25,7 @@ class AssessmentController extends Controller
             ]);
         }
 
-        $list = $this->assessments->listWithStats()
+        $list = $this->assessments->listWithStats($request->user())
             ->map(fn (Assessment $a) => $this->assessments->formatForApi($a));
 
         return response()->json([
@@ -49,9 +49,10 @@ class AssessmentController extends Controller
         ], 201);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        $assessment = Assessment::with('assignedMentees:id,name,email,role')->findOrFail($id);
+        $assessment = $this->assessments->findForMentorOrFail($id, $request->user());
+        $assessment->load('assignedMentees:id,name,email,role');
 
         return response()->json([
             'status'     => true,
@@ -62,7 +63,7 @@ class AssessmentController extends Controller
 
     public function update(Request $request, int $id): JsonResponse
     {
-        $assessment = Assessment::findOrFail($id);
+        $assessment = $this->assessments->findForMentorOrFail($id, $request->user());
         $this->assessments->validatedAssessment($request, $assessment->id, $request->user());
         $assessment = $this->assessments->updateFromRequest($request, $assessment);
 
@@ -74,9 +75,9 @@ class AssessmentController extends Controller
         ]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        $assessment = Assessment::findOrFail($id);
+        $assessment = $this->assessments->findForMentorOrFail($id, $request->user());
         $this->assessments->delete($assessment);
 
         return response()->json([

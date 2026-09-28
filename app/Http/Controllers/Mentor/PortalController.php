@@ -363,6 +363,7 @@ class PortalController extends Controller
         try {
             if (Schema::hasTable('assessments')) {
                 $assessments = Assessment::query()
+                    ->ownedByMentor(auth()->id())
                     ->withCount('questions')
                     ->latest()
                     ->get()

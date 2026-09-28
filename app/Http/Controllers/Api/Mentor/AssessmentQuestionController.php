@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Mentor;
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\AssessmentQuestion;
+use App\Services\AssessmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,9 +14,9 @@ class AssessmentQuestionController extends Controller
     /**
      * Get questions for an assessment
      */
-    public function index(int $assessmentId): JsonResponse
+    public function index(Request $request, int $assessmentId): JsonResponse
     {
-        $assessment = Assessment::findOrFail($assessmentId);
+        $assessment = app(AssessmentService::class)->findForMentorOrFail($assessmentId, $request->user());
 
         $questions = $assessment->questions()
             ->get()
@@ -48,7 +49,7 @@ class AssessmentQuestionController extends Controller
      */
     public function store(Request $request, int $assessmentId): JsonResponse
     {
-        $assessment = Assessment::findOrFail($assessmentId);
+        $assessment = app(AssessmentService::class)->findForMentorOrFail($assessmentId, $request->user());
 
         $data = $request->validate([
             'question'   => 'required|string|max:5000',
@@ -83,8 +84,10 @@ class AssessmentQuestionController extends Controller
     /**
      * Get one question
      */
-    public function show(int $assessmentId, int $questionId): JsonResponse
+    public function show(Request $request, int $assessmentId, int $questionId): JsonResponse
     {
+        app(AssessmentService::class)->findForMentorOrFail($assessmentId, $request->user());
+
         $question = AssessmentQuestion::where('assessment_id', $assessmentId)
             ->findOrFail($questionId);
 
@@ -103,6 +106,8 @@ class AssessmentQuestionController extends Controller
         int $assessmentId,
         int $questionId
     ): JsonResponse {
+        app(AssessmentService::class)->findForMentorOrFail($assessmentId, $request->user());
+
         $question = AssessmentQuestion::where('assessment_id', $assessmentId)
             ->findOrFail($questionId);
 
@@ -132,9 +137,12 @@ class AssessmentQuestionController extends Controller
      * Delete question
      */
     public function destroy(
+        Request $request,
         int $assessmentId,
         int $questionId
     ): JsonResponse {
+        app(AssessmentService::class)->findForMentorOrFail($assessmentId, $request->user());
+
         $question = AssessmentQuestion::where('assessment_id', $assessmentId)
             ->findOrFail($questionId);
 
