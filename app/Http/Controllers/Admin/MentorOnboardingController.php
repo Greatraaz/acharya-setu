@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\ActivityLog;
 use App\Services\ActivityLogger;
 use App\Services\PublicFileStorage;
+use App\Support\IndianPhone;
 use Illuminate\Http\Request;
  
 class MentorOnboardingController extends Controller
@@ -42,11 +43,14 @@ class MentorOnboardingController extends Controller
     {
         $data = $request->validate([
             'name'   => 'required|string|max:100',
-            'phone'  => 'nullable|string|max:20',
+            'phone'  => IndianPhone::rules(),
             'gender' => 'nullable|in:male,female,other,prefer_not_to_say',
             'avatar' => 'nullable|image|max:2048',
         ]);
- 
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        } 
         /** @var User $user */
         $user = auth()->user();
  

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\EducationStream;
 use App\Models\User;
+use App\Support\IndianPhone;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -316,7 +317,7 @@ class MenteeOnboardingService
         $rules = [
             'name'                   => 'required|string|max:100',
             'email'                  => 'required|email',
-            'phone'                  => 'nullable|string|max:20',
+            'phone'                  => IndianPhone::rules(),
             'gender'                 => 'nullable|in:male,female,other,prefer_not_to_say',
             'address'                => 'required|string|max:200',
             'avatar'                 => 'nullable|image|max:2048',

@@ -9,6 +9,7 @@ use App\Models\OtpCode;
 use App\Models\WalletTransaction;
 use App\Mail\OtpMail;
 use App\Services\SmsService;
+use App\Support\IndianPhone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
@@ -175,7 +176,7 @@ class AuthController extends Controller
             'company'          => ['nullable', 'string'],
             'designation'      => ['nullable', 'string'],
             'experience_years' => ['nullable', 'integer'],
-            'phone'            => ['nullable', 'string', 'max:20'],
+            'phone'            => IndianPhone::rules(),
             'linkedin'         => ['nullable', 'url'],
             'gender'           => ['nullable', 'in:male,female,other'],
             'education_stream' => ['nullable', 'string'],
@@ -192,7 +193,12 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $request->user()->update($validator->validated());
+        $data = $validator->validated();
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
+
+        $request->user()->update($data);
         return response()->json([
             'success' => true,
             'status'  => true,

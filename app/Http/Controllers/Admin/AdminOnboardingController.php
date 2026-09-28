@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\MenteeOnboardingService;
 use App\Services\PublicFileStorage;
+use App\Support\IndianPhone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -28,7 +29,7 @@ class AdminOnboardingController extends Controller
             'name'             => 'required|string|max:100',
             'email'            => 'required|email|unique:users,email',
             'password'         => ['required', Password::min(8)],
-            'phone'            => 'nullable|string|max:20',
+            'phone'            => IndianPhone::rules(),
             'gender'           => 'nullable|in:male,female,other,prefer_not_to_say',
             'avatar'           => 'nullable|image|max:2048',
  
@@ -52,6 +53,10 @@ class AdminOnboardingController extends Controller
             // Approval
             'mentor_status'    => 'required|in:pending,approved,rejected',
         ]);
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
  
         if ($request->hasFile('avatar')) {
             $data['avatar_url'] = PublicFileStorage::store($request->file('avatar'), 'avatars');
@@ -90,7 +95,7 @@ class AdminOnboardingController extends Controller
         $data = $request->validate([
             'name'             => 'required|string|max:100',
             'email'            => 'required|email|unique:users,email,' . $mentor->id,
-            'phone'            => 'nullable|string|max:20',
+            'phone'            => IndianPhone::rules(),
             'gender'           => 'nullable|in:male,female,other,prefer_not_to_say',
             'avatar'           => 'nullable|image|max:2048',
             'designation'      => 'required|string|max:150',
@@ -107,6 +112,10 @@ class AdminOnboardingController extends Controller
             'is_active'        => 'nullable|boolean',
             'new_password'     => ['nullable', Password::min(8)],
         ]);
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
  
         if ($request->hasFile('avatar')) {
             PublicFileStorage::deleteByUrl($mentor->avatar_url);
@@ -163,6 +172,10 @@ class AdminOnboardingController extends Controller
             $onboarding->adminValidationRules(),
             ['email' => 'required|email|unique:users,email']
         ));
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
 
         $avatarUrl = $this->storeAvatar($request);
         $preferences = $onboarding->mergePreferences(new User(), $data);
@@ -242,6 +255,10 @@ class AdminOnboardingController extends Controller
             $onboarding->adminValidationRules(isUpdate: true),
             ['email' => ['required', 'email', Rule::unique('users', 'email')->ignore($mentee->id)]]
         ));
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
 
         if ($request->hasFile('avatar')) {
             $data['avatar_url'] = $this->storeAvatar($request, $mentee->avatar_url);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mentee;
 
 use App\Http\Controllers\Controller;
 use App\Services\MenteeOnboardingService;
+use App\Support\IndianPhone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -39,12 +40,16 @@ class OnboardingController extends Controller
         $data = $request->validate([
             'name'   => 'required|string|max:100',
             'gender' => 'nullable|in:male,female,other',
-            'phone'  => 'nullable|string|max:20',
+            'phone'  => IndianPhone::rules(),
             'address'=> 'nullable|string|max:200',
             'avatar' => 'nullable|image|mimes:jpeg,png,webp,jpg|max:2048',
         ]);
 
         $user = auth()->user();
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
 
         if ($request->hasFile('avatar')) {
             if ($user->avatar_url && str_starts_with($user->avatar_url, '/storage/')) {

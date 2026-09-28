@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\OtpCode;
 use App\Models\User;
+use App\Support\IndianPhone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -74,9 +75,13 @@ class LoginController extends Controller
         $user = auth()->user();
         $data = $request->validate([
             'name'   => 'required|string|max:100',
-            'phone'  => 'nullable|string',
+            'phone'  => IndianPhone::rules(),
             'gender' => 'nullable|string',
         ]);
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
 
         $user->update($data);
 

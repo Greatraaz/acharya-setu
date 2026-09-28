@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EducationStream;
 use App\Services\MenteeOnboardingService;
 use App\Services\MentorMatcherService;
+use App\Support\IndianPhone;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -49,12 +50,16 @@ class OnboardingController extends Controller
         $data = $request->validate([
             'name'     => 'required|string|max:100',
             'gender'   => 'nullable|in:male,female,other',
-            'phone'    => 'nullable|string',
+            'phone'    => IndianPhone::rules(),
             'address'  => 'nullable|string|max:200',
             // File upload OR base64 string (data URI or raw base64)
             'avatar'   => 'nullable',
             'mimeType' => 'nullable|string|in:image/jpeg,image/png,image/webp,image/jpg',
         ]);
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
 
         if ($request->hasFile('avatar')) {
             $request->validate([

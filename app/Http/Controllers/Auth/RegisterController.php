@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\OtpCode;
+use App\Support\IndianPhone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +27,7 @@ class RegisterController extends Controller
         $request->validate([
             'name'      => 'required|string|max:100',
             'email'     => 'required|email|unique:users,email',
-            'phone'     => 'required|string',
+            'phone'     => IndianPhone::rules(required: true),
             'password'  => ['required', Password::min(8)],
             'role'      => 'required|in:mentor,mentee',
             'email_otp' => 'required|string|size:6',
@@ -48,7 +49,7 @@ class RegisterController extends Controller
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
-            'phone'    => $request->phone,
+            'phone'    => IndianPhone::normalize($request->phone),
             'password' => Hash::make($request->password),
             'role'     => $request->role,
             'mentor_status'         => $request->role === 'mentor' ? 'pending' : 'approved',

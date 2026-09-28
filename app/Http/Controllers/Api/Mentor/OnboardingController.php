@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Mentor;
 
 use App\Http\Controllers\Controller;
+use App\Support\IndianPhone;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -65,11 +66,15 @@ class OnboardingController extends Controller
         $data = $request->validate([
             'name'     => 'required|string|max:100',
             'gender'   => 'nullable|in:male,female,other',
-            'phone'    => 'nullable|string|max:20',
+            'phone'    => IndianPhone::rules(),
             'linkedin' => 'nullable|url',
             'bio'      => 'required|string|min:50|max:2000',
             'avatar'   => 'nullable|file|image|mimes:jpeg,png,webp|max:2048',
         ]);
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
 
         if ($request->hasFile('avatar')) {
             // Delete old avatar if exists

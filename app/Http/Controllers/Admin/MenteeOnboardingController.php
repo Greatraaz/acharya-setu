@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\MentorMatcherService;
 use App\Services\PublicFileStorage;
+use App\Support\IndianPhone;
 use Illuminate\Http\Request;
  
 class MenteeOnboardingController extends Controller
@@ -38,12 +39,16 @@ class MenteeOnboardingController extends Controller
     {
         $data = $request->validate([
             'name'   => 'required|string|max:100',
-            'phone'  => 'nullable|string|max:20',
+            'phone'  => IndianPhone::rules(),
             'gender' => 'nullable|in:male,female,other,prefer_not_to_say',
             'college'=> 'nullable|string|max:200',
             'year'   => 'nullable|string|max:20',
             'avatar' => 'nullable|image|max:2048',
         ]);
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
  
         /** @var User $user */
         $user = auth()->user();
