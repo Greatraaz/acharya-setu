@@ -305,22 +305,13 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Plan *</label>
-                        <select name="plan_id" class="form-select" required>
-                            <option value="">— Select plan —</option>
-                            @foreach($plans as $plan)
-                            <option value="{{ $plan->id }}">{{ $plan->name ?? $plan->plan_name }}</option>
+                        <label class="form-label">Submission type</label>
+                        <select name="submission_type" class="form-select">
+                            @foreach(\App\Models\CurriculumTask::SUBMISSION_TYPES as $val => $label)
+                            <option value="{{ $val }}">{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Submission type</label>
-                    <select name="submission_type" class="form-select">
-                        @foreach(\App\Models\CurriculumTask::SUBMISSION_TYPES as $val => $label)
-                        <option value="{{ $val }}">{{ $label }}</option>
-                        @endforeach
-                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Attachments</label>
@@ -595,7 +586,6 @@ function openEditTask(task) {
     form.title.value = task.title || '';
     form.description.value = task.description || '';
     form.type.value = task.type || 'task';
-    form.plan_id.value = task.plan_id || '';
     form.submission_type.value = task.submission_type || 'none';
     document.getElementById('task-mentee-id').value = task.mentee_id || '';
     form.querySelector('[name=is_required][type=checkbox]').checked = !!task.is_required;

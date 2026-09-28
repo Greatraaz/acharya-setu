@@ -303,15 +303,6 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Plan</label>
-                    <select name="plan_id" id="task-plan" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white">
-                        <option value="">— Optional —</option>
-                        @foreach(($plans ?? collect()) as $plan)
-                        <option value="{{ $plan->id }}">{{ $plan->plan_name ?? $plan->name ?? ('Plan #'.$plan->id) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Submission Type</label>
                     <select name="submission_type" id="task-submission-type" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 bg-white">
                         @foreach(\App\Models\CurriculumTask::SUBMISSION_TYPES as $val => $label)
@@ -462,8 +453,6 @@ function openAddTask(weekId) {
     document.getElementById('task-title').value = '';
     document.getElementById('task-description').value = '';
     document.getElementById('task-type').value = 'task';
-    const plan = document.getElementById('task-plan');
-    if (plan) plan.value = '';
     document.getElementById('task-submission-type').value = 'none';
     document.getElementById('task-minutes').value = 30;
     document.getElementById('task-order').value = 0;
@@ -479,8 +468,6 @@ function openEditTask(task) {
     document.getElementById('task-title').value = task.title || '';
     document.getElementById('task-description').value = task.description || '';
     document.getElementById('task-type').value = task.type || 'task';
-    const plan = document.getElementById('task-plan');
-    if (plan) plan.value = task.plan_id || '';
     document.getElementById('task-submission-type').value = task.submission_type || 'none';
     document.getElementById('task-minutes').value = task.estimated_minutes || 0;
     document.getElementById('task-order').value = task.order_index || 0;

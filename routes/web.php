@@ -32,6 +32,7 @@ use App\Http\Controllers\Mentor\AssessmentController         as MentorAssessment
 use App\Http\Controllers\Mentor\AssessmentQuestionController as MentorAssessmentQuestionController;
 use App\Http\Controllers\Mentor\CurriculumController  as MentorCurriculumController;
 use App\Http\Controllers\Mentor\MentorVideoController as MentorMentorVideoController;
+use App\Http\Controllers\Mentor\MenteeTaskController as MentorMenteeTaskController;
 
 use App\Http\Controllers\Mentee\OnboardingController   as MenteeOnboardingController;
 use App\Http\Controllers\Mentee\DashboardController    as MenteeDashboardController;
@@ -49,6 +50,7 @@ use App\Http\Controllers\Mentee\JobController as MenteeJobController;
 use App\Http\Controllers\Mentee\MentorRequestController as MenteeMentorRequestController;
 use App\Http\Controllers\Mentee\CareerServiceController as MenteeCareerServiceController;
 use App\Http\Controllers\Mentee\MockInterviewController as MenteeMockInterviewController;
+use App\Http\Controllers\Mentee\MenteeTaskController as MenteeMenteeTaskController;
 use App\Http\Controllers\Mentee\CareerServiceInvoiceController as MenteeCareerServiceInvoiceController;
 use App\Http\Controllers\Mentee\MentorVideoController as MenteeMentorVideoController;
 use App\Http\Controllers\Mentor\MentorRequestController as MentorMentorRequestController;
@@ -85,6 +87,7 @@ use App\Http\Controllers\Admin\BlogController;
 use App\Http\Controllers\Admin\OfferController;
 use App\Http\Controllers\Admin\CareerServiceController as AdminCareerServiceController;
 use App\Http\Controllers\Admin\MockInterviewController as AdminMockInterviewController;
+use App\Http\Controllers\Admin\MenteeTaskController as AdminMenteeTaskController;
 use App\Http\Controllers\Admin\CareerServiceInvoiceController as AdminCareerServiceInvoiceController;
 use App\Http\Controllers\Admin\MentorVideoController as AdminMentorVideoController;
 use App\Http\Controllers\Admin\WhitePaperController;
@@ -321,6 +324,17 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     Route::get('/journey/{mentee}',               [MentorPortalController::class, 'journeyShow'])->name('journey.show');
     Route::get('/submissions',                    [MentorPortalController::class, 'submissions'])->name('submissions');
     Route::post('/submissions/{progress}/review', [MentorPortalController::class, 'reviewSubmission'])->name('submissions.review')->whereNumber('progress');
+
+    // Standalone mentee tasks (outside curriculum)
+    Route::get('/tasks', [MentorMenteeTaskController::class, 'index'])->name('tasks.index');
+    Route::get('/tasks/create', [MentorMenteeTaskController::class, 'create'])->name('tasks.create');
+    Route::post('/tasks', [MentorMenteeTaskController::class, 'store'])->name('tasks.store');
+    Route::get('/tasks/{task}', [MentorMenteeTaskController::class, 'show'])->name('tasks.show')->whereNumber('task');
+    Route::get('/tasks/{task}/edit', [MentorMenteeTaskController::class, 'edit'])->name('tasks.edit')->whereNumber('task');
+    Route::put('/tasks/{task}', [MentorMenteeTaskController::class, 'update'])->name('tasks.update')->whereNumber('task');
+    Route::delete('/tasks/{task}', [MentorMenteeTaskController::class, 'destroy'])->name('tasks.destroy')->whereNumber('task');
+    Route::post('/tasks/submissions/{progress}/review', [MentorMenteeTaskController::class, 'review'])->name('tasks.review')->whereNumber('progress');
+
     Route::get('/community',                                          [MentorPortalController::class, 'community'])->name('community');
     Route::get('/community/create',                                   [ChannelController::class, 'create'])->name('community.create');
     Route::post('/community',                                         [ChannelController::class, 'store'])->name('community.store');
@@ -453,6 +467,11 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::get( '/mock-interviews/{mockInterview}', [MenteeMockInterviewController::class, 'show'])->name('mock-interviews.show')->whereNumber('mockInterview');
     Route::post('/mock-interviews/{mockInterview}/pay', [MenteeMockInterviewController::class, 'pay'])->name('mock-interviews.pay')->whereNumber('mockInterview');
     Route::post('/mock-interviews/{mockInterview}/verify', [MenteeMockInterviewController::class, 'verify'])->name('mock-interviews.verify')->whereNumber('mockInterview');
+
+    // Standalone tasks (outside curriculum)
+    Route::get('/tasks', [MenteeMenteeTaskController::class, 'index'])->name('tasks.index');
+    Route::get('/tasks/{task}', [MenteeMenteeTaskController::class, 'show'])->name('tasks.show')->whereNumber('task');
+    Route::post('/tasks/{task}/submit', [MenteeMenteeTaskController::class, 'submit'])->name('tasks.submit')->whereNumber('task');
 
     // Mentor-shared videos (not curriculum)
     Route::get( '/mentor-videos',                    [MenteeMentorVideoController::class, 'index'])->name('mentor-videos.index');
@@ -646,6 +665,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::post('/mock-interviews/{mockInterview}/confirm', [AdminMockInterviewController::class, 'confirm'])->name('mock-interviews.confirm')->whereNumber('mockInterview');
     Route::post('/mock-interviews/{mockInterview}/complete', [AdminMockInterviewController::class, 'complete'])->name('mock-interviews.complete')->whereNumber('mockInterview');
     Route::post('/mock-interviews/{mockInterview}/cancel', [AdminMockInterviewController::class, 'cancel'])->name('mock-interviews.cancel')->whereNumber('mockInterview');
+
+    Route::get('/mentee-tasks', [AdminMenteeTaskController::class, 'index'])->name('mentee-tasks.index');
+    Route::get('/mentee-tasks/create', [AdminMenteeTaskController::class, 'create'])->name('mentee-tasks.create');
+    Route::post('/mentee-tasks', [AdminMenteeTaskController::class, 'store'])->name('mentee-tasks.store');
+    Route::get('/mentee-tasks/{menteeTask}', [AdminMenteeTaskController::class, 'show'])->name('mentee-tasks.show')->whereNumber('menteeTask');
+    Route::get('/mentee-tasks/{menteeTask}/edit', [AdminMenteeTaskController::class, 'edit'])->name('mentee-tasks.edit')->whereNumber('menteeTask');
+    Route::put('/mentee-tasks/{menteeTask}', [AdminMenteeTaskController::class, 'update'])->name('mentee-tasks.update')->whereNumber('menteeTask');
+    Route::delete('/mentee-tasks/{menteeTask}', [AdminMenteeTaskController::class, 'destroy'])->name('mentee-tasks.destroy')->whereNumber('menteeTask');
+    Route::post('/mentee-tasks/submissions/{progress}/review', [AdminMenteeTaskController::class, 'review'])->name('mentee-tasks.review')->whereNumber('progress');
 
     Route::get('mentor-videos', [AdminMentorVideoController::class, 'index'])->name('mentor-videos.index');
     Route::get('mentor-videos/create', [AdminMentorVideoController::class, 'create'])->name('mentor-videos.create');

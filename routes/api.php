@@ -24,6 +24,8 @@ use App\Http\Controllers\Api\AssignmentsController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\CareerServiceController as ApiCareerServiceController;
 use App\Http\Controllers\Api\MockInterviewController as ApiMockInterviewController;
+use App\Http\Controllers\Api\Mentee\MenteeTaskController as ApiMenteeMenteeTask;
+use App\Http\Controllers\Api\Mentor\MenteeTaskController as ApiMentorMenteeTask;
 use App\Http\Controllers\Api\Admin\AdminController;
 use App\Http\Controllers\Api\Admin\SubscriptionInvoiceController as AdminSubscriptionInvoice;
 use App\Http\Controllers\Api\Mentee\OnboardingController as MenteeOnboarding;
@@ -76,6 +78,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/media/curriculum-supporting-materials/{filename}', [VideosController::class, 'serveSupportingMaterialFile'])
         ->where('filename', '[^/]+');
     Route::get('/media/curriculum-tasks/{filename}', [VideosController::class, 'serveCurriculumTaskFile'])
+        ->where('filename', '[^/]+');
+    Route::get('/media/mentee-tasks/{filename}', [VideosController::class, 'serveMenteeTaskFile'])
         ->where('filename', '[^/]+');
 });
 
@@ -317,6 +321,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('/{id}/verify', [ApiMockInterviewController::class, 'verify'])->whereNumber('id');
         });
 
+        Route::prefix('tasks')->group(function () {
+            Route::get('/', [ApiMenteeMenteeTask::class, 'index']);
+            Route::get('/{id}', [ApiMenteeMenteeTask::class, 'show'])->whereNumber('id');
+            Route::post('/{id}/submit', [ApiMenteeMenteeTask::class, 'submit'])->whereNumber('id');
+        });
+
         // Plan invoices
         Route::get('invoices', [MenteeInvoice::class, 'index']);
         Route::get('invoices/{invoice}', [MenteeInvoice::class, 'show'])->whereNumber('invoice');
@@ -441,6 +451,17 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}/notes/{noteId}', [SessionsController::class, 'destroyNote'])->name('notes.destroy')->whereNumber('id')->whereNumber('noteId');
             Route::patch('/{id}',      [SessionsController::class, 'update'])->name('update');
             Route::delete('/{id}',     [SessionsController::class, 'destroy'])->name('destroy');
+        });
+
+        // Standalone mentee tasks
+        Route::prefix('tasks')->group(function () {
+            Route::get('/', [ApiMentorMenteeTask::class, 'index']);
+            Route::post('/', [ApiMentorMenteeTask::class, 'store']);
+            Route::get('/pending', [ApiMentorMenteeTask::class, 'pending']);
+            Route::get('/{id}', [ApiMentorMenteeTask::class, 'show'])->whereNumber('id');
+            Route::match(['put', 'patch', 'post'], '/{id}', [ApiMentorMenteeTask::class, 'update'])->whereNumber('id');
+            Route::delete('/{id}', [ApiMentorMenteeTask::class, 'destroy'])->whereNumber('id');
+            Route::post('/submissions/{progress}/review', [ApiMentorMenteeTask::class, 'review'])->whereNumber('progress');
         });
 
         // Assessments (mentor CRUD)

@@ -348,6 +348,20 @@ class VideosController extends Controller
         ]);
     }
 
+    public function serveMenteeTaskFile(string $filename)
+    {
+        $filename = basename($filename);
+        $path     = 'mentee-tasks/'.$filename;
+
+        if (! Storage::disk('public')->exists($path)) {
+            abort(404, 'File not found.');
+        }
+
+        return Storage::disk('public')->response($path, $filename, [
+            'Content-Type' => Storage::disk('public')->mimeType($path),
+        ]);
+    }
+
     private function findOwnedMentorVideo(Request $request, int $id): MentorVideo
     {
         return MentorVideo::where('mentor_id', $request->user()->id)

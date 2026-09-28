@@ -32,6 +32,9 @@
     <a href="{{ route('mentor.curriculum.tracks') }}" class="sidebar-item @if(request()->routeIs('mentor.curriculum*')) active @endif">
         <span class="si-icon">🗺️</span> Curriculum
     </a>
+    <a href="{{ route('mentor.tasks.index') }}" class="sidebar-item @if(request()->routeIs('mentor.tasks*')) active @endif">
+        <span class="si-icon">✅</span> Tasks
+    </a>
     <a href="{{ route('mentor.journey') }}" class="sidebar-item @if(request()->routeIs('mentor.journey*') || request()->routeIs('mentor.submissions*')) active @endif">
         <span class="si-icon">📈</span> Progress
         @php

@@ -492,7 +492,7 @@ class CurriculumController extends Controller
             'title'             => 'required|string|max:200',
             'description'       => 'nullable|string',
             'type'              => 'nullable|in:task,reading,video,project,quiz,reflection',
-            'plan_id'           => 'required|integer|exists:plans,id',
+            'plan_id'           => 'nullable|integer|exists:plans,id',
             'is_required'       => 'nullable',
             'is_active'         => 'nullable',
             'submission_type'   => ['nullable', Rule::in(array_keys(CurriculumTask::SUBMISSION_TYPES))],
@@ -522,7 +522,7 @@ class CurriculumController extends Controller
         $task = CurriculumTask::create([
             'week_id'           => $weekModel->id,
             'mentee_id'         => $data['mentee_id'],
-            'plan_id'           => $data['plan_id'],
+            'plan_id'           => $data['plan_id'] ?? null,
             'title'             => $data['title'],
             'description'       => $data['description'] ?? null,
             'type'              => $data['type'] ?? 'task',

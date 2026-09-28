@@ -16,6 +16,9 @@
     <a href="{{ route('mentee.journey.index') }}" class="sidebar-item @if(request()->routeIs('mentee.journey.*')) active @endif">
         <span class="si-icon">🗺️</span> My Journey
     </a>
+    <a href="{{ route('mentee.tasks.index') }}" class="sidebar-item @if(request()->routeIs('mentee.tasks*')) active @endif">
+        <span class="si-icon">✅</span> My Tasks
+    </a>
     <a href="{{ route('mentors.search') }}" class="sidebar-item @if(request()->routeIs('mentors.search', 'mentors.show')) active @endif">
         <span class="si-icon">🔍</span> Find Mentors
     </a>
