@@ -171,6 +171,46 @@ class OfferService
         });
     }
 
+    /**
+     * Undo a session coupon redemption so the mentee can reuse the coupon.
+     */
+    public function restoreSessionRedemption(ConsultationSession $session): bool
+    {
+        return (bool) DB::transaction(function () use ($session) {
+            $redemptions = OfferRedemption::query()
+                ->where('consultation_session_id', $session->id)
+                ->where('type', OfferRedemption::TYPE_SESSION_DISCOUNT)
+                ->lockForUpdate()
+                ->get();
+
+            if ($redemptions->isEmpty()) {
+                if (! $session->offer_id) {
+                    return false;
+                }
+
+                // Fallback: offer stored on session but redemption row missing.
+                $offer = Offer::query()->lockForUpdate()->find($session->offer_id);
+                if ($offer && (int) $offer->usage_count > 0) {
+                    $offer->decrement('usage_count');
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            foreach ($redemptions as $redemption) {
+                $offer = Offer::query()->lockForUpdate()->find($redemption->offer_id);
+                if ($offer && (int) $offer->usage_count > 0) {
+                    $offer->decrement('usage_count');
+                }
+                $redemption->delete();
+            }
+
+            return true;
+        });
+    }
+
     public function generateCouponCode(): string
     {
         do {

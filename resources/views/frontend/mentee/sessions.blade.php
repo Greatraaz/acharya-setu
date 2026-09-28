@@ -66,9 +66,7 @@
                 'completed' => 'var(--brand)',
                 default => 'var(--error)',
             };
-            $canCancel = $statusKey === 'upcoming'
-                && $session->scheduled_at
-                && $session->scheduled_at->gt(now()->addHours(2));
+            $canCancel = $session->canMenteeCancel();
         @endphp
         <div class="card session-list-card">
             <div class="session-list-card__accent" style="background:{{ $barColor }};"></div>
@@ -160,7 +158,7 @@
 @push('scripts')
 <script>
 function cancelSession(id) {
-    if (!confirm('Cancel this session? A refund will be credited if within the free cancellation window.')) return;
+    if (!confirm('Cancel this session?\n\n• ≥24 hours before start: full refund (wallet/Razorpay/coupon/plan benefit restored)\n• 6–24 hours before start: 50% refund to wallet/Razorpay only')) return;
     AjaxPost(`/mentee/sessions/${id}`, { reason: 'Cancelled by mentee' }, {
         method: 'DELETE',
         loader: true,

@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
 use App\Models\SessionReview;
 use App\Models\User;
+use App\Services\SessionCancellationService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
  
 class ConsultationSessionController extends Controller
 {
@@ -119,11 +121,22 @@ class ConsultationSessionController extends Controller
         return redirect()->back()->with('success', 'Session marked as upcoming.');
     }
  
-    public function cancel(Request $request, ConsultationSession $session)
+    public function cancel(Request $request, ConsultationSession $session, SessionCancellationService $cancellations)
     {
         $request->validate(['reason' => 'nullable|string|max:500']);
-        $session->cancel(auth()->id(), $request->reason ?? '');
-        return redirect()->back()->with('success', 'Session cancelled.');
+
+        try {
+            $result = $cancellations->cancel(
+                $session,
+                auth()->user(),
+                SessionCancellationService::ROLE_ADMIN,
+                $request->reason
+            );
+        } catch (InvalidArgumentException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->back()->with('success', $result['message']);
     }
  
     public function complete(ConsultationSession $session)

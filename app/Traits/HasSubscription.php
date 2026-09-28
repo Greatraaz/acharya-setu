@@ -241,7 +241,10 @@ trait HasSubscription
         return (int) ConsultationSession::where('mentee_id', $this->id)
             ->where('payment_method', 'plan')
             ->whereBetween('scheduled_at', [$start, $end])
-            ->where('status', '!=', ConsultationSession::STATUS_CANCELLED)
+            ->where(function ($q) {
+                $q->where('status', '!=', ConsultationSession::STATUS_CANCELLED)
+                    ->orWhere('forfeit_plan_benefit', true);
+            })
             ->sum('duration_minutes');
     }
 
@@ -255,7 +258,10 @@ trait HasSubscription
         return ConsultationSession::where('mentee_id', $this->id)
             ->where('payment_method', 'plan')
             ->whereBetween('scheduled_at', [$start, $end])
-            ->where('status', '!=', ConsultationSession::STATUS_CANCELLED)
+            ->where(function ($q) {
+                $q->where('status', '!=', ConsultationSession::STATUS_CANCELLED)
+                    ->orWhere('forfeit_plan_benefit', true);
+            })
             ->count();
     }
 

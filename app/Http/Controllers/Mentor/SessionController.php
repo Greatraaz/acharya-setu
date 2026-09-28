@@ -3,10 +3,16 @@ namespace App\Http\Controllers\Mentor;
 
 use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
+use App\Services\SessionCancellationService;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class SessionController extends Controller
 {
+    public function __construct(
+        private readonly SessionCancellationService $cancellations,
+    ) {}
+
     public function index(Request $request)
     {
         $mentorId = auth()->id();
@@ -56,9 +62,27 @@ class SessionController extends Controller
         $session = ConsultationSession::where('mentor_id', auth()->id())
             ->where('status', ConsultationSession::STATUS_UPCOMING)
             ->findOrFail($id);
-        $session->cancel(auth()->id(), $request->reason ?? 'Cancelled by mentor');
 
-        return response()->json(['message' => 'Session cancelled.']);
+        try {
+            $result = $this->cancellations->cancel(
+                $session,
+                auth()->user(),
+                SessionCancellationService::ROLE_MENTOR,
+                $request->input('reason')
+            );
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'message'               => $result['message'],
+            'policy'                => $result['policy'],
+            'refund_percent'        => $result['refund_percent'],
+            'wallet_refunded'       => $result['wallet_refunded'],
+            'razorpay_refunded'     => $result['razorpay_refunded'],
+            'coupon_restored'       => $result['coupon_restored'],
+            'plan_benefit_restored' => $result['plan_benefit_restored'],
+        ]);
     }
 
     public function complete(int $id)

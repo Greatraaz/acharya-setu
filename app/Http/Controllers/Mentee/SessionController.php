@@ -2,10 +2,16 @@
 namespace App\Http\Controllers\Mentee;
 use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
+use App\Services\SessionCancellationService;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class SessionController extends Controller
 {
+    public function __construct(
+        private readonly SessionCancellationService $cancellations,
+    ) {}
+
     public function index(Request $request)
     {
         ConsultationSession::expireMissedSessions(null, auth()->id());
@@ -50,30 +56,35 @@ class SessionController extends Controller
     {
         $session = ConsultationSession::where('mentee_id', auth()->id())
             ->where('status', ConsultationSession::STATUS_UPCOMING)
-            ->where('scheduled_at', '>', now()->addHours(2))
             ->findOrFail($id);
 
-        $session->cancel(auth()->id(), $request->reason ?? 'Cancelled by mentee');
+        try {
+            $result = $this->cancellations->cancel(
+                $session,
+                auth()->user(),
+                SessionCancellationService::ROLE_MENTEE,
+                $request->input('reason')
+            );
+        } catch (InvalidArgumentException $e) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
 
-        $mentee = auth()->user();
-        $balanceBefore = $mentee->wallet_balance;
-        if ((float) $session->amount > 0 && $session->payment_status === 'paid') {
-            $mentee->increment('wallet_balance', $session->amount);
-            \App\Models\WalletTransaction::create([
-                'user_id'        => $mentee->id,
-                'type'           => 'refund',
-                'amount'         => $session->amount,
-                'balance_before' => $balanceBefore,
-                'balance_after'  => $mentee->fresh()->wallet_balance,
-                'description'    => 'Refund for cancelled session ' . $session->booking_ref,
-                'reference'      => 'REF-' . $session->booking_ref,
-                'status'         => 'completed',
+            return back()->with('error', $e->getMessage());
+        }
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return response()->json([
+                'message'         => $result['message'],
+                'policy'          => $result['policy'],
+                'refund_percent'  => $result['refund_percent'],
+                'wallet_refunded' => $result['wallet_refunded'],
+                'razorpay_refunded' => $result['razorpay_refunded'],
+                'coupon_restored' => $result['coupon_restored'],
+                'plan_benefit_restored' => $result['plan_benefit_restored'],
             ]);
         }
 
-        if ($request->ajax()) {
-            return response()->json(['message' => 'Session cancelled'.((float) $session->amount > 0 ? ' and ₹'.number_format($session->amount,0).' refunded.' : '.')]);
-        }
-        return back()->with('success', 'Session cancelled.');
+        return back()->with('success', $result['message']);
     }
 }

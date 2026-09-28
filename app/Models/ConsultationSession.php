@@ -25,21 +25,23 @@ class ConsultationSession extends Model
         'title', 'agenda', 'mentor_notes', 'meeting_link', 'meeting_provider', 'meeting_channel',
         'status', 'cancellation_reason', 'cancelled_by', 'cancelled_at', 'started_at', 'ended_at',
         'actual_duration_seconds', 'amount', 'list_amount', 'currency', 'payment_status', 'payment_method',
-        'offer_id', 'coupon_discount', 'platform_subsidy',
+        'offer_id', 'coupon_discount', 'platform_subsidy', 'forfeit_plan_benefit',
         'wallet_amount', 'razorpay_amount', 'payment_reference',
-        'razorpay_order_id', 'razorpay_payment_id',
+        'razorpay_order_id', 'razorpay_payment_id', 'cancellation_settlement',
     ];
 
     protected $casts = [
-        'cancelled_at'      => 'datetime',
-        'started_at'        => 'datetime',
-        'ended_at'          => 'datetime',
-        'amount'            => 'decimal:2',
-        'list_amount'       => 'decimal:2',
-        'coupon_discount'   => 'decimal:2',
-        'platform_subsidy'  => 'decimal:2',
-        'wallet_amount'     => 'decimal:2',
-        'razorpay_amount'   => 'decimal:2',
+        'cancelled_at'             => 'datetime',
+        'started_at'               => 'datetime',
+        'ended_at'                 => 'datetime',
+        'amount'                   => 'decimal:2',
+        'list_amount'              => 'decimal:2',
+        'coupon_discount'          => 'decimal:2',
+        'platform_subsidy'         => 'decimal:2',
+        'wallet_amount'            => 'decimal:2',
+        'razorpay_amount'          => 'decimal:2',
+        'forfeit_plan_benefit'     => 'boolean',
+        'cancellation_settlement'  => 'array',
     ];
 
     protected static function booted(): void
@@ -739,5 +741,19 @@ class ConsultationSession extends Model
             'cancelled_at'        => now(),
             'cancellation_reason' => $reason,
         ]);
+    }
+
+    /** Mentee may cancel when at least 6 hours remain before start. */
+    public function canMenteeCancel(?\Carbon\CarbonInterface $at = null): bool
+    {
+        if ($this->status !== self::STATUS_UPCOMING || ! $this->scheduled_at) {
+            return false;
+        }
+
+        $at = $at ? \Carbon\Carbon::parse($at) : now();
+
+        return $this->scheduled_at->gt($at->copy()->addHours(
+            \App\Services\SessionCancellationService::PARTIAL_REFUND_HOURS
+        ));
     }
 }

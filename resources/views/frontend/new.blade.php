@@ -150,7 +150,7 @@
             <div class="feature-card">
                 <div class="feature-icon">⏱️</div>
                 <h3>Pay-Per-Minute</h3>
-                <p>Only pay for the time you use. No subscriptions, no hidden fees. Rates from ₹5/min. Cancel sessions free up to 2 hours before.</p>
+                <p>Only pay for the time you use. No subscriptions, no hidden fees. Rates from ₹5/min. Full refund if you cancel ≥24 hours before; 50% refund between 6–24 hours.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">📅</div>

@@ -31,7 +31,7 @@
                             @if($session->canJoinCall())
                                 <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
                             @endif
-                            @if($session->status === 'upcoming' && $session->scheduled_at?->gt(now()->addHours(2)))
+                            @if($session->canMenteeCancel())
                                 <button type="button" class="btn btn-outline" style="color:var(--error);" onclick="cancelSession({{ $session->id }})">Cancel</button>
                             @endif
                         </div>
@@ -117,7 +117,7 @@
 @push('scripts')
 <script>
 function cancelSession(id) {
-    if (!confirm('Cancel this session? A refund will be credited if eligible.')) return;
+    if (!confirm('Cancel this session?\n\n• ≥24 hours before start: full refund (wallet/Razorpay/coupon/plan benefit restored)\n• 6–24 hours before start: 50% refund to wallet/Razorpay only')) return;
     AjaxPost(`/mentee/sessions/${id}`, { reason: 'Cancelled by mentee' }, {
         method: 'DELETE',
         loader: true,

@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\{AppSetting, ConsultationSession, SessionNote, User};
 use App\Services\SessionBookingService;
+use App\Services\SessionCancellationService;
 use Carbon\Carbon;
 use Illuminate\Http\{JsonResponse, Request};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 class SessionsController extends Controller
 {
@@ -312,7 +314,7 @@ class SessionsController extends Controller
         ]);
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $id, SessionCancellationService $cancellations): JsonResponse
     {
         try {
             $s = $this->findOwnedSession($request, $id);
@@ -324,6 +326,28 @@ class SessionsController extends Controller
             if (($d['status'] ?? null) === 'completed') {
                 $s->complete();
                 $s->refresh();
+            } elseif (($d['status'] ?? null) === 'cancelled') {
+                $role = $request->user()->role === 'mentor'
+                    ? SessionCancellationService::ROLE_MENTOR
+                    : SessionCancellationService::ROLE_MENTEE;
+                $result = $cancellations->cancel($s, $request->user(), $role, $d['notes'] ?? null);
+                $s = $result['session'];
+
+                return response()->json([
+                    'status'     => true,
+                    'statuscode' => 200,
+                    'message'    => $result['message'],
+                    'session'    => $s,
+                    'settlement' => [
+                        'policy'                => $result['policy'],
+                        'refund_percent'        => $result['refund_percent'],
+                        'wallet_refunded'       => $result['wallet_refunded'],
+                        'razorpay_refunded'     => $result['razorpay_refunded'],
+                        'coupon_restored'       => $result['coupon_restored'],
+                        'plan_benefit_restored' => $result['plan_benefit_restored'],
+                        'mentor_credited'       => $result['mentor_credited'],
+                    ],
+                ]);
             } else {
                 $s->update($d);
             }
@@ -339,6 +363,12 @@ class SessionsController extends Controller
                 'statuscode' => 404,
                 'message'    => 'Session not found',
             ], 404);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => $e->getMessage(),
+            ], 422);
         } catch (\Throwable $e) {
             return response()->json([
                 'status'     => false,
@@ -348,16 +378,34 @@ class SessionsController extends Controller
         }
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id, SessionCancellationService $cancellations): JsonResponse
     {
         try {
-            $session = ConsultationSession::findOrFail($id);
-            $session->update(['status' => 'cancelled']);
+            $session = $this->findOwnedSession($request, $id);
+            $role = $request->user()->role === 'mentor'
+                ? SessionCancellationService::ROLE_MENTOR
+                : SessionCancellationService::ROLE_MENTEE;
+
+            $result = $cancellations->cancel(
+                $session,
+                $request->user(),
+                $role,
+                $request->input('reason')
+            );
 
             return response()->json([
                 'status'     => true,
                 'statuscode' => 200,
-                'message'    => 'Cancelled',
+                'message'    => $result['message'],
+                'settlement' => [
+                    'policy'                => $result['policy'],
+                    'refund_percent'        => $result['refund_percent'],
+                    'wallet_refunded'       => $result['wallet_refunded'],
+                    'razorpay_refunded'     => $result['razorpay_refunded'],
+                    'coupon_restored'       => $result['coupon_restored'],
+                    'plan_benefit_restored' => $result['plan_benefit_restored'],
+                    'mentor_credited'       => $result['mentor_credited'],
+                ],
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
@@ -365,6 +413,12 @@ class SessionsController extends Controller
                 'statuscode' => 404,
                 'message'    => 'Session not found',
             ], 404);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => $e->getMessage(),
+            ], 422);
         } catch (\Throwable $e) {
             return response()->json([
                 'status'     => false,
