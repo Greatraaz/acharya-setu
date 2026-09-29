@@ -21,6 +21,7 @@
                 ['admin.sessions.index',     '📅', 'Sessions'],
                 ['admin.transactions.index', '🧾', 'Transactions'],
                 ['admin.wallet.index',       '💰', 'Wallet'],
+                ['admin.wallet.add-fund',    '➕', 'Add Fund'],
                 ['admin.offers.index',       '🎁', 'Offers'],
                 ['admin.career-services.index', '📄', 'Career Services'],
                 ['admin.mock-interviews.index', '🎤', 'Mock Interviews'],

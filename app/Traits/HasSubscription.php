@@ -8,6 +8,11 @@ use Carbon\Carbon;
 
 trait HasSubscription
 {
+    public function subscriptions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(UserSubscription::class);
+    }
+
     /**
      * Check if the user has any active subscription.
      */

@@ -9,14 +9,20 @@
             <h6 class="text-lg font-semibold text-gray-800">Wallet Transactions</h6>
             <p class="text-sm text-gray-500 mt-0.5">Adjust balances and transfer funds. For the full ledger see <a href="{{ route('admin.transactions.index') }}" class="text-indigo-600 hover:underline">Transactions</a>.</p>
         </div>
-        <nav class="flex items-center gap-2 text-sm">
-            <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors">
-                <iconify-icon icon="solar:home-smile-angle-outline" class="text-base"></iconify-icon>
-                Dashboard
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('admin.wallet.add-fund') }}"
+               class="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                <iconify-icon icon="fa-solid:plus-circle"></iconify-icon> Add Fund
             </a>
-            <span class="text-gray-300">/</span>
-            <span class="text-gray-700 font-medium">Wallet Transactions</span>
-        </nav>
+            <nav class="flex items-center gap-2 text-sm">
+                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors">
+                    <iconify-icon icon="solar:home-smile-angle-outline" class="text-base"></iconify-icon>
+                    Dashboard
+                </a>
+                <span class="text-gray-300">/</span>
+                <span class="text-gray-700 font-medium">Wallet Transactions</span>
+            </nav>
+        </div>
     </div>
 
     {{-- Summary Cards --}}

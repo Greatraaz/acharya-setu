@@ -112,6 +112,20 @@ $stats = [
                 </div>
             </div>
 
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Plan Subscription</label>
+                <div class="relative">
+                    <select name="subscribed" class="border border-gray-200 rounded-xl px-3.5 py-2 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
+                        <option value="">All</option>
+                        <option value="yes" {{ request('subscribed') === 'yes' ? 'selected' : '' }}>Subscribed</option>
+                        <option value="no"  {{ request('subscribed') === 'no'  ? 'selected' : '' }}>Not Subscribed</option>
+                    </select>
+                    <span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </span>
+                </div>
+            </div>
+
             <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">Filter</button>
             <a href="{{ route('admin.mentees.index') }}" class="text-sm text-gray-500 border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
         </form>
@@ -140,6 +154,7 @@ $stats = [
                         <th class="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Mentee</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Education</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Mentor</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Plan</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Onboarding</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Joined</th>
@@ -196,6 +211,21 @@ $stats = [
                                     class="text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors border border-blue-100">
                                 + Assign Mentor
                             </button>
+                            @endif
+                        </td>
+
+                        {{-- Plan subscription --}}
+                        <td class="px-4 py-4">
+                            @php $activePlan = $mentee->subscriptions->first(); @endphp
+                            @if($activePlan)
+                            <span class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full">
+                                <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
+                                {{ $activePlan->plan->name ?? 'Subscribed' }}
+                            </span>
+                            @else
+                            <span class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+                                Free
+                            </span>
                             @endif
                         </td>
 

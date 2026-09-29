@@ -12,6 +12,10 @@
             Back to Mentees
         </a>
         <div class="flex gap-2">
+            <a href="{{ route('admin.wallet.add-fund', ['mentee_id' => $mentee->id]) }}"
+               class="text-xs font-medium px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
+                Add Fund
+            </a>
             <a href="{{ route('admin.mentee.edit', $mentee) }}"
                class="text-xs font-medium px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors">
                 Edit Profile

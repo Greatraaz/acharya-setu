@@ -13,9 +13,19 @@ class UserController extends Controller
 {
     public function menteeIndex(Request $request)
     {
+        $activeSubscription = fn ($q) => $q
+            ->where('status', 'active')
+            ->where('payment_status', 'paid')
+            ->where('expires_at', '>', now());
+
         $mentees = User::where('role', 'mentee')
             ->withTrashed()
-            ->with('assignedMentor')
+            ->with([
+                'assignedMentor',
+                'subscriptions' => fn ($q) => $activeSubscription($q)
+                    ->with('plan:id,name')
+                    ->latest('starts_at'),
+            ])
             ->when($request->search, fn($q) =>
                 $q->where(fn($q) => $q
                     ->where('name', 'like', "%{$request->search}%")
@@ -30,6 +40,8 @@ class UserController extends Controller
             )
             ->when($request->assigned === 'yes', fn($q) => $q->whereNotNull('assigned_mentor_id'))
             ->when($request->assigned === 'no',  fn($q) => $q->whereNull('assigned_mentor_id'))
+            ->when($request->subscribed === 'yes', fn($q) => $q->whereHas('subscriptions', $activeSubscription))
+            ->when($request->subscribed === 'no',  fn($q) => $q->whereDoesntHave('subscriptions', $activeSubscription))
             ->whereNull('deleted_at')      // exclude soft-deleted from main list
             ->latest()
             ->paginate(20)

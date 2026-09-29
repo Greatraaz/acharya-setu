@@ -59,6 +59,15 @@
             </div>
             <p class="text-sm text-gray-500 truncate">{{ $user->email }}</p>
         </div>
+        @if($user->role === 'mentee')
+            <a href="{{ route('admin.wallet.add-fund', ['mentee_id' => $user->id]) }}"
+               class="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add Fund
+            </a>
+        @endif
     </div>
 
     {{-- Summary Cards --}}
