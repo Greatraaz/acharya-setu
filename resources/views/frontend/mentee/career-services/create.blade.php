@@ -4,6 +4,8 @@
 @php
     $pay = $quote['payment'] ?? null;
     $walletBalance = (float) ($quote['wallet_balance'] ?? auth()->user()->wallet_balance ?? 0);
+    $openRequest = $quote['open_request'] ?? null;
+    $canSubmit = (bool) ($quote['can_submit'] ?? true);
 @endphp
 
 @section('content')
@@ -19,6 +21,21 @@
         <div class="alert alert-error" style="margin:16px 0;"><span class="alert-icon">!</span><div style="font-size:13px;">{{ session('error') }}</div></div>
         @endif
 
+        @if($openRequest)
+        <div class="card" style="padding:20px;margin-top:16px;border-color:rgba(245,158,11,.45);background:rgba(245,158,11,.08);">
+            <div style="font-size:14px;font-weight:700;margin-bottom:8px;">You already have an open request</div>
+            <p style="font-size:13px;color:var(--text-2);line-height:1.5;margin:0 0 14px;">
+                Status: <strong>{{ $openRequest['status_label'] ?? 'Under review' }}</strong>
+                @if(!empty($openRequest['plan_slug']))
+                    · Plan when submitted: <strong>{{ ucfirst($openRequest['plan_slug']) }}</strong>
+                @endif
+                <br>Finish or wait for this request before starting a new one — including after a plan upgrade.
+            </p>
+            <a href="{{ route('mentee.career-services.show', $openRequest['id']) }}" class="btn btn-primary">
+                View open request
+            </a>
+        </div>
+        @else
         <div class="card" style="padding:20px;margin-top:16px;">
             <div style="font-size:13px;margin-bottom:16px;padding:12px;border-radius:10px;background:var(--bg-3);">
                 @if($quote['is_free'])
@@ -53,16 +70,18 @@
                     <textarea name="mentee_notes" class="form-input" rows="3" placeholder="Role you’re targeting, anything to emphasise…">{{ old('mentee_notes') }}</textarea>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-lg" id="career-submit-btn">
+                <button type="submit" class="btn btn-primary btn-lg" id="career-submit-btn" @disabled(! $canSubmit)>
                     {{ $quote['is_free'] ? 'Submit request' : 'Continue' }}
                 </button>
             </form>
         </div>
+        @endif
     </div>
 </div>
 @endsection
 
 @push('scripts')
+@if(! $openRequest)
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
 const CAREER_IS_FREE = @json((bool) $quote['is_free']);
@@ -190,4 +209,5 @@ document.getElementById('career-service-form')?.addEventListener('submit', funct
     });
 });
 </script>
+@endif
 @endpush

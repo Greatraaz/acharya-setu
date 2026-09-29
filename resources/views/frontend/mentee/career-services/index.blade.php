@@ -22,16 +22,30 @@
 
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px;">
             @foreach(['resume' => 'Resume development', 'linkedin' => 'LinkedIn optimisation'] as $key => $label)
-            @php $q = $quotes[$key]; @endphp
+            @php
+                $q = $quotes[$key];
+                $open = $q['open_request'] ?? null;
+            @endphp
             <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:10px;">
                 <div style="font-size:15px;font-weight:800;">{{ $label }}</div>
                 <p style="font-size:12px;color:var(--text-2);line-height:1.45;margin:0;">{{ $q['entitlement']['label'] }}</p>
+                @if($open)
+                <div style="font-size:12px;padding:10px 12px;border-radius:8px;background:rgba(245,158,11,.12);color:#92400e;line-height:1.45;">
+                    Open request: <strong>{{ $open['status_label'] }}</strong>
+                    @if(!empty($open['plan_slug'])) ({{ ucfirst($open['plan_slug']) }} plan) @endif
+                </div>
+                <div style="font-size:22px;font-weight:800;color:var(--brand);">In progress</div>
+                <a href="{{ route('mentee.career-services.show', $open['id']) }}" class="btn btn-primary" style="width:100%;margin-top:auto;">
+                    View open request
+                </a>
+                @else
                 <div style="font-size:22px;font-weight:800;color:var(--brand);">
                     @if($q['is_free']) Included @else ₹{{ number_format($q['amount'], 0) }} @endif
                 </div>
                 <a href="{{ route('mentee.career-services.create', ['type' => $key]) }}" class="btn btn-primary" style="width:100%;margin-top:auto;">
                     Request {{ $key === 'resume' ? 'resume review' : 'LinkedIn review' }}
                 </a>
+                @endif
             </div>
             @endforeach
         </div>

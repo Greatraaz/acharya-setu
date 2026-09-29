@@ -43,6 +43,12 @@ class CareerServiceController extends Controller
 
     public function store(Request $request, CareerServiceService $services)
     {
+        if ($request->filled('linkedin_url')) {
+            $request->merge([
+                'linkedin_url' => CareerServiceService::normalizeLinkedInUrl($request->input('linkedin_url')),
+            ]);
+        }
+
         $data = $request->validate([
             'type'            => 'required|in:resume,linkedin',
             'linkedin_url'    => 'nullable|url|max:500',
@@ -59,8 +65,20 @@ class CareerServiceController extends Controller
                 'payment_method' => $data['payment_method'] ?? null,
             ]);
         } catch (InvalidArgumentException $e) {
+            $open = $services->findOpenRequest(auth()->user(), $data['type']);
+
             if ($request->expectsJson() || $request->ajax()) {
-                return response()->json(['message' => $e->getMessage()], 422);
+                return response()->json([
+                    'message'      => $e->getMessage(),
+                    'open_request' => $open?->toPublicArray(),
+                    'can_submit'   => false,
+                ], 422);
+            }
+
+            if ($open) {
+                return redirect()
+                    ->route('mentee.career-services.show', $open)
+                    ->with('error', $e->getMessage());
             }
 
             return back()->withInput()->with('error', $e->getMessage());

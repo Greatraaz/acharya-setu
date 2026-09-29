@@ -72,6 +72,8 @@ class CareerServiceService
             $nextFreeAt = null;
         }
 
+        $openRequest = $this->findOpenRequest($user, $type);
+
         return [
             'type'        => $type,
             'plan_slug'   => $planSlug,
@@ -80,6 +82,8 @@ class CareerServiceService
             'currency'    => $prices['currency'],
             'wallet_balance' => $walletBalance,
             'payment'     => $isFree ? null : $this->paymentChoicePayload($payable, $walletBalance),
+            'open_request'=> $openRequest?->toPublicArray(),
+            'can_submit'  => $openRequest === null,
             'entitlement' => [
                 'included'         => $included,
                 'months'           => $months,
@@ -134,23 +138,19 @@ class CareerServiceService
         }
 
         if ($type === CareerServiceRequest::TYPE_LINKEDIN) {
-            $url = trim((string) ($input['linkedin_url'] ?? ''));
+            $url = self::normalizeLinkedInUrl($input['linkedin_url'] ?? null) ?? '';
+            $input['linkedin_url'] = $url !== '' ? $url : null;
             if ($url === '' || ! filter_var($url, FILTER_VALIDATE_URL)) {
                 throw new InvalidArgumentException('Please provide a valid LinkedIn profile URL.');
             }
         }
 
-        $open = CareerServiceRequest::query()
-            ->where('user_id', $user->id)
-            ->where('type', $type)
-            ->whereIn('status', [
-                CareerServiceRequest::STATUS_PENDING_PAYMENT,
-                CareerServiceRequest::STATUS_SUBMITTED,
-            ])
-            ->exists();
+        $open = $this->findOpenRequest($user, $type);
 
         if ($open) {
-            throw new InvalidArgumentException('You already have an open '.$this->typeLabel($type).' request. Wait for it to finish before submitting again.');
+            throw new InvalidArgumentException(
+                'You already have an open '.$this->typeLabel($type).' request (#'.$open->id.', '.$open->statusLabel().'). Open that request — wait for review to finish before submitting again.'
+            );
         }
 
         $resumePath = null;
@@ -584,6 +584,39 @@ class CareerServiceService
         }
 
         return $type;
+    }
+
+    public function findOpenRequest(User $user, string $type): ?CareerServiceRequest
+    {
+        $type = $this->normalizeType($type);
+
+        return CareerServiceRequest::query()
+            ->with('invoice')
+            ->where('user_id', $user->id)
+            ->where('type', $type)
+            ->whereIn('status', [
+                CareerServiceRequest::STATUS_PENDING_PAYMENT,
+                CareerServiceRequest::STATUS_SUBMITTED,
+            ])
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * Accept linkedin.com/... without scheme; store as https://...
+     */
+    public static function normalizeLinkedInUrl(?string $url): ?string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return null;
+        }
+
+        if (! preg_match('#^https?://#i', $url)) {
+            $url = 'https://'.ltrim($url, '/');
+        }
+
+        return $url;
     }
 
     private function typeLabel(string $type): string

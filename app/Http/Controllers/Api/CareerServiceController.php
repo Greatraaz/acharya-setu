@@ -28,11 +28,19 @@ class CareerServiceController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $data = $request->validate([
+            'type'     => 'nullable|in:resume,linkedin',
+            'status'   => 'nullable|in:pending_payment,submitted,completed,cancelled',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
         $items = CareerServiceRequest::query()
             ->with('invoice')
             ->where('user_id', $request->user()->id)
+            ->when(! empty($data['type']), fn ($q) => $q->where('type', $data['type']))
+            ->when(! empty($data['status']), fn ($q) => $q->where('status', $data['status']))
             ->latest()
-            ->paginate(20);
+            ->paginate($data['per_page'] ?? 20);
 
         return response()->json([
             'status'  => true,
@@ -41,7 +49,10 @@ class CareerServiceController extends Controller
             'meta'    => [
                 'current_page' => $items->currentPage(),
                 'last_page'    => $items->lastPage(),
+                'per_page'     => $items->perPage(),
                 'total'        => $items->total(),
+                'type'         => $data['type'] ?? null,
+                'status'       => $data['status'] ?? null,
             ],
         ]);
     }
@@ -72,6 +83,12 @@ class CareerServiceController extends Controller
 
     public function store(Request $request, CareerServiceService $services): JsonResponse
     {
+        if ($request->filled('linkedin_url')) {
+            $request->merge([
+                'linkedin_url' => CareerServiceService::normalizeLinkedInUrl($request->input('linkedin_url')),
+            ]);
+        }
+
         $data = $request->validate([
             'type'           => 'required|in:resume,linkedin',
             'linkedin_url'   => 'nullable|url|max:500',
@@ -88,7 +105,14 @@ class CareerServiceController extends Controller
                 'payment_method' => $data['payment_method'] ?? null,
             ]);
         } catch (InvalidArgumentException $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 422);
+            $open = $services->findOpenRequest($request->user(), $data['type']);
+
+            return response()->json([
+                'status'       => false,
+                'message'      => $e->getMessage(),
+                'open_request' => $open?->toPublicArray(),
+                'can_submit'   => false,
+            ], 422);
         }
 
         return $this->paymentJson($result);
