@@ -212,10 +212,17 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::post('/',         [SessionsController::class, 'store']);
             Route::post('/verify',   [SessionsController::class, 'verifyPayment']);
             Route::get('/{id}/agora-token', [SessionsController::class, 'agoraToken'])->whereNumber('id');
+            // Personal notes (private)
             Route::get('/{id}/notes', [SessionsController::class, 'notes'])->whereNumber('id');
             Route::post('/{id}/notes', [SessionsController::class, 'addNote'])->whereNumber('id');
             Route::patch('/{id}/notes/{noteId}', [SessionsController::class, 'updateNote'])->whereNumber('id')->whereNumber('noteId');
             Route::delete('/{id}/notes/{noteId}', [SessionsController::class, 'destroyNote'])->whereNumber('id')->whereNumber('noteId');
+            // Shared notes (visible to mentor + mentee)
+            Route::get('/{id}/shared-notes', [SessionsController::class, 'sharedNotes'])->whereNumber('id');
+            Route::post('/{id}/shared-notes', [SessionsController::class, 'saveSharedNote'])->whereNumber('id');
+            Route::put('/{id}/shared-notes', [SessionsController::class, 'saveSharedNote'])->whereNumber('id');
+            Route::patch('/{id}/shared-notes/{noteId}', [SessionsController::class, 'updateSharedNote'])->whereNumber('id')->whereNumber('noteId');
+            Route::delete('/{id}/shared-notes/{noteId}', [SessionsController::class, 'destroySharedNote'])->whereNumber('id')->whereNumber('noteId');
             Route::patch('/{id}',    [SessionsController::class, 'update']);
             Route::delete('/{id}',   [SessionsController::class, 'destroy']);
         });
@@ -445,10 +452,17 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/',            [SessionsController::class, 'index'])->name('index');
             Route::post('/',           [SessionsController::class, 'store'])->name('store');
             Route::get('/{id}/agora-token', [SessionsController::class, 'agoraToken'])->whereNumber('id');
+            // Personal notes (private)
             Route::get('/{id}/notes', [SessionsController::class, 'notes'])->name('notes')->whereNumber('id');
             Route::post('/{id}/notes', [SessionsController::class, 'addNote'])->name('notes.store')->whereNumber('id');
             Route::patch('/{id}/notes/{noteId}', [SessionsController::class, 'updateNote'])->name('notes.update')->whereNumber('id')->whereNumber('noteId');
             Route::delete('/{id}/notes/{noteId}', [SessionsController::class, 'destroyNote'])->name('notes.destroy')->whereNumber('id')->whereNumber('noteId');
+            // Shared notes (visible to mentor + mentee)
+            Route::get('/{id}/shared-notes', [SessionsController::class, 'sharedNotes'])->name('shared-notes')->whereNumber('id');
+            Route::post('/{id}/shared-notes', [SessionsController::class, 'saveSharedNote'])->name('shared-notes.store')->whereNumber('id');
+            Route::put('/{id}/shared-notes', [SessionsController::class, 'saveSharedNote'])->name('shared-notes.save')->whereNumber('id');
+            Route::patch('/{id}/shared-notes/{noteId}', [SessionsController::class, 'updateSharedNote'])->name('shared-notes.update')->whereNumber('id')->whereNumber('noteId');
+            Route::delete('/{id}/shared-notes/{noteId}', [SessionsController::class, 'destroySharedNote'])->name('shared-notes.destroy')->whereNumber('id')->whereNumber('noteId');
             Route::patch('/{id}',      [SessionsController::class, 'update'])->name('update');
             Route::delete('/{id}',     [SessionsController::class, 'destroy'])->name('destroy');
         });

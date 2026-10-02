@@ -93,7 +93,7 @@ class PlanCheckoutService
         $remainingDays = min($remainingDays, $totalDays);
         $usedDays = max(0, $totalDays - $remainingDays);
 
-        $paid = (float) ($current->amount_paid ?? 0);
+        $paid = $this->creditBasis($current);
         $dailyRate = $totalDays > 0 ? round($paid / $totalDays, 4) : 0.0;
         $amount = round($dailyRate * $remainingDays, 2);
 
@@ -107,6 +107,41 @@ class PlanCheckoutService
             'from_plan_id'    => (int) $current->plan_id,
             'from_plan_name'  => $current->plan?->name,
         ];
+    }
+
+    /**
+     * Value used to prorate unused days of the current plan.
+     *
+     * Prefer the plan total stored at purchase (works even when cash payable was ₹0
+     * because of leftover-day credit or a free/misquoted activation). Fall back to
+     * amount_paid, then the current plan's live pricing.
+     */
+    public function creditBasis(UserSubscription $current): float
+    {
+        $meta = is_array($current->meta) ? $current->meta : [];
+        $checkout = is_array($meta['checkout'] ?? null) ? $meta['checkout'] : [];
+
+        foreach ([
+            $checkout['credit_basis'] ?? null,
+            $checkout['plan_total'] ?? null,
+            $current->amount_paid ?? null,
+        ] as $candidate) {
+            $value = round((float) $candidate, 2);
+            if ($value > 0) {
+                return $value;
+            }
+        }
+
+        if ($current->plan) {
+            $billing = Plan::normalizeBilling(
+                $checkout['billing']
+                    ?? ($checkout['pricing']['billing'] ?? 'monthly')
+            );
+
+            return round((float) ($current->plan->pricingBreakdown($billing)['total'] ?? 0), 2);
+        }
+
+        return 0.0;
     }
 
     public function isPaidActive(?UserSubscription $subscription): bool
@@ -130,17 +165,22 @@ class PlanCheckoutService
     public function snapshot(Plan $plan, array $quote): array
     {
         $billing = Plan::normalizeBilling($quote['billing'] ?? ($quote['pricing']['billing'] ?? 'monthly'));
+        $planTotal = (float) ($quote['plan_total'] ?? 0);
 
         return [
-            'plan_id'    => (int) $plan->id,
-            'is_upgrade' => (bool) ($quote['is_upgrade'] ?? false),
-            'plan_total' => (float) ($quote['plan_total'] ?? 0),
-            'payable'    => (float) ($quote['payable'] ?? 0),
-            'currency'   => $quote['currency'] ?? 'INR',
-            'billing'    => $billing,
-            'pricing'    => $quote['pricing'] ?? $plan->pricingBreakdown($billing),
-            'credit'     => $quote['credit'] ?? [],
-            'quoted_at'  => now()->toDateTimeString(),
+            'plan_id'      => (int) $plan->id,
+            'is_upgrade'   => (bool) ($quote['is_upgrade'] ?? false),
+            'plan_total'   => $planTotal,
+            // Kept for future upgrades even when cash payable was ₹0.
+            'credit_basis' => $planTotal > 0
+                ? $planTotal
+                : (float) ($quote['pricing']['total'] ?? 0),
+            'payable'      => (float) ($quote['payable'] ?? 0),
+            'currency'     => $quote['currency'] ?? 'INR',
+            'billing'      => $billing,
+            'pricing'      => $quote['pricing'] ?? $plan->pricingBreakdown($billing),
+            'credit'       => $quote['credit'] ?? [],
+            'quoted_at'    => now()->toDateTimeString(),
         ];
     }
 
@@ -188,6 +228,8 @@ class PlanCheckoutService
         $billing = Plan::normalizeBilling($quote['billing'] ?? ($quote['pricing']['billing'] ?? 'monthly'));
         $expiresAt = $startsAt->copy()->addDays($plan->billingDaysFor($billing));
 
+        // Cash collected this checkout. Proration for later upgrades uses plan_total /
+        // credit_basis from the snapshot, not only amount_paid.
         $subscription->update([
             'plan_id'             => $plan->id,
             'amount_paid'         => (float) $quote['payable'],

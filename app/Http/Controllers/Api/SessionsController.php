@@ -211,61 +211,87 @@ class SessionsController extends Controller
     }
 
     /**
-     * List all notes on a session (mentor + mentee).
+     * Personal notes only (private — matches web "My Personal Notes").
+     * Frontend already uses these routes for personal notes.
      * GET /api/v1/{mentor|mentee}/sessions/{id}/notes
      */
     public function notes(Request $request, int $id): JsonResponse
     {
         $session = $this->findOwnedSession($request, $id);
+        $userId  = (int) $request->user()->id;
 
         $notes = $session->notes()
             ->with('author:id,name,role,avatar_url')
+            ->where('author_id', $userId)
+            ->where('is_shared', false)
             ->latest()
             ->get()
             ->map(fn (SessionNote $note) => $this->formatNote($note));
+
+        $myNote = $notes->first();
 
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
             'session_id' => $session->id,
             'count'      => $notes->count(),
+            'my_note'    => $myNote,
             'notes'      => $notes,
         ]);
     }
 
     /**
-     * Add a plain-text note (may include URLs in content).
+     * Create / upsert personal note (is_shared = false).
      * POST /api/v1/{mentor|mentee}/sessions/{id}/notes
-     * Body: { "content": "Discussed roadmap https://example.com" }
+     * Body: { "content": "..." }
      */
     public function addNote(Request $request, int $id): JsonResponse
     {
         $session = $this->findOwnedSession($request, $id);
+        $userId  = (int) $request->user()->id;
 
         $data = $request->validate([
             'content' => 'required|string|max:65535',
         ]);
 
-        $note = $session->notes()->create([
-            'author_id'    => $request->user()->id,
-            'type'         => 'note',
-            'content'      => $data['content'],
-            'resource_url' => null,
-            'is_shared'    => true,
-        ]);
+        $note = $session->notes()
+            ->where('author_id', $userId)
+            ->where('is_shared', false)
+            ->where('type', 'note')
+            ->latest()
+            ->first();
+
+        if ($note) {
+            $note->update([
+                'content'      => $data['content'],
+                'resource_url' => null,
+            ]);
+            $statusCode = 200;
+            $message = 'Personal note updated.';
+        } else {
+            $note = $session->notes()->create([
+                'author_id'    => $userId,
+                'type'         => 'note',
+                'content'      => $data['content'],
+                'resource_url' => null,
+                'is_shared'    => false,
+            ]);
+            $statusCode = 201;
+            $message = 'Personal note saved.';
+        }
 
         $note->load('author:id,name,role,avatar_url');
 
         return response()->json([
             'status'     => true,
-            'statuscode' => 201,
-            'message'    => 'Note added.',
+            'statuscode' => $statusCode,
+            'message'    => $message,
             'note'       => $this->formatNote($note),
-        ], 201);
+        ], $statusCode);
     }
 
     /**
-     * Update own session note text.
+     * Update own personal note.
      * PATCH /api/v1/{mentor|mentee}/sessions/{id}/notes/{noteId}
      */
     public function updateNote(Request $request, int $id, int $noteId): JsonResponse
@@ -275,6 +301,7 @@ class SessionsController extends Controller
         $note = $session->notes()
             ->where('id', $noteId)
             ->where('author_id', $request->user()->id)
+            ->where('is_shared', false)
             ->firstOrFail();
 
         $data = $request->validate([
@@ -287,13 +314,13 @@ class SessionsController extends Controller
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
-            'message'    => 'Note updated.',
+            'message'    => 'Personal note updated.',
             'note'       => $this->formatNote($note),
         ]);
     }
 
     /**
-     * Delete own session note.
+     * Delete own personal note.
      * DELETE /api/v1/{mentor|mentee}/sessions/{id}/notes/{noteId}
      */
     public function destroyNote(Request $request, int $id, int $noteId): JsonResponse
@@ -303,6 +330,7 @@ class SessionsController extends Controller
         $note = $session->notes()
             ->where('id', $noteId)
             ->where('author_id', $request->user()->id)
+            ->where('is_shared', false)
             ->firstOrFail();
 
         $note->delete();
@@ -310,7 +338,145 @@ class SessionsController extends Controller
         return response()->json([
             'status'     => true,
             'statuscode' => 200,
-            'message'    => 'Note deleted.',
+            'message'    => 'Personal note deleted.',
+        ]);
+    }
+
+    /**
+     * Shared notes visible to both mentor and mentee (matches web "Shared Session Notes").
+     * GET /api/v1/{mentor|mentee}/sessions/{id}/shared-notes
+     */
+    public function sharedNotes(Request $request, int $id): JsonResponse
+    {
+        $session = $this->findOwnedSession($request, $id);
+        $userId  = (int) $request->user()->id;
+
+        $notes = $session->notes()
+            ->with('author:id,name,role,avatar_url')
+            ->where('is_shared', true)
+            ->latest()
+            ->get()
+            ->map(fn (SessionNote $note) => $this->formatNote($note));
+
+        $mySharedNote = $notes->first(fn ($n) => (int) $n['author_id'] === $userId);
+
+        return response()->json([
+            'status'         => true,
+            'statuscode'     => 200,
+            'session_id'     => $session->id,
+            'count'          => $notes->count(),
+            'my_shared_note' => $mySharedNote,
+            'notes'          => $notes,
+        ]);
+    }
+
+    /**
+     * Create / upsert own shared note (visible to the other party).
+     * POST /api/v1/{mentor|mentee}/sessions/{id}/shared-notes
+     * Body: { "content": "Key discussion points…", "type": "note" }
+     */
+    public function saveSharedNote(Request $request, int $id): JsonResponse
+    {
+        $session = $this->findOwnedSession($request, $id);
+        $userId  = (int) $request->user()->id;
+
+        $data = $request->validate([
+            'content' => 'required|string|max:65535',
+            'type'    => 'nullable|in:note,resource,action_item',
+        ]);
+
+        $type = $data['type'] ?? 'note';
+
+        $note = $session->notes()
+            ->where('author_id', $userId)
+            ->where('type', $type)
+            ->where('is_shared', true)
+            ->latest()
+            ->first();
+
+        $payload = [
+            'content'   => $data['content'],
+            'is_shared' => true,
+            'type'      => $type,
+        ];
+
+        if ($note) {
+            $note->update($payload);
+            $statusCode = 200;
+            $message = 'Shared notes saved.';
+        } else {
+            $note = $session->notes()->create(array_merge($payload, [
+                'author_id'    => $userId,
+                'resource_url' => null,
+            ]));
+            $statusCode = 201;
+            $message = 'Shared notes saved.';
+        }
+
+        $note->load('author:id,name,role,avatar_url');
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => $statusCode,
+            'message'    => $message,
+            'note'       => $this->formatNote($note),
+        ], $statusCode);
+    }
+
+    /**
+     * Update own shared note by id.
+     * PATCH /api/v1/{mentor|mentee}/sessions/{id}/shared-notes/{noteId}
+     */
+    public function updateSharedNote(Request $request, int $id, int $noteId): JsonResponse
+    {
+        $session = $this->findOwnedSession($request, $id);
+
+        $note = $session->notes()
+            ->where('id', $noteId)
+            ->where('author_id', $request->user()->id)
+            ->where('is_shared', true)
+            ->firstOrFail();
+
+        $data = $request->validate([
+            'content' => 'required|string|max:65535',
+            'type'    => 'nullable|in:note,resource,action_item',
+        ]);
+
+        $note->update(array_filter([
+            'content' => $data['content'],
+            'type'    => $data['type'] ?? null,
+        ], fn ($v) => $v !== null));
+
+        $note->load('author:id,name,role,avatar_url');
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Shared note updated.',
+            'note'       => $this->formatNote($note),
+        ]);
+    }
+
+    /**
+     * Delete own shared note.
+     * DELETE /api/v1/{mentor|mentee}/sessions/{id}/shared-notes/{noteId}
+     */
+    public function destroySharedNote(Request $request, int $id, int $noteId): JsonResponse
+    {
+        $session = $this->findOwnedSession($request, $id);
+
+        $note = $session->notes()
+            ->where('id', $noteId)
+            ->where('author_id', $request->user()->id)
+            ->where('is_shared', true)
+            ->firstOrFail();
+
+        $note->delete();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Shared note deleted.',
         ]);
     }
 

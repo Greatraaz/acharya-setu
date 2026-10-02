@@ -158,7 +158,7 @@
                         <div style="font-size:11px;color:var(--text-3);margin-top:4px;">
                             {{ $plan->billingDaysFor($billingKey) }}-day billing cycle{{ $p['isUpgrade'] ? ' · starts today' : '' }}
                         </div>
-                        @if($p['isUpgrade'] && (int) ($p['credit']['remaining_days'] ?? 0) > 0)
+                        @if($p['isUpgrade'] && $p['creditAmount'] > 0 && (int) ($p['credit']['remaining_days'] ?? 0) > 0)
                         <div style="font-size:11px;color:#15803d;margin-top:4px;line-height:1.45;">
                             {{ (int) $p['credit']['remaining_days'] }} unused day{{ (int) $p['credit']['remaining_days'] === 1 ? '' : 's' }} of {{ $p['credit']['from_plan_name'] ?? 'your current plan' }} credited at ₹{{ number_format((float) ($p['credit']['daily_rate'] ?? 0), 2) }}/day.
                             Benefits reset with this plan.

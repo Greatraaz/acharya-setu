@@ -1,0 +1,539 @@
+{
+    "info": {
+        "name": "Session Notes — Personal & Shared",
+        "description": "Personal notes (private) and Shared notes (visible to mentor + mentee), matching the web session detail UI.\n\n**Variables**\n- `baseUrl` — e.g. `http://127.0.0.1:8000/api/v1` or `https://vedrix.online/api/v1`\n- `mentorToken` / `menteeToken` — Sanctum bearer tokens\n- `sessionId` — consultation session id both users own\n- `personalNoteId` / `sharedNoteId` — set after create/list\n\n**Personal** → `/sessions/{id}/notes` (`is_shared=false`)\n**Shared** → `/sessions/{id}/shared-notes` (`is_shared=true`)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "https://vedrix.online/api/v1"
+        },
+        {
+            "key": "mentorToken",
+            "value": ""
+        },
+        {
+            "key": "menteeToken",
+            "value": ""
+        },
+        {
+            "key": "sessionId",
+            "value": "2"
+        },
+        {
+            "key": "personalNoteId",
+            "value": "1"
+        },
+        {
+            "key": "sharedNoteId",
+            "value": "1"
+        }
+    ],
+    "item": [
+        {
+            "name": "Mentor — Personal Notes",
+            "description": "Private notes — only the mentor can see these (web: My Personal Notes).",
+            "item": [
+                {
+                    "name": "List personal notes",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "try {",
+                                    "  const json = pm.response.json();",
+                                    "  if (json.my_note && json.my_note.id) {",
+                                    "    pm.collectionVariables.set('personalNoteId', String(json.my_note.id));",
+                                    "  } else if (json.notes && json.notes[0]) {",
+                                    "    pm.collectionVariables.set('personalNoteId', String(json.notes[0].id));",
+                                    "  }",
+                                    "} catch (e) {}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{mentorToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentor/sessions/{{sessionId}}/notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentor", "sessions", "{{sessionId}}", "notes"]
+                        },
+                        "description": "Returns only the current user's personal notes (`is_shared=false`). Includes `my_note`."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save personal note",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "try {",
+                                    "  const json = pm.response.json();",
+                                    "  if (json.note && json.note.id) {",
+                                    "    pm.collectionVariables.set('personalNoteId', String(json.note.id));",
+                                    "  }",
+                                    "} catch (e) {}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{mentorToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"My private reminders from this session…\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentor/sessions/{{sessionId}}/notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentor", "sessions", "{{sessionId}}", "notes"]
+                        },
+                        "description": "Creates or upserts personal note with `is_shared=false`."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update personal note",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{mentorToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Updated private notes…\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentor/sessions/{{sessionId}}/notes/{{personalNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentor", "sessions", "{{sessionId}}", "notes", "{{personalNoteId}}"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete personal note",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{mentorToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentor/sessions/{{sessionId}}/notes/{{personalNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentor", "sessions", "{{sessionId}}", "notes", "{{personalNoteId}}"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Mentor — Shared Notes",
+            "description": "Shared notes visible to the mentee (web: Shared Session Notes / Save Shared Notes).",
+            "item": [
+                {
+                    "name": "List shared notes",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "try {",
+                                    "  const json = pm.response.json();",
+                                    "  if (json.my_shared_note && json.my_shared_note.id) {",
+                                    "    pm.collectionVariables.set('sharedNoteId', String(json.my_shared_note.id));",
+                                    "  } else if (json.notes && json.notes[0]) {",
+                                    "    pm.collectionVariables.set('sharedNoteId', String(json.notes[0].id));",
+                                    "  }",
+                                    "} catch (e) {}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{mentorToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentor/sessions/{{sessionId}}/shared-notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentor", "sessions", "{{sessionId}}", "shared-notes"]
+                        },
+                        "description": "All shared notes on the session + `my_shared_note` for the editor pad."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save shared notes (POST upsert)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "try {",
+                                    "  const json = pm.response.json();",
+                                    "  if (json.note && json.note.id) {",
+                                    "    pm.collectionVariables.set('sharedNoteId', String(json.note.id));",
+                                    "  }",
+                                    "} catch (e) {}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{mentorToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Key discussion points…\\n\\n- Career roadmap\\n- Resume feedback\\n- Next steps\",\n  \"type\": \"note\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentor/sessions/{{sessionId}}/shared-notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentor", "sessions", "{{sessionId}}", "shared-notes"]
+                        },
+                        "description": "Creates or updates mentor's shared note (`is_shared=true`). Same as web Save Shared Notes."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save shared notes (PUT upsert)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{mentorToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Updated shared summary for mentee…\",\n  \"type\": \"note\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentor/sessions/{{sessionId}}/shared-notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentor", "sessions", "{{sessionId}}", "shared-notes"]
+                        },
+                        "description": "Same upsert as POST."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update shared note by id",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{mentorToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Patched shared note content…\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentor/sessions/{{sessionId}}/shared-notes/{{sharedNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentor", "sessions", "{{sessionId}}", "shared-notes", "{{sharedNoteId}}"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete shared note",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{mentorToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentor/sessions/{{sessionId}}/shared-notes/{{sharedNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentor", "sessions", "{{sessionId}}", "shared-notes", "{{sharedNoteId}}"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Mentee — Personal Notes",
+            "description": "Private notes — only the mentee can see these.",
+            "item": [
+                {
+                    "name": "List personal notes",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "try {",
+                                    "  const json = pm.response.json();",
+                                    "  if (json.my_note && json.my_note.id) {",
+                                    "    pm.collectionVariables.set('personalNoteId', String(json.my_note.id));",
+                                    "  } else if (json.notes && json.notes[0]) {",
+                                    "    pm.collectionVariables.set('personalNoteId', String(json.notes[0].id));",
+                                    "  }",
+                                    "} catch (e) {}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/sessions/{{sessionId}}/notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "sessions", "{{sessionId}}", "notes"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save personal note",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "try {",
+                                    "  const json = pm.response.json();",
+                                    "  if (json.note && json.note.id) {",
+                                    "    pm.collectionVariables.set('personalNoteId', String(json.note.id));",
+                                    "  }",
+                                    "} catch (e) {}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Things I want to remember privately…\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/sessions/{{sessionId}}/notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "sessions", "{{sessionId}}", "notes"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update personal note",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Updated mentee private notes…\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/sessions/{{sessionId}}/notes/{{personalNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "sessions", "{{sessionId}}", "notes", "{{personalNoteId}}"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete personal note",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/sessions/{{sessionId}}/notes/{{personalNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "sessions", "{{sessionId}}", "notes", "{{personalNoteId}}"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Mentee — Shared Notes",
+            "description": "View / contribute shared session notes (visible to mentor).",
+            "item": [
+                {
+                    "name": "List shared notes",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "try {",
+                                    "  const json = pm.response.json();",
+                                    "  if (json.my_shared_note && json.my_shared_note.id) {",
+                                    "    pm.collectionVariables.set('sharedNoteId', String(json.my_shared_note.id));",
+                                    "  } else if (json.notes && json.notes[0]) {",
+                                    "    pm.collectionVariables.set('sharedNoteId', String(json.notes[0].id));",
+                                    "  }",
+                                    "} catch (e) {}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/sessions/{{sessionId}}/shared-notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "sessions", "{{sessionId}}", "shared-notes"]
+                        },
+                        "description": "Mentee sees mentor shared notes (and any of their own shared notes)."
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save shared notes (POST upsert)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "try {",
+                                    "  const json = pm.response.json();",
+                                    "  if (json.note && json.note.id) {",
+                                    "    pm.collectionVariables.set('sharedNoteId', String(json.note.id));",
+                                    "  }",
+                                    "} catch (e) {}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Shared follow-up from mentee…\",\n  \"type\": \"note\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/sessions/{{sessionId}}/shared-notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "sessions", "{{sessionId}}", "shared-notes"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save shared notes (PUT upsert)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Updated mentee shared note…\",\n  \"type\": \"note\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/sessions/{{sessionId}}/shared-notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "sessions", "{{sessionId}}", "shared-notes"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update shared note by id",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Patched mentee shared note…\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/sessions/{{sessionId}}/shared-notes/{{sharedNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "sessions", "{{sessionId}}", "shared-notes", "{{sharedNoteId}}"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete shared note",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/sessions/{{sessionId}}/shared-notes/{{sharedNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "sessions", "{{sessionId}}", "shared-notes", "{{sharedNoteId}}"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}
