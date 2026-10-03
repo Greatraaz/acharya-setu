@@ -26,6 +26,22 @@ trait HasSubscription
     }
 
     /**
+     * True if the mentee has ever completed a paid plan subscription
+     * (active, expired, or cancelled — as long as payment_status is paid).
+     */
+    public function hasEverSubscribed(): bool
+    {
+        return UserSubscription::where('user_id', $this->id)
+            ->where('payment_status', 'paid')
+            ->exists();
+    }
+
+    public function hasNeverSubscribed(): bool
+    {
+        return ! $this->hasEverSubscribed();
+    }
+
+    /**
      * Get the current active subscription with plan details.
      */
     public function activeSubscription(): ?UserSubscription

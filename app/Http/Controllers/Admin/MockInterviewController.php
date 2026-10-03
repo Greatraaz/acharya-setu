@@ -36,11 +36,55 @@ class MockInterviewController extends Controller
 
     public function show(MockInterviewRequest $mockInterview)
     {
-        $mockInterview->load(['user', 'reviewer', 'assigner']);
+        $mockInterview->load([
+            'user',
+            'reviewer',
+            'assigner',
+            'notes.author:id,name,role,avatar_url',
+        ]);
 
         return view('admin.mock-interviews.show', [
             'item' => $mockInterview,
         ]);
+    }
+
+    public function saveSharedNote(Request $request, MockInterviewRequest $mockInterview)
+    {
+        $data = $request->validate([
+            'content'   => 'required|string|max:65535',
+            'type'      => 'nullable|in:note,resource,action_item',
+            'is_shared' => 'nullable|boolean',
+        ]);
+
+        $type = $data['type'] ?? 'note';
+        $payload = [
+            'content'   => $data['content'],
+            'is_shared' => $request->boolean('is_shared', true),
+            'type'      => $type,
+        ];
+
+        $note = $mockInterview->notes()
+            ->where('author_id', auth()->id())
+            ->where('type', $type)
+            ->where('is_shared', true)
+            ->latest()
+            ->first();
+
+        if ($note) {
+            $note->update($payload);
+        } else {
+            $note = $mockInterview->notes()->create(array_merge($payload, [
+                'author_id' => auth()->id(),
+            ]));
+        }
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['message' => 'Shared notes saved.', 'note' => $note]);
+        }
+
+        return redirect()
+            ->route('admin.mock-interviews.show', $mockInterview)
+            ->with('success', 'Shared notes saved.');
     }
 
     public function confirm(Request $request, MockInterviewRequest $mockInterview, MockInterviewService $services)

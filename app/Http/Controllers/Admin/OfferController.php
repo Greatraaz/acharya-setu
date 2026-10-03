@@ -57,7 +57,7 @@ class OfferController extends Controller
         $data = $this->validated($request);
         $data['created_by'] = auth()->id();
 
-        if ($data['audience'] === Offer::AUDIENCE_SELECTED_MENTEES && empty($data['coupon_code'])) {
+        if ($this->isCouponAudience($data['audience']) && empty($data['coupon_code'])) {
             $data['coupon_code'] = $this->offers->generateCouponCode();
         }
 
@@ -66,7 +66,7 @@ class OfferController extends Controller
 
         $offer = Offer::create($data);
 
-        if ($offer->isCouponOffer()) {
+        if ($offer->isSelectedMenteesOffer()) {
             $offer->mentees()->sync($menteeIds);
         }
 
@@ -89,7 +89,7 @@ class OfferController extends Controller
         $menteeIds = $data['mentee_ids'] ?? [];
         unset($data['mentee_ids']);
 
-        if ($data['audience'] === Offer::AUDIENCE_SELECTED_MENTEES && empty($data['coupon_code'])) {
+        if ($this->isCouponAudience($data['audience']) && empty($data['coupon_code'])) {
             $data['coupon_code'] = $offer->coupon_code ?: $this->offers->generateCouponCode();
         }
 
@@ -101,7 +101,7 @@ class OfferController extends Controller
 
         $offer->update($data);
 
-        if ($offer->isCouponOffer()) {
+        if ($offer->isSelectedMenteesOffer()) {
             $offer->mentees()->sync($menteeIds);
         } else {
             $offer->mentees()->detach();
@@ -129,14 +129,24 @@ class OfferController extends Controller
             ->get(['id', 'name', 'email']);
     }
 
+    private function isCouponAudience(string $audience): bool
+    {
+        return in_array($audience, Offer::COUPON_AUDIENCES, true);
+    }
+
     private function validated(Request $request, ?Offer $offer = null): array
     {
         $audience = $request->input('audience', Offer::AUDIENCE_NEW_JOINEE);
-        $isCoupon = $audience === Offer::AUDIENCE_SELECTED_MENTEES;
+        $isCoupon = $this->isCouponAudience($audience);
+        $isSelected = $audience === Offer::AUDIENCE_SELECTED_MENTEES;
 
         $rules = [
             'title'      => 'required|string|max:200',
-            'audience'   => ['required', Rule::in([Offer::AUDIENCE_NEW_JOINEE, Offer::AUDIENCE_SELECTED_MENTEES])],
+            'audience'   => ['required', Rule::in([
+                Offer::AUDIENCE_NEW_JOINEE,
+                Offer::AUDIENCE_SELECTED_MENTEES,
+                Offer::AUDIENCE_UNSUBSCRIBED_MENTEES,
+            ])],
             'amount'     => 'required|numeric|min:1',
             'starts_at'  => 'required|date',
             'expires_at' => 'required|date|after_or_equal:starts_at',
@@ -152,6 +162,9 @@ class OfferController extends Controller
             ];
             $rules['usage_limit'] = 'required|integer|min:1';
             $rules['min_session_amount'] = 'required|numeric|min:0';
+        }
+
+        if ($isSelected) {
             $rules['mentee_ids'] = 'required|array|min:1';
             $rules['mentee_ids.*'] = 'exists:users,id';
         }
@@ -167,6 +180,8 @@ class OfferController extends Controller
             $data['coupon_code'] = null;
             $data['usage_limit'] = null;
             $data['min_session_amount'] = null;
+        } elseif (! $isSelected) {
+            $data['mentee_ids'] = [];
         }
 
         return $data;

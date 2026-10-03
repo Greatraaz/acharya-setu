@@ -14,6 +14,14 @@ class Offer extends Model
 
     public const AUDIENCE_SELECTED_MENTEES = 'selected_mentees';
 
+    /** Session coupon for mentees who have never purchased / activated a paid plan. */
+    public const AUDIENCE_UNSUBSCRIBED_MENTEES = 'unsubscribed_mentees';
+
+    public const COUPON_AUDIENCES = [
+        self::AUDIENCE_SELECTED_MENTEES,
+        self::AUDIENCE_UNSUBSCRIBED_MENTEES,
+    ];
+
     protected $fillable = [
         'title',
         'audience',
@@ -61,7 +69,17 @@ class Offer extends Model
 
     public function isCouponOffer(): bool
     {
+        return in_array($this->audience, self::COUPON_AUDIENCES, true);
+    }
+
+    public function isSelectedMenteesOffer(): bool
+    {
         return $this->audience === self::AUDIENCE_SELECTED_MENTEES;
+    }
+
+    public function isUnsubscribedMenteesOffer(): bool
+    {
+        return $this->audience === self::AUDIENCE_UNSUBSCRIBED_MENTEES;
     }
 
     public function isWithinDates(?\Carbon\Carbon $at = null): bool
@@ -89,9 +107,10 @@ class Offer extends Model
     public function audienceLabel(): string
     {
         return match ($this->audience) {
-            self::AUDIENCE_NEW_JOINEE      => 'New joinee wallet credit',
-            self::AUDIENCE_SELECTED_MENTEES => 'Coupon for selected mentees',
-            default                        => ucfirst(str_replace('_', ' ', $this->audience)),
+            self::AUDIENCE_NEW_JOINEE           => 'New joinee wallet credit',
+            self::AUDIENCE_SELECTED_MENTEES     => 'Coupon for selected mentees',
+            self::AUDIENCE_UNSUBSCRIBED_MENTEES => 'Coupon for unsubscribed mentees',
+            default                            => ucfirst(str_replace('_', ' ', $this->audience)),
         };
     }
 

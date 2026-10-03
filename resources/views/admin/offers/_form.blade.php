@@ -28,6 +28,9 @@
                 <option value="{{ \App\Models\Offer::AUDIENCE_SELECTED_MENTEES }}" @selected($audience === \App\Models\Offer::AUDIENCE_SELECTED_MENTEES)>
                     Selected mentees — session booking coupon
                 </option>
+                <option value="{{ \App\Models\Offer::AUDIENCE_UNSUBSCRIBED_MENTEES }}" @selected($audience === \App\Models\Offer::AUDIENCE_UNSUBSCRIBED_MENTEES)>
+                    Unsubscribed mentees — coupon for mentees who never subscribed
+                </option>
             </select>
             @error('audience')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
         </div>
@@ -50,7 +53,10 @@
             @error('mentee_ids.*')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
         </div>
 
-        <div id="coupon-fields" class="space-y-4 {{ $audience === \App\Models\Offer::AUDIENCE_SELECTED_MENTEES ? '' : 'hidden' }}">
+        @php
+            $isCouponAudience = in_array($audience, \App\Models\Offer::COUPON_AUDIENCES, true);
+        @endphp
+        <div id="coupon-fields" class="space-y-4 {{ $isCouponAudience ? '' : 'hidden' }}">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Coupon Code</label>
                 <input type="text" name="coupon_code" value="{{ old('coupon_code', $offer->coupon_code ?? '') }}"
@@ -80,7 +86,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                    <span id="amount-label">{{ $audience === \App\Models\Offer::AUDIENCE_SELECTED_MENTEES ? 'Discount Amount (₹)' : 'Wallet Credit Amount (₹)' }}</span> *
+                    <span id="amount-label">{{ $isCouponAudience ? 'Discount Amount (₹)' : 'Wallet Credit Amount (₹)' }}</span> *
                 </label>
                 <input type="number" name="amount" min="1" step="0.01" required
                        value="{{ old('amount', $offer->amount ?? '') }}"
@@ -120,6 +126,9 @@
         <div id="offer-hint-coupon" class="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 text-sm text-blue-900 {{ $audience === \App\Models\Offer::AUDIENCE_SELECTED_MENTEES ? '' : 'hidden' }}">
             Assigned mentees can optionally apply this coupon when booking a session. Minimum booking amount, usage limit, and expiry are enforced at checkout.
         </div>
+        <div id="offer-hint-unsubscribed" class="rounded-xl bg-violet-50 border border-violet-100 px-4 py-3 text-sm text-violet-900 {{ $audience === \App\Models\Offer::AUDIENCE_UNSUBSCRIBED_MENTEES ? '' : 'hidden' }}">
+            Only mentees who have <strong>never subscribed</strong> to any plan can use this coupon at session booking. No mentee assignment needed — eligibility is checked automatically.
+        </div>
     </div>
 
     <div class="flex items-center justify-end gap-3">
@@ -135,6 +144,7 @@
 (function () {
     const AUDIENCE_NEW = @json(\App\Models\Offer::AUDIENCE_NEW_JOINEE);
     const AUDIENCE_COUPON = @json(\App\Models\Offer::AUDIENCE_SELECTED_MENTEES);
+    const AUDIENCE_UNSUBSCRIBED = @json(\App\Models\Offer::AUDIENCE_UNSUBSCRIBED_MENTEES);
     const mentees = @json($mentees->map(fn ($m) => ['id' => (string) $m->id, 'name' => $m->name, 'email' => $m->email])->values());
     let selected = new Set(@json($selectedMenteeIds));
 
@@ -143,6 +153,7 @@
     const couponFields = document.getElementById('coupon-fields');
     const hintNew = document.getElementById('offer-hint-new');
     const hintCoupon = document.getElementById('offer-hint-coupon');
+    const hintUnsubscribed = document.getElementById('offer-hint-unsubscribed');
     const amountLabel = document.getElementById('amount-label');
     const searchEl = document.getElementById('mentee-search');
     const dropdownEl = document.getElementById('mentee-dropdown');
@@ -152,11 +163,16 @@
     const minSession = document.getElementById('offer-min-session');
 
     function toggleAudience() {
-        const isCoupon = audienceEl.value === AUDIENCE_COUPON;
-        menteePicker.classList.toggle('hidden', !isCoupon);
+        const value = audienceEl.value;
+        const isSelected = value === AUDIENCE_COUPON;
+        const isUnsubscribed = value === AUDIENCE_UNSUBSCRIBED;
+        const isCoupon = isSelected || isUnsubscribed;
+
+        menteePicker.classList.toggle('hidden', !isSelected);
         couponFields.classList.toggle('hidden', !isCoupon);
-        hintNew.classList.toggle('hidden', isCoupon);
-        hintCoupon.classList.toggle('hidden', !isCoupon);
+        hintNew.classList.toggle('hidden', value !== AUDIENCE_NEW);
+        hintCoupon.classList.toggle('hidden', !isSelected);
+        if (hintUnsubscribed) hintUnsubscribed.classList.toggle('hidden', !isUnsubscribed);
         amountLabel.textContent = isCoupon ? 'Discount Amount (₹)' : 'Wallet Credit Amount (₹)';
         if (usageLimit) usageLimit.required = isCoupon;
         if (minSession) minSession.required = isCoupon;

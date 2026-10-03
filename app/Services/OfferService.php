@@ -86,7 +86,7 @@ class OfferService
         }
 
         $offer = Offer::query()
-            ->where('audience', Offer::AUDIENCE_SELECTED_MENTEES)
+            ->whereIn('audience', Offer::COUPON_AUDIENCES)
             ->whereRaw('UPPER(coupon_code) = ?', [$code])
             ->first();
 
@@ -106,8 +106,16 @@ class OfferService
             return ['valid' => false, 'message' => 'This coupon has reached its usage limit.'];
         }
 
-        if (! $offer->mentees()->where('users.id', $mentee->id)->exists()) {
-            return ['valid' => false, 'message' => 'This coupon is not assigned to your account.'];
+        if ($offer->isSelectedMenteesOffer()) {
+            if (! $offer->mentees()->where('users.id', $mentee->id)->exists()) {
+                return ['valid' => false, 'message' => 'This coupon is not assigned to your account.'];
+            }
+        } elseif ($offer->isUnsubscribedMenteesOffer()) {
+            if (! $mentee->hasNeverSubscribed()) {
+                return ['valid' => false, 'message' => 'This coupon is only for mentees who have never subscribed to a plan.'];
+            }
+        } else {
+            return ['valid' => false, 'message' => 'Invalid coupon code.'];
         }
 
         $minAmount = round((float) ($offer->min_session_amount ?? 0), 2);
@@ -139,16 +147,31 @@ class OfferService
         }
 
         return Offer::query()
-            ->where('audience', Offer::AUDIENCE_SELECTED_MENTEES)
+            ->whereIn('audience', Offer::COUPON_AUDIENCES)
             ->active()
             ->withinDates()
-            ->whereHas('mentees', fn ($q) => $q->where('users.id', $mentee->id))
+            ->where(function ($q) use ($mentee) {
+                $q->where(function ($selected) use ($mentee) {
+                    $selected->where('audience', Offer::AUDIENCE_SELECTED_MENTEES)
+                        ->whereHas('mentees', fn ($mq) => $mq->where('users.id', $mentee->id));
+                })->orWhere(function ($unsubscribed) {
+                    $unsubscribed->where('audience', Offer::AUDIENCE_UNSUBSCRIBED_MENTEES);
+                });
+            })
             ->where(function ($q) {
                 $q->whereNull('usage_limit')
                     ->orWhereColumn('usage_count', '<', 'usage_limit');
             })
             ->orderBy('title')
-            ->get();
+            ->get()
+            ->filter(function (Offer $offer) use ($mentee) {
+                if ($offer->isUnsubscribedMenteesOffer()) {
+                    return $mentee->hasNeverSubscribed();
+                }
+
+                return true;
+            })
+            ->values();
     }
 
     public function recordSessionRedemption(Offer $offer, User $mentee, ConsultationSession $session, float $discount): void

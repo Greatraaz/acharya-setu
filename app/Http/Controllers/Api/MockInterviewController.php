@@ -184,6 +184,275 @@ class MockInterviewController extends Controller
         ]);
     }
 
+    /**
+     * Personal notes (private).
+     * GET /api/v1/mentee/mock-interviews/{id}/notes
+     */
+    public function notes(Request $request, int $id): JsonResponse
+    {
+        $item = $this->findOwned($request, $id);
+        $userId = (int) $request->user()->id;
+
+        $notes = $item->notes()
+            ->with('author:id,name,role,avatar_url')
+            ->where('author_id', $userId)
+            ->where('is_shared', false)
+            ->latest()
+            ->get()
+            ->map(fn ($note) => $this->formatNote($note));
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'mock_interview_id' => $item->id,
+            'count'      => $notes->count(),
+            'my_note'    => $notes->first(),
+            'notes'      => $notes,
+        ]);
+    }
+
+    /**
+     * Create / upsert personal note.
+     * POST /api/v1/mentee/mock-interviews/{id}/notes
+     */
+    public function addNote(Request $request, int $id): JsonResponse
+    {
+        $item = $this->findOwned($request, $id);
+        $userId = (int) $request->user()->id;
+
+        $data = $request->validate([
+            'content' => 'required|string|max:65535',
+        ]);
+
+        $note = $item->notes()
+            ->where('author_id', $userId)
+            ->where('is_shared', false)
+            ->where('type', 'note')
+            ->latest()
+            ->first();
+
+        if ($note) {
+            $note->update(['content' => $data['content'], 'resource_url' => null]);
+            $statusCode = 200;
+            $message = 'Personal note updated.';
+        } else {
+            $note = $item->notes()->create([
+                'author_id'    => $userId,
+                'type'         => 'note',
+                'content'      => $data['content'],
+                'resource_url' => null,
+                'is_shared'    => false,
+            ]);
+            $statusCode = 201;
+            $message = 'Personal note saved.';
+        }
+
+        $note->load('author:id,name,role,avatar_url');
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => $statusCode,
+            'message'    => $message,
+            'note'       => $this->formatNote($note),
+        ], $statusCode);
+    }
+
+    public function updateNote(Request $request, int $id, int $noteId): JsonResponse
+    {
+        $item = $this->findOwned($request, $id);
+
+        $note = $item->notes()
+            ->where('id', $noteId)
+            ->where('author_id', $request->user()->id)
+            ->where('is_shared', false)
+            ->firstOrFail();
+
+        $data = $request->validate([
+            'content' => 'required|string|max:65535',
+        ]);
+
+        $note->update(['content' => $data['content']]);
+        $note->load('author:id,name,role,avatar_url');
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Personal note updated.',
+            'note'       => $this->formatNote($note),
+        ]);
+    }
+
+    public function destroyNote(Request $request, int $id, int $noteId): JsonResponse
+    {
+        $item = $this->findOwned($request, $id);
+
+        $note = $item->notes()
+            ->where('id', $noteId)
+            ->where('author_id', $request->user()->id)
+            ->where('is_shared', false)
+            ->firstOrFail();
+
+        $note->delete();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Personal note deleted.',
+        ]);
+    }
+
+    /**
+     * Shared notes visible to mentee + interviewer/admin.
+     * GET /api/v1/mentee/mock-interviews/{id}/shared-notes
+     */
+    public function sharedNotes(Request $request, int $id): JsonResponse
+    {
+        $item = $this->findOwned($request, $id);
+        $userId = (int) $request->user()->id;
+
+        $notes = $item->notes()
+            ->with('author:id,name,role,avatar_url')
+            ->where('is_shared', true)
+            ->latest()
+            ->get()
+            ->map(fn ($note) => $this->formatNote($note));
+
+        $mySharedNote = $notes->first(fn ($n) => (int) $n['author_id'] === $userId);
+
+        return response()->json([
+            'status'            => true,
+            'statuscode'        => 200,
+            'mock_interview_id' => $item->id,
+            'count'             => $notes->count(),
+            'my_shared_note'    => $mySharedNote,
+            'notes'             => $notes,
+        ]);
+    }
+
+    public function saveSharedNote(Request $request, int $id): JsonResponse
+    {
+        $item = $this->findOwned($request, $id);
+        $userId = (int) $request->user()->id;
+
+        $data = $request->validate([
+            'content' => 'required|string|max:65535',
+            'type'    => 'nullable|in:note,resource,action_item',
+        ]);
+
+        $type = $data['type'] ?? 'note';
+
+        $note = $item->notes()
+            ->where('author_id', $userId)
+            ->where('type', $type)
+            ->where('is_shared', true)
+            ->latest()
+            ->first();
+
+        $payload = [
+            'content'   => $data['content'],
+            'is_shared' => true,
+            'type'      => $type,
+        ];
+
+        if ($note) {
+            $note->update($payload);
+            $statusCode = 200;
+        } else {
+            $note = $item->notes()->create(array_merge($payload, [
+                'author_id'    => $userId,
+                'resource_url' => null,
+            ]));
+            $statusCode = 201;
+        }
+
+        $note->load('author:id,name,role,avatar_url');
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => $statusCode,
+            'message'    => 'Shared notes saved.',
+            'note'       => $this->formatNote($note),
+        ], $statusCode);
+    }
+
+    public function updateSharedNote(Request $request, int $id, int $noteId): JsonResponse
+    {
+        $item = $this->findOwned($request, $id);
+
+        $note = $item->notes()
+            ->where('id', $noteId)
+            ->where('author_id', $request->user()->id)
+            ->where('is_shared', true)
+            ->firstOrFail();
+
+        $data = $request->validate([
+            'content' => 'required|string|max:65535',
+            'type'    => 'nullable|in:note,resource,action_item',
+        ]);
+
+        $note->update(array_filter([
+            'content' => $data['content'],
+            'type'    => $data['type'] ?? null,
+        ], fn ($v) => $v !== null));
+
+        $note->load('author:id,name,role,avatar_url');
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Shared note updated.',
+            'note'       => $this->formatNote($note),
+        ]);
+    }
+
+    public function destroySharedNote(Request $request, int $id, int $noteId): JsonResponse
+    {
+        $item = $this->findOwned($request, $id);
+
+        $note = $item->notes()
+            ->where('id', $noteId)
+            ->where('author_id', $request->user()->id)
+            ->where('is_shared', true)
+            ->firstOrFail();
+
+        $note->delete();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Shared note deleted.',
+        ]);
+    }
+
+    private function findOwned(Request $request, int $id): MockInterviewRequest
+    {
+        return MockInterviewRequest::query()
+            ->where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+    }
+
+    private function formatNote($note): array
+    {
+        return [
+            'id'                        => $note->id,
+            'mock_interview_request_id' => $note->mock_interview_request_id,
+            'author_id'                 => $note->author_id,
+            'type'                      => $note->type,
+            'content'                   => $note->content,
+            'resource_url'              => $note->resource_url,
+            'is_shared'                 => (bool) $note->is_shared,
+            'created_at'                => $note->created_at,
+            'updated_at'                => $note->updated_at,
+            'author'                    => $note->relationLoaded('author') && $note->author ? [
+                'id'         => $note->author->id,
+                'name'       => $note->author->name,
+                'role'       => $note->author->role,
+                'avatar_url' => $note->author->avatar_url,
+            ] : null,
+        ];
+    }
+
     private function paymentJson(array $result): JsonResponse
     {
         $payment = $result['payment'] ?? null;

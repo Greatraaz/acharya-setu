@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MockInterviewRequest extends Model
 {
@@ -98,6 +99,16 @@ class MockInterviewRequest extends Model
         return $this->assigner();
     }
 
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function notes(): HasMany
+    {
+        return $this->hasMany(MockInterviewNote::class, 'mock_interview_request_id');
+    }
+
     public function isMentee(User $user): bool
     {
         return (int) $this->user_id === (int) $user->id;
@@ -116,11 +127,6 @@ class MockInterviewRequest extends Model
     public function isParticipant(User $user): bool
     {
         return $this->isMentee($user) || $this->isHost($user);
-    }
-
-    public function reviewer(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     public function statusLabel(): string

@@ -128,6 +128,43 @@
                 </div>
                 @endif
             </div>
+
+            @php
+                $mySharedContent = ($item->notes ?? collect())
+                    ->where('is_shared', true)
+                    ->where('author_id', auth()->id())
+                    ->first()?->content ?? '';
+            @endphp
+            <div class="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900">Shared Interview Notes</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Visible to the mentee</p>
+                    </div>
+                </div>
+                @if(in_array($item->status, ['confirmed', 'completed', 'submitted'], true))
+                <form method="POST" action="{{ route('admin.mock-interviews.shared-notes', $item) }}" class="space-y-3">
+                    @csrf
+                    <input type="hidden" name="type" value="note">
+                    <input type="hidden" name="is_shared" value="1">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Key discussion points</label>
+                        <textarea name="content" rows="5" required
+                                  class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                  placeholder="Summarize what was discussed, strengths, areas to improve…">{{ old('content', $mySharedContent) }}</textarea>
+                        @error('content') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+                    </div>
+                    <button type="submit"
+                            class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition">
+                        Save Shared Notes
+                    </button>
+                </form>
+                @else
+                <p class="text-sm text-gray-400">Shared notes can be added once the interview is submitted or confirmed.</p>
+                @endif
+            </div>
+
+            @include('admin.mock-interviews.partials.my-notes', ['item' => $item])
         </div>
 
         <div class="lg:col-span-2 space-y-5">

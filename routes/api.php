@@ -326,6 +326,17 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
             Route::get('/{id}/agora-token', [ApiMockInterviewController::class, 'agoraToken'])->whereNumber('id');
             Route::post('/{id}/pay', [ApiMockInterviewController::class, 'pay'])->whereNumber('id');
             Route::post('/{id}/verify', [ApiMockInterviewController::class, 'verify'])->whereNumber('id');
+            // Personal notes
+            Route::get('/{id}/notes', [ApiMockInterviewController::class, 'notes'])->whereNumber('id');
+            Route::post('/{id}/notes', [ApiMockInterviewController::class, 'addNote'])->whereNumber('id');
+            Route::patch('/{id}/notes/{noteId}', [ApiMockInterviewController::class, 'updateNote'])->whereNumber('id')->whereNumber('noteId');
+            Route::delete('/{id}/notes/{noteId}', [ApiMockInterviewController::class, 'destroyNote'])->whereNumber('id')->whereNumber('noteId');
+            // Shared notes
+            Route::get('/{id}/shared-notes', [ApiMockInterviewController::class, 'sharedNotes'])->whereNumber('id');
+            Route::post('/{id}/shared-notes', [ApiMockInterviewController::class, 'saveSharedNote'])->whereNumber('id');
+            Route::put('/{id}/shared-notes', [ApiMockInterviewController::class, 'saveSharedNote'])->whereNumber('id');
+            Route::patch('/{id}/shared-notes/{noteId}', [ApiMockInterviewController::class, 'updateSharedNote'])->whereNumber('id')->whereNumber('noteId');
+            Route::delete('/{id}/shared-notes/{noteId}', [ApiMockInterviewController::class, 'destroySharedNote'])->whereNumber('id')->whereNumber('noteId');
         });
 
         Route::prefix('tasks')->group(function () {

@@ -662,6 +662,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     Route::get('/mock-interviews', [AdminMockInterviewController::class, 'index'])->name('mock-interviews.index');
     Route::get('/mock-interviews/{mockInterview}', [AdminMockInterviewController::class, 'show'])->name('mock-interviews.show')->whereNumber('mockInterview');
+    Route::post('/mock-interviews/{mockInterview}/shared-notes', [AdminMockInterviewController::class, 'saveSharedNote'])->name('mock-interviews.shared-notes')->whereNumber('mockInterview');
     Route::post('/mock-interviews/{mockInterview}/confirm', [AdminMockInterviewController::class, 'confirm'])->name('mock-interviews.confirm')->whereNumber('mockInterview');
     Route::post('/mock-interviews/{mockInterview}/complete', [AdminMockInterviewController::class, 'complete'])->name('mock-interviews.complete')->whereNumber('mockInterview');
     Route::post('/mock-interviews/{mockInterview}/cancel', [AdminMockInterviewController::class, 'cancel'])->name('mock-interviews.cancel')->whereNumber('mockInterview');

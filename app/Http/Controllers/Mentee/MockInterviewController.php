@@ -73,7 +73,10 @@ class MockInterviewController extends Controller
     {
         abort_unless((int) $mockInterview->user_id === (int) auth()->id(), 404);
 
-        $mockInterview->load('assigner');
+        $mockInterview->load([
+            'assigner',
+            'notes.author:id,name,role,avatar_url',
+        ]);
 
         return view('frontend.mentee.mock-interviews.show', [
             'item' => $mockInterview,

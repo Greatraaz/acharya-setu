@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MockInterviewNote;
 use App\Models\MockInterviewRequest;
 use App\Services\AgoraService;
 use Illuminate\Http\Request;
@@ -80,24 +81,62 @@ class MockInterviewCallController extends Controller
         ]);
     }
 
-    /** Notes stub so the shared call UI does not 404. */
+    /** Load the current user's private mock-interview notes. */
     public function myNote(int $id)
     {
-        $this->accessible($id, auth()->user());
+        $user = auth()->user();
+        $item = $this->accessible($id, $user);
+        $note = $this->findPersonalNote($item, (int) $user->id);
 
-        return response()->json(['content' => '', 'updated_at' => null]);
+        return response()->json([
+            'content'    => $note?->content ?? '',
+            'updated_at' => $note?->updated_at?->toIso8601String(),
+        ]);
     }
 
+    /** Save the current user's private mock-interview notes. */
     public function saveMyNote(Request $request, int $id)
     {
-        $this->accessible($id, auth()->user());
-        $request->validate(['content' => 'nullable|string|max:65535']);
+        $user = auth()->user();
+        $item = $this->accessible($id, $user);
+
+        $data = $request->validate([
+            'content' => 'nullable|string|max:65535',
+        ]);
+
+        $content = trim((string) ($data['content'] ?? ''));
+        $note = $this->findPersonalNote($item, (int) $user->id);
+
+        if ($note) {
+            if ($content === '') {
+                $note->delete();
+                $note = null;
+            } else {
+                $note->update(['content' => $content]);
+            }
+        } elseif ($content !== '') {
+            $note = $item->notes()->create([
+                'author_id' => $user->id,
+                'type'      => 'note',
+                'content'   => $content,
+                'is_shared' => false,
+            ]);
+        }
 
         return response()->json([
             'message'    => 'Notes saved.',
-            'content'    => (string) $request->input('content', ''),
-            'updated_at' => now()->toIso8601String(),
+            'content'    => $content,
+            'updated_at' => $note?->fresh()?->updated_at?->toIso8601String(),
         ]);
+    }
+
+    private function findPersonalNote(MockInterviewRequest $item, int $userId): ?MockInterviewNote
+    {
+        return $item->notes()
+            ->where('author_id', $userId)
+            ->where('is_shared', false)
+            ->where('type', 'note')
+            ->first();
     }
 
     private function accessible(int $id, $user): MockInterviewRequest

@@ -1,0 +1,220 @@
+{
+    "info": {
+        "name": "Mock Interview Notes — Personal & Shared",
+        "description": "Personal (private) and Shared notes for mock interviews — mirrors session notes.\n\n**Variables**\n- `baseUrl` e.g. `http://127.0.0.1:8000/api/v1`\n- `menteeToken`\n- `mockInterviewId`\n- `personalNoteId` / `sharedNoteId` (auto-filled)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        { "key": "baseUrl", "value": "http://127.0.0.1:8000/api/v1" },
+        { "key": "menteeToken", "value": "" },
+        { "key": "mockInterviewId", "value": "1" },
+        { "key": "personalNoteId", "value": "1" },
+        { "key": "sharedNoteId", "value": "1" }
+    ],
+    "item": [
+        {
+            "name": "Mentee — Personal Notes",
+            "item": [
+                {
+                    "name": "List personal notes",
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "exec": [
+                                "try { const j = pm.response.json();",
+                                "  if (j.my_note && j.my_note.id) pm.collectionVariables.set('personalNoteId', String(j.my_note.id));",
+                                "  else if (j.notes && j.notes[0]) pm.collectionVariables.set('personalNoteId', String(j.notes[0].id));",
+                                "} catch (e) {}"
+                            ],
+                            "type": "text/javascript"
+                        }
+                    }],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewId}}/notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "mock-interviews", "{{mockInterviewId}}", "notes"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save personal note",
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "exec": [
+                                "try { const j = pm.response.json();",
+                                "  if (j.note && j.note.id) pm.collectionVariables.set('personalNoteId', String(j.note.id));",
+                                "} catch (e) {}"
+                            ],
+                            "type": "text/javascript"
+                        }
+                    }],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"My private mock interview notes…\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewId}}/notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "mock-interviews", "{{mockInterviewId}}", "notes"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update personal note",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Updated private notes…\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewId}}/notes/{{personalNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "mock-interviews", "{{mockInterviewId}}", "notes", "{{personalNoteId}}"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete personal note",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewId}}/notes/{{personalNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "mock-interviews", "{{mockInterviewId}}", "notes", "{{personalNoteId}}"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Mentee — Shared Notes",
+            "item": [
+                {
+                    "name": "List shared notes",
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "exec": [
+                                "try { const j = pm.response.json();",
+                                "  if (j.my_shared_note && j.my_shared_note.id) pm.collectionVariables.set('sharedNoteId', String(j.my_shared_note.id));",
+                                "  else if (j.notes && j.notes[0]) pm.collectionVariables.set('sharedNoteId', String(j.notes[0].id));",
+                                "} catch (e) {}"
+                            ],
+                            "type": "text/javascript"
+                        }
+                    }],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewId}}/shared-notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "mock-interviews", "{{mockInterviewId}}", "shared-notes"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Save shared notes",
+                    "event": [{
+                        "listen": "test",
+                        "script": {
+                            "exec": [
+                                "try { const j = pm.response.json();",
+                                "  if (j.note && j.note.id) pm.collectionVariables.set('sharedNoteId', String(j.note.id));",
+                                "} catch (e) {}"
+                            ],
+                            "type": "text/javascript"
+                        }
+                    }],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Shared follow-ups from mentee…\",\n  \"type\": \"note\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewId}}/shared-notes",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "mock-interviews", "{{mockInterviewId}}", "shared-notes"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Update shared note",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"content\": \"Updated shared note…\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewId}}/shared-notes/{{sharedNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "mock-interviews", "{{mockInterviewId}}", "shared-notes", "{{sharedNoteId}}"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Delete shared note",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Authorization", "value": "Bearer {{menteeToken}}" }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/mentee/mock-interviews/{{mockInterviewId}}/shared-notes/{{sharedNoteId}}",
+                            "host": ["{{baseUrl}}"],
+                            "path": ["mentee", "mock-interviews", "{{mockInterviewId}}", "shared-notes", "{{sharedNoteId}}"]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}

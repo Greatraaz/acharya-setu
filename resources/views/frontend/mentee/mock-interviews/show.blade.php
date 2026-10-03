@@ -117,6 +117,24 @@
             @endif
 
             <div class="card cs-panel cs-panel--tight">
+                <div class="cs-panel__head">Shared notes from interviewer</div>
+                @php $sharedNotes = ($item->notes ?? collect())->where('is_shared', true); @endphp
+                @forelse($sharedNotes as $note)
+                <div style="padding:12px;border:1px solid var(--border);border-radius:var(--radius);margin-top:10px;">
+                    <div style="font-size:12px;color:var(--text-3);margin-bottom:6px;">
+                        {{ $note->author?->name ?? 'Interviewer' }}
+                        · {{ $note->created_at?->format('d M Y') }}
+                    </div>
+                    <div style="font-size:14px;color:var(--text-2);line-height:1.7;white-space:pre-wrap;word-break:break-word;">{{ $note->content ?? '' }}</div>
+                </div>
+                @empty
+                <p class="cs-panel__hint" style="margin:8px 0 0;">No shared notes yet. Notes from your interviewer appear here after the session.</p>
+                @endforelse
+            </div>
+
+            @include('frontend.mock-interviews.partials.my-notes', ['item' => $item])
+
+            <div class="card cs-panel cs-panel--tight">
                 <div class="cs-panel__head">Booking details</div>
                 <div class="cs-fields cs-fields--compact">
                     <div class="cs-field">

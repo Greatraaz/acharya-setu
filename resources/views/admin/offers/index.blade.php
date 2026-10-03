@@ -5,7 +5,7 @@
 @section('content')
 <div class="space-y-4">
     <div class="flex items-center justify-between flex-wrap gap-3">
-        <p class="text-sm text-gray-500">Wallet credits for new joinees and session coupons for selected mentees.</p>
+        <p class="text-sm text-gray-500">Wallet credits for new joinees and session coupons for selected or unsubscribed mentees.</p>
         <a href="{{ route('admin.offers.create') }}"
            class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition">
             + Add Offer
@@ -24,7 +24,8 @@
                 <select name="audience" class="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white">
                     <option value="">All types</option>
                     <option value="new_joinee" @selected(request('audience') === 'new_joinee')>New joinee</option>
-                    <option value="selected_mentees" @selected(request('audience') === 'selected_mentees')>Coupon</option>
+                    <option value="selected_mentees" @selected(request('audience') === 'selected_mentees')>Selected mentees</option>
+                    <option value="unsubscribed_mentees" @selected(request('audience') === 'unsubscribed_mentees')>Unsubscribed mentees</option>
                 </select>
                 <select name="status" class="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white">
                     <option value="">All status</option>
@@ -79,8 +80,10 @@
                         </td>
                         <td class="px-5 py-4 text-gray-600">
                             {{ $offer->usage_count }}@if($offer->usage_limit)/{{ $offer->usage_limit }}@else/∞@endif
-                            @if($offer->isCouponOffer())
+                            @if($offer->isSelectedMenteesOffer())
                                 <span class="text-gray-400"> · {{ $offer->mentees_count }} mentee(s)</span>
+                            @elseif($offer->isUnsubscribedMenteesOffer())
+                                <span class="text-gray-400"> · never subscribed</span>
                             @endif
                         </td>
                         <td class="px-5 py-4">

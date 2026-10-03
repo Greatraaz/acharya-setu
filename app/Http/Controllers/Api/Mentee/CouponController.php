@@ -100,6 +100,7 @@ class CouponController extends Controller
     {
         return [
             'id'                 => $offer->id,
+            'audience'           => $offer->audience,
             'title'              => $offer->title,
             'coupon_code'        => $offer->coupon_code,
             'discount_amount'    => (float) $offer->amount,
