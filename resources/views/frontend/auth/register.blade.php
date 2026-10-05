@@ -1,19 +1,130 @@
 @extends('frontend.layouts.app')
 @section('title', 'Create Account — Vedrix')
 
+@push('styles')
+<style>
+    .register-page {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: calc(var(--nav-h) + 40px) 16px 40px;
+        box-sizing: border-box;
+    }
+    .register-page__inner {
+        width: 100%;
+        max-width: 480px;
+    }
+    .register-page__hero {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+    .register-page__hero h1 {
+        font-size: 24px;
+        font-weight: 800;
+    }
+    .register-page__hero img {
+        height: 48px;
+        width: auto;
+        max-width: 180px;
+        object-fit: contain;
+        margin: 0 auto 12px;
+        display: block;
+    }
+    .register-page__card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 32px;
+    }
+    .register-terms {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        cursor: pointer;
+        font-size: 13px;
+        color: var(--text-2);
+        line-height: 1.45;
+    }
+    .register-terms input {
+        margin-top: 2px;
+        flex-shrink: 0;
+        accent-color: var(--brand);
+    }
+    .register-terms__text {
+        flex: 1;
+        min-width: 0;
+    }
+    .register-terms__text a {
+        color: var(--brand);
+        white-space: nowrap;
+    }
+    .register-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .register-actions .btn-primary {
+        flex: 1;
+    }
+    @media (max-width: 640px) {
+        .register-page {
+            align-items: flex-start;
+            padding: calc(var(--nav-h) + 20px) 14px 28px;
+        }
+        .register-page__hero {
+            margin-bottom: 20px;
+        }
+        .register-page__hero img {
+            height: 40px;
+            margin-bottom: 8px;
+        }
+        .register-page__hero h1 {
+            font-size: 20px;
+        }
+        .register-page__steps {
+            margin-bottom: 20px !important;
+        }
+        .register-page__card {
+            padding: 20px 16px;
+        }
+        .register-terms__text a {
+            white-space: normal;
+        }
+        .register-actions {
+            gap: 8px;
+        }
+        .register-actions .btn-ghost {
+            flex-shrink: 0;
+            padding-left: 14px;
+            padding-right: 14px;
+        }
+        .register-page__card .otp-grid {
+            gap: 5px;
+            max-width: 100%;
+        }
+        .register-page__card .otp-input {
+            font-size: 16px;
+            max-width: none;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(var(--nav-h) + 40px) 16px 40px;">
-<div style="width:100%;max-width:480px;">
+<div class="register-page">
+<div class="register-page__inner">
 
     {{-- Logo --}}
-    <div class="text-center" style="margin-bottom:32px;">
-        <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin:0 auto 12px;">
-        <h1 style="font-size:24px;font-weight:800;">Create your account</h1>
+    <div class="register-page__hero">
+        <img src="{{ asset('images/logo.png') }}" alt="Vedrix">
+        <h1>Create your account</h1>
         <p style="font-size:14px;color:var(--text-2);">Join 45,000+ learners & mentors</p>
     </div>
 
     {{-- Progress Steps --}}
-    <div class="steps-bar" style="margin-bottom:32px;">
+    <div class="steps-bar register-page__steps" style="margin-bottom:32px;">
         <div class="step-item active" data-step-indicator="1">
             <div class="step-circle">1</div>
         </div>
@@ -27,7 +138,7 @@
         </div>
     </div>
 
-    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;">
+    <div class="register-page__card">
 
         {{-- STEP 1: Role --}}
         <div data-step="1">
@@ -85,15 +196,17 @@
                 <div class="form-hint">Must include uppercase, lowercase, and a number.</div>
             </div>
             <div class="form-group" style="margin-bottom:0;">
-                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text-2);">
-                    <input type="checkbox" id="reg-terms" style="margin-top:2px;accent-color:var(--brand);" required>
-                    I agree to the <a href="{{ route('terms') }}" target="_blank" style="color:var(--brand);">Terms & Conditions</a> and <a href="{{ route('privacy') }}" target="_blank" style="color:var(--brand);">Privacy Policy</a>
+                <label class="register-terms" for="reg-terms">
+                    <input type="checkbox" id="reg-terms" required>
+                    <span class="register-terms__text">
+                        I agree to the <a href="{{ route('terms') }}" target="_blank">Terms &amp; Conditions</a> and <a href="{{ route('privacy') }}" target="_blank">Privacy Policy</a>
+                    </span>
                 </label>
             </div>
 
-            <div style="display:flex;gap:10px;margin-top:20px;">
+            <div class="register-actions">
                 <button class="btn btn-ghost" onclick="FormStepper.back()">← Back</button>
-                <button class="btn btn-primary" style="flex:1;" id="send-otp-btn" onclick="sendOtpStep()">
+                <button class="btn btn-primary" id="send-otp-btn" onclick="sendOtpStep()">
                     Send OTP →
                 </button>
             </div>
@@ -133,9 +246,9 @@
                 <a href="#" id="resend-link" onclick="resendOtp()" style="color:var(--brand);font-weight:600;">Resend OTP</a>
             </div>
 
-            <div style="display:flex;gap:10px;">
+            <div class="register-actions" style="margin-top:0;">
                 <button class="btn btn-ghost" onclick="FormStepper.back()">← Back</button>
-                <button class="btn btn-primary" style="flex:1;" id="verify-btn" onclick="verifyAndRegister()">
+                <button class="btn btn-primary" id="verify-btn" onclick="verifyAndRegister()">
                     ✓ Create Account
                 </button>
             </div>

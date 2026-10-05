@@ -1,13 +1,219 @@
 @extends('frontend.layouts.app')
 @section('title', 'Become a Mentor — Step ' . $step . ' of 5 — Vedrix')
 
+@push('styles')
+<style>
+    .mentor-onboard {
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding: calc(var(--nav-h) + 40px) 16px 60px;
+        background: var(--bg);
+        box-sizing: border-box;
+    }
+    .mentor-onboard__inner {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    .mentor-onboard__hero {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+    .mentor-onboard__hero img {
+        height: 48px;
+        width: auto;
+        max-width: 180px;
+        object-fit: contain;
+        margin: 0 auto 14px;
+        display: block;
+    }
+    .mentor-onboard__steps {
+        display: flex;
+        align-items: center;
+        margin-bottom: 36px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .mentor-onboard__step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex-shrink: 0;
+        min-width: 80px;
+    }
+    .mentor-onboard__step-label {
+        font-size: 10px;
+        font-weight: 600;
+        margin-top: 6px;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .mentor-onboard__step-line {
+        flex: 1;
+        height: 2px;
+        margin: 0 4px 22px;
+        min-width: 20px;
+    }
+    .mentor-onboard__card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 36px;
+    }
+    .mentor-onboard__profile-row {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+    .mentor-onboard__avatar-wrap {
+        flex-shrink: 0;
+        text-align: center;
+    }
+    .mentor-onboard__fields {
+        flex: 1;
+        min-width: 0;
+    }
+    .mentor-onboard__grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 16px;
+    }
+    .mentor-onboard__grid-2.no-top {
+        margin-top: 0;
+    }
+    .mentor-onboard__actions {
+        display: flex;
+        gap: 12px;
+    }
+    .mentor-onboard__actions .btn-primary,
+    .mentor-onboard__actions form {
+        flex: 1;
+    }
+    .mentor-onboard__skill-add {
+        display: flex;
+        gap: 8px;
+    }
+    .mentor-onboard__bio-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 4px;
+    }
+    .mentor-onboard__checklist {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 24px;
+    }
+    .mentor-onboard__strengths {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 8px;
+    }
+    @media (max-width: 640px) {
+        .mentor-onboard {
+            padding: calc(var(--nav-h) + 20px) 14px 40px;
+        }
+        .mentor-onboard__hero {
+            margin-bottom: 20px;
+        }
+        .mentor-onboard__hero img {
+            height: 40px;
+            margin-bottom: 8px;
+        }
+        .mentor-onboard__hero h1 {
+            font-size: 20px !important;
+        }
+        .mentor-onboard__steps {
+            margin-bottom: 24px;
+        }
+        .mentor-onboard__step {
+            min-width: 64px;
+        }
+        .mentor-onboard__step-circle {
+            width: 30px !important;
+            height: 30px !important;
+            font-size: 12px !important;
+        }
+        .mentor-onboard__step-label {
+            font-size: 9px;
+            white-space: normal;
+            max-width: 60px;
+            line-height: 1.2;
+        }
+        .mentor-onboard__step-line {
+            min-width: 8px;
+            margin-bottom: 24px;
+        }
+        .mentor-onboard__card {
+            padding: 20px 16px;
+        }
+        .mentor-onboard__profile-row {
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .mentor-onboard__fields {
+            width: 100%;
+        }
+        .mentor-onboard__avatar-hint {
+            font-size: 11px !important;
+        }
+        .mentor-onboard__grid-2,
+        .mentor-onboard__checklist,
+        .mentor-onboard__strengths {
+            grid-template-columns: 1fr;
+            gap: 0;
+            margin-top: 0;
+        }
+        .mentor-onboard__grid-2 .form-group,
+        .mentor-onboard__strengths > label {
+            margin-bottom: 16px;
+        }
+        .mentor-onboard__strengths {
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .mentor-onboard__strengths > label {
+            margin-bottom: 0;
+        }
+        .mentor-onboard__checklist {
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .mentor-onboard__bio-meta {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+        .mentor-onboard__actions {
+            gap: 8px;
+        }
+        .mentor-onboard__actions .btn-ghost {
+            flex-shrink: 0;
+            padding-left: 14px;
+            padding-right: 14px;
+        }
+        .mentor-onboard__skill-add {
+            flex-direction: column;
+        }
+        .mentor-onboard__skill-add .btn {
+            width: 100%;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
-<div style="min-height:100vh; padding:calc(var(--nav-h) + 40px) 16px 60px; background:var(--bg);">
-<div style="max-width:700px; margin:0 auto;">
+<div class="mentor-onboard">
+<div class="mentor-onboard__inner">
 
     {{-- ── HEADER ────────────────────────────────────────── --}}
-    <div class="text-center" style="margin-bottom:32px;">
-        <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin:0 auto 14px;">
+    <div class="mentor-onboard__hero">
+        <img src="{{ asset('images/logo.png') }}" alt="Vedrix">
         <h1 style="font-size:22px; font-weight:800; margin-bottom:4px;">Become a Mentor</h1>
         <p style="font-size:13px; color:var(--text-2);">Step {{ $step }} of 5 — Complete your profile to start mentoring</p>
     </div>
@@ -16,11 +222,11 @@
     @php
         $stepLabels = ['Basic Info','Professional','Expertise','Preferences','Review'];
     @endphp
-    <div style="display:flex; align-items:center; margin-bottom:36px; overflow-x:auto; padding-bottom:4px;">
+    <div class="mentor-onboard__steps">
         @foreach($stepLabels as $i => $label)
         @php $num = $i + 1; $isDone = $num < $step; $isCurrent = $num === $step; @endphp
-        <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0; min-width:80px;">
-            <div style="
+        <div class="mentor-onboard__step">
+            <div class="mentor-onboard__step-circle" style="
                 width:38px; height:38px; border-radius:50%;
                 display:flex; align-items:center; justify-content:center;
                 font-size:13px; font-weight:700; font-family:var(--font-head);
@@ -29,16 +235,16 @@
                 border:2px solid {{ $isDone ? 'var(--success)' : ($isCurrent ? 'var(--brand)' : 'var(--border)') }};
                 transition:all .3s;
             ">{{ $isDone ? '✓' : $num }}</div>
-            <div style="font-size:10px; font-weight:600; margin-top:6px; color:{{ $isCurrent ? 'var(--brand)' : 'var(--text-3)' }}; white-space:nowrap;">{{ $label }}</div>
+            <div class="mentor-onboard__step-label" style="color:{{ $isCurrent ? 'var(--brand)' : 'var(--text-3)' }};">{{ $label }}</div>
         </div>
         @if($i < 4)
-        <div style="flex:1; height:2px; background:{{ $num < $step ? 'var(--success)' : 'var(--border)' }}; margin:0 4px; margin-bottom:22px; min-width:20px;"></div>
+        <div class="mentor-onboard__step-line" style="background:{{ $num < $step ? 'var(--success)' : 'var(--border)' }};"></div>
         @endif
         @endforeach
     </div>
 
     {{-- ── CARD ───────────────────────────────────────────── --}}
-    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-xl); padding:36px;">
+    <div class="mentor-onboard__card">
 
         {{-- ════════════════════════════════════════════════
              STEP 1 — Basic Info & Photo
@@ -58,9 +264,9 @@
             @csrf
 
             {{-- Avatar + Name row --}}
-            <div style="display:flex; gap:24px; align-items:flex-start; margin-bottom:8px;">
+            <div class="mentor-onboard__profile-row">
                 {{-- Avatar --}}
-                <div style="flex-shrink:0; text-align:center;">
+                <div class="mentor-onboard__avatar-wrap">
                     <div
                         id="avatar-preview"
                         onclick="document.getElementById('avatar-input').click()"
@@ -78,11 +284,11 @@
                     </div>
                     <input type="file" id="avatar-input" name="avatar" accept="image/*" style="display:none;"
                            onchange="previewImage(this, '#avatar-preview')">
-                    <div style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.4;">Click to<br>upload photo</div>
+                    <div class="mentor-onboard__avatar-hint" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.4;">Click to upload photo</div>
                 </div>
 
                 {{-- Name + Gender --}}
-                <div style="flex:1;">
+                <div class="mentor-onboard__fields">
                     <div class="form-group" style="margin-bottom:12px;">
                         <label class="form-label">Full Name *</label>
                         <input type="text" name="name" class="form-input" required
@@ -102,14 +308,14 @@
             </div>
 
             {{-- Phone + LinkedIn --}}
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
+            <div class="mentor-onboard__grid-2">
                 <div class="form-group">
                     <label class="form-label">Phone Number</label>
                     <div class="input-prefix">
                         <span class="input-prefix-label">🇮🇳 +91</span>
                         <input type="tel" name="phone" class="form-input" placeholder="98765 43210"
                                maxlength="10"
-                               value="{{ old('phone', ltrim(auth()->user()->phone ?? '', '+91')) }}">
+                               value="{{ old('phone', \App\Support\IndianPhone::localTenDigits(auth()->user()->phone)) }}">
                     </div>
                 </div>
                 <div class="form-group">
@@ -126,7 +332,7 @@
                 <textarea name="bio" class="form-textarea" rows="5" required minlength="50" maxlength="2000"
                           id="bio-area"
                           placeholder="Write a compelling bio. Tell mentees who you are, what you've done, and what kind of help you can offer. Be specific — this is your first impression.">{{ old('bio', auth()->user()->bio) }}</textarea>
-                <div style="display:flex; justify-content:space-between; margin-top:4px;">
+                <div class="mentor-onboard__bio-meta">
                     <div class="form-hint">Minimum 50 characters. Be specific about your background.</div>
                     <div style="font-size:11px; color:var(--text-3);"><span id="bio-count">{{ strlen(auth()->user()->bio ?? '') }}</span>/2000</div>
                 </div>
@@ -151,7 +357,7 @@
         >
             @csrf
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="mentor-onboard__grid-2 no-top">
                 <div class="form-group">
                     <label class="form-label">Current Designation *</label>
                     <input type="text" name="designation" class="form-input" required
@@ -206,14 +412,9 @@
 
             <div class="form-group">
                 <label class="form-label">Education Stream <span style="font-weight:400; color:var(--text-3);">(helps with mentee matching)</span></label>
-                <select name="education_stream" class="form-select">
-                    <option value="">— Select stream —</option>
-                    @foreach($streams as $stream)
-                    <option value="{{ $stream->name }}" @selected(old('education_stream', auth()->user()->education_stream) === $stream->name)>
-                        {{ $stream->icon ?? '' }} {{ $stream->name }}
-                    </option>
-                    @endforeach
-                </select>
+                <input type="text" name="education_stream" class="form-input"
+                       placeholder="Education stream"
+                       value="{{ old('education_stream', auth()->user()->education_stream) }}">
             </div>
 
             {{-- Rate preview box --}}
@@ -232,9 +433,9 @@
                 </div>
             </div>
 
-            <div style="display:flex; gap:12px;">
-                <a href="{{ route('mentor.onboarding', ['step' => 1]) }}" class="btn btn-ghost" style="flex-shrink:0;">← Back</a>
-                <button type="submit" class="btn btn-primary" style="flex:1;">Save & Continue →</button>
+            <div class="mentor-onboard__actions">
+                <a href="{{ route('mentor.onboarding', ['step' => 1]) }}" class="btn btn-ghost">← Back</a>
+                <button type="submit" class="btn btn-primary">Save & Continue →</button>
             </div>
         </form>
 
@@ -258,10 +459,10 @@
             {{-- Skill input --}}
             <div class="form-group">
                 <label class="form-label">Type a skill and press Enter or comma</label>
-                <div style="display:flex; gap:8px;">
+                <div class="mentor-onboard__skill-add">
                     <input type="text" id="skill-input" class="form-input"
                            placeholder="e.g. Python, System Design, CAT Prep, Leadership…">
-                    <button type="button" class="btn btn-ghost" onclick="addSkillFromInput()" style="flex-shrink:0;">+ Add</button>
+                    <button type="button" class="btn btn-ghost" onclick="addSkillFromInput()">+ Add</button>
                 </div>
             </div>
 
@@ -297,9 +498,9 @@
                 </div>
             </div>
 
-            <div style="display:flex; gap:12px;">
-                <a href="{{ route('mentor.onboarding', ['step' => 2]) }}" class="btn btn-ghost" style="flex-shrink:0;">← Back</a>
-                <button type="submit" class="btn btn-primary" style="flex:1;" onclick="return validateExpertise()">Save & Continue →</button>
+            <div class="mentor-onboard__actions">
+                <a href="{{ route('mentor.onboarding', ['step' => 2]) }}" class="btn btn-ghost">← Back</a>
+                <button type="submit" class="btn btn-primary" onclick="return validateExpertise()">Save & Continue →</button>
             </div>
         </form>
 
@@ -324,7 +525,7 @@
                 $preferredTime = old('preferences.preferred_time', $mentorPrefs['preferred_time'] ?? '');
                 $sessionLength = old('preferences.session_length', $mentorPrefs['session_length'] ?? '');
             @endphp
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="mentor-onboard__grid-2 no-top">
                 <div class="form-group">
                     <label class="form-label">Preferred time</label>
                     <select name="preferences[preferred_time]" class="form-select">
@@ -348,7 +549,7 @@
             {{-- Strengths --}}
             <div class="form-group">
                 <label class="form-label">Your strengths as a mentor <span style="font-weight:400; color:var(--text-3);">(select all that apply)</span></label>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
+                <div class="mentor-onboard__strengths">
                     @foreach([
                         'Career Guidance & Planning',
                         'Technical Interview Prep',
@@ -371,9 +572,9 @@
                 </div>
             </div>
 
-            <div style="display:flex; gap:12px;">
-                <a href="{{ route('mentor.onboarding', ['step' => 3]) }}" class="btn btn-ghost" style="flex-shrink:0;">← Back</a>
-                <button type="submit" class="btn btn-primary" style="flex:1;">Save & Continue →</button>
+            <div class="mentor-onboard__actions">
+                <a href="{{ route('mentor.onboarding', ['step' => 3]) }}" class="btn btn-ghost">← Back</a>
+                <button type="submit" class="btn btn-primary">Save & Continue →</button>
             </div>
         </form>
 
@@ -444,7 +645,7 @@
         </div>
 
         {{-- Checklist --}}
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:24px;">
+        <div class="mentor-onboard__checklist">
             @foreach($checks as [$label, $done, $link])
             <a href="{{ $link }}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--radius-sm); font-size:13px; text-decoration:none; background:{{ $done ? 'var(--success-muted)' : 'var(--error-muted)' }}; color:{{ $done ? 'var(--success)' : 'var(--error)' }}; border:1px solid {{ $done ? 'rgba(34,197,94,.25)' : 'rgba(239,68,68,.25)' }};">
                 {{ $done ? '✅' : '❌' }} {{ $label }}
@@ -466,9 +667,9 @@
             Our team will review your profile within <strong>24–48 hours</strong>. You'll receive an email notification once approved. After approval, your profile goes live and mentees can book sessions.
         </div>
 
-        <div style="display:flex; gap:12px;">
-            <a href="{{ route('mentor.onboarding', ['step' => 4]) }}" class="btn btn-ghost" style="flex-shrink:0;">← Back</a>
-            <form action="{{ route('mentor.onboarding.submit') }}" method="POST" style="flex:1;">
+        <div class="mentor-onboard__actions">
+            <a href="{{ route('mentor.onboarding', ['step' => 4]) }}" class="btn btn-ghost">← Back</a>
+            <form action="{{ route('mentor.onboarding.submit') }}" method="POST">
                 @csrf
                 <button type="submit" class="btn btn-primary btn-full" style="font-size:15px; padding:14px;" @disabled(!$allDone)>
                     ✓ Submit for Approval

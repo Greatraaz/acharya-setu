@@ -1211,11 +1211,17 @@
    /* OTP inputs */
    .otp-grid {
        display: grid;
-       grid-template-columns: repeat(6, 1fr);
+       grid-template-columns: repeat(6, minmax(0, 1fr));
        gap: 8px;
+       width: 100%;
+       max-width: 360px;
    }
    .otp-input {
        aspect-ratio: 1;
+       width: 100%;
+       min-width: 0;
+       max-width: 52px;
+       justify-self: center;
        text-align: center;
        background: var(--input-bg);
        border: 2px solid var(--input-border);
@@ -1225,7 +1231,8 @@
        font-family: var(--font-head);
        color: var(--text);
        transition: all var(--trans);
-       width:50px;
+       padding: 0;
+       box-sizing: border-box;
    }
    .otp-input:focus {
        border-color: var(--brand);
@@ -4574,9 +4581,11 @@
        }
        .otp-grid {
            gap: 6px;
+           max-width: 100%;
        }
        .otp-input {
-           font-size: 18px;
+           font-size: 16px;
+           max-width: none;
        }
        .time-grid {
            grid-template-columns: repeat(3, 1fr);

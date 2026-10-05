@@ -1,24 +1,445 @@
 @extends('frontend.layouts.app')
 @section('title', 'Set Up Your Profile — Step ' . $step . ' of 4 — Vedrix')
 
+@push('styles')
+<style>
+    .mentee-onboard {
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding: calc(var(--nav-h) + 40px) 16px 60px;
+        background: var(--bg);
+        box-sizing: border-box;
+    }
+    .mentee-onboard__inner {
+        max-width: 620px;
+        margin: 0 auto;
+    }
+    .mentee-onboard__hero {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+    .mentee-onboard__hero img {
+        height: 48px;
+        width: auto;
+        max-width: 180px;
+        object-fit: contain;
+        margin: 0 auto 14px;
+        display: block;
+    }
+    .mentee-onboard__steps {
+        display: flex;
+        align-items: center;
+        margin-bottom: 36px;
+        gap: 0;
+    }
+    .mentee-onboard__step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        min-width: 0;
+    }
+    .mentee-onboard__step-label {
+        font-size: 10px;
+        font-weight: 600;
+        margin-top: 5px;
+        text-align: center;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+    .mentee-onboard__step-line {
+        height: 2px;
+        flex: 1;
+        min-width: 8px;
+        margin-bottom: 20px;
+    }
+    .mentee-onboard__card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 36px;
+    }
+    .mentee-onboard__profile-row {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+        margin-bottom: 8px;
+    }
+    .mentee-onboard__avatar-wrap {
+        flex-shrink: 0;
+        text-align: center;
+    }
+    .mentee-onboard__fields {
+        flex: 1;
+        min-width: 0;
+    }
+    .mentee-onboard__grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 16px;
+    }
+    .mentee-onboard__grid-2.no-top {
+        margin-top: 0;
+    }
+    .mentee-onboard__actions {
+        display: flex;
+        gap: 12px;
+    }
+    .mentee-onboard__actions .btn-primary {
+        flex: 1;
+    }
+    .mentee-onboard__track-add {
+        display: flex;
+        gap: 8px;
+    }
+    .mentee-goals-title {
+        font-size: 19px;
+        font-weight: 800;
+        margin-bottom: 4px;
+        line-height: 1.3;
+        color: var(--text);
+    }
+    .mentee-goals-title span {
+        color: var(--brand);
+    }
+    .mentee-goals-sub {
+        font-size: 13px;
+        color: var(--text-2);
+        margin-bottom: 28px;
+    }
+    .mentee-goals-sub span {
+        color: var(--brand);
+        font-weight: 600;
+    }
+    .mentee-goals-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 24px;
+    }
+    .mentee-goal-option {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 14px;
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+        background: var(--card-bg);
+        cursor: pointer;
+        transition: border-color .15s, background .15s, box-shadow .15s;
+        text-align: left;
+        color: var(--text);
+        font: inherit;
+    }
+    .mentee-goal-option:hover {
+        border-color: rgba(245, 158, 11, .45);
+    }
+    .mentee-goal-option.is-selected {
+        border-color: var(--brand);
+        background: var(--brand-muted);
+        box-shadow: 0 0 0 1px rgba(245, 158, 11, .15);
+    }
+    .mentee-goal-option__icon {
+        font-size: 18px;
+        line-height: 1;
+        flex-shrink: 0;
+        width: 24px;
+        text-align: center;
+    }
+    .mentee-goal-option__label {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+    .mentee-goal-option__check {
+        width: 20px;
+        height: 20px;
+        border-radius: 5px;
+        border: 2px solid var(--border);
+        background: var(--bg-3);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all .15s;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .mentee-goal-option.is-selected .mentee-goal-option__check {
+        border-color: var(--brand);
+        background: var(--brand);
+    }
+    .mentee-stream-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+    .mentee-stream-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 14px 16px;
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+        background: var(--card-bg);
+        cursor: pointer;
+        transition: border-color .15s, background .15s, box-shadow .15s;
+        text-align: left;
+        color: var(--text);
+        font: inherit;
+    }
+    .mentee-stream-card:hover {
+        border-color: rgba(245, 158, 11, .45);
+    }
+    .mentee-stream-card.is-active {
+        border-color: var(--brand);
+        background: var(--brand-muted);
+        box-shadow: 0 0 0 1px rgba(245, 158, 11, .15);
+    }
+    .mentee-stream-card__icon {
+        font-size: 22px;
+        line-height: 1;
+        width: 28px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .mentee-stream-card__body {
+        flex: 1;
+        min-width: 0;
+    }
+    .mentee-stream-card__name {
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+    .mentee-stream-card__field {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .mentee-stream-card__chevron {
+        color: var(--text-3);
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+    .mentee-stream-sheet {
+        position: fixed;
+        inset: 0;
+        z-index: 1200;
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+    }
+    .mentee-stream-sheet.is-open {
+        display: flex;
+    }
+    .mentee-stream-sheet__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, .55);
+    }
+    .mentee-stream-sheet__panel {
+        position: relative;
+        width: 100%;
+        max-width: 520px;
+        max-height: min(78vh, 640px);
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 20px 20px 0 0;
+        padding: 12px 16px 20px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, .25);
+        animation: menteeSheetUp .2s ease-out;
+    }
+    @keyframes menteeSheetUp {
+        from { transform: translateY(24px); opacity: .6; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .mentee-stream-sheet__handle {
+        width: 40px;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--border);
+        margin: 2px auto 14px;
+    }
+    .mentee-stream-sheet__head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .mentee-stream-sheet__head-icon {
+        font-size: 20px;
+    }
+    .mentee-stream-sheet__head-title {
+        font-size: 15px;
+        font-weight: 800;
+    }
+    .mentee-stream-sheet__options {
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .mentee-stream-option {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 14px;
+        border: 1.5px solid var(--border);
+        border-radius: 12px;
+        background: var(--card-bg);
+        cursor: pointer;
+        transition: border-color .15s, background .15s;
+        text-align: left;
+        color: var(--text);
+        font: inherit;
+    }
+    .mentee-stream-option.is-selected {
+        border-color: var(--brand);
+        background: var(--brand-muted);
+    }
+    .mentee-stream-option__icon {
+        font-size: 18px;
+        width: 24px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .mentee-stream-option__label {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+    .mentee-stream-option__check {
+        width: 20px;
+        height: 20px;
+        border-radius: 5px;
+        border: 2px solid var(--border);
+        background: var(--bg-3);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .mentee-stream-option.is-selected .mentee-stream-option__check {
+        border-color: var(--brand);
+        background: var(--brand);
+    }
+    .mentee-stream-sheet__done {
+        margin-top: 14px;
+        width: 100%;
+    }
+    @media (max-width: 640px) {
+        .mentee-onboard {
+            padding: calc(var(--nav-h) + 20px) 14px 40px;
+        }
+        .mentee-onboard__hero {
+            margin-bottom: 20px;
+        }
+        .mentee-onboard__hero img {
+            height: 40px;
+            margin-bottom: 8px;
+        }
+        .mentee-onboard__hero h1 {
+            font-size: 20px !important;
+        }
+        .mentee-onboard__steps {
+            margin-bottom: 24px;
+        }
+        .mentee-onboard__step-circle {
+            width: 30px !important;
+            height: 30px !important;
+            font-size: 12px !important;
+        }
+        .mentee-onboard__step-label {
+            font-size: 9px;
+            white-space: normal;
+            max-width: 64px;
+        }
+        .mentee-onboard__step-line {
+            margin-bottom: 22px;
+            min-width: 4px;
+        }
+        .mentee-onboard__card {
+            padding: 20px 16px;
+        }
+        .mentee-onboard__profile-row {
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            text-align: center;
+        }
+        .mentee-onboard__fields {
+            width: 100%;
+            text-align: left;
+        }
+        .mentee-onboard__avatar-hint {
+            font-size: 11px !important;
+        }
+        .mentee-onboard__grid-2 {
+            grid-template-columns: 1fr;
+            gap: 0;
+            margin-top: 0;
+        }
+        .mentee-onboard__grid-2 .form-group {
+            margin-bottom: 16px;
+        }
+        .mentee-onboard__actions {
+            gap: 8px;
+        }
+        .mentee-onboard__actions .btn-ghost {
+            flex-shrink: 0;
+            padding-left: 14px;
+            padding-right: 14px;
+        }
+        .mentee-onboard__track-add {
+            flex-direction: column;
+        }
+        .mentee-onboard__track-add .btn {
+            width: 100%;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
-<div style="min-height:100vh; padding:calc(var(--nav-h) + 40px) 16px 60px; background:var(--bg);">
-<div style="max-width:620px; margin:0 auto;">
+<div class="mentee-onboard">
+<div class="mentee-onboard__inner">
 
     {{-- ── HEADER ────────────────────────────────────────── --}}
-    <div class="text-center" style="margin-bottom:32px;">
-        <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin:0 auto 14px;">
+    <div class="mentee-onboard__hero">
+        <img src="{{ asset('images/logo.png') }}" alt="Vedrix">
         <h1 style="font-size:22px; font-weight:800; margin-bottom:4px;">Set Up Your Profile</h1>
         <p style="font-size:13px; color:var(--text-2);">Step {{ $step }} of 4 — Takes less than 3 minutes</p>
     </div>
 
     {{-- ── STEP PROGRESS BAR ──────────────────────────────── --}}
     @php $stepLabels = ['About You', 'Education', 'Tracks', 'Preferences']; @endphp
-    <div style="display:flex; align-items:center; margin-bottom:36px;">
+    <div class="mentee-onboard__steps">
         @foreach($stepLabels as $i => $label)
         @php $num = $i + 1; $isDone = $num < $step; $isCurrent = $num === $step; @endphp
-        <div style="display:flex; flex-direction:column; align-items:center; flex:1;">
-            <div style="
+        <div class="mentee-onboard__step">
+            <div class="mentee-onboard__step-circle" style="
                 width:36px; height:36px; border-radius:50%;
                 display:flex; align-items:center; justify-content:center;
                 font-size:13px; font-weight:700; font-family:var(--font-head);
@@ -26,16 +447,16 @@
                 color: {{ ($isDone || $isCurrent) ? '#000' : 'var(--text-3)' }};
                 border:2px solid {{ $isDone ? 'var(--success)' : ($isCurrent ? 'var(--brand)' : 'var(--border)') }};
             ">{{ $isDone ? '✓' : $num }}</div>
-            <div style="font-size:10px; font-weight:600; margin-top:5px; color:{{ $isCurrent ? 'var(--brand)' : 'var(--text-3)' }}; white-space:nowrap;">{{ $label }}</div>
+            <div class="mentee-onboard__step-label" style="color:{{ $isCurrent ? 'var(--brand)' : 'var(--text-3)' }};">{{ $label }}</div>
         </div>
         @if($i < 3)
-        <div style="height:2px; flex:1; background:{{ $num < $step ? 'var(--success)' : 'var(--border)' }}; margin-bottom:20px;"></div>
+        <div class="mentee-onboard__step-line" style="background:{{ $num < $step ? 'var(--success)' : 'var(--border)' }};"></div>
         @endif
         @endforeach
     </div>
 
     {{-- ── CARD ───────────────────────────────────────────── --}}
-    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius-xl); padding:36px;">
+    <div class="mentee-onboard__card">
 
         {{-- ════════════════════════════════════════════════
              STEP 1 — About You
@@ -54,8 +475,8 @@
         >
             @csrf
 
-            <div style="display:flex; gap:24px; align-items:flex-start; margin-bottom:8px;">
-                <div style="flex-shrink:0; text-align:center;">
+            <div class="mentee-onboard__profile-row">
+                <div class="mentee-onboard__avatar-wrap">
                     <div
                         id="avatar-preview"
                         onclick="document.getElementById('avatar-input').click()"
@@ -73,9 +494,9 @@
                     </div>
                     <input type="file" id="avatar-input" name="avatar" accept="image/jpeg,image/png,image/webp,image/jpg" style="display:none;"
                            onchange="previewImage(this, '#avatar-preview')">
-                    <div style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.4;">Click to<br>upload photo</div>
+                    <div class="mentee-onboard__avatar-hint" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.4;">Click to upload photo</div>
                 </div>
-                <div style="flex:1;">
+                <div class="mentee-onboard__fields">
                     <div class="form-group" style="margin-bottom:12px;">
                         <label class="form-label">Your Full Name *</label>
                         <input type="text" name="name" class="form-input" required
@@ -94,7 +515,7 @@
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
+            <div class="mentee-onboard__grid-2">
                 <div class="form-group">
                     <label class="form-label">Phone Number</label>
                     <div class="input-prefix">
@@ -118,8 +539,64 @@
              STEP 2 — Education
              ════════════════════════════════════════════════ --}}
         @elseif($step == 2)
-        <h2 style="font-size:19px; font-weight:800; margin-bottom:4px;">Your Education</h2>
-        <p style="font-size:13px; color:var(--text-2); margin-bottom:28px;">Helps us match you with mentors in your career stream.</p>
+        @php
+            $streamCatalog = [
+                'Engineering' => [
+                    'icon' => '👷',
+                    'fields' => [
+                        ['Computer Science Engineering (CSE)', '💻'],
+                        ['Electrical Engineering (EE)', '⚡'],
+                        ['Mechanical Engineering (ME)', '⚙️'],
+                        ['Civil Engineering (CE)', '🏗️'],
+                        ['Chemical Engineering', '🧪'],
+                    ],
+                ],
+                'Commerce' => [
+                    'icon' => '🏢',
+                    'fields' => [
+                        ['Accounting', '📒'],
+                        ['Finance', '💰'],
+                        ['Marketing', '📈'],
+                        ['Business Management', '🗂️'],
+                        ['Economics', '📊'],
+                    ],
+                ],
+                'Arts' => [
+                    'icon' => '🎨',
+                    'fields' => [
+                        ['Psychology', '🧠'],
+                        ['Political Science', '🏛️'],
+                        ['Geography', '🌍'],
+                        ['History', '📜'],
+                        ['Sociology', '👥'],
+                    ],
+                ],
+                'Management' => [
+                    'icon' => '⚙️',
+                    'fields' => [
+                        ['Finance Management', '💵'],
+                        ['Marketing Management', '📉'],
+                        ['Operations Management', '🔄'],
+                        ['Business Analytics', '📊'],
+                        ['IT Management', '🖱️'],
+                    ],
+                ],
+                'Switch Career' => [
+                    'icon' => '🔀',
+                    'fields' => [
+                        ['Tech Transition', '💻'],
+                        ['Move to Management', '👔'],
+                        ['Entrepreneurship', '🚀'],
+                        ['Government / Civil Services', '🏛️'],
+                        ['Freelancing', '✍️'],
+                    ],
+                ],
+            ];
+            $selectedStream = old('education_stream', auth()->user()->education_stream);
+            $selectedField  = old('field', auth()->user()->field);
+        @endphp
+        <h2 class="mentee-goals-title">Select Your <span>Stream/Domain</span></h2>
+        <p class="mentee-goals-sub">Choose your area of career interest for personalized guidance</p>
 
         <form
             action="{{ route('mentee.onboarding.save2') }}"
@@ -129,91 +606,93 @@
             data-success="Saved!"
         >
             @csrf
-            <input type="hidden" name="education_stream" id="stream-hidden" value="{{ old('education_stream', auth()->user()->education_stream) }}">
+            <input type="hidden" name="education_stream" id="stream-hidden" value="{{ $selectedStream }}">
+            <input type="hidden" name="field" id="field-hidden" value="{{ $selectedField }}">
 
-            {{-- Career stream selector --}}
             <div class="form-group">
                 <label class="form-label">Career Stream *</label>
-                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:12px; margin-top:8px;">
-                    @forelse($streams as $stream)
-                    <div
-                        class="stream-option"
-                        data-stream="{{ $stream->name }}"
-                        onclick="selectStream(this)"
-                        style="display:flex; flex-direction:column; align-items:center; justify-content:center;
-                               padding:20px 12px; border:2px solid var(--border); border-radius:var(--radius-lg);
-                               cursor:pointer; text-align:center; transition:all .2s;
-                               {{ old('education_stream', auth()->user()->education_stream) === $stream->name ? 'border-color:var(--brand); background:var(--brand-muted);' : '' }}"
+                <div class="mentee-stream-list" id="stream-catalog">
+                    @foreach($streamCatalog as $streamName => $meta)
+                    @php $isActive = strcasecmp((string) $selectedStream, $streamName) === 0; @endphp
+                    <button
+                        type="button"
+                        class="mentee-stream-card {{ $isActive ? 'is-active' : '' }}"
+                        data-stream="{{ $streamName }}"
+                        data-icon="{{ $meta['icon'] }}"
+                        onclick="openStreamSheet('{{ $streamName }}')"
                     >
-                        <span style="font-size:36px; margin-bottom:8px;">{{ $stream->icon ?? '📚' }}</span>
-                        <span style="font-size:13px; font-weight:700; line-height:1.3;">{{ $stream->name }}</span>
-                        @if($stream->description)
-                        <span style="font-size:10px; color:var(--text-3); margin-top:4px; line-height:1.4;">{{ Str::limit($stream->description, 40) }}</span>
-                        @endif
-                    </div>
-                    @empty
-                    @foreach([
-                        ['🖥️','Engineering','Computer Science, Mechanical, Civil'],
-                        ['💼','Commerce','Finance, Accounting, Marketing'],
-                        ['🎨','Arts','Psychology, Sociology, Literature'],
-                        ['🏥','Medicine','MBBS, NEET, Pharmacy'],
-                        ['⚖️','Law','LLB, Corporate Law, IP'],
-                        ['📢','Marketing','Digital, Brand, Growth'],
-                    ] as [$icon, $name, $desc])
-                    <div
-                        class="stream-option"
-                        data-stream="{{ $name }}"
-                        onclick="selectStream(this)"
-                        style="display:flex; flex-direction:column; align-items:center; justify-content:center;
-                               padding:20px 12px; border:2px solid var(--border); border-radius:var(--radius-lg);
-                               cursor:pointer; text-align:center; transition:all .2s;"
-                    >
-                        <span style="font-size:36px; margin-bottom:8px;">{{ $icon }}</span>
-                        <span style="font-size:13px; font-weight:700;">{{ $name }}</span>
-                        <span style="font-size:10px; color:var(--text-3); margin-top:4px; line-height:1.4;">{{ $desc }}</span>
-                    </div>
+                        <span class="mentee-stream-card__icon">{{ $meta['icon'] }}</span>
+                        <span class="mentee-stream-card__body">
+                            <span class="mentee-stream-card__name">{{ $streamName }}</span>
+                            <span class="mentee-stream-card__field" data-stream-field="{{ $streamName }}" @if(!($isActive && $selectedField)) style="display:none;" @endif>
+                                {{ $isActive && $selectedField ? $selectedField : '' }}
+                            </span>
+                        </span>
+                        <span class="mentee-stream-card__chevron">›</span>
+                    </button>
                     @endforeach
-                    @endforelse
                 </div>
-                <div id="stream-error" class="form-error" style="display:none; margin-top:8px;">Please select a career stream.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Field of Study</label>
-                <input type="text" name="field" class="form-input"
-                       placeholder="Computer Science, Finance, Psychology…"
-                       value="{{ old('field', auth()->user()->field) }}">
+                <div id="stream-error" class="form-error" style="display:none; margin-top:8px;">Please select a stream and domain.</div>
             </div>
 
             {{-- College & Year --}}
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="mentee-onboard__grid-2 no-top">
                 <div class="form-group">
                     <label class="form-label">College / University</label>
                     <input type="text" name="college" class="form-input"
-                           placeholder="IIT Bombay, DU, Amity…"
+                           placeholder="Your College / Institute"
                            value="{{ old('college', auth()->user()->college) }}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Graduation Year / Batch</label>
                     <input type="text" name="year" class="form-input"
-                           placeholder="2025 / Final Year / 2021–24"
+                           placeholder="Current Year (e.g. 3rd Year)"
                            value="{{ old('year', auth()->user()->year) }}">
                 </div>
             </div>
 
-            <div style="display:flex; gap:12px;">
-                <a href="{{ route('mentee.onboarding', ['step' => 1]) }}" class="btn btn-ghost" style="flex-shrink:0;">← Back</a>
-                <button type="submit" class="btn btn-primary" style="flex:1;" onclick="return validateStream()">Continue →</button>
+            <div class="mentee-onboard__actions">
+                <a href="{{ route('mentee.onboarding', ['step' => 1]) }}" class="btn btn-ghost">← Back</a>
+                <button type="submit" class="btn btn-primary" onclick="return validateStream()">Continue →</button>
             </div>
         </form>
 
+        {{-- Stream subdomain bottom sheet --}}
+        <div class="mentee-stream-sheet" id="stream-sheet" aria-hidden="true">
+            <div class="mentee-stream-sheet__backdrop" onclick="closeStreamSheet()"></div>
+            <div class="mentee-stream-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="stream-sheet-title">
+                <div class="mentee-stream-sheet__handle"></div>
+                <div class="mentee-stream-sheet__head">
+                    <span class="mentee-stream-sheet__head-icon" id="stream-sheet-icon">⚙️</span>
+                    <span class="mentee-stream-sheet__head-title" id="stream-sheet-title">Select domain</span>
+                </div>
+                <div class="mentee-stream-sheet__options" id="stream-sheet-options"></div>
+                <button type="button" class="btn btn-primary mentee-stream-sheet__done" onclick="confirmStreamField()">Done</button>
+            </div>
+        </div>
+
+        <script type="application/json" id="stream-catalog-data">@json($streamCatalog)</script>
+
         {{-- ════════════════════════════════════════════════
-             STEP 3 — Career Tracks
+             STEP 3 — Career Tracks / Goals
              ════════════════════════════════════════════════ --}}
         @elseif($step == 3)
-        @php $selectedTracks = collect($tracks ?? [])->filter()->values(); @endphp
-        <h2 style="font-size:19px; font-weight:800; margin-bottom:4px;">Your Career Tracks</h2>
-        <p style="font-size:13px; color:var(--text-2); margin-bottom:28px;">Pick the tracks you want help with — same as the app. We'll match you with the best-fit mentors.</p>
+        @php
+            $careerGoals = [
+                ['Job Opportunities', '💼'],
+                ['Internships', '👨‍💻'],
+                ['Resume Building', '📄'],
+                ['Portfolio / Projects', '📁'],
+                ['Interview Preparation', '✏️'],
+                ['Skill Development', '🚀'],
+                ['Higher Education Abroad', '🌐'],
+                ['Competitive Exams', '🏆'],
+            ];
+            $selectedTracks = collect($tracks ?? [])->filter()->values();
+            $selectedLower = $selectedTracks->map(fn ($t) => strtolower(trim($t)));
+        @endphp
+        <h2 class="mentee-goals-title">Select Your <span>Career Goals</span></h2>
+        <p class="mentee-goals-sub">Choose what you want to <span>Achieve</span></p>
 
         <form
             action="{{ route('mentee.onboarding.save3') }}"
@@ -221,51 +700,33 @@
             id="mentee-tracks-form"
             data-ajax-form="{{ route('mentee.onboarding.save3') }}"
             data-redirect="{{ route('mentee.onboarding', ['step' => 4]) }}"
-            data-success="Tracks saved!"
+            data-success="Goals saved!"
         >
             @csrf
 
-            <div id="tracks-hidden-inputs">
-                @foreach($selectedTracks as $track)
-                <input type="hidden" name="tracks[]" value="{{ $track }}" data-onboard-hidden="tracks">
+            <div class="mentee-goals-list" id="career-goals-list">
+                @foreach($careerGoals as $i => [$label, $icon])
+                @php $isSelected = $selectedLower->contains(strtolower($label)); @endphp
+                <button
+                    type="button"
+                    class="mentee-goal-option {{ $isSelected ? 'is-selected' : '' }}"
+                    data-goal="{{ $label }}"
+                    onclick="toggleCareerGoal(this)"
+                    aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                >
+                    <span class="mentee-goal-option__icon">{{ $icon }}</span>
+                    <span class="mentee-goal-option__label">{{ $i + 1 }}. {{ $label }}</span>
+                    <span class="mentee-goal-option__check" aria-hidden="true">{{ $isSelected ? '✓' : '' }}</span>
+                    @if($isSelected)
+                    <input type="hidden" name="tracks[]" value="{{ $label }}">
+                    @endif
+                </button>
                 @endforeach
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Selected tracks *</label>
-                <div id="tracks-chips" style="min-height:48px; padding:12px; background:var(--bg-3); border:1px solid var(--border); border-radius:var(--radius); display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-                    @forelse($selectedTracks as $track)
-                    <span class="skill-tag" data-chip-field="tracks" data-chip-value="{{ $track }}"
-                          style="display:inline-flex; align-items:center; gap:6px; padding:5px 12px; background:var(--brand-muted); border:1px solid rgba(245,158,11,.3); border-radius:999px; font-size:12px; font-weight:600; color:var(--brand);">
-                        {{ $track }}
-                        <button type="button" onclick="removeTrackChip(this)" style="background:none; color:var(--brand); font-size:14px; cursor:pointer; line-height:1; padding:0;">×</button>
-                    </span>
-                    @empty
-                    <div id="tracks-placeholder" style="font-size:12px; color:var(--text-3);">No tracks yet. Tap a suggestion or add your own.</div>
-                    @endforelse
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <input type="text" id="tracks-input" class="form-input" placeholder="e.g. Frontend Development, UI UX Design">
-                    <button type="button" class="btn btn-ghost" onclick="addTrackFromInput()" style="flex-shrink:0;">+ Add</button>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Quick add</label>
-                <div class="chip-wrap">
-                    @foreach(($trackSuggestions ?? collect(['Frontend Development','UI UX Design','Data Science','Product Management','MBA Prep','DSA & Algorithms','Career Switch','Startup Advice'])) as $opt)
-                    @php $optName = is_object($opt) ? $opt->name : $opt; @endphp
-                    <div class="chip {{ $selectedTracks->contains($optName) ? 'selected' : '' }}" onclick="addTrackDirect('{{ addslashes($optName) }}')">{{ $optName }}</div>
-                    @endforeach
-                    @foreach(['Cracking FAANG / Tech Interviews','Getting My First Job','Study Abroad / Masters Abroad'] as $extra)
-                    <div class="chip {{ $selectedTracks->contains($extra) ? 'selected' : '' }}" onclick="addTrackDirect('{{ addslashes($extra) }}')">{{ $extra }}</div>
-                    @endforeach
-                </div>
-            </div>
-
-            <div style="display:flex; gap:12px;">
-                <a href="{{ route('mentee.onboarding', ['step' => 2]) }}" class="btn btn-ghost" style="flex-shrink:0;">← Back</a>
-                <button type="submit" class="btn btn-primary" style="flex:1;" onclick="return validateTracks()">Continue →</button>
+            <div class="mentee-onboard__actions">
+                <a href="{{ route('mentee.onboarding', ['step' => 2]) }}" class="btn btn-ghost">← Back</a>
+                <button type="submit" class="btn btn-primary" onclick="return validateTracks()">Continue →</button>
             </div>
         </form>
 
@@ -285,7 +746,7 @@
         >
             @csrf
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="mentee-onboard__grid-2 no-top">
                 <div class="form-group">
                     <label class="form-label">Weekly Time Commitment *</label>
                     <select name="weekly_time_commitment" class="form-select" required>
@@ -324,9 +785,9 @@
                 </div>
             </div>
 
-            <div style="display:flex; gap:12px;">
-                <a href="{{ route('mentee.onboarding', ['step' => 3]) }}" class="btn btn-ghost" style="flex-shrink:0;">← Back</a>
-                <button type="submit" class="btn btn-primary" style="flex:1;">Finish & Go to Dashboard →</button>
+            <div class="mentee-onboard__actions">
+                <a href="{{ route('mentee.onboarding', ['step' => 3]) }}" class="btn btn-ghost">← Back</a>
+                <button type="submit" class="btn btn-primary">Finish & Go to Dashboard →</button>
             </div>
         </form>
         @endif
@@ -350,124 +811,155 @@ function previewImage(input, selector) {
     reader.readAsDataURL(file);
 }
 
-function selectStream(card) {
-    document.querySelectorAll('.stream-option').forEach(c => {
-        c.style.borderColor = 'var(--border)';
-        c.style.background  = 'var(--card-bg)';
+const STREAM_CATALOG = (() => {
+    try {
+        return JSON.parse(document.getElementById('stream-catalog-data')?.textContent || '{}');
+    } catch (e) {
+        return {};
+    }
+})();
+
+let pendingStream = '';
+let pendingField = '';
+
+function openStreamSheet(streamName) {
+    const meta = STREAM_CATALOG[streamName];
+    if (!meta) return;
+
+    pendingStream = streamName;
+    pendingField = (document.getElementById('stream-hidden')?.value === streamName)
+        ? (document.getElementById('field-hidden')?.value || '')
+        : '';
+
+    document.getElementById('stream-sheet-title').textContent = streamName;
+    document.getElementById('stream-sheet-icon').textContent = meta.icon || '📚';
+
+    const options = document.getElementById('stream-sheet-options');
+    options.innerHTML = '';
+
+    (meta.fields || []).forEach((item, idx) => {
+        const label = Array.isArray(item) ? item[0] : item;
+        const icon  = Array.isArray(item) ? (item[1] || '•') : '•';
+        const selected = pendingField && pendingField.toLowerCase() === String(label).toLowerCase();
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'mentee-stream-option' + (selected ? ' is-selected' : '');
+        btn.innerHTML = `
+            <span class="mentee-stream-option__icon">${icon}</span>
+            <span class="mentee-stream-option__label">${idx + 1}. ${label}</span>
+            <span class="mentee-stream-option__check">${selected ? '✓' : ''}</span>
+        `;
+        btn.addEventListener('click', () => selectStreamField(label, btn));
+        options.appendChild(btn);
     });
-    card.style.borderColor = 'var(--brand)';
-    card.style.background  = 'var(--brand-muted)';
-    const hidden = document.getElementById('stream-hidden');
-    if (hidden) hidden.value = card.dataset.stream;
+
+    const sheet = document.getElementById('stream-sheet');
+    sheet.classList.add('is-open');
+    sheet.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function selectStreamField(label, btn) {
+    pendingField = label;
+    document.querySelectorAll('.mentee-stream-option').forEach(el => {
+        el.classList.remove('is-selected');
+        const check = el.querySelector('.mentee-stream-option__check');
+        if (check) check.textContent = '';
+    });
+    btn.classList.add('is-selected');
+    const check = btn.querySelector('.mentee-stream-option__check');
+    if (check) check.textContent = '✓';
+}
+
+function confirmStreamField() {
+    if (!pendingStream || !pendingField) {
+        showToast('error', 'Please select a domain option.');
+        return;
+    }
+
+    document.getElementById('stream-hidden').value = pendingStream;
+    document.getElementById('field-hidden').value = pendingField;
+
+    document.querySelectorAll('.mentee-stream-card').forEach(card => {
+        const active = card.dataset.stream === pendingStream;
+        card.classList.toggle('is-active', active);
+        const fieldEl = card.querySelector('[data-stream-field]');
+        if (fieldEl) {
+            if (active && pendingField) {
+                fieldEl.textContent = pendingField;
+                fieldEl.style.display = '';
+            } else {
+                fieldEl.textContent = '';
+                fieldEl.style.display = 'none';
+            }
+        }
+    });
+
     const errEl = document.getElementById('stream-error');
     if (errEl) errEl.style.display = 'none';
+
+    closeStreamSheet();
+}
+
+function closeStreamSheet() {
+    const sheet = document.getElementById('stream-sheet');
+    if (!sheet) return;
+    sheet.classList.remove('is-open');
+    sheet.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
 }
 
 function validateStream() {
-    const val = document.getElementById('stream-hidden')?.value;
-    if (!val) {
+    const stream = document.getElementById('stream-hidden')?.value?.trim();
+    const field  = document.getElementById('field-hidden')?.value?.trim();
+    if (!stream || !field) {
         const errEl = document.getElementById('stream-error');
         if (errEl) errEl.style.display = 'block';
-        showToast('error', 'Please select a career stream.');
+        showToast('error', 'Please select a stream and domain.');
         return false;
     }
     return true;
 }
 
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeStreamSheet();
+});
+
 function selectedTrackValues() {
-    return [...document.querySelectorAll('#tracks-hidden-inputs input[name="tracks[]"]')]
+    return [...document.querySelectorAll('#mentee-tracks-form input[name="tracks[]"]')]
         .map(i => i.value.trim())
         .filter(Boolean);
 }
 
-function syncTrackChips() {
-    const container = document.getElementById('tracks-hidden-inputs');
-    if (!container) return;
-    container.innerHTML = '';
-    document.querySelectorAll('#tracks-chips [data-chip-field="tracks"]').forEach(span => {
-        const value = (span.dataset.chipValue || '').trim();
-        if (!value) return;
+function toggleCareerGoal(btn) {
+    const goal = (btn.dataset.goal || '').trim();
+    if (!goal) return;
+
+    const check = btn.querySelector('.mentee-goal-option__check');
+    const selected = btn.classList.toggle('is-selected');
+    btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+
+    if (check) check.textContent = selected ? '✓' : '';
+
+    const existing = btn.querySelector('input[name="tracks[]"]');
+    if (selected && !existing) {
         const inp = document.createElement('input');
         inp.type = 'hidden';
         inp.name = 'tracks[]';
-        inp.value = value;
-        inp.dataset.onboardHidden = 'tracks';
-        container.appendChild(inp);
-    });
-}
-
-function addTrackDirect(track) {
-    const name = (track || '').trim();
-    if (!name) return;
-    const existing = selectedTrackValues().map(v => v.toLowerCase());
-    if (existing.includes(name.toLowerCase())) return;
-
-    const chips = document.getElementById('tracks-chips');
-    document.getElementById('tracks-placeholder')?.remove();
-    const span = document.createElement('span');
-    span.className = 'skill-tag';
-    span.dataset.chipField = 'tracks';
-    span.dataset.chipValue = name;
-    span.style.cssText = 'display:inline-flex; align-items:center; gap:6px; padding:5px 12px; background:var(--brand-muted); border:1px solid rgba(245,158,11,.3); border-radius:999px; font-size:12px; font-weight:600; color:var(--brand);';
-    span.innerHTML = `${name}<button type="button" onclick="removeTrackChip(this)" style="background:none; color:var(--brand); font-size:14px; cursor:pointer; line-height:1; padding:0;">×</button>`;
-    chips.appendChild(span);
-    syncTrackChips();
-    document.querySelectorAll('.chip').forEach(c => {
-        if (c.textContent.trim().toLowerCase() === name.toLowerCase()) c.classList.add('selected');
-    });
-}
-
-function addTrackFromInput() {
-    const input = document.getElementById('tracks-input');
-    if (!input) return;
-    const raw = input.value.trim().replace(/,+$/, '');
-    if (!raw) return;
-    raw.split(',').map(v => v.trim()).filter(Boolean).forEach(addTrackDirect);
-    input.value = '';
-}
-
-function removeTrackChip(btn) {
-    const span = btn.closest('[data-chip-field="tracks"]');
-    const name = span?.dataset.chipValue || '';
-    span?.remove();
-    syncTrackChips();
-    document.querySelectorAll('.chip').forEach(c => {
-        if (c.textContent.trim().toLowerCase() === name.toLowerCase()) c.classList.remove('selected');
-    });
-    const chips = document.getElementById('tracks-chips');
-    if (chips && !chips.querySelector('[data-chip-field="tracks"]') && !document.getElementById('tracks-placeholder')) {
-        chips.innerHTML = '<div id="tracks-placeholder" style="font-size:12px; color:var(--text-3);">No tracks yet. Tap a suggestion or add your own.</div>';
+        inp.value = goal;
+        btn.appendChild(inp);
+    } else if (!selected && existing) {
+        existing.remove();
     }
 }
 
 function validateTracks() {
-    addTrackFromInput();
-    syncTrackChips();
     if (selectedTrackValues().length === 0) {
-        showToast('error', 'Please select at least one track.');
+        showToast('error', 'Please select at least one career goal.');
         return false;
     }
     return true;
 }
-
-document.getElementById('tracks-input')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTrackFromInput(); }
-});
-document.getElementById('mentee-tracks-form')?.addEventListener('submit', () => {
-    addTrackFromInput();
-    syncTrackChips();
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    const streamVal = document.getElementById('stream-hidden')?.value;
-    if (streamVal) {
-        document.querySelectorAll('.stream-option').forEach(c => {
-            if (c.dataset.stream === streamVal) {
-                c.style.borderColor = 'var(--brand)';
-                c.style.background  = 'var(--brand-muted)';
-            }
-        });
-    }
-});
 </script>
 @endpush

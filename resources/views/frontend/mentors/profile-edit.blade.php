@@ -66,7 +66,7 @@
                             <label class="form-label">Phone</label>
                             <div class="input-prefix">
                                 <span class="input-prefix-label">🇮🇳 +91</span>
-                                <input type="tel" name="phone" class="form-input" maxlength="10" value="{{ old('phone', ltrim(auth()->user()->phone??'','+91')) }}">
+                                <input type="tel" name="phone" class="form-input" maxlength="10" value="{{ old('phone', \App\Support\IndianPhone::localTenDigits(auth()->user()->phone)) }}">
                             </div>
                         </div>
                     </div>
