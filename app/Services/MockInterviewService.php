@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AppSetting;
 use App\Models\MockInterviewRequest;
+use App\Models\Plan;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -14,8 +15,6 @@ use InvalidArgumentException;
 
 class MockInterviewService
 {
-    private const MAX_FREE_DURATION_MINUTES = 60;
-
     /** @return array{rate_per_minute: float, currency: string} */
     public function prices(): array
     {
@@ -38,8 +37,18 @@ class MockInterviewService
         $amount = round($rate * $duration, 2);
 
         $subscription = $user->activeSubscription();
-        $planSlug = $subscription?->plan?->slug;
-        $months = $this->freeWindowMonths($planSlug);
+        $plan = $subscription?->plan;
+        $planSlug = $plan?->slug;
+        $billing = Plan::normalizeBilling(
+            data_get($subscription?->meta, 'checkout.billing')
+                ?? data_get($subscription?->meta, 'billing')
+        );
+        $months = $plan?->freeEntitlementMonths('mock_interview', $billing);
+        $maxFreeDuration = $plan?->freeEntitlementDurationMinutes('mock_interview', $billing);
+        $benefitText = $plan?->benefitValueMatching([
+            'mock interview',
+            'mock interviews',
+        ], $billing);
 
         $included = $months !== null;
         $used = 0;
@@ -70,7 +79,12 @@ class MockInterviewService
         }
 
         $remaining = $included ? max(0, 1 - $used) : 0;
-        $isFree = $included && $remaining > 0 && $duration <= self::MAX_FREE_DURATION_MINUTES;
+        // If plan includes mock interviews but duration isn't parsable, don't invent a 60-min cap.
+        $durationCap = $maxFreeDuration;
+        $isFree = $included
+            && $remaining > 0
+            && $durationCap !== null
+            && $duration <= $durationCap;
         $payable = $isFree ? 0.0 : $amount;
         $walletBalance = round((float) $user->wallet_balance, 2);
 
@@ -101,12 +115,14 @@ class MockInterviewService
                 'window_starts_at'   => $windowStarts?->toDateTimeString(),
                 'last_used_at'       => $lastFreeAt?->toDateTimeString(),
                 'next_free_at'       => $remaining > 0 ? null : $nextFreeAt?->toDateTimeString(),
-                'max_free_duration'  => self::MAX_FREE_DURATION_MINUTES,
+                'max_free_duration'  => $durationCap,
+                'benefit_text'       => $benefitText,
                 'label'              => $this->entitlementLabel(
-                    $planSlug,
                     $included,
                     $remaining,
                     $months,
+                    $durationCap,
+                    $benefitText,
                     $nextFreeAt
                 ),
             ],
@@ -653,31 +669,25 @@ class MockInterviewService
         ];
     }
 
-    private function freeWindowMonths(?string $planSlug): ?int
-    {
-        return match (true) {
-            $planSlug === 'premium' => 1,
-            $planSlug === 'growth'  => 3,
-            default                 => null,
-        };
-    }
-
     private function entitlementLabel(
-        ?string $planSlug,
         bool $included,
         int $remaining,
         ?int $months,
+        ?int $maxFreeDuration = null,
+        ?string $benefitText = null,
         ?Carbon $nextFreeAt = null,
     ): string {
         if (! $included) {
             return 'Mock interviews are a paid add-on on your current plan.';
         }
         if ($remaining > 0) {
-            $cap = self::MAX_FREE_DURATION_MINUTES;
+            if ($benefitText) {
+                return 'Included in your plan: '.$benefitText.' (available now).';
+            }
+            $cap = $maxFreeDuration ?: 45;
+            $every = $months === 1 ? 'every month' : ('every '.($months ?? 3).' months');
 
-            return "Included in your plan: 1 free mock interview (up to {$cap} min) every {$months} month"
-                .($months === 1 ? '' : 's')
-                .' (available now).';
+            return "Included in your plan: 1 free mock interview (up to {$cap} min) {$every} (available now).";
         }
         if ($nextFreeAt) {
             return 'You\'ve used your free mock interview. Next free benefit on '

@@ -858,17 +858,25 @@
    .search-hero {
        background: var(--card-bg);
        border: 1px solid var(--border);
-       border-radius: var(--radius-xl);
-       padding: 6px 6px 6px 20px;
+       border-radius: var(--radius);
+       padding: 6px 6px 6px 16px;
        display: flex;
        align-items: center;
        gap: 12px;
        max-width: 680px;
        margin: 32px auto 0;
-       box-shadow: var(--shadow-lg);
+       box-shadow: var(--shadow-md);
+   }
+   .search-hero__icon {
+       flex-shrink: 0;
+       width: 18px;
+       height: 18px;
+       color: var(--text-3);
+       display: block;
    }
    .search-hero input {
        flex: 1;
+       min-width: 0;
        background: transparent;
        border: none;
        outline: none;
@@ -902,6 +910,34 @@
        background: var(--brand-muted);
        color: var(--brand);
        border-color: rgba(245, 158, 11, 0.3);
+   }
+   .search-filters .btn {
+       border-radius: var(--radius-sm);
+       white-space: nowrap;
+   }
+   .search-sort-select {
+       background: var(--bg-3);
+       border: 1px solid var(--border);
+       border-radius: var(--radius-sm);
+       padding: 8px 32px 8px 12px;
+       font-size: 13px;
+       color: var(--text);
+       cursor: pointer;
+       appearance: none;
+       -webkit-appearance: none;
+       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+       background-repeat: no-repeat;
+       background-position: right 10px center;
+       text-rendering: geometricPrecision;
+       -webkit-font-smoothing: antialiased;
+   }
+   .search-results-header {
+       display: flex;
+       justify-content: space-between;
+       align-items: center;
+       margin-bottom: 20px;
+       flex-wrap: wrap;
+       gap: 12px;
    }
    
    /* ── Cards ───────────────────────────────────────────────── */
@@ -4150,10 +4186,18 @@
            padding: 12px;
            gap: 10px;
            max-width: none;
+           border-radius: var(--radius);
+       }
+       .search-hero__icon {
+           display: none;
        }
        .search-hero input {
            width: 100%;
            min-width: 0;
+           padding: 10px 12px;
+           background: var(--bg-3);
+           border: 1px solid var(--border);
+           border-radius: var(--radius-sm);
        }
        .search-filters {
            width: 100%;
@@ -4164,6 +4208,12 @@
        .search-filters select,
        .search-filters .btn {
            width: 100%;
+           border-radius: var(--radius-sm);
+       }
+       .search-sort-select {
+           width: 100%;
+           max-width: 220px;
+           border-radius: var(--radius-sm);
        }
        .chip-wrap {
            gap: 8px;
@@ -4653,7 +4703,8 @@
        }
        .search-hero {
            flex-direction: column;
-           padding: 16px;
+           padding: 12px;
+           border-radius: var(--radius);
        }
        .search-filters {
            flex-wrap: wrap;

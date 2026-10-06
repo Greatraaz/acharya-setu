@@ -687,6 +687,236 @@ class Plan extends Model
         return $query->where('is_active', true);
     }
 
+    /**
+     * Free entitlement cadence in months for resume / LinkedIn / mock interview.
+     * Reads the plan's configured benefit rows (admin-editable) — not hardcoded by slug.
+     * Returns null when the benefit is a paid add-on or not included.
+     */
+    public function freeEntitlementMonths(string $benefitKey, ?string $billing = null): ?int
+    {
+        $key = strtolower(trim($benefitKey));
+
+        $raw = is_array($this->benefits) ? $this->benefits : [];
+        if ($raw !== [] && ! array_is_list($raw)) {
+            $legacyKey = match ($key) {
+                'resume', 'resume_development' => 'resume_development',
+                'linkedin', 'linkedin_optimisation' => 'linkedin_optimisation',
+                'mock', 'mock_interview' => 'mock_interview',
+                default => null,
+            };
+            if ($legacyKey && isset($raw[$legacyKey]) && is_array($raw[$legacyKey])) {
+                return self::monthsFromLegacyBenefit($raw[$legacyKey], $legacyKey);
+            }
+        }
+
+        $labels = match ($key) {
+            'resume', 'resume_development' => [
+                'resume development',
+                'resume',
+            ],
+            'linkedin', 'linkedin_optimisation' => [
+                'linkedin/profile optimisation',
+                'linkedin optimisation',
+                'linkedin profile optimisation',
+                'linkedin',
+            ],
+            'mock', 'mock_interview' => [
+                'mock interview',
+                'mock interviews',
+            ],
+            default => [],
+        };
+
+        if ($labels === []) {
+            return null;
+        }
+
+        $value = $this->benefitValueMatching($labels, $billing);
+
+        return self::monthsFromBenefitValue($value, $key);
+    }
+
+    /**
+     * Max free mock-interview duration (minutes) from plan benefits, or null if paid add-on / unknown.
+     * Examples: "1 × 45 min per quarter" → 45, "1 × 45/60 min per quarter" → 60, "1 x 60 min per month" → 60.
+     */
+    public function freeEntitlementDurationMinutes(string $benefitKey = 'mock_interview', ?string $billing = null): ?int
+    {
+        $key = strtolower(trim($benefitKey));
+
+        $raw = is_array($this->benefits) ? $this->benefits : [];
+        if ($raw !== [] && ! array_is_list($raw)) {
+            $legacyKey = match ($key) {
+                'mock', 'mock_interview' => 'mock_interview',
+                default => null,
+            };
+            if ($legacyKey && isset($raw[$legacyKey]) && is_array($raw[$legacyKey])) {
+                $mode = strtolower((string) ($raw[$legacyKey]['mode'] ?? 'addon'));
+                if ($mode === 'addon' || $mode === 'none' || $mode === '') {
+                    return null;
+                }
+                $mins = (int) ($raw[$legacyKey]['duration_minutes'] ?? 0);
+
+                return $mins > 0 ? $mins : null;
+            }
+        }
+
+        $labels = match ($key) {
+            'mock', 'mock_interview' => [
+                'mock interview',
+                'mock interviews',
+            ],
+            default => [],
+        };
+        if ($labels === []) {
+            return null;
+        }
+
+        $value = $this->benefitValueMatching($labels, $billing);
+
+        return self::durationMinutesFromBenefitValue($value);
+    }
+
+    /**
+     * Parse max free duration minutes from benefit text.
+     */
+    public static function durationMinutesFromBenefitValue(?string $value): ?int
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $lower = strtolower($value);
+        if (
+            str_contains($lower, 'paid add-on')
+            || str_contains($lower, 'paid addon')
+            || $lower === 'addon'
+            || $lower === 'none'
+            || $lower === 'n/a'
+            || $lower === '-'
+        ) {
+            return null;
+        }
+
+        // "45/60 min" → take the higher as max free duration
+        if (preg_match('/(\d+)\s*\/\s*(\d+)\s*min/', $lower, $m)) {
+            return max((int) $m[1], (int) $m[2]);
+        }
+
+        if (preg_match('/(?:up\s*to\s*)?(\d+)\s*min/', $lower, $m)) {
+            $mins = (int) $m[1];
+
+            return $mins > 0 ? $mins : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Find a benefit value by matching label aliases (case-insensitive).
+     */
+    public function benefitValueMatching(array $labelAliases, ?string $billing = null): ?string
+    {
+        $aliases = array_map(
+            fn ($l) => strtolower(trim((string) $l)),
+            $labelAliases
+        );
+
+        foreach ($this->benefitSummary($billing) as $row) {
+            $label = strtolower(trim((string) ($row['label'] ?? '')));
+            if ($label === '') {
+                continue;
+            }
+            foreach ($aliases as $alias) {
+                if ($alias !== '' && ($label === $alias || str_contains($label, $alias) || str_contains($alias, $label))) {
+                    return trim((string) ($row['value'] ?? ''));
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    public static function monthsFromLegacyBenefit(array $row, string $key): ?int
+    {
+        $mode = strtolower((string) ($row['mode'] ?? 'addon'));
+        if ($mode === 'addon' || $mode === 'none' || $mode === '') {
+            return null;
+        }
+
+        if ($key === 'mock_interview') {
+            $period = strtolower((string) ($row['period'] ?? 'quarter'));
+            if ($period === 'month' || $period === 'monthly') {
+                return 1;
+            }
+            if ($period === 'quarter' || $period === 'quarterly') {
+                return 3;
+            }
+            if ($period === 'year' || $period === 'yearly') {
+                return 12;
+            }
+        }
+
+        $months = (int) ($row['every_n_months'] ?? 0);
+
+        return $months > 0 ? $months : null;
+    }
+
+    /**
+     * Parse human-readable benefit values from plan admin UI into a free-window months count.
+     * Examples: "Paid add-on" → null, "1 complete resume / 6 months" → 6,
+     * "1 × 45/60 min per quarter" → 3, "1 x 60 min per month" → 1.
+     */
+    public static function monthsFromBenefitValue(?string $value, string $benefitKey = ''): ?int
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $lower = strtolower($value);
+
+        if (
+            str_contains($lower, 'paid add-on')
+            || str_contains($lower, 'paid addon')
+            || $lower === 'addon'
+            || $lower === 'none'
+            || $lower === 'n/a'
+            || $lower === '-'
+        ) {
+            return null;
+        }
+
+        if (preg_match('/\bper\s+month\b|\bevery\s+month\b|\/\s*month\b/', $lower)) {
+            return 1;
+        }
+        if (preg_match('/\bper\s+quarter\b|\bevery\s+quarter\b|\/\s*quarter\b/', $lower)) {
+            return 3;
+        }
+        if (preg_match('/\bper\s+year\b|\bevery\s+year\b|\/\s*year\b|\bannually\b/', $lower)) {
+            return 12;
+        }
+
+        if (preg_match('/(?:every|\/)\s*(\d+)\s*months?\b/', $lower, $m)) {
+            $months = (int) $m[1];
+
+            return $months > 0 ? $months : null;
+        }
+
+        if (preg_match('/(\d+)\s*months?\b/', $lower, $m)) {
+            $months = (int) $m[1];
+
+            return $months > 0 ? $months : null;
+        }
+
+        // Included-looking text without a clear cadence — fail closed as paid.
+        return null;
+    }
+
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('id');

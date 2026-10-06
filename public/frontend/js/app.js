@@ -92,13 +92,21 @@
        if (loader) showLoader();
    
        return fetch(url, {
+           cache: "no-store",
            headers: {
                "X-CSRF-TOKEN": getCsrf(),
                "X-Requested-With": "XMLHttpRequest",
                Accept: "application/json",
            },
        })
-           .then((res) => res.json())
+           .then((res) => {
+               const type = res.headers.get("content-type") || "";
+               if (!res.ok) throw new Error("Request failed.");
+               if (!type.includes("application/json")) {
+                   throw new Error("Unexpected response.");
+               }
+               return res.json();
+           })
            .then((data) => {
                if (onSuccess) onSuccess(data);
                return data;

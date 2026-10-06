@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AppSetting;
 use App\Models\CareerServiceRequest;
+use App\Models\Plan;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
@@ -32,8 +33,13 @@ class CareerServiceService
         $amount = $type === CareerServiceRequest::TYPE_LINKEDIN ? $prices['linkedin'] : $prices['resume'];
 
         $subscription = $user->activeSubscription();
-        $planSlug = $subscription?->plan?->slug;
-        $months = $this->freeWindowMonths($planSlug, $type);
+        $plan = $subscription?->plan;
+        $planSlug = $plan?->slug;
+        $billing = Plan::normalizeBilling(
+            data_get($subscription?->meta, 'checkout.billing')
+                ?? data_get($subscription?->meta, 'billing')
+        );
+        $months = $plan?->freeEntitlementMonths($type, $billing);
 
         $included = $months !== null;
         $used = 0;
@@ -107,19 +113,6 @@ class CareerServiceService
                 ),
             ],
         ];
-    }
-
-    /**
-     * Months in the free entitlement window, or null when always paid.
-     */
-    private function freeWindowMonths(?string $planSlug, string $type): ?int
-    {
-        return match (true) {
-            $planSlug === 'premium' => 3,
-            $planSlug === 'growth' => 6,
-            $planSlug === 'essential' && $type === CareerServiceRequest::TYPE_RESUME => 6,
-            default => null,
-        };
     }
 
     /**

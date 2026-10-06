@@ -13,13 +13,21 @@
             padding: 0;
             line-height: 1.45;
         }
-        .accent { height: 6px; background: #f59e0b; margin: 0 0 18px; }
-        .top { width: 100%; margin-bottom: 18px; border-collapse: collapse; }
+        .accent { height: 5px; background: #f59e0b; margin: 0 0 16px; }
+        .top { width: 100%; margin-bottom: 14px; border-collapse: collapse; }
         .top td { vertical-align: top; }
-        .seller { color: #64748b; font-size: 9px; line-height: 1.5; margin-top: 8px; }
+        .logo { height: 42px; width: auto; max-width: 180px; display: block; }
+        .brand-fallback {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0b1b3a;
+            letter-spacing: 0.02em;
+        }
+        .tagline { color: #d97706; font-size: 9px; margin-top: 3px; }
+        .seller { color: #64748b; font-size: 9px; line-height: 1.5; margin-top: 6px; }
         .right { text-align: right; }
         .doc-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             color: #0b1b3a;
             margin: 0 0 6px;
@@ -39,27 +47,27 @@
         }
         .meta { color: #475569; font-size: 10px; line-height: 1.65; }
         .meta strong { color: #0b1b3a; }
-        .divider { height: 1px; background: #e2e8f0; margin: 4px 0 16px; }
-        .section { width: 100%; margin-bottom: 16px; border-collapse: collapse; }
-        .section td { width: 50%; vertical-align: top; }
+        .divider { height: 1px; background: #e2e8f0; margin: 2px 0 14px; }
+        .section { width: 100%; margin-bottom: 14px; border-collapse: collapse; }
+        .section td { width: 50%; vertical-align: top; padding: 0; }
         .card {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            padding: 12px 14px;
-            margin-right: 8px;
+            padding: 11px 12px;
         }
-        .card-right { margin-right: 0; margin-left: 8px; }
+        .card-left { margin-right: 6px; }
+        .card-right { margin-left: 6px; }
         .label {
             font-size: 8px;
             text-transform: uppercase;
             letter-spacing: 0.08em;
             color: #94a3b8;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
             font-weight: bold;
         }
         .card strong { color: #0b1b3a; font-size: 12px; }
         .muted { color: #64748b; font-size: 10px; line-height: 1.5; }
-        table.items { width: 100%; border-collapse: collapse; margin: 8px 0 14px; }
+        table.items { width: 100%; border-collapse: collapse; margin: 4px 0 12px; }
         table.items th {
             background: #0b1b3a;
             color: #ffffff;
@@ -72,11 +80,18 @@
         table.items th.right { text-align: right; }
         table.items td {
             border-bottom: 1px solid #e2e8f0;
-            padding: 12px 10px;
+            padding: 11px 10px;
             vertical-align: top;
+            background: #ffffff;
         }
-        .totals { width: 250px; margin-left: auto; border-collapse: collapse; }
-        .totals td { padding: 7px 0; color: #475569; font-size: 10px; }
+        .amt { white-space: nowrap; }
+        .totals-wrap { width: 100%; }
+        .totals {
+            width: 240px;
+            margin-left: auto;
+            border-collapse: collapse;
+        }
+        .totals td { padding: 6px 0; color: #475569; font-size: 10px; }
         .totals td.right { text-align: right; color: #1e293b; }
         .totals .grand td {
             border-top: 2px solid #f59e0b;
@@ -86,8 +101,8 @@
             color: #0b1b3a;
         }
         .foot {
-            margin-top: 28px;
-            padding-top: 12px;
+            margin-top: 24px;
+            padding-top: 10px;
             border-top: 1px solid #e2e8f0;
             font-size: 9px;
             color: #94a3b8;
@@ -98,11 +113,17 @@
     </style>
 </head>
 <body>
+@php
+    $isPlanCovered = ($invoice->payment_method ?? '') === 'plan' || (float) $invoice->total_amount <= 0;
+    $paymentNote = $isPlanCovered
+        ? 'Covered by plan · GST not applicable'
+        : ('Paid via '.$invoice->paymentMethodLabel().' · GST not applicable');
+@endphp
 <div class="accent"></div>
 
 <table class="top">
     <tr>
-        <td width="58%">
+        <td width="55%">
             @include('invoices.partials.brand-logo', ['forPdf' => true, 'invoice' => $invoice])
             <div class="seller">
                 @if($invoice->seller_name && $invoice->seller_name !== 'Vedrix')
@@ -113,8 +134,8 @@
                 @if($invoice->seller_phone) · {{ $invoice->seller_phone }}@endif
             </div>
         </td>
-        <td class="right" width="42%">
-            <div class="badge">{{ $invoice->paymentMethodLabel() }}</div>
+        <td class="right" width="45%">
+            <div class="badge">{{ $isPlanCovered ? 'Plan benefit' : $invoice->paymentMethodLabel() }}</div>
             <div class="doc-title">Career Service Invoice</div>
             <div class="meta">
                 <strong>Invoice #</strong> {{ $invoice->invoice_number }}<br>
@@ -130,7 +151,7 @@
 <table class="section">
     <tr>
         <td>
-            <div class="card">
+            <div class="card card-left">
                 <div class="label">Bill To</div>
                 <strong>{{ $invoice->billing_name ?: 'Mentee' }}</strong>
                 <div class="muted">
@@ -163,31 +184,33 @@
         <tr>
             <td>
                 <strong>{{ $invoice->description ?: $invoice->serviceLabel() }}</strong><br>
-                <span class="muted">Paid via {{ $invoice->paymentMethodLabel() }} · GST not applicable</span>
+                <span class="muted">{{ $paymentNote }}</span>
             </td>
-            <td class="right">{{ number_format((float) $invoice->total_amount, 2) }}</td>
+            <td class="right amt">₹ {{ number_format((float) $invoice->total_amount, 2) }}</td>
         </tr>
     </tbody>
 </table>
 
-<table class="totals">
-    @if((float) ($invoice->wallet_amount ?? 0) > 0)
-    <tr>
-        <td>Wallet</td>
-        <td class="right">{{ number_format((float) $invoice->wallet_amount, 2) }}</td>
-    </tr>
-    @endif
-    @if((float) ($invoice->razorpay_amount ?? 0) > 0)
-    <tr>
-        <td>Razorpay</td>
-        <td class="right">{{ number_format((float) $invoice->razorpay_amount, 2) }}</td>
-    </tr>
-    @endif
-    <tr class="grand">
-        <td>Total paid</td>
-        <td class="right">₹ {{ number_format((float) $invoice->total_amount, 2) }}</td>
-    </tr>
-</table>
+<div class="totals-wrap">
+    <table class="totals">
+        @if((float) ($invoice->wallet_amount ?? 0) > 0)
+        <tr>
+            <td>Wallet</td>
+            <td class="right amt">₹ {{ number_format((float) $invoice->wallet_amount, 2) }}</td>
+        </tr>
+        @endif
+        @if((float) ($invoice->razorpay_amount ?? 0) > 0)
+        <tr>
+            <td>Razorpay</td>
+            <td class="right amt">₹ {{ number_format((float) $invoice->razorpay_amount, 2) }}</td>
+        </tr>
+        @endif
+        <tr class="grand">
+            <td>Total paid</td>
+            <td class="right amt">₹ {{ number_format((float) $invoice->total_amount, 2) }}</td>
+        </tr>
+    </table>
+</div>
 
 <div class="foot">
     <div class="slogan">Mentors shape possibilities</div>

@@ -89,24 +89,27 @@ function mockUrl(template, id) {
 function computeMockPricing(durationMinutes) {
     const ent = MOCK_QUOTE.entitlement || {};
     const rate = Number(MOCK_QUOTE.rate_per_minute || 0);
-    const maxFree = Number(ent.max_free_duration ?? 60);
+    const maxFreeRaw = ent.max_free_duration;
+    const maxFree = maxFreeRaw === null || maxFreeRaw === undefined || maxFreeRaw === ''
+        ? null
+        : Number(maxFreeRaw);
     const remaining = Number(ent.remaining ?? 0);
     const included = Boolean(ent.included);
-    const isFree = included && remaining > 0 && durationMinutes <= maxFree;
+    const isFree = included && remaining > 0 && maxFree !== null && !Number.isNaN(maxFree) && durationMinutes <= maxFree;
     const amount = isFree ? 0 : Math.round(rate * durationMinutes);
-    return { isFree, amount, rate };
+    return { isFree, amount, rate, maxFree };
 }
 
 function refreshMockPriceEstimate() {
     const sel = document.getElementById('duration_minutes');
     const duration = parseInt(sel?.value || '60', 10);
-    const { isFree, amount, rate } = computeMockPricing(duration);
+    const { isFree, amount, rate, maxFree } = computeMockPricing(duration);
     const textEl = document.getElementById('mock-price-estimate-text');
     const walletLine = document.getElementById('mock-wallet-line');
     const btn = document.getElementById('mock-submit-btn');
 
     if (isFree) {
-        textEl.innerHTML = '<strong>No charge</strong> — this uses your plan entitlement for up to ' + (MOCK_QUOTE.entitlement?.max_free_duration ?? 60) + ' minutes.';
+        textEl.innerHTML = '<strong>No charge</strong> — this uses your plan entitlement for up to ' + maxFree + ' minutes.';
         walletLine.style.display = 'none';
         btn.textContent = 'Submit request';
     } else {

@@ -17,8 +17,11 @@
 
             {{-- Search bar --}}
             <div class="search-hero" style="margin:0;max-width:100%;">
-                <span style="font-size:18px;flex-shrink:0;">🔍</span>
-                <input type="text" id="mentor-search-input" value="{{ request('q') }}" placeholder="Search by name, skill, company (e.g. DSA, Product Manager, Google)…">
+                <svg class="search-hero__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+                    <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <input type="text" id="mentor-search-input" value="{{ request('q') }}" placeholder="Search by name, skill, company…">
                 <div class="search-filters">
                     <select data-filter="experience" class="search-filter-btn" style="background:var(--bg-4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-2);font-size:12px;">
                         <option value="">Any Experience</option>
@@ -129,7 +132,7 @@
             {{-- RESULTS --}}
             <div>
                 {{-- Results header --}}
-                <div class="flex-between" style="margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                <div class="search-results-header">
                     <div style="font-size:13px;color:var(--text-2);" id="mentor-count-wrap">
                         @if(($mentors->total() ?? 0) > 0)
                             Showing <strong id="mentor-count-range" style="color:var(--text);">{{ $mentors->firstItem() }}–{{ $mentors->lastItem() }}</strong>
@@ -138,7 +141,7 @@
                             Showing <strong id="mentor-count" style="color:var(--text);">0</strong> mentors
                         @endif
                     </div>
-                    <select data-sort-select style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;color:var(--text);cursor:pointer;">
+                    <select data-sort-select class="search-sort-select">
                         <option value="best" @selected(request('sort', 'best') === 'best')>Best Match</option>
                         <option value="rating" @selected(request('sort') === 'rating')>Highest Rated</option>
                         <option value="rate_asc" @selected(request('sort') === 'rate_asc')>Lowest Price</option>

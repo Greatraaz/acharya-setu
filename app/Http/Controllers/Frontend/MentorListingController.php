@@ -42,8 +42,9 @@ class MentorListingController extends Controller
             }
         }
 
-        // AJAX request — return JSON for JS rendering
-        if ($request->ajax() || $request->wantsJson()) {
+        // AJAX filter refresh only — never JSON for normal browser navigations
+        // (Back button must get HTML; same URL was previously used by AjaxGet.)
+        if ($request->ajax()) {
             return response()->json([
                 'data'         => $mentors->items(),
                 'total'        => $mentors->total(),
@@ -52,7 +53,8 @@ class MentorListingController extends Controller
                 'per_page'     => $mentors->perPage(),
                 'from'         => $mentors->firstItem(),
                 'to'           => $mentors->lastItem(),
-            ]);
+            ])->header('Cache-Control', 'no-store, no-cache, must-revalidate')
+              ->header('Vary', 'Accept, X-Requested-With');
         }
 
         $mentorFields = User::query()
@@ -65,7 +67,9 @@ class MentorListingController extends Controller
             ->orderBy('field')
             ->pluck('field');
 
-        return view('frontend.search', compact('mentors', 'mentorFields'));
+        return response()
+            ->view('frontend.search', compact('mentors', 'mentorFields'))
+            ->header('Vary', 'Accept, X-Requested-With');
     }
 
     // ── Public mentor profile ─────────────────────────────────
