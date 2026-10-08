@@ -202,91 +202,93 @@
         @endif
 
         @if($history->isNotEmpty() || request()->filled('search'))
-        <div class="card">
+        <div class="card plan-history">
             <div class="plan-history-head">
-                <h3 style="font-size:15px;font-weight:700;margin:0;">Subscription history</h3>
-                <form method="GET" action="{{ route('mentee.plans') }}" class="session-toolbar-controls" style="margin:0;">
-                    <div class="session-search-field">
-                        <span class="session-search-icon" aria-hidden="true">🔍</span>
+                <h3 class="plan-history-title">Subscription history</h3>
+                <form method="GET" action="{{ route('mentee.plans') }}" class="plan-history-search">
+                    <label class="plan-history-search__field">
+                        <span class="plan-history-search__icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"/>
+                            </svg>
+                        </span>
                         <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
-                               placeholder="Search plan or ID…" autocomplete="off">
-                    </div>
+                               placeholder="Search plan or ID…" autocomplete="off" aria-label="Search plan or ID">
+                    </label>
                     <button type="submit" class="btn btn-outline btn-sm">Search</button>
                 </form>
             </div>
 
-            <div class="table-scroll">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Plan</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Period</th>
-                        <th>Invoice</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($history as $sub)
-                    @php
-                        $statusClass = match ($sub->status) {
-                            'active' => 'completed',
-                            'cancelled' => 'cancelled',
-                            'expired' => 'pending',
-                            default => 'pending',
-                        };
-                    @endphp
-                    <tr>
-                        <td>
-                            <div style="font-weight:600;">{{ $sub->plan->name ?? 'N/A' }}</div>
-                            @if($sub->subscription_id)
-                            <div style="font-size:11px;color:var(--text-3);margin-top:2px;">{{ $sub->subscription_id }}</div>
-                            @endif
-                        </td>
-                        <td style="white-space:nowrap;font-weight:600;">₹{{ number_format((float) $sub->amount_paid, 0) }}</td>
-                        <td><span class="session-status {{ $statusClass }}">{{ ucfirst($sub->status) }}</span></td>
-                        <td style="font-size:12px;white-space:nowrap;color:var(--text-2);">
-                            @if($sub->starts_at && $sub->expires_at)
-                                {{ $sub->starts_at->format('d M Y') }} → {{ $sub->expires_at->format('d M Y') }}
-                            @else
-                                —
-                            @endif
-                        </td>
-                        <td>
-                            @if($sub->invoice)
-                                <div class="plan-history-actions">
-                                    <a href="{{ route('mentee.invoices.show', $sub->invoice) }}" style="color:var(--brand);font-weight:600;font-size:12px;white-space:nowrap;">{{ $sub->invoice->invoice_number }}</a>
-                                    <a href="{{ route('mentee.invoices.download', $sub->invoice) }}"
-                                       class="plan-history-icon-btn"
-                                       title="Download invoice"
-                                       aria-label="Download invoice">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                                        </svg>
-                                    </a>
-                                </div>
-                            @elseif(($sub->payment_status ?? '') === 'paid')
-                                <form method="POST" action="{{ route('mentee.subscriptions.invoice', $sub->id) }}" style="margin:0;">
-                                    @csrf
-                                    <button type="submit" class="plan-history-icon-btn" title="Generate invoice" aria-label="Generate invoice">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                                        </svg>
-                                    </button>
-                                </form>
-                            @else
-                                <span style="font-size:12px;color:var(--text-3);">—</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="5" style="text-align:center;padding:36px 16px;color:var(--text-2);">No subscriptions match that search.</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+            @if($history->isEmpty())
+            <p class="plan-history-empty">No subscriptions match that search.</p>
+            @else
+            <div class="plan-history-table" role="table" aria-label="Subscription history">
+                <div class="plan-history-table__head" role="row">
+                    <span role="columnheader">Plan</span>
+                    <span role="columnheader">Amount</span>
+                    <span role="columnheader">Status</span>
+                    <span role="columnheader">Period</span>
+                    <span role="columnheader">Invoice</span>
+                </div>
+                @foreach($history as $sub)
+                @php
+                    $statusClass = match ($sub->status) {
+                        'active' => 'completed',
+                        'cancelled' => 'cancelled',
+                        'expired' => 'pending',
+                        default => 'pending',
+                    };
+                @endphp
+                <article class="plan-history-item" role="row">
+                    <div class="plan-history-item__plan" role="cell">
+                        <div class="plan-history-item__name">{{ $sub->plan->name ?? 'N/A' }}</div>
+                        @if($sub->subscription_id)
+                        <div class="plan-history-item__id">{{ $sub->subscription_id }}</div>
+                        @endif
+                    </div>
+                    <div class="plan-history-item__amount" role="cell">₹{{ number_format((float) $sub->amount_paid, 0) }}</div>
+                    <div class="plan-history-item__status" role="cell">
+                        <span class="session-status {{ $statusClass }}">{{ ucfirst($sub->status) }}</span>
+                    </div>
+                    <div class="plan-history-item__period" role="cell">
+                        @if($sub->starts_at && $sub->expires_at)
+                            <span>{{ $sub->starts_at->format('d M Y') }}</span>
+                            <span class="plan-history-item__arrow" aria-hidden="true">→</span>
+                            <span>{{ $sub->expires_at->format('d M Y') }}</span>
+                        @else
+                            —
+                        @endif
+                    </div>
+                    <div class="plan-history-item__invoice" role="cell">
+                        @if($sub->invoice)
+                            <div class="plan-history-actions">
+                                <a href="{{ route('mentee.invoices.show', $sub->invoice) }}" class="plan-history-invoice-link">{{ $sub->invoice->invoice_number }}</a>
+                                <a href="{{ route('mentee.invoices.download', $sub->invoice) }}"
+                                   class="plan-history-icon-btn"
+                                   title="Download invoice"
+                                   aria-label="Download invoice">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                    </svg>
+                                </a>
+                            </div>
+                        @elseif(($sub->payment_status ?? '') === 'paid')
+                            <form method="POST" action="{{ route('mentee.subscriptions.invoice', $sub->id) }}" style="margin:0;">
+                                @csrf
+                                <button type="submit" class="plan-history-icon-btn" title="Generate invoice" aria-label="Generate invoice">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        @else
+                            <span class="plan-history-item__muted">—</span>
+                        @endif
+                    </div>
+                </article>
+                @endforeach
             </div>
+            @endif
 
             @include('frontend.partials.pagination', ['paginator' => $history])
         </div>

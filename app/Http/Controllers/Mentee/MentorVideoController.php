@@ -13,9 +13,8 @@ class MentorVideoController extends Controller
     public function index(Request $request)
     {
         $result = $this->videos->listForMentee(auth()->user(), [
-            'search'    => $request->input('search'),
-            'mentor_id' => $request->input('mentor_id'),
-            'watched'   => $request->input('watched'),
+            'search'  => $request->input('search'),
+            'watched' => $request->input('watched'),
         ], 12);
 
         $collections = $result['paginator']->through(function ($item) use ($result) {
@@ -34,7 +33,7 @@ class MentorVideoController extends Controller
 
     public function show(int $video)
     {
-        $item = $this->videos->findActiveForMentee($video);
+        $item = $this->videos->findActiveForMentee(auth()->user(), $video);
         $watchedIds = $this->videos->watchedFileIds(auth()->user());
         $formatted = $this->videos->format($item, $watchedIds);
 

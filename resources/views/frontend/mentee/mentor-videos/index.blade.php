@@ -9,7 +9,7 @@
         <div class="dash-header">
             <div>
                 <div class="dash-title">Mentor Videos</div>
-                <div class="dash-subtitle">Watch videos shared by mentors — separate from your curriculum.</div>
+                <div class="dash-subtitle">Watch videos shared by your mentor — separate from your curriculum.</div>
             </div>
         </div>
 
@@ -73,7 +73,7 @@
             <div class="card" style="padding:36px;text-align:center;grid-column:1/-1;color:var(--text-3);">
                 <div style="font-size:40px;margin-bottom:8px;">🎬</div>
                 <div style="font-weight:700;color:var(--text-1);">No videos yet</div>
-                <p style="margin:6px 0 0;font-size:13px;">When mentors upload videos, they’ll appear here.</p>
+                <p style="margin:6px 0 0;font-size:13px;">Videos uploaded by your mentor will appear here.</p>
             </div>
             @endforelse
         </div>

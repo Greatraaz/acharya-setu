@@ -3296,12 +3296,18 @@
        flex-shrink: 0;
        white-space: nowrap;
    }
+   .community-filters-toolbar {
+       flex-wrap: nowrap;
+       align-items: center;
+   }
    .community-filters-toolbar__controls {
        display: flex;
-       flex-direction: column;
-       align-items: stretch;
+       flex-direction: row;
+       flex-wrap: nowrap;
+       align-items: center;
+       justify-content: flex-end;
        gap: 8px;
-       flex: 1 1 320px;
+       flex: 0 1 auto;
        min-width: 0;
        margin-left: auto;
    }
@@ -3311,25 +3317,33 @@
        align-items: center;
        gap: 8px;
        min-width: 0;
-       width: 100%;
-   }
-   .community-filters-toolbar__row--search {
-       justify-content: flex-end;
+       width: auto;
    }
    .community-filters-toolbar__row--filters {
        justify-content: flex-end;
+       flex-shrink: 0;
+   }
+   .community-filters-toolbar__select {
+       flex: 0 0 148px;
+       width: 148px;
+       min-width: 148px;
+       max-width: none;
+   }
+   .community-filters-toolbar__select--category {
+       flex: 0 0 210px;
+       width: 210px;
+       min-width: 210px;
+   }
+   .community-filters-toolbar .form-input,
+   .community-filters-toolbar .btn {
+       height: 40px;
+       box-sizing: border-box;
    }
    .community-filters-toolbar__search,
    .community-filters-toolbar .session-search-field {
-       flex: 1 1 200px;
-       min-width: 0;
-       max-width: 280px;
-       width: auto;
-   }
-   .community-filters-toolbar__select {
-       flex: 1 1 140px;
-       min-width: 0;
-       max-width: 180px;
+       flex: 1 1 180px;
+       min-width: 140px;
+       max-width: 240px;
        width: auto;
    }
    .community-filters-toolbar__submit,
@@ -3784,9 +3798,140 @@
        display: flex;
        justify-content: space-between;
        align-items: center;
-       gap: 12px;
+       gap: 12px 16px;
        flex-wrap: wrap;
-       margin-bottom: 14px;
+       margin-bottom: 6px;
+   }
+   .plan-history-title {
+       margin: 0;
+       font-size: 15px;
+       font-weight: 700;
+       color: var(--text);
+   }
+   .plan-history-search {
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       flex: 1 1 280px;
+       min-width: min(100%, 240px);
+       max-width: 420px;
+       margin-left: auto;
+   }
+   .plan-history-search__field {
+       position: relative;
+       flex: 1 1 auto;
+       min-width: 0;
+       display: block;
+   }
+   .plan-history-search__field .form-input {
+       width: 100%;
+       height: 40px;
+       padding: 0 12px 0 36px;
+       box-sizing: border-box;
+       appearance: none;
+       -webkit-appearance: none;
+   }
+   .plan-history-search__field .form-input::-webkit-search-decoration,
+   .plan-history-search__field .form-input::-webkit-search-cancel-button {
+       -webkit-appearance: none;
+       appearance: none;
+   }
+   .plan-history-search__icon {
+       position: absolute;
+       left: 12px;
+       top: 50%;
+       width: 16px;
+       height: 16px;
+       transform: translateY(-50%);
+       color: var(--text-3);
+       pointer-events: none;
+       display: flex;
+   }
+   .plan-history-search__icon svg {
+       width: 16px;
+       height: 16px;
+   }
+   .plan-history-search .btn {
+       flex: 0 0 auto;
+       height: 40px;
+       white-space: nowrap;
+   }
+   .plan-history-empty {
+       margin: 18px 0 8px;
+       text-align: center;
+       color: var(--text-2);
+       font-size: 13px;
+   }
+   .plan-history-table {
+       margin-top: 8px;
+   }
+   .plan-history-table__head,
+   .plan-history-item {
+       display: grid;
+       grid-template-columns: minmax(0, 1.3fr) 84px 92px minmax(0, 1.5fr) minmax(108px, auto);
+       gap: 8px 14px;
+       align-items: center;
+   }
+   .plan-history-table__head {
+       padding: 10px 0;
+       border-bottom: 1px solid var(--border);
+       font-size: 11px;
+       font-weight: 700;
+       letter-spacing: 0.05em;
+       text-transform: uppercase;
+       color: var(--text-3);
+   }
+   .plan-history-item {
+       padding: 14px 0;
+       border-bottom: 1px solid var(--border);
+   }
+   .plan-history-item:last-child {
+       border-bottom: none;
+       padding-bottom: 4px;
+   }
+   .plan-history-item__name {
+       font-weight: 700;
+       color: var(--text);
+       line-height: 1.3;
+   }
+   .plan-history-item__id {
+       margin-top: 2px;
+       font-size: 11px;
+       color: var(--text-3);
+       white-space: nowrap;
+       overflow: hidden;
+       text-overflow: ellipsis;
+   }
+   .plan-history-item__amount {
+       font-weight: 700;
+       color: var(--text);
+       white-space: nowrap;
+   }
+   .plan-history-item__period {
+       display: flex;
+       flex-wrap: wrap;
+       align-items: center;
+       gap: 4px 6px;
+       font-size: 12px;
+       color: var(--text-2);
+       line-height: 1.4;
+   }
+   .plan-history-item__arrow {
+       color: var(--text-3);
+   }
+   .plan-history-invoice-link {
+       color: var(--brand);
+       font-weight: 600;
+       font-size: 12px;
+       text-decoration: none;
+       word-break: break-all;
+   }
+   .plan-history-invoice-link:hover {
+       text-decoration: underline;
+   }
+   .plan-history-item__muted {
+       font-size: 12px;
+       color: var(--text-3);
    }
    .plan-history-actions {
        display: inline-flex;
@@ -3816,6 +3961,52 @@
    .plan-history-icon-btn svg {
        width: 16px;
        height: 16px;
+   }
+   @media (max-width: 768px) {
+       .plan-history-head {
+           align-items: stretch;
+       }
+       .plan-history-search {
+           flex: 1 1 100%;
+           max-width: none;
+           margin-left: 0;
+           width: 100%;
+       }
+       .plan-history-table__head {
+           display: none;
+       }
+       .plan-history-item {
+           grid-template-columns: minmax(0, 1fr) auto;
+           grid-template-areas:
+               "plan status"
+               "amount amount"
+               "period period"
+               "invoice invoice";
+           align-items: start;
+           gap: 10px 12px;
+           padding: 14px 0;
+       }
+       .plan-history-item__plan { grid-area: plan; min-width: 0; }
+       .plan-history-item__status { grid-area: status; justify-self: end; }
+       .plan-history-item__amount { grid-area: amount; }
+       .plan-history-item__period {
+           grid-area: period;
+           display: block;
+           text-align: left;
+       }
+       .plan-history-item__invoice { grid-area: invoice; }
+       .plan-history-item__amount::before,
+       .plan-history-item__period::before {
+           display: block;
+           margin-bottom: 2px;
+           font-size: 10px;
+           font-weight: 700;
+           letter-spacing: 0.05em;
+           text-transform: uppercase;
+           color: var(--text-3);
+       }
+       .plan-history-item__amount::before { content: "Amount"; }
+       .plan-history-item__period::before { content: "Period"; }
    }
    .session-card-inner {
        display: flex;
@@ -4015,6 +4206,8 @@
            width: 100%;
            margin-left: 0;
            flex: none;
+           flex-direction: column;
+           align-items: stretch;
        }
        .community-filters-toolbar__row {
            width: 100%;

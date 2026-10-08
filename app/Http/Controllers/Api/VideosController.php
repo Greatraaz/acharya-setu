@@ -95,11 +95,12 @@ class VideosController extends Controller
         $watched = array_key_exists('watched', $data) ? (bool) $data['watched'] : null;
 
         $watchedFileIds = MentorVideoWatch::where('mentee_id', $menteeId)->pluck('mentor_video_file_id');
+        $mentorId = (int) ($request->user()->assigned_mentor_id ?? 0);
 
         $query = MentorVideo::where('is_active', true)
+            ->where('mentor_id', $mentorId)
             ->with(['files', 'mentor:id,name,avatar_url'])
             ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
-            ->when(! empty($data['mentor_id']), fn ($q) => $q->where('mentor_id', (int) $data['mentor_id']))
             ->latest();
 
         $allForSummary = (clone $query)->with('files')->get();
@@ -155,7 +156,7 @@ class VideosController extends Controller
             ],
             'filters'    => [
                 'search'    => $search !== '' ? $search : null,
-                'mentor_id' => isset($data['mentor_id']) ? (int) $data['mentor_id'] : null,
+                'mentor_id' => $mentorId > 0 ? $mentorId : null,
                 'watched'   => $watched,
             ],
         ]);

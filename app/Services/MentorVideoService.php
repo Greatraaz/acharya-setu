@@ -73,11 +73,12 @@ class MentorVideoService
             : null;
 
         $watchedFileIds = MentorVideoWatch::where('mentee_id', $mentee->id)->pluck('mentor_video_file_id');
+        $mentorId = $this->assignedMentorId($mentee);
 
         $query = MentorVideo::where('is_active', true)
+            ->where('mentor_id', $mentorId ?? 0)
             ->with(['files', 'mentor:id,name,avatar_url'])
             ->when($search !== '', fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
-            ->when(! empty($filters['mentor_id']), fn ($q) => $q->where('mentor_id', (int) $filters['mentor_id']))
             ->latest();
 
         $allForSummary = (clone $query)->with('files')->get();
@@ -129,9 +130,10 @@ class MentorVideoService
         return MentorVideo::with(['files', 'mentor:id,name,email'])->findOrFail($id);
     }
 
-    public function findActiveForMentee(int $id): MentorVideo
+    public function findActiveForMentee(User $mentee, int $id): MentorVideo
     {
         return MentorVideo::where('is_active', true)
+            ->where('mentor_id', $this->assignedMentorId($mentee) ?? 0)
             ->with(['files', 'mentor:id,name,avatar_url'])
             ->findOrFail($id);
     }
@@ -225,7 +227,10 @@ class MentorVideoService
     public function markWatched(User $mentee, int $fileId): MentorVideoFile
     {
         $videoFile = MentorVideoFile::where('id', $fileId)
-            ->whereHas('mentorVideo', fn ($q) => $q->where('is_active', true))
+            ->whereHas('mentorVideo', function ($q) use ($mentee) {
+                $q->where('is_active', true)
+                    ->where('mentor_id', $this->assignedMentorId($mentee) ?? 0);
+            })
             ->firstOrFail();
 
         MentorVideoWatch::updateOrCreate(
@@ -237,6 +242,13 @@ class MentorVideoService
         );
 
         return $videoFile;
+    }
+
+    public function assignedMentorId(User $mentee): ?int
+    {
+        $id = (int) ($mentee->assigned_mentor_id ?? 0);
+
+        return $id > 0 ? $id : null;
     }
 
     public function watchedFileIds(User $mentee): Collection

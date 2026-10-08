@@ -312,8 +312,10 @@ class ProgressController extends Controller
     {
         $menteeId = $request->user()->id;
 
+        $mentorId = (int) ($request->user()->assigned_mentor_id ?? 0);
+
         $videoFile = MentorVideoFile::where('id', $file)
-            ->whereHas('mentorVideo', fn ($q) => $q->where('is_active', true))
+            ->whereHas('mentorVideo', fn ($q) => $q->where('is_active', true)->where('mentor_id', $mentorId))
             ->firstOrFail();
 
         MentorVideoWatch::updateOrCreate(

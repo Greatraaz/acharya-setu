@@ -5,14 +5,14 @@
         ->where('type', 'note')
         ->first();
 @endphp
-<div class="card session-detail-card" id="my-mock-notes" data-save-url="{{ route('mock-interviews.notes.save', $item->id) }}">
-    <div class="session-detail-card-head">
-        <h3>📝 My Personal Notes</h3>
+<div class="card session-detail-card cs-panel cs-panel--tight" id="my-mock-notes" data-save-url="{{ route('mock-interviews.notes.save', $item->id) }}">
+    <div class="session-detail-card-head" style="margin-bottom:10px;">
+        <h3>My Personal Notes</h3>
         <span class="session-detail-card-hint">Private — only you can see these</span>
     </div>
-    <textarea id="my-mock-note-content" class="form-textarea" rows="5"
+    <textarea id="my-mock-note-content" class="form-textarea" rows="6"
               placeholder="Notes you took during the mock interview…">{{ $myNote->content ?? '' }}</textarea>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;gap:12px;flex-wrap:wrap;">
+    <div class="mi-notes-actions" style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;gap:12px;flex-wrap:wrap;">
         <span id="my-mock-note-status" style="font-size:12px;color:var(--text-3);"></span>
         <button type="button" class="btn btn-primary btn-sm" id="my-mock-note-save" style="margin-left:auto;">Save Notes</button>
     </div>

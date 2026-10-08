@@ -37,6 +37,21 @@
             <input type="hidden" name="joined" value="0">
         @endif
 
+        <div class="community-filters-toolbar__row community-filters-toolbar__row--filters">
+            <select name="type" class="form-input form-select community-filters-toolbar__select" title="Channel type" aria-label="Channel type">
+                <option value="">All types</option>
+                <option value="public" @selected($type === 'public')>Public</option>
+                <option value="private" @selected($type === 'private')>Private</option>
+            </select>
+
+            <select name="category" class="form-input form-select community-filters-toolbar__select community-filters-toolbar__select--category" title="Category" aria-label="Category">
+                <option value="">All categories</option>
+                @foreach(\App\Models\Channel::CATEGORIES as $key => $label)
+                    <option value="{{ $key }}" @selected($category === $key)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </div>
+
         <div class="community-filters-toolbar__row community-filters-toolbar__row--search">
             <div class="session-search-field community-filters-toolbar__search">
                 <span class="session-search-icon" aria-hidden="true">🔍</span>
@@ -47,21 +62,6 @@
             @if($search !== '' || $type !== '' || $category !== '' || $joinedKey !== 'all')
                 <a href="{{ route($routeName) }}" class="btn btn-ghost community-filters-toolbar__clear">Clear</a>
             @endif
-        </div>
-
-        <div class="community-filters-toolbar__row community-filters-toolbar__row--filters">
-            <select name="type" class="form-input form-select community-filters-toolbar__select" title="Channel type" aria-label="Channel type">
-                <option value="">All types</option>
-                <option value="public" @selected($type === 'public')>Public</option>
-                <option value="private" @selected($type === 'private')>Private</option>
-            </select>
-
-            <select name="category" class="form-input form-select community-filters-toolbar__select" title="Category" aria-label="Category">
-                <option value="">All categories</option>
-                @foreach(\App\Models\Channel::CATEGORIES as $key => $label)
-                    <option value="{{ $key }}" @selected($category === $key)>{{ $label }}</option>
-                @endforeach
-            </select>
         </div>
     </div>
 </form>
