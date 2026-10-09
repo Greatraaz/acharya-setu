@@ -37,7 +37,10 @@ class QuizController extends Controller
 
         $myAttempts = QuizAttempt::where('user_id', $userId)
             ->whereNotNull('completed_at')
+            ->orderByDesc('completed_at')
+            ->orderByDesc('id')
             ->get()
+            ->unique('quiz_id')
             ->keyBy('quiz_id');
 
         return view('frontend.mentee.quizzes', compact('quizzes', 'myAttempts', 'search', 'status'));
@@ -47,9 +50,18 @@ class QuizController extends Controller
     {
         abort_unless($quiz->is_published, 404);
         $quiz->load('questions.options');
-        $attempt = $quiz->userAttempt(Auth::user());
 
-        return view('frontend.mentee.quiz-show', compact('quiz', 'attempt'));
+        $attempts = $quiz->attempts()
+            ->where('user_id', Auth::id())
+            ->whereNotNull('completed_at')
+            ->latest('completed_at')
+            ->latest('id')
+            ->get();
+
+        $attempt = $attempts->first();
+        $attemptCount = $attempts->count();
+
+        return view('frontend.mentee.quiz-show', compact('quiz', 'attempt', 'attemptCount'));
     }
 
     public function attempt(Quiz $quiz)
@@ -57,19 +69,35 @@ class QuizController extends Controller
         abort_unless($quiz->is_published, 404);
         $quiz->load('questions.options');
 
+        QuizAttempt::where('quiz_id', $quiz->id)
+            ->where('user_id', Auth::id())
+            ->whereNull('completed_at')
+            ->delete();
+
         $attempt = QuizAttempt::create([
             'quiz_id' => $quiz->id,
             'user_id' => Auth::id(),
             'started_at' => now(),
         ]);
 
-        return view('frontend.mentee.quiz-attempt', compact('quiz', 'attempt'));
+        $attemptNumber = QuizAttempt::where('quiz_id', $quiz->id)
+            ->where('user_id', Auth::id())
+            ->whereNotNull('completed_at')
+            ->count() + 1;
+
+        return view('frontend.mentee.quiz-attempt', compact('quiz', 'attempt', 'attemptNumber'));
     }
 
     public function submit(Request $request, Quiz $quiz, QuizAttempt $attempt)
     {
-        abort_unless($attempt->user_id === Auth::id() && ! $attempt->completed_at, 403);
+        abort_unless($attempt->user_id === Auth::id(), 403);
         abort_unless($attempt->quiz_id === $quiz->id, 404);
+
+        if ($attempt->completed_at) {
+            return redirect()
+                ->route('mentee.quizzes.result', [$quiz, $attempt])
+                ->with('success', 'This attempt is already submitted. Retake the quiz to try again.');
+        }
 
         $quiz->load('questions.options');
 
@@ -130,11 +158,15 @@ class QuizController extends Controller
     {
         abort_unless($attempt->user_id === Auth::id(), 403);
         abort_unless($attempt->quiz_id === $quiz->id, 404);
-        abort_unless($quiz->show_results, 403);
+        abort_unless($attempt->completed_at, 404);
 
         $attempt->load(['answers.question.options', 'answers.option']);
         $quiz->load('questions.options');
+        $attemptCount = QuizAttempt::where('quiz_id', $quiz->id)
+            ->where('user_id', Auth::id())
+            ->whereNotNull('completed_at')
+            ->count();
 
-        return view('frontend.mentee.quiz-result', compact('quiz', 'attempt'));
+        return view('frontend.mentee.quiz-result', compact('quiz', 'attempt', 'attemptCount'));
     }
 }

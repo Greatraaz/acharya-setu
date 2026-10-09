@@ -5,70 +5,83 @@
 <div class="dash-layout">
     @include('frontend.mentee.partials.sidebar')
 
-    <div class="dash-content">
-        <div style="font-size:12px;margin-bottom:12px;">
-            <a href="{{ route('mentee.quizzes.index') }}" style="color:var(--brand);">← Quizzes</a>
+    <div class="dash-content mq">
+        <a href="{{ route('mentee.quizzes.index') }}" class="mq-back">← Quizzes</a>
+
+        @if(session('success'))
+        <div class="alert alert-success" style="margin-bottom:14px;">
+            <span class="alert-icon">✓</span>
+            <div style="font-size:13px;">{{ session('success') }}</div>
         </div>
+        @endif
 
-        <div class="card" style="max-width:640px;margin:0 auto 20px;padding:28px;text-align:center;">
-            <div style="font-size:48px;margin-bottom:10px;">{{ $attempt->passed ? '🎉' : '😔' }}</div>
-            <div class="dash-title" style="color:{{ $attempt->passed ? 'var(--success)' : 'var(--error)' }};">
-                {{ $attempt->passed ? 'You Passed!' : 'Not Quite' }}
-            </div>
-            <div class="dash-subtitle" style="margin-bottom:18px;">{{ $quiz->title }}</div>
+        <div class="mq-result">
+            <div class="card mq-score {{ $attempt->passed ? 'is-pass' : 'is-fail' }}">
+                <div class="mq-score__emoji" aria-hidden="true">{{ $attempt->passed ? '🎉' : '😔' }}</div>
+                <h1 class="mq-score__title">{{ $attempt->passed ? 'You passed' : 'Not passed' }}</h1>
+                <p class="mq-score__quiz">{{ $quiz->title }}</p>
+                @if($attemptCount > 1)
+                <p class="mq-score__attempt">Attempt {{ $attemptCount }}</p>
+                @endif
 
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;">
-                <div class="card" style="padding:12px;">
-                    <div style="font-size:24px;font-weight:800;color:{{ $attempt->passed ? 'var(--success)' : 'var(--error)' }};">{{ (int) $attempt->percentage }}%</div>
-                    <div style="font-size:11px;color:var(--text-3);">Your Score</div>
+                <div class="mq-stats">
+                    <div class="mq-stat">
+                        <strong>{{ (int) $attempt->percentage }}%</strong>
+                        <span>Score</span>
+                    </div>
+                    <div class="mq-stat">
+                        <strong>{{ $attempt->score }}/{{ $attempt->total_marks }}</strong>
+                        <span>Marks</span>
+                    </div>
+                    <div class="mq-stat">
+                        <strong>{{ $quiz->pass_score }}%</strong>
+                        <span>Pass mark</span>
+                    </div>
                 </div>
-                <div class="card" style="padding:12px;">
-                    <div style="font-size:24px;font-weight:800;">{{ $attempt->score }}/{{ $attempt->total_marks }}</div>
-                    <div style="font-size:11px;color:var(--text-3);">Marks</div>
-                </div>
-                <div class="card" style="padding:12px;">
-                    <div style="font-size:24px;font-weight:800;color:var(--brand);">{{ $quiz->pass_score }}%</div>
-                    <div style="font-size:11px;color:var(--text-3);">Pass Mark</div>
-                </div>
-            </div>
 
-            <div class="progress-bar" style="margin-bottom:18px;">
-                <div class="progress-fill" style="width:{{ (int) $attempt->percentage }}%;background:{{ $attempt->passed ? 'var(--success)' : 'var(--error)' }};"></div>
-            </div>
-
-            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-                <a href="{{ route('mentee.quizzes.show', $quiz) }}" class="btn btn-outline">Retake</a>
-                <a href="{{ route('mentee.quizzes.index') }}" class="btn btn-primary">All Quizzes</a>
-            </div>
-        </div>
-
-        <div class="card" style="max-width:640px;margin:0 auto;">
-            <h3 style="font-size:15px;font-weight:700;margin-bottom:14px;">Answer Review</h3>
-            @foreach($quiz->questions as $qIndex => $question)
-            @php
-                $userAnswer = $attempt->answers->firstWhere('question_id', $question->id);
-                $correct = (bool) ($userAnswer?->is_correct);
-            @endphp
-            <div style="padding:12px 0;border-bottom:1px solid var(--border);">
-                <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;">
-                    <span>{{ $correct ? '✅' : '❌' }}</span>
-                    <div style="font-size:13px;font-weight:600;">{{ $qIndex + 1 }}. {{ $question->question }}</div>
+                <div class="progress-bar mq-progress">
+                    <div class="progress-fill" style="width:{{ (int) $attempt->percentage }}%;background:{{ $attempt->passed ? 'var(--success)' : 'var(--error)' }};"></div>
                 </div>
-                <div style="font-size:12px;color:var(--text-2);padding-left:28px;">
-                    @if($question->type === 'short_answer')
-                        Your answer: {{ $userAnswer->text_answer ?? '—' }}
-                    @else
-                        Your answer: {{ $userAnswer?->option?->option_text ?? '—' }}
-                        @unless($correct)
-                            · Correct: {{ $question->options->firstWhere('is_correct', true)?->option_text ?? '—' }}
-                        @endunless
-                    @endif
-                    @if($question->explanation)
-                    <div style="margin-top:4px;color:var(--text-3);">{{ $question->explanation }}</div>
-                    @endif
+
+                <div class="mq-score__actions">
+                    <form method="POST" action="{{ route('mentee.quizzes.attempt', $quiz) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-primary">Retake quiz</button>
+                    </form>
+                    <a href="{{ route('mentee.quizzes.show', $quiz) }}" class="btn btn-outline">Quiz details</a>
                 </div>
             </div>
-            @endforeach
+
+            <div class="card mq-review">
+                <h2 class="mq-review__title">{{ $quiz->show_results ? 'Answer review' : 'Your answers' }}</h2>
+                @foreach($quiz->questions as $qIndex => $question)
+                @php
+                    $userAnswer = $attempt->answers->firstWhere('question_id', $question->id);
+                    $correct = (bool) ($userAnswer?->is_correct);
+                @endphp
+                <article class="mq-review__item {{ $quiz->show_results ? ($correct ? 'is-correct' : 'is-wrong') : '' }}">
+                    <div class="mq-review__q">
+                        @if($quiz->show_results)
+                        <span aria-hidden="true">{{ $correct ? '✓' : '✕' }}</span>
+                        @endif
+                        <strong>{{ $qIndex + 1 }}. {{ $question->question }}</strong>
+                    </div>
+                    <div class="mq-review__a">
+                        @if($question->type === 'short_answer')
+                            Your answer: {{ $userAnswer->text_answer ?? '—' }}
+                        @else
+                            Your answer: {{ $userAnswer?->option?->option_text ?? 'Not answered' }}
+                            @if($quiz->show_results && ! $correct)
+                            <div>Correct: {{ $question->options->firstWhere('is_correct', true)?->option_text ?? '—' }}</div>
+                            @endif
+                        @endif
+                        @if($quiz->show_results && $question->explanation)
+                        <div class="mq-review__explain">{{ $question->explanation }}</div>
+                        @endif
+                    </div>
+                </article>
+                @endforeach
+            </div>
         </div>
     </div>
 </div>

@@ -68,7 +68,7 @@
                 </div>
                 <a href="{{ route('mentee.quizzes.show', $quiz) }}"
                    class="btn {{ $attempt ? 'btn-outline' : 'btn-primary' }} btn-sm mentee-quiz-card__cta">
-                    {{ $attempt ? 'Review / Retake' : 'Start Quiz' }}
+                    {{ $attempt ? 'View / Retake' : 'Start Quiz' }}
                 </a>
             </article>
             @empty

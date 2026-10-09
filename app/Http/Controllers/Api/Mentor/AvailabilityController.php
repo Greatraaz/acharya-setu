@@ -342,7 +342,7 @@ class AvailabilityController extends Controller
                 ]);
             }
 
-            $mins = \Carbon\Carbon::createFromFormat('H:i', $start)->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i', $end));
+            $mins = (int) abs(\Carbon\Carbon::createFromFormat('H:i', $start)->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i', $end)));
             if (! in_array($mins, \App\Models\ConsultationSession::BOOKING_DURATIONS, true)) {
                 throw ValidationException::withMessages([
                     "slots.{$i}.end_time" => 'Each slot must be exactly 30, 60, 90, or 120 minutes.',
@@ -416,7 +416,7 @@ class AvailabilityController extends Controller
             $end = substr((string) (is_array($slot) ? $slot['end_time'] : $slot->end_time), 0, 5);
             $mins = 0;
             try {
-                $mins = \Carbon\Carbon::createFromFormat('H:i', $start)->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i', $end));
+                $mins = (int) abs(\Carbon\Carbon::createFromFormat('H:i', $start)->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i', $end)));
             } catch (\Throwable) {
             }
             $days[$day][] = [
@@ -446,7 +446,7 @@ class AvailabilityController extends Controller
             $end = substr((string) ($arr['end_time'] ?? ''), 0, 5);
             $mins = 0;
             try {
-                $mins = \Carbon\Carbon::createFromFormat('H:i', $start)->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i', $end));
+                $mins = (int) abs(\Carbon\Carbon::createFromFormat('H:i', $start)->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i', $end)));
             } catch (\Throwable) {
             }
             $arr['start_time'] = $start;

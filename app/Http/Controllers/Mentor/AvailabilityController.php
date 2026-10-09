@@ -104,7 +104,7 @@ class AvailabilityController extends Controller
                         "days.{$day}.ranges" => "Each slot end time must be after start time for {$day}.",
                     ]);
                 }
-                $mins = Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to));
+                $mins = (int) abs(Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to)));
                 if ($mins < 15) {
                     throw ValidationException::withMessages([
                         "days.{$day}.ranges" => "Each slot on {$day} must be at least 15 minutes ({$from}–{$to}).",
@@ -289,7 +289,7 @@ class AvailabilityController extends Controller
                     $from = isset($range['from']) ? substr((string) $range['from'], 0, 5) : null;
                     $to = isset($range['to']) ? substr((string) $range['to'], 0, 5) : null;
                     if ($from && $to) {
-                        $mins = Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to));
+                        $mins = (int) abs(Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to)));
                         $ranges[] = ['from' => $from, 'to' => $to, 'duration' => $mins];
                     }
                 }
@@ -297,7 +297,7 @@ class AvailabilityController extends Controller
             if ($ranges === [] && ! empty($row['from']) && ! empty($row['to'])) {
                 $from = substr((string) $row['from'], 0, 5);
                 $to = substr((string) $row['to'], 0, 5);
-                $mins = Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to));
+                $mins = (int) abs(Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to)));
                 $ranges[] = ['from' => $from, 'to' => $to, 'duration' => $mins];
             }
             if ($ranges === []) {
