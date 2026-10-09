@@ -7,6 +7,8 @@ use App\Models\OtpCode;
 use App\Models\User;
 use App\Mail\OtpMail;
 use App\Services\SmsService;
+use App\Support\IndianPhone;
+use App\Support\RegistrationData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -23,16 +25,31 @@ class OtpController extends Controller
     */
     public function send(Request $request)
     {
+        $email = strtolower(trim((string) $request->input('email')));
+        $phone = trim((string) $request->input('phone', ''));
+        $request->merge(['email' => $email, 'phone' => $phone]);
+
         $request->validate([
-            'email' => 'required|email',
-            'phone' => 'nullable|string|min:10',
+            'email' => 'required|email:filter|max:255',
+            'phone' => IndianPhone::rules(required: true),
         ]);
 
-        // ── Generate 6-digit codes ────────────────────────────
-        $emailOtp = $this->generateOtp();
+        if (RegistrationData::emailTaken($email)) {
+            return response()->json([
+                'message' => 'This email is already registered.',
+                'errors'  => ['email' => ['This email is already registered.']],
+            ], 422);
+        }
 
-        // ── Persist to DB ─────────────────────────────────────
-        OtpCode::storeOtp($request->email, 'email', $emailOtp);
+        if (RegistrationData::phoneTaken($phone)) {
+            return response()->json([
+                'message' => 'This mobile number is already registered.',
+                'errors'  => ['phone' => ['This mobile number is already registered.']],
+            ], 422);
+        }
+
+        $emailOtp = $this->generateOtp();
+        OtpCode::storeOtp($email, 'email', $emailOtp);
 
         // Phone OTP disabled for web registration
         // $phoneOtp = $this->generateOtp();
@@ -43,7 +60,7 @@ class OtpController extends Controller
 
         // ── Send Email OTP ────────────────────────────────────
         try {
-            Mail::to($request->email)->send(new OtpMail($emailOtp, 'registration'));
+            Mail::to($email)->send(new OtpMail($emailOtp, 'registration'));
         } catch (\Throwable $e) {
             Log::error('OTP email failed: ' . $e->getMessage());
         }

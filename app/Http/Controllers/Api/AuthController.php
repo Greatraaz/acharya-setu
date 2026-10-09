@@ -10,6 +10,7 @@ use App\Models\WalletTransaction;
 use App\Mail\OtpMail;
 use App\Services\SmsService;
 use App\Support\IndianPhone;
+use App\Support\RegistrationData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
@@ -34,19 +35,23 @@ class AuthController extends Controller
 
     public function register(Request $request): JsonResponse
     {
+        RegistrationData::normalize($request);
+
         $validator = Validator::make($request->all(), [
             'name'             => ['required', 'string', 'max:100'],
-            'email'            => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
-            'password'         => ['required', 'confirmed', Password::min(6)],
+            'email'            => ['required', 'email:filter', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            'phone'            => IndianPhone::rules(required: true),
+            'password'         => ['required', 'confirmed', Password::min(8)],
             'role'             => ['nullable', 'in:mentor,mentee'],
-            'college'          => ['nullable', 'string'],
-            'year'             => ['nullable', 'string'],
-            'field'            => ['nullable', 'string'],
-            'company'          => ['nullable', 'string'],
-            'designation'      => ['nullable', 'string'],
+            'college'          => ['nullable', 'string', 'max:255'],
+            'year'             => ['nullable', 'string', 'max:20'],
+            'field'            => ['nullable', 'string', 'max:255'],
+            'company'          => ['nullable', 'string', 'max:255'],
+            'designation'      => ['nullable', 'string', 'max:255'],
             'experience_years' => ['nullable', 'integer'],
             'gender'           => ['nullable', 'in:male,female,other'],
-            'referral_code'    => ['nullable', 'string'],
+            'referral_code'    => ['nullable', 'string', 'max:50'],
+            'accepted_terms'   => ['required', 'accepted'],
         ]);
 
         if ($validator->fails()) {
@@ -58,6 +63,23 @@ class AuthController extends Controller
         }
 
         $validated = $validator->validated();
+
+        if (RegistrationData::emailTaken($validated['email'])) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'errors'  => ['email' => ['This email is already registered.']],
+            ], 422);
+        }
+
+        if (RegistrationData::phoneTaken($validated['phone'])) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'errors'  => ['phone' => ['This mobile number is already registered.']],
+            ], 422);
+        }
+
         $email = strtolower($validated['email']);
 
         // Legacy soft-deleted accounts may still hold the email — release it so re-registration works.
@@ -65,20 +87,35 @@ class AuthController extends Controller
             ->where('email', $email)
             ->each(fn (User $user) => $user->releaseCredentialsForDeletion());
 
-        $user = User::create([
-            'name'             => $validated['name'],
-            'email'            => $email,
-            'password'         => Hash::make($validated['password']),
-            'role'             => $validated['role'] ?? 'mentee',
-            'college'          => $validated['college'] ?? null,
-            'year'             => $validated['year'] ?? null,
-            'field'            => $validated['field'] ?? null,
-            'company'          => $validated['company'] ?? null,
-            'designation'      => $validated['designation'] ?? null,
-            'experience_years' => $validated['experience_years'] ?? 0,
-            'gender'           => $validated['gender'] ?? null,
-            'referral_code'    => $validated['referral_code'] ?? null,
-        ]);
+        try {
+            $user = User::create([
+                'name'              => $validated['name'],
+                'email'             => $email,
+                'phone'             => IndianPhone::normalize($validated['phone']),
+                'password'          => Hash::make($validated['password']),
+                'role'              => $validated['role'] ?? 'mentee',
+                'college'           => $validated['college'] ?? null,
+                'year'              => $validated['year'] ?? null,
+                'field'             => $validated['field'] ?? null,
+                'company'           => $validated['company'] ?? null,
+                'designation'       => $validated['designation'] ?? null,
+                'experience_years'  => $validated['experience_years'] ?? 0,
+                'gender'            => $validated['gender'] ?? null,
+                'referral_code'     => $validated['referral_code'] ?? null,
+                'terms_accepted_at' => now(),
+                'terms_version'     => RegistrationData::TERMS_VERSION,
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ((int) ($e->errorInfo[1] ?? 0) !== 1062) {
+                throw $e;
+            }
+
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'errors'  => ['email' => ['This email is already registered.']],
+            ], 422);
+        }
 
         if ($user->role === 'mentee') {
             WalletTransaction::create([
@@ -381,8 +418,45 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $identifier = $request->input('identifier');
+        $identifier = trim((string) $request->input('identifier'));
         $channel = $request->input('channel');
+        $type = $request->input('type');
+
+        if ($channel === 'email') {
+            $identifier = strtolower($identifier);
+            if (! filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+                return response()->json([
+                    'status' => false,
+                    'statusCode' => 422,
+                    'errors' => ['identifier' => ['Enter a valid email address.']],
+                ], 422);
+            }
+            if ($type === 'registration' && RegistrationData::emailTaken($identifier)) {
+                return response()->json([
+                    'status' => false,
+                    'statusCode' => 422,
+                    'errors' => ['identifier' => ['This email is already registered.']],
+                ], 422);
+            }
+        }
+
+        if ($channel === 'phone') {
+            if (! IndianPhone::isValid($identifier)) {
+                return response()->json([
+                    'status' => false,
+                    'statusCode' => 422,
+                    'errors' => ['identifier' => ['Enter a valid 10-digit Indian mobile number.']],
+                ], 422);
+            }
+            $identifier = IndianPhone::normalize($identifier);
+            if ($type === 'registration' && RegistrationData::phoneTaken($identifier)) {
+                return response()->json([
+                    'status' => false,
+                    'statusCode' => 422,
+                    'errors' => ['identifier' => ['This mobile number is already registered.']],
+                ], 422);
+            }
+        }
 
         $otp = rand(100000, 999999);
         $expiresAt = now()->addMinutes(10);

@@ -174,26 +174,29 @@
 
             <div class="form-group">
                 <label class="form-label">Full Name *</label>
-                <input type="text" id="reg-name" class="form-input" placeholder="Rohit Sharma" autocomplete="name" data-required="Please enter your name">
+                <input type="text" id="reg-name" class="form-input" placeholder="Rohit Sharma" autocomplete="name" maxlength="100" data-required="Please enter your name">
                 <div class="form-error" data-error-for="name" style="display:none;"></div>
             </div>
             <div class="form-group">
                 <label class="form-label">Email Address *</label>
-                <input type="email" id="reg-email" class="form-input" placeholder="rohit@example.com" autocomplete="email" data-required="Please enter a valid email">
+                <input type="email" id="reg-email" class="form-input" placeholder="rohit@example.com" autocomplete="email" maxlength="255" inputmode="email" data-required="Please enter a valid email">
                 <div class="form-error" data-error-for="email" style="display:none;"></div>
             </div>
             <div class="form-group">
                 <label class="form-label">Phone Number *</label>
                 <div class="input-prefix">
                     <span class="input-prefix-label">🇮🇳 +91</span>
-                    <input type="tel" id="reg-phone" class="form-input" placeholder="98765 43210" maxlength="10" data-required="Please enter your phone number">
+                    <input type="tel" id="reg-phone" class="form-input" placeholder="98765 43210" maxlength="10" inputmode="numeric" autocomplete="tel" data-required="Please enter your phone number">
                 </div>
                 <div class="form-error" data-error-for="phone" style="display:none;"></div>
             </div>
             <div class="form-group">
                 <label class="form-label">Password *</label>
-                <input type="password" id="reg-password" class="form-input" placeholder="Min. 8 characters" autocomplete="new-password" data-required="Please set a password">
-                <div class="form-hint">Must include uppercase, lowercase, and a number.</div>
+                <div style="position:relative;">
+                    <input type="password" id="reg-password" class="form-input" placeholder="Min. 8 characters" autocomplete="new-password" minlength="8" maxlength="100" data-required="Please set a password" style="padding-right:72px;">
+                    <button type="button" id="reg-password-toggle" onclick="toggleRegPassword()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--brand);font-size:12px;font-weight:700;cursor:pointer;">Show</button>
+                </div>
+                <div class="form-hint">At least 8 characters.</div>
             </div>
             <div class="form-group" style="margin-bottom:0;">
                 <label class="register-terms" for="reg-terms">
@@ -279,28 +282,48 @@ FormStepper.show = function(n) {
     }
 };
 
-function validateStep2() {
-    const name     = document.getElementById('reg-name').value.trim();
-    const email    = document.getElementById('reg-email').value.trim();
-    const phone    = document.getElementById('reg-phone').value.trim();
-    const password = document.getElementById('reg-password').value;
-    const terms    = document.getElementById('reg-terms').checked;
+let registerInFlight = false;
 
-    if (!name)                            { showToast('error','Please enter your full name.'); return false; }
-    if (!email || !email.includes('@'))   { showToast('error','Please enter a valid email address.'); return false; }
-    if (!phone || phone.length < 10)      { showToast('error','Please enter a valid 10-digit phone number.'); return false; }
-    if (!password || password.length < 8) { showToast('error','Password must be at least 8 characters.'); return false; }
-    if (!terms)                            { showToast('warning','Please agree to the Terms & Conditions.'); return false; }
+function toggleRegPassword() {
+    const input = document.getElementById('reg-password');
+    const btn = document.getElementById('reg-password-toggle');
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.textContent = show ? 'Hide' : 'Show';
+}
+
+function registrationPayload() {
+    return {
+        name: document.getElementById('reg-name').value.trim().replace(/\s+/g, ' '),
+        email: document.getElementById('reg-email').value.trim().toLowerCase(),
+        phoneDigits: document.getElementById('reg-phone').value.replace(/\D/g, ''),
+        password: document.getElementById('reg-password').value,
+        terms: document.getElementById('reg-terms').checked,
+        role: document.getElementById('role-input').value,
+    };
+}
+
+function validateStep2() {
+    const data = registrationPayload();
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email);
+
+    if (!data.name)                         { showToast('error','Please enter your full name.'); return false; }
+    if (data.name.length > 100)             { showToast('error','Name must be 100 characters or fewer.'); return false; }
+    if (!emailOk)                           { showToast('error','Please enter a valid email address.'); return false; }
+    if (!/^[6-9]\d{9}$/.test(data.phoneDigits)) { showToast('error','Enter a 10-digit mobile number starting with 6–9.'); return false; }
+    if (!data.password || data.password.length < 8) { showToast('error','Password must be at least 8 characters.'); return false; }
+    if (!data.terms)                        { showToast('error','Please agree to the Terms & Conditions and Privacy Policy.'); return false; }
     return true;
 }
 
 function sendOtpStep() {
     if (!validateStep2()) return;
 
+    const data = registrationPayload();
     const btn = document.getElementById('send-otp-btn');
     AjaxPost('/auth/send-otp', {
-        email: document.getElementById('reg-email').value,
-        phone: '+91' + document.getElementById('reg-phone').value,
+        email: data.email,
+        phone: '+91' + data.phoneDigits,
     }, {
         btn, loader: true,
         onSuccess: () => {
@@ -313,26 +336,32 @@ function sendOtpStep() {
 }
 
 function verifyAndRegister() {
-    const emailOtp = collectOtp('#email-otp-grid');
+    if (registerInFlight) return;
+    if (!validateStep2()) return;
 
+    const emailOtp = collectOtp('#email-otp-grid');
     if (emailOtp.length < 6) { showToast('error','Please enter the complete email OTP.'); return; }
 
+    const data = registrationPayload();
     const btn = document.getElementById('verify-btn');
+    registerInFlight = true;
     AjaxPost('/register', {
-        name:            document.getElementById('reg-name').value,
-        email:           document.getElementById('reg-email').value,
-        phone:           '+91' + document.getElementById('reg-phone').value,
-        password:        document.getElementById('reg-password').value,
-        password_confirmation: document.getElementById('reg-password').value,
-        role:            document.getElementById('role-input').value,
+        name:            data.name,
+        email:           data.email,
+        phone:           '+91' + data.phoneDigits,
+        password:        data.password,
+        password_confirmation: data.password,
+        role:            data.role,
         email_otp:       emailOtp,
+        accepted_terms:  true,
     }, {
         btn, loader: true,
         onSuccess: data => {
-            showToast('success', '🎉 Account created! Redirecting…');
+            showToast('success', 'Account created! Redirecting…');
             setTimeout(() => window.location.href = data.redirect || '/dashboard', 1500);
         },
         onError: err => {
+            registerInFlight = false;
             showToast('error', err.message || 'Verification failed. Please check the OTP.');
         }
     });
@@ -340,8 +369,8 @@ function verifyAndRegister() {
 
 function resendOtp() {
     AjaxPost('/auth/send-otp', {
-        email: document.getElementById('reg-email').value,
-        phone: '+91' + document.getElementById('reg-phone').value,
+        email: registrationPayload().email,
+        phone: '+91' + registrationPayload().phoneDigits,
     }, {
         onSuccess: () => {
             showToast('success', 'OTP resent!');

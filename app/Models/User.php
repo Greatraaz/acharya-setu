@@ -44,6 +44,7 @@ class User extends Authenticatable
         'career_goals', 'strengths', 'preferences',
         'onboarding_step', 'onboarding_completed', 'isVerifiedEmail',
         'approved_by', 'approved_at', 'rejection_reason', 'has_pending_changes',
+        'terms_accepted_at', 'terms_version',
     ];
  
     protected $hidden = ['password', 'remember_token', 'deleted_email', 'deleted_phone'];
@@ -60,6 +61,7 @@ class User extends Authenticatable
         'rating'               => 'decimal:2',
         'rate_per_minute'      => 'decimal:2',
         'approved_at'          => 'datetime',
+        'terms_accepted_at'    => 'datetime',
         'email_verified_at'    => 'datetime',
     ];
 
