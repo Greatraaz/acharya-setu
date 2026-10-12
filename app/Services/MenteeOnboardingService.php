@@ -6,6 +6,7 @@ use App\Models\EducationStream;
 use App\Models\User;
 use App\Support\IndianPhone;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class MenteeOnboardingService
@@ -276,40 +277,60 @@ class MenteeOnboardingService
      */
     public function complete(User $user, bool $autoAssignMentor = true): array
     {
-        $missing = $this->missingCompletionFields($user);
+        return DB::transaction(function () use ($user, $autoAssignMentor) {
+            $user = User::whereKey($user->id)->lockForUpdate()->first() ?? $user;
 
-        if (! empty($missing)) {
+            if ($user->onboarding_completed && $this->isComplete($user)) {
+                return [
+                    'completed'      => true,
+                    'already'        => true,
+                    'assigned'       => (bool) $user->assigned_mentor_id,
+                    'mentor'         => $user->assignedMentor,
+                    'match_score'    => 0,
+                    'missing'        => [],
+                    'welcome_credit' => null,
+                ];
+            }
+
+            $missing = $this->missingCompletionFields($user);
+
+            if (! empty($missing)) {
+                return [
+                    'completed'      => false,
+                    'already'        => false,
+                    'assigned'       => false,
+                    'mentor'         => $user->assignedMentor,
+                    'match_score'    => 0,
+                    'missing'        => $missing,
+                    'welcome_credit' => null,
+                ];
+            }
+
+            $user->update([
+                'onboarding_completed' => true,
+                'onboarding_step'      => self::TOTAL_STEPS,
+            ]);
+
+            $user->refresh();
+
+            $assignment = ['assigned' => false, 'mentor' => $user->assignedMentor, 'match_score' => 0];
+
+            if ($autoAssignMentor && ! $user->assigned_mentor_id) {
+                $assignment = app(MentorMatcherService::class)->assignBestMentor($user);
+            }
+
+            $welcomeCredit = app(OfferService::class)->creditNewJoineeIfEligible($user->fresh());
+
             return [
-                'completed'   => false,
-                'assigned'    => false,
-                'mentor'      => $user->assignedMentor,
-                'match_score' => 0,
-                'missing'     => $missing,
+                'completed'      => true,
+                'already'        => false,
+                'assigned'       => $assignment['assigned'],
+                'mentor'         => $assignment['mentor'],
+                'match_score'    => $assignment['match_score'],
+                'missing'        => [],
+                'welcome_credit' => $welcomeCredit,
             ];
-        }
-
-        $user->update([
-            'onboarding_completed' => true,
-            'onboarding_step'      => self::TOTAL_STEPS,
-        ]);
-
-        $user->refresh();
-
-        $assignment = ['assigned' => false, 'mentor' => $user->assignedMentor, 'match_score' => 0];
-
-        if ($autoAssignMentor && ! $user->assigned_mentor_id) {
-            $assignment = app(MentorMatcherService::class)->assignBestMentor($user);
-        }
-
-        app(OfferService::class)->creditNewJoineeIfEligible($user->fresh());
-
-        return [
-            'completed'   => true,
-            'assigned'    => $assignment['assigned'],
-            'mentor'      => $assignment['mentor'],
-            'match_score' => $assignment['match_score'],
-            'missing'     => [],
-        ];
+        });
     }
 
     public function adminValidationRules(bool $isUpdate = false): array

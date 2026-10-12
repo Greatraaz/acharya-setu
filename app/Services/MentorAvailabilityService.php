@@ -6,6 +6,7 @@ use App\Models\ConsultationSession;
 use App\Models\MentorAvailability;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Validation\ValidationException;
 
 class MentorAvailabilityService
 {
@@ -88,11 +89,12 @@ class MentorAvailabilityService
     {
         $schedule = $this->resolvedSchedule($mentor);
         $dayKey = strtolower(Carbon::parse($date, 'Asia/Kolkata')->format('l'));
-        $occupied = $this->occupiedIntervals($mentor->id, $date);
+        $settings = $this->sessionSettings($mentor);
+        $occupied = $this->withBuffer($this->occupiedIntervals($mentor->id, $date), $settings['buffer_minutes']);
         $meta = $schedule['days'][$dayKey] ?? null;
         $ranges = ($meta['enabled'] ?? false) ? ($meta['ranges'] ?? []) : [];
 
-        if (in_array($date, $schedule['blocked_dates'] ?? [], true)) {
+        if (! $this->isAcceptingBookings($mentor) || in_array($date, $schedule['blocked_dates'] ?? [], true) || ! $this->withinAdvanceWindow($date, $settings['advance_days'])) {
             $ranges = [];
         }
 
@@ -134,6 +136,7 @@ class MentorAvailabilityService
         }
 
         $starts = $this->excludePastSlots($date, array_column($options, 'start_time'));
+        $starts = $this->excludeShortNotice($date, $starts, $settings['min_notice_hours']);
         $options = array_values(array_filter(
             $options,
             fn ($opt) => in_array($opt['start_time'], $starts, true)
@@ -199,8 +202,13 @@ class MentorAvailabilityService
     ): bool {
         $time = substr($time, 0, 5);
         $end = $this->addMinutes($time, $duration);
+        $mentor = User::find($mentorId);
+        $buffer = $mentor ? $this->sessionSettings($mentor)['buffer_minutes'] : 0;
 
-        return $this->overlapsAny($time, $end, $this->occupiedIntervals($mentorId, $date, $exceptMenteeId));
+        return $this->overlapsAny($time, $end, $this->withBuffer(
+            $this->occupiedIntervals($mentorId, $date, $exceptMenteeId),
+            $buffer
+        ));
     }
 
     /**
@@ -474,6 +482,201 @@ class MentorAvailabilityService
             // Allow booking up to exactly 5 minutes before the slot starts.
             return $slotAt->greaterThanOrEqualTo($cutoff);
         }));
+    }
+
+    public function isAcceptingBookings(User $mentor): bool
+    {
+        if (! $mentor->is_active) {
+            return false;
+        }
+
+        $prefs = is_array($mentor->preferences) ? $mentor->preferences : [];
+
+        return ($prefs['accepting_bookings'] ?? true) !== false;
+    }
+
+    public function setAcceptingBookings(User $mentor, bool $accepting): bool
+    {
+        $prefs = is_array($mentor->preferences) ? $mentor->preferences : [];
+        $prefs['accepting_bookings'] = $accepting;
+        $mentor->update(['preferences' => $prefs]);
+
+        return $accepting;
+    }
+
+    /**
+     * @return array{buffer_minutes:int,advance_days:int,min_notice_hours:int}
+     */
+    public function sessionSettings(User $mentor): array
+    {
+        $raw = is_array($mentor->preferences) ? ($mentor->preferences['session_settings'] ?? []) : [];
+
+        return [
+            'buffer_minutes'   => (int) ($raw['buffer_minutes'] ?? 0),
+            'advance_days'     => (int) ($raw['advance_days'] ?? 7),
+            'min_notice_hours' => (int) ($raw['min_notice_hours'] ?? 2),
+        ];
+    }
+
+    public function saveSessionSettings(User $mentor, array $settings): void
+    {
+        $prefs = is_array($mentor->preferences) ? $mentor->preferences : [];
+        $prefs['session_settings'] = [
+            'buffer_minutes'   => (int) $settings['buffer_minutes'],
+            'advance_days'     => (int) $settings['advance_days'],
+            'min_notice_hours' => (int) $settings['min_notice_hours'],
+        ];
+        $mentor->update(['preferences' => $prefs]);
+    }
+
+    public function blockDate(User $mentor, string $date): string
+    {
+        $day = Carbon::parse($date, 'Asia/Kolkata')->startOfDay();
+        if ($day->lt(Carbon::now('Asia/Kolkata')->startOfDay())) {
+            throw ValidationException::withMessages([
+                'blocked_date' => 'Choose today or a future date.',
+            ]);
+        }
+
+        $key = $day->toDateString();
+        $prefs = is_array($mentor->preferences) ? $mentor->preferences : [];
+        $dates = collect($prefs['blocked_dates'] ?? [])
+            ->map(fn ($value) => Carbon::parse($value, 'Asia/Kolkata')->toDateString())
+            ->push($key)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+        $prefs['blocked_dates'] = $dates;
+        $mentor->update(['preferences' => $prefs]);
+
+        return $key;
+    }
+
+    public function unblockDate(User $mentor, string $date): void
+    {
+        $key = Carbon::parse($date, 'Asia/Kolkata')->toDateString();
+        $prefs = is_array($mentor->preferences) ? $mentor->preferences : [];
+        $prefs['blocked_dates'] = collect($prefs['blocked_dates'] ?? [])
+            ->map(fn ($value) => Carbon::parse($value, 'Asia/Kolkata')->toDateString())
+            ->reject(fn ($value) => $value === $key)
+            ->values()
+            ->all();
+        $mentor->update(['preferences' => $prefs]);
+    }
+
+    /**
+     * @param  array<string, list<string>>  $keptStarts  day key (monday or Monday) => start times H:i
+     */
+    public function assertBookedWindowsRemain(User $mentor, array $keptStarts): void
+    {
+        $normalized = [];
+        foreach ($keptStarts as $day => $times) {
+            $normalized[strtolower((string) $day)] = array_map(
+                fn ($time) => substr((string) $time, 0, 5),
+                $times
+            );
+        }
+
+        $lost = ConsultationSession::query()
+            ->where('mentor_id', $mentor->id)
+            ->where('scheduled_at', '>', now())
+            ->occupyingSlot()
+            ->get(['scheduled_at'])
+            ->filter(function ($session) use ($normalized) {
+                $at = Carbon::parse($session->scheduled_at)->timezone('Asia/Kolkata');
+                $day = strtolower($at->format('l'));
+                $time = $at->format('H:i');
+
+                return ! in_array($time, $normalized[$day] ?? [], true);
+            });
+
+        if ($lost->isNotEmpty()) {
+            $first = Carbon::parse($lost->first()->scheduled_at)->timezone('Asia/Kolkata');
+            throw ValidationException::withMessages([
+                'slots' => 'Keep the '.$first->format('D H:i').' window. It already has an upcoming booking.',
+            ]);
+        }
+    }
+
+    public function slotHasUpcomingBooking(User $mentor, string $dayOfWeek, string $startTime): bool
+    {
+        $startTime = substr($startTime, 0, 5);
+
+        return ConsultationSession::query()
+            ->where('mentor_id', $mentor->id)
+            ->where('scheduled_at', '>', now())
+            ->occupyingSlot()
+            ->get(['scheduled_at'])
+            ->contains(function ($session) use ($dayOfWeek, $startTime) {
+                $at = Carbon::parse($session->scheduled_at)->timezone('Asia/Kolkata');
+
+                return $at->format('l') === $dayOfWeek && $at->format('H:i') === $startTime;
+            });
+    }
+
+    /**
+     * @param  list<string>  $slots
+     * @return list<string>
+     */
+    private function excludeShortNotice(string $date, array $slots, int $noticeHours): array
+    {
+        if ($noticeHours <= 0) {
+            return array_values($slots);
+        }
+
+        $cutoff = Carbon::now('Asia/Kolkata')->addHours($noticeHours);
+
+        return array_values(array_filter($slots, function ($time) use ($date, $cutoff) {
+            try {
+                $slotAt = Carbon::createFromFormat(
+                    'Y-m-d H:i',
+                    $date.' '.substr((string) $time, 0, 5),
+                    'Asia/Kolkata'
+                );
+            } catch (\Throwable) {
+                return false;
+            }
+
+            return $slotAt->greaterThanOrEqualTo($cutoff);
+        }));
+    }
+
+    private function withinAdvanceWindow(string $date, int $advanceDays): bool
+    {
+        if ($advanceDays <= 0) {
+            return true;
+        }
+
+        $day = Carbon::parse($date, 'Asia/Kolkata')->startOfDay();
+        $last = Carbon::now('Asia/Kolkata')->startOfDay()->addDays($advanceDays);
+
+        return $day->lessThanOrEqualTo($last);
+    }
+
+    /**
+     * @param  list<array{start:string,end:string}>  $occupied
+     * @return list<array{start:string,end:string}>
+     */
+    private function withBuffer(array $occupied, int $buffer): array
+    {
+        if ($buffer <= 0) {
+            return $occupied;
+        }
+
+        return array_map(function (array $block) use ($buffer) {
+            $block['start'] = $this->shiftMinutes($block['start'], -$buffer);
+            $block['end'] = $this->shiftMinutes($block['end'], $buffer);
+
+            return $block;
+        }, $occupied);
+    }
+
+    private function shiftMinutes(string $time, int $delta): string
+    {
+        $mins = max(0, min(24 * 60, $this->timeToMinutes(substr($time, 0, 5)) + $delta));
+
+        return sprintf('%02d:%02d', intdiv($mins, 60), $mins % 60);
     }
 
     /**

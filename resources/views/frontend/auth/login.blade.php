@@ -73,10 +73,13 @@
                             Password
                             <a href="{{ route('password.request') }}" style="color:var(--brand);font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;">Forgot?</a>
                         </label>
-                        <input type="password" name="password" class="form-input" placeholder="Your password" autocomplete="current-password" required>
+                        <div class="password-field">
+                            <input type="password" name="password" class="form-input" placeholder="Your password" autocomplete="current-password" required>
+                            @include('frontend.partials.password-toggle')
+                        </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-                        <input type="checkbox" name="remember" id="remember" style="accent-color:var(--brand);">
+                        <input type="checkbox" name="remember" id="remember" value="1" style="accent-color:var(--brand);">
                         <label for="remember" style="font-size:13px;color:var(--text-2);cursor:pointer;">Remember me</label>
                     </div>
                     <button type="submit" class="btn btn-primary btn-full btn-lg">Sign In →</button>

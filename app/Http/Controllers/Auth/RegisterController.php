@@ -33,9 +33,9 @@ class RegisterController extends Controller
             'name'           => 'required|string|max:100',
             'email'          => ['required', 'email:filter', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'phone'          => IndianPhone::rules(required: true),
-            'password'       => ['required', Password::min(8)],
+            'password'       => ['required', Password::min(8)->mixedCase()->numbers()],
             'role'           => 'required|in:mentor,mentee',
-            'email_otp'      => 'required|string|size:6',
+            'email_otp'      => 'required|digits:6',
             'accepted_terms' => 'required|accepted',
         ]);
 
@@ -51,9 +51,9 @@ class RegisterController extends Controller
             ]);
         }
 
-        $emailOk = OtpCode::verify($request->email, 'email', $request->email_otp);
-        if (! $emailOk) {
-            return $this->otpError($request, 'email_otp', 'Invalid or expired email OTP.');
+        $emailResult = OtpCode::verify($request->email, 'email', $request->email_otp, 'registration');
+        if ($emailResult !== 'ok') {
+            return $this->otpError($request, 'email_otp', OtpCode::message($emailResult));
         }
 
         // Phone OTP verification disabled

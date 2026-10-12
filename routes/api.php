@@ -93,7 +93,7 @@ Route::prefix('v1/auth')->group(function () {
     Route::post('/resend-otp',  [AuthController::class, 'resendOtp']);
 });
 
-Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', 'active'])->group(function () {
     Route::match(['get', 'post'], '/get-agora-token/{channel}', [SessionsController::class, 'getAgoraToken']);
 
     /**********************************************************
@@ -103,8 +103,11 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::get('/me',               [AuthController::class, 'me']);
         Route::post('/logout',          [AuthController::class, 'logout']);
+        Route::get('/sessions',         [AuthController::class, 'sessions']);
+        Route::post('/logout-all',      [AuthController::class, 'logoutAll']);
         Route::patch('/profile',        [AuthController::class, 'updateProfile']);
         Route::post('/upload-photo',    [AuthController::class, 'uploadPhoto']);
+        Route::delete('/photo',         [AuthController::class, 'removePhoto']);
         Route::post('/change-password', [AuthController::class, 'changePassword']);
         Route::patch('/onboarding',     [AuthController::class, 'updateOnboarding']);
     });
@@ -442,6 +445,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::prefix('availability')->name('availability.')->group(function () {
             Route::get('/',              [AvailabilityController::class, 'index']);       // GET    all own slots
             Route::get('/available',     [AvailabilityController::class, 'available']);   // GET    only active slots
+            Route::put('/settings',      [AvailabilityController::class, 'updateSettings']);
+            Route::post('/block',        [AvailabilityController::class, 'blockDate']);
+            Route::delete('/block/{date}', [AvailabilityController::class, 'unblockDate']);
+            Route::post('/live',         [AvailabilityController::class, 'toggleLive']);
             Route::post('/',              [AvailabilityController::class, 'store']);       // POST   add single slot
             Route::put('/',              [AvailabilityController::class, 'update']);      // PUT    bulk replace all slots
             Route::put('/{id}',          [AvailabilityController::class, 'updateSlot']); // PUT    update single slot

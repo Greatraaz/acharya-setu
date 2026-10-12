@@ -192,11 +192,11 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Password *</label>
-                <div style="position:relative;">
-                    <input type="password" id="reg-password" class="form-input" placeholder="Min. 8 characters" autocomplete="new-password" minlength="8" maxlength="100" data-required="Please set a password" style="padding-right:72px;">
-                    <button type="button" id="reg-password-toggle" onclick="toggleRegPassword()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--brand);font-size:12px;font-weight:700;cursor:pointer;">Show</button>
+                <div class="password-field">
+                    <input type="password" id="reg-password" class="form-input" placeholder="Min. 8 characters" autocomplete="new-password" minlength="8" maxlength="100" data-required="Please set a password">
+                    @include('frontend.partials.password-toggle')
                 </div>
-                <div class="form-hint">At least 8 characters.</div>
+                <div class="form-hint">At least 8 characters, with uppercase, lowercase, and a number.</div>
             </div>
             <div class="form-group" style="margin-bottom:0;">
                 <label class="register-terms" for="reg-terms">
@@ -225,7 +225,7 @@
                 <label class="form-label">📧 Email OTP</label>
                 <div class="otp-grid" id="email-otp-grid">
                     @for($i = 0; $i < 6; $i++)
-                    <input type="text" class="otp-input" maxlength="1" inputmode="numeric" id="email-otp-{{ $i }}">
+                    <input type="text" class="otp-input" maxlength="6" inputmode="numeric" autocomplete="{{ $i === 0 ? 'one-time-code' : 'off' }}" id="email-otp-{{ $i }}">
                     @endfor
                 </div>
             </div>
@@ -284,13 +284,14 @@ FormStepper.show = function(n) {
 
 let registerInFlight = false;
 
-function toggleRegPassword() {
-    const input = document.getElementById('reg-password');
-    const btn = document.getElementById('reg-password-toggle');
-    const show = input.type === 'password';
-    input.type = show ? 'text' : 'password';
-    btn.textContent = show ? 'Hide' : 'Show';
-}
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (!window.registrationOtpExpiresAt || window.registrationOtpExpiryNotified) return;
+    if (Date.now() > window.registrationOtpExpiresAt) {
+        window.registrationOtpExpiryNotified = true;
+        showToast('error', 'This OTP has expired. Request a new one.');
+    }
+});
 
 function registrationPayload() {
     return {
@@ -311,7 +312,8 @@ function validateStep2() {
     if (data.name.length > 100)             { showToast('error','Name must be 100 characters or fewer.'); return false; }
     if (!emailOk)                           { showToast('error','Please enter a valid email address.'); return false; }
     if (!/^[6-9]\d{9}$/.test(data.phoneDigits)) { showToast('error','Enter a 10-digit mobile number starting with 6–9.'); return false; }
-    if (!data.password || data.password.length < 8) { showToast('error','Password must be at least 8 characters.'); return false; }
+    const passwordOk = data.password.length >= 8 && /[a-z]/.test(data.password) && /[A-Z]/.test(data.password) && /\d/.test(data.password);
+    if (!passwordOk) { showToast('error','Password must be at least 8 characters and include uppercase, lowercase, and a number.'); return false; }
     if (!data.terms)                        { showToast('error','Please agree to the Terms & Conditions and Privacy Policy.'); return false; }
     return true;
 }
@@ -327,6 +329,8 @@ function sendOtpStep() {
     }, {
         btn, loader: true,
         onSuccess: () => {
+            window.registrationOtpExpiresAt = Date.now() + 10 * 60 * 1000;
+            window.registrationOtpExpiryNotified = false;
             FormStepper.show(3);
         },
         onError: err => {
@@ -340,7 +344,11 @@ function verifyAndRegister() {
     if (!validateStep2()) return;
 
     const emailOtp = collectOtp('#email-otp-grid');
-    if (emailOtp.length < 6) { showToast('error','Please enter the complete email OTP.'); return; }
+    if (!/^\d{6}$/.test(emailOtp)) { showToast('error','Enter the complete 6-digit OTP.'); return; }
+    if (window.registrationOtpExpiresAt && Date.now() > window.registrationOtpExpiresAt) {
+        showToast('error','This OTP has expired. Request a new one.');
+        return;
+    }
 
     const data = registrationPayload();
     const btn = document.getElementById('verify-btn');
@@ -373,9 +381,16 @@ function resendOtp() {
         phone: '+91' + registrationPayload().phoneDigits,
     }, {
         onSuccess: () => {
-            showToast('success', 'OTP resent!');
+            document.querySelectorAll('#email-otp-grid .otp-input').forEach((box) => {
+                box.value = '';
+                box.classList.remove('filled');
+            });
+            window.registrationOtpExpiresAt = Date.now() + 10 * 60 * 1000;
+            window.registrationOtpExpiryNotified = false;
+            showToast('success', 'OTP resent! The previous code no longer works.');
             startResendTimer('#resend-link', '#resend-count', 30);
-        }
+        },
+        onError: err => showToast('error', err.message || 'Could not resend OTP.')
     });
 }
 </script>

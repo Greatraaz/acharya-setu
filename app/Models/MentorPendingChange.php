@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ProfileUpdate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,8 +40,12 @@ class MentorPendingChange extends Model
  
     public function approve(int $adminId): void
     {
-        // Apply changes to the mentor's profile
-        $this->mentor->update($this->changes);
+        // The column is named "changes", which collides with Eloquent's $changes property.
+        $proposed = $this->getAttribute('changes');
+        $allowed = array_intersect_key(is_array($proposed) ? $proposed : [], array_flip(ProfileUpdate::MODERATED));
+        if ($allowed !== [] && $this->mentor) {
+            $this->mentor->update($allowed);
+        }
         $this->update([
             'status'      => self::STATUS_APPROVED,
             'reviewed_by' => $adminId,

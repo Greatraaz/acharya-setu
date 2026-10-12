@@ -191,7 +191,7 @@ class DashboardController extends Controller
 
     private function resolveNextSlot(MentorAvailabilityService $availabilityService, $mentor): array
     {
-        $isLive = (bool) $mentor->is_active;
+        $isLive = $availabilityService->isAcceptingBookings($mentor);
         $nextSlot = null;
         $nextSlotDate = null;
         $hasSchedule = false;

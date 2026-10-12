@@ -1191,6 +1191,44 @@
        color: var(--text-3);
        margin-top: 4px;
    }
+   .password-field {
+       position: relative;
+   }
+   .password-field .form-input {
+       padding-right: 44px;
+   }
+   .password-field__toggle {
+       position: absolute;
+       right: 4px;
+       top: 50%;
+       transform: translateY(-50%);
+       width: 36px;
+       height: 36px;
+       display: inline-flex;
+       align-items: center;
+       justify-content: center;
+       border: 0;
+       background: transparent;
+       color: var(--text-3);
+       cursor: pointer;
+       padding: 0;
+       border-radius: 8px;
+   }
+   .password-field__toggle:hover {
+       color: var(--text);
+   }
+   .password-field__icon {
+       display: block;
+   }
+   .password-field__icon--hide {
+       display: none;
+   }
+   .password-field.is-visible .password-field__icon--show {
+       display: none;
+   }
+   .password-field.is-visible .password-field__icon--hide {
+       display: block;
+   }
    .form-textarea {
        resize: vertical;
        min-height: 100px;

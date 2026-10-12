@@ -18,6 +18,9 @@ class OnboardingController extends Controller
     public function show(int $step)
     {
         $user = auth()->user();
+        if ($user->onboarding_completed) {
+            return redirect()->route('mentee.dashboard');
+        }
         $streams = collect();
         try {
             $streams = \DB::table('education_streams')
@@ -37,11 +40,15 @@ class OnboardingController extends Controller
 
     public function saveStep1(Request $request)
     {
+        if ($done = $this->alreadyComplete($request)) {
+            return $done;
+        }
+
         $data = $request->validate([
             'name'   => 'required|string|max:100',
             'gender' => 'nullable|in:male,female,other',
             'phone'  => IndianPhone::rules(),
-            'address'=> 'nullable|string|max:200',
+            'address'=> 'required|string|max:200',
             'avatar' => 'nullable|image|mimes:jpeg,png,webp,jpg|max:2048',
         ]);
 
@@ -69,8 +76,12 @@ class OnboardingController extends Controller
 
     public function saveStep2(Request $request)
     {
+        if ($done = $this->alreadyComplete($request)) {
+            return $done;
+        }
+
         $data = $request->validate([
-            'education_stream' => 'nullable|string|max:100',
+            'education_stream' => 'required|string|max:100',
             'field'            => 'nullable|string|max:100',
             'college'          => 'nullable|string|max:200',
             'year'             => 'nullable|string|max:50',
@@ -88,6 +99,10 @@ class OnboardingController extends Controller
 
     public function saveStep3(Request $request)
     {
+        if ($done = $this->alreadyComplete($request)) {
+            return $done;
+        }
+
         $data = $request->validate([
             'tracks'   => 'required|array|min:1',
             'tracks.*' => 'string|max:100',
@@ -115,6 +130,10 @@ class OnboardingController extends Controller
 
     public function saveStep4(Request $request)
     {
+        if ($done = $this->alreadyComplete($request)) {
+            return $done;
+        }
+
         $data = $request->validate([
             'weekly_time_commitment' => 'required|string',
             'monthly_budget'         => 'nullable|string',
@@ -155,18 +174,36 @@ class OnboardingController extends Controller
         }
 
         $redirect = route('mentee.dashboard');
+        $message = ! empty($result['already'])
+            ? 'Onboarding is already complete.'
+            : ($result['assigned']
+                ? 'Onboarding complete! A mentor has been assigned to you.'
+                : 'Onboarding complete!');
         if ($request->ajax()) {
             return response()->json([
-                'message'  => $result['assigned']
-                    ? 'Onboarding complete! A mentor has been assigned to you.'
-                    : 'Onboarding complete!',
+                'message'  => $message,
                 'redirect' => $redirect,
             ]);
         }
 
-        return redirect($redirect)->with('success', $result['assigned']
-            ? 'Onboarding complete! A mentor has been assigned to you.'
-            : 'Onboarding complete!');
+        return redirect($redirect)->with('success', $message);
+    }
+
+    private function alreadyComplete(Request $request)
+    {
+        if (! auth()->user()->onboarding_completed) {
+            return null;
+        }
+
+        $redirect = route('mentee.dashboard');
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'message'  => 'Onboarding is already complete.',
+                'redirect' => $redirect,
+            ], 422);
+        }
+
+        return redirect($redirect);
     }
 
     private function next(Request $request, int $step)

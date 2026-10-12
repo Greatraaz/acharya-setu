@@ -48,26 +48,24 @@ class OtpController extends Controller
             ], 422);
         }
 
-        $emailOtp = $this->generateOtp();
-        OtpCode::storeOtp($email, 'email', $emailOtp);
+        $issued = OtpCode::issue($email, 'email', 'registration');
+        if (! $issued['ok']) {
+            return response()->json([
+                'message'     => $issued['message'],
+                'retry_after' => $issued['retry_after'] ?? null,
+            ], $issued['status']);
+        }
 
-        // Phone OTP disabled for web registration
-        // $phoneOtp = $this->generateOtp();
-        // if ($request->filled('phone')) {
-        //     OtpCode::storeOtp($request->phone, 'phone', $phoneOtp);
-        //     SmsService::sendOtp($request->phone, $phoneOtp);
-        // }
-
-        // ── Send Email OTP ────────────────────────────────────
         try {
-            Mail::to($email)->send(new OtpMail($emailOtp, 'registration'));
+            Mail::to($issued['identifier'])->send(new OtpMail($issued['otp'], 'registration'));
         } catch (\Throwable $e) {
             Log::error('OTP email failed: ' . $e->getMessage());
         }
 
         return response()->json([
-            'message'    => 'OTP sent to your email.',
-            'expires_in' => 600,
+            'message'     => 'OTP sent to your email.',
+            'expires_in'  => $issued['expires_in'],
+            'retry_after' => OtpCode::COOLDOWN_SECONDS,
         ]);
     }
 
@@ -88,12 +86,21 @@ class OtpController extends Controller
             return response()->json(['message' => 'No account found with this phone number.'], 404);
         }
 
-        $otp = $this->generateOtp();
-        OtpCode::storeOtp($request->phone, 'phone', $otp);
+        $issued = OtpCode::issue($request->phone, 'phone', 'login');
+        if (! $issued['ok']) {
+            return response()->json([
+                'message'     => $issued['message'],
+                'retry_after' => $issued['retry_after'] ?? null,
+            ], $issued['status']);
+        }
 
-        SmsService::sendOtp($request->phone, $otp);
+        SmsService::sendOtp($issued['identifier'], $issued['otp']);
 
-        return response()->json(['message' => 'OTP sent to your phone.', 'expires_in' => 600]);
+        return response()->json([
+            'message'     => 'OTP sent to your phone.',
+            'expires_in'  => $issued['expires_in'],
+            'retry_after' => OtpCode::COOLDOWN_SECONDS,
+        ]);
     }
 
     /*
@@ -107,17 +114,23 @@ class OtpController extends Controller
     {
         $request->validate([
             'identifier' => 'required|string',
-            'otp'        => 'required|string|size:6',
+            'otp'        => 'required|digits:6',
             'channel'    => 'required|in:email,phone',
+            'type'       => 'nullable|in:registration,login,reset',
         ]);
 
-        $ok = OtpCode::verify($request->identifier, $request->channel, $request->otp);
+        $result = OtpCode::verify(
+            $request->identifier,
+            $request->channel,
+            $request->otp,
+            $request->input('type')
+        );
 
-        if (! $ok) {
-            return response()->json(['message' => 'Invalid or expired OTP.'], 422);
+        if ($result !== 'ok') {
+            return response()->json(['message' => OtpCode::message($result), 'verified' => false], 422);
         }
 
-        return response()->json(['message' => 'OTP verified.', 'verified' => true]);
+        return response()->json(['message' => OtpCode::message('ok'), 'verified' => true]);
     }
 
     /*
@@ -131,12 +144,12 @@ class OtpController extends Controller
     {
         $request->validate([
             'phone' => 'required|string',
-            'otp'   => 'required|string|size:6',
+            'otp'   => 'required|digits:6',
         ]);
 
-        $ok = OtpCode::verify($request->phone, 'phone', $request->otp);
-        if (! $ok) {
-            return response()->json(['message' => 'Invalid or expired OTP.'], 422);
+        $result = OtpCode::verify($request->phone, 'phone', $request->otp, 'login');
+        if ($result !== 'ok') {
+            return response()->json(['message' => OtpCode::message($result)], 422);
         }
 
         $user = User::findByPhone($request->phone);
@@ -157,11 +170,6 @@ class OtpController extends Controller
     }
 
     // ── Helpers ───────────────────────────────────────────────
-
-    private function generateOtp(): string
-    {
-        return str_pad((string) random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
-    }
 
     private function redirectForUser(User $user): string
     {

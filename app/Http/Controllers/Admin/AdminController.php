@@ -42,18 +42,23 @@ class AdminController extends Controller
             ], 422);
         }
 
+        $email = strtolower(trim((string) $request->email));
+        $ip = $request->ip() ?: 'local';
+
+        if ($wait = \App\Support\LoginThrottle::availableIn($email, $ip)) {
+            return response()->json([
+                'status'  => 429,
+                'message' => \App\Support\LoginThrottle::lockedMessage($wait),
+            ], 429);
+        }
+
         $credentials = [
-            'email'    => $request->email,
+            'email'    => $email,
             'password' => $request->password,
         ];
 
-        // If you want only admins allowed:
-        // add role restriction if column exists
-        /*
-        $credentials['role'] = 'admin';
-        */
-
         if (!Auth::guard('web')->attempt($credentials, true)) {
+            \App\Support\LoginThrottle::hit($email, $ip);
 
             return response()->json([
                 'status'  => 401,
@@ -61,10 +66,23 @@ class AdminController extends Controller
             ], 401);
         }
 
-        // Prevent session fixation
-        $request->session()->regenerate();
-
         $user = Auth::guard('web')->user();
+
+        if ($user->role !== 'admin' || \App\Support\LoginThrottle::isDisabled($user)) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return response()->json([
+                'status'  => 403,
+                'message' => $user->role !== 'admin'
+                    ? 'Unauthorized. You are not an admin.'
+                    : 'This account has been disabled.',
+            ], 403);
+        }
+
+        \App\Support\LoginThrottle::clear($email, $ip);
+        $request->session()->regenerate();
 
         return response()->json([
             'status'   => 200,

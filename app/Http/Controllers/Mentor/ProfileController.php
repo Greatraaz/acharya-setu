@@ -1,43 +1,66 @@
 <?php
+
 namespace App\Http\Controllers\Mentor;
+
 use App\Http\Controllers\Controller;
+use App\Support\IndianPhone;
+use App\Support\ProfileUpdate;
 use Illuminate\Http\Request;
 
 class ProfileController extends Controller
 {
     public function edit()
     {
-        return view('frontend.mentors.profile-edit', ['user' => auth()->user()]);
+        $user = auth()->user();
+
+        return view('frontend.mentors.profile-edit', [
+            'user' => $user,
+            'pendingChange' => $user->latestPendingChange,
+        ]);
     }
 
     public function update(Request $request)
     {
         $data = $request->validate([
-            'bio'            => 'nullable|string|max:2000',
-            'designation'    => 'nullable|string|max:100',
-            'company'        => 'nullable|string|max:100',
-            'experience_years' => 'nullable|integer|min:0',
-            'rate_per_minute'  => 'nullable|numeric|min:1',
-            'linkedin'       => 'nullable|url',
-            'expertise'      => 'nullable|array',
-            'expertise.*'    => 'string|max:60',
-            'preferences'    => 'nullable|array',
-            'strengths'      => 'nullable|array',
+            'name' => 'required|string|max:100',
+            'gender' => 'nullable|in:male,female,other',
+            'phone' => IndianPhone::rules(),
+            'bio' => 'required|string|min:80|max:2000',
+            'designation' => 'required|string|max:100',
+            'company' => 'nullable|string|max:100',
+            'experience_years' => 'required|integer|min:0|max:50',
+            'rate_per_minute' => 'required|numeric|min:5|max:500',
+            'linkedin' => 'nullable|url|max:255',
+            'expertise' => 'required|array|min:1',
+            'expertise.*' => 'string|max:60',
+            'avatar' => 'nullable|file|image|mimes:jpeg,jpg,png,webp|max:2048',
         ]);
 
-        auth()->user()->update($data);
+        $avatar = $request->file('avatar');
+        unset($data['avatar']);
+
+        $result = ProfileUpdate::save(auth()->user(), $data);
+        if ($avatar) {
+            ProfileUpdate::storeAvatar(auth()->user(), $avatar);
+        }
 
         if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['message' => 'Profile updated successfully.']);
+            return response()->json([
+                'message' => $result['message'],
+                'pending' => $result['pending'],
+            ]);
         }
-        return back()->with('success', 'Profile updated.');
+
+        return back()->with('success', $result['message']);
     }
 
     public function avatar(Request $request)
     {
-        $request->validate(['avatar' => 'required|image|max:2048']);
-        $path = $request->file('avatar')->store('avatars', 'public');
-        auth()->user()->update(['avatar_url' => '/storage/' . $path]);
-        return response()->json(['message' => 'Photo updated.', 'url' => '/storage/' . $path]);
+        $request->validate([
+            'avatar' => 'required|file|image|mimes:jpeg,jpg,png,webp|max:2048',
+        ]);
+        $url = ProfileUpdate::storeAvatar(auth()->user(), $request->file('avatar'));
+
+        return response()->json(['message' => 'Photo updated.', 'url' => $url]);
     }
 }

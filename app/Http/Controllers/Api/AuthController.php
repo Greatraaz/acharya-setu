@@ -10,6 +10,9 @@ use App\Models\WalletTransaction;
 use App\Mail\OtpMail;
 use App\Services\SmsService;
 use App\Support\IndianPhone;
+use App\Support\LoginThrottle;
+use App\Support\PasswordReset as PasswordResetGuard;
+use App\Support\ProfileUpdate;
 use App\Support\RegistrationData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -18,6 +21,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 
@@ -31,6 +35,7 @@ class AuthController extends Controller
         'onboarding_step', 'mentor_status', 'subscription_plan',
         'education_stream', 'career_goals', 'strengths',
         'preferences', 'is_active', 'isVerifiedEmail', 'created_at',
+        'has_pending_changes',
     ];
 
     public function register(Request $request): JsonResponse
@@ -41,7 +46,7 @@ class AuthController extends Controller
             'name'             => ['required', 'string', 'max:100'],
             'email'            => ['required', 'email:filter', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'phone'            => IndianPhone::rules(required: true),
-            'password'         => ['required', 'confirmed', Password::min(8)],
+            'password'         => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
             'role'             => ['nullable', 'in:mentor,mentee'],
             'college'          => ['nullable', 'string', 'max:255'],
             'year'             => ['nullable', 'string', 'max:20'],
@@ -151,6 +156,10 @@ class AuthController extends Controller
 
     public function login(Request $request): JsonResponse
     {
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
+
         $validator = Validator::make($request->all(), [
             'email'    => ['required', 'email'],
             'password' => ['required', 'string'],
@@ -165,15 +174,38 @@ class AuthController extends Controller
         }
 
         $validated = $validator->validated();
-        $user = User::where('email', strtolower($validated['email']))->where('is_active', true)->first();
+        $email = $validated['email'];
+        $ip = $request->ip() ?: 'local';
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if ($wait = LoginThrottle::availableIn($email, $ip)) {
             return response()->json([
                 'success' => false,
                 'status'  => false,
-                'error'   => 'Invalid email or password.'
+                'message' => LoginThrottle::lockedMessage($wait),
+            ], 429);
+        }
+
+        $user = User::where('email', $email)->first();
+
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
+            LoginThrottle::hit($email, $ip);
+
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'error'   => 'Invalid email or password.',
             ], 401);
         }
+
+        if (LoginThrottle::isDisabled($user)) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'message' => 'This account has been disabled.',
+            ], 403);
+        }
+
+        LoginThrottle::clear($email, $ip);
 
         return response()->json([
             'success' => true,
@@ -202,25 +234,82 @@ class AuthController extends Controller
         ], 200);
     }
 
+    public function sessions(Request $request): JsonResponse
+    {
+        $currentId = $request->user()->currentAccessToken()?->id;
+
+        $sessions = $request->user()->tokens()->latest('id')->get()->map(fn ($token) => [
+            'id'           => $token->id,
+            'name'         => $token->name,
+            'current'      => $token->id === $currentId,
+            'last_used_at' => $token->last_used_at,
+            'created_at'   => $token->created_at,
+            'expires_at'   => $token->expires_at,
+        ]);
+
+        return response()->json([
+            'success'  => true,
+            'status'   => true,
+            'sessions' => $sessions,
+        ]);
+    }
+
+    public function logoutAll(Request $request): JsonResponse
+    {
+        $request->user()->tokens()->delete();
+
+        return response()->json([
+            'success' => true,
+            'status'  => true,
+            'message' => 'Signed out of all devices.',
+        ]);
+    }
+
     public function updateProfile(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'name'             => ['sometimes', 'string', 'max:100'],
-            'bio'              => ['nullable', 'string'],
-            'field'            => ['nullable', 'string'],
-            'college'          => ['nullable', 'string'],
-            'year'             => ['nullable', 'string'],
-            'company'          => ['nullable', 'string'],
-            'designation'      => ['nullable', 'string'],
-            'experience_years' => ['nullable', 'integer'],
-            'phone'            => IndianPhone::rules(),
-            'linkedin'         => ['nullable', 'url'],
-            'gender'           => ['nullable', 'in:male,female,other'],
-            'education_stream' => ['nullable', 'string'],
-            'career_goals'     => ['nullable', 'array'],
-            'strengths'        => ['nullable', 'array'],
-            'preferences'      => ['nullable', 'array'],
-        ]);
+        $user = $request->user();
+        $rules = [
+            'name' => ['sometimes', 'string', 'max:100'],
+            'phone' => IndianPhone::rules(),
+            'gender' => ['nullable', 'in:male,female,other'],
+            'preferences' => ['nullable', 'array'],
+            'preferences.notifications' => ['nullable', 'array'],
+            'preferences.notifications.session_reminders' => ['nullable', 'boolean'],
+            'preferences.notifications.product_updates' => ['nullable', 'boolean'],
+        ];
+
+        if ($user->role === 'mentee') {
+            $rules = array_merge($rules, [
+                'education_stream' => ['nullable', 'string', 'max:100'],
+                'field' => ['nullable', 'string', 'max:100'],
+                'college' => ['nullable', 'string', 'max:200'],
+                'year' => ['nullable', 'string', 'max:50'],
+                'career_goals' => ['nullable', 'array', 'min:1'],
+                'career_goals.*' => ['string', 'max:100'],
+                'preferences.preferred_language' => ['nullable', 'string', 'max:100'],
+                'preferences.mentoring_format' => ['nullable', 'string', 'max:50'],
+                'preferences.weekly_time_commitment' => ['nullable', 'string', 'max:100'],
+                'preferences.monthly_budget' => ['nullable', 'string', 'max:100'],
+            ]);
+        }
+
+        if ($user->role === 'mentor') {
+            $rules = array_merge($rules, [
+                'bio' => ['sometimes', 'string', 'min:80', 'max:2000'],
+                'field' => ['nullable', 'string', 'max:100'],
+                'company' => ['nullable', 'string', 'max:100'],
+                'designation' => ['sometimes', 'string', 'max:100'],
+                'experience_years' => ['sometimes', 'integer', 'min:0', 'max:50'],
+                'rate_per_minute' => ['sometimes', 'numeric', 'min:5', 'max:500'],
+                'linkedin' => ['nullable', 'url', 'max:255'],
+                'expertise' => ['sometimes', 'array', 'min:1'],
+                'expertise.*' => ['string', 'max:60'],
+                'strengths' => ['nullable', 'array'],
+                'strengths.*' => ['string', 'max:60'],
+            ]);
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json([
@@ -230,16 +319,22 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $data = $validator->validated();
-        if (array_key_exists('phone', $data)) {
-            $data['phone'] = IndianPhone::normalize($data['phone']);
+        try {
+            $result = ProfileUpdate::save($user, $validator->validated());
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'errors'  => $e->errors(),
+            ], 422);
         }
 
-        $request->user()->update($data);
         return response()->json([
             'success' => true,
             'status'  => true,
-            'user' => $request->user()->fresh()->only(self::USER_FIELDS)
+            'message' => $result['message'],
+            'pending' => $result['pending'],
+            'user' => $user->fresh()->only(self::USER_FIELDS),
         ], 200);
     }
 
@@ -258,44 +353,36 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $mime = $request->input('mimeType', 'image/jpeg');
         $rawBase64 = preg_replace('/^data:image\/\w+;base64,/', '', $request->input('base64'));
         $rawBase64 = str_replace(' ', '+', $rawBase64);
+        $imageData = base64_decode($rawBase64, true);
 
-        $imageData = base64_decode($rawBase64);
-
-        if ($imageData === false) {
+        if ($imageData === false || strlen($imageData) > 2 * 1024 * 1024) {
             return response()->json([
                 'success' => false,
                 'status'  => false,
-                'error'   => 'Invalid base64 image data'
+                'error'   => 'Upload a JPG, PNG, or WebP image up to 2MB.',
             ], 422);
         }
 
-        $extension = match ($mime) {
+        $info = @getimagesizefromstring($imageData);
+        $detected = is_array($info) ? ($info['mime'] ?? '') : '';
+        if (! in_array($detected, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'error'   => 'Upload a JPG, PNG, or WebP image up to 2MB.',
+            ], 422);
+        }
+
+        $extension = match ($detected) {
             'image/png'  => 'png',
             'image/webp' => 'webp',
             default      => 'jpg',
         };
 
         $user = $request->user();
-
-        $fileName = 'avatar_' . $user->id . '_' . time() . '.' . $extension;
-
-        // public/upload/avatar folder
-        $uploadPath = public_path('upload/avatar');
-
-        if (!file_exists($uploadPath)) {
-            mkdir($uploadPath, 0755, true);
-        }
-
-        file_put_contents($uploadPath . '/' . $fileName, $imageData);
-
-        $url = url('upload/avatar/' . $fileName);
-
-        $user->update([
-            'avatar_url' => $url
-        ]);
+        $url = ProfileUpdate::storeAvatarContents($user, $imageData, $extension);
 
         return response()->json([
             'success'    => true,
@@ -305,11 +392,24 @@ class AuthController extends Controller
         ], 200);
     }
 
+    public function removePhoto(Request $request): JsonResponse
+    {
+        ProfileUpdate::clearAvatar($request->user());
+
+        return response()->json([
+            'success' => true,
+            'status'  => true,
+            'message' => 'Photo removed.',
+            'avatar_url' => null,
+            'user' => $request->user()->fresh()->only(self::USER_FIELDS),
+        ]);
+    }
+
     public function changePassword(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'current_password' => ['required', 'string'],
-            'new_password'     => ['required', 'confirmed', Password::min(6)],
+            'new_password'     => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
         ]);
 
         if ($validator->fails()) {
@@ -340,9 +440,14 @@ class AuthController extends Controller
 
     public function resetPassword(Request $request): JsonResponse
     {
+        $request->merge([
+            'email' => PasswordResetGuard::normalizeEmail((string) $request->input('email', '')),
+        ]);
+
         $validator = Validator::make($request->all(), [
             'email'        => ['required', 'email'],
-            'new_password' => ['required', 'confirmed', Password::min(6)],
+            'token'        => ['required', 'string'],
+            'new_password' => PasswordResetGuard::rules(),
         ]);
 
         if ($validator->fails()) {
@@ -354,23 +459,40 @@ class AuthController extends Controller
         }
 
         $validated = $validator->validated();
-
-        $user = User::where('email', strtolower($validated['email']))->where('is_active', true)->first();
-
-        if (!$user) {
+        $outcome = PasswordResetGuard::inspect($validated['email'], $validated['token']);
+        if ($outcome !== 'ok') {
             return response()->json([
                 'success' => false,
                 'status'  => false,
-                'message' => 'User not found.',
-            ], 404);
+                'message' => PasswordResetGuard::message($outcome),
+            ], 422);
         }
 
-        $user->update(['password' => Hash::make($validated['new_password'])]);
+        $status = \Illuminate\Support\Facades\Password::reset(
+            [
+                'email'                 => $validated['email'],
+                'token'                 => $validated['token'],
+                'password'              => $validated['new_password'],
+                'password_confirmation' => $request->input('new_password_confirmation'),
+            ],
+            function ($user, $password) {
+                PasswordResetGuard::apply($user, $password);
+                event(new \Illuminate\Auth\Events\PasswordReset($user));
+            }
+        );
+
+        if ($status !== \Illuminate\Support\Facades\Password::PASSWORD_RESET) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'message' => PasswordResetGuard::message('invalid'),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
             'status'  => true,
-            'message' => 'Password reset successfully.'
+            'message' => 'Password reset successfully.',
         ], 200);
     }
 
@@ -458,30 +580,32 @@ class AuthController extends Controller
             }
         }
 
-        $otp = rand(100000, 999999);
-        $expiresAt = now()->addMinutes(10);
-
-        OtpCode::updateOrCreate(
-            ['identifier' => $identifier, 'channel' => $channel],
-            [
-                'code' => bcrypt($otp),
-                'expires_at' => $expiresAt,
-                'verified_at' => null,
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
-        );
-
-        if ($channel === 'email') {
-            Mail::to($identifier)->send(new OtpMail($otp, $request->input('type')));
-        } else if ($channel === 'phone') {
-            SmsService::send($identifier, "Your OTP is {$otp}. Valid for 10 minutes.");
+        if ($type === 'reset' && ! $this->resetUser($identifier, $channel)) {
+            return response()->json([
+                'status'     => true,
+                'statusCode' => 200,
+                'message'    => PasswordResetGuard::GENERIC_SENT,
+            ], 200);
         }
 
+        $issued = OtpCode::issue($identifier, $channel, $type);
+        if (! $issued['ok']) {
+            return response()->json([
+                'status'      => false,
+                'statusCode'  => $issued['status'],
+                'message'     => $issued['message'],
+                'retry_after' => $issued['retry_after'] ?? null,
+            ], $issued['status']);
+        }
+
+        $this->deliverOtp($issued['identifier'], $channel, $issued['otp'], $type);
+
         return response()->json([
-            'status' => true,
+            'status'      => true,
             'statusCode'  => 200,
-            'message' => 'OTP sent successfully'
+            'message'     => $type === 'reset' ? PasswordResetGuard::GENERIC_SENT : 'OTP sent successfully',
+            'expires_in'  => $issued['expires_in'],
+            'retry_after' => OtpCode::COOLDOWN_SECONDS,
         ], 200);
     }
 
@@ -491,35 +615,50 @@ class AuthController extends Controller
             'identifier' => ['required', 'string'],
             'channel'    => ['required', 'in:email,phone'],
             'otp'        => ['required', 'digits:6'],
+            'type'       => ['required', 'in:registration,login,reset'],
         ]);
 
         if ($validator->fails()) {
             return response()->json(['status' => false,'statusCode'  => 422,'errors'  => $validator->errors(),], 422);
         }
 
-        $identifier = $request->input('identifier');
+        $identifier = OtpCode::normalizeIdentifier($request->input('identifier'), $request->input('channel'));
         $channel = $request->input('channel');
-        $otp      = $request->input('otp');
+        $result = OtpCode::verify($identifier, $channel, $request->input('otp'), $request->input('type'));
 
-        $otpData = OtpCode::where('identifier', $identifier)->where('channel', $channel)->whereNull('verified_at')->first();
-
-        if (!$otpData) {
-            return response()->json(['status' => false,'statusCode'  => 404,'message' => 'No OTP found or OTP already used'], 404);
+        if ($result !== 'ok') {
+            return response()->json([
+                'status'     => false,
+                'statusCode' => 422,
+                'message'    => OtpCode::message($result),
+            ], 422);
         }
 
-        if (Carbon::parse($otpData->expires_at)->isPast()) {
-            return response()->json(['status' => false,'statusCode'  => 422,'message' => 'OTP expired'], 422);
-        }
+        if ($request->input('type') === 'reset') {
+            $user = $this->resetUser($identifier, $channel);
+            if (! $user) {
+                return response()->json([
+                    'status'     => false,
+                    'statusCode' => 422,
+                    'message'    => 'This reset code is invalid.',
+                ], 422);
+            }
 
-        if (!Hash::check($otp, $otpData->code)) {
-            return response()->json(['status' => false,'statusCode'  => 422,'message' => 'Invalid OTP'], 422);
+            return response()->json([
+                'status'      => true,
+                'statusCode'  => 200,
+                'message'     => 'OTP verified successfully',
+                'reset_token' => \Illuminate\Support\Facades\Password::broker()->createToken($user),
+                'email'       => $user->email,
+                'expires_in'  => ((int) config('auth.passwords.users.expire', 60)) * 60,
+            ], 200);
         }
-
-        OtpCode::where('identifier', $identifier)->where('channel', $channel)->update(['verified_at' => now()]);
 
         if ($channel === 'email') {
-            $user = User::where('email', strtolower($identifier))->where('is_active', true)->first();
-            $user->update(['isVerifiedEmail' => 1]);
+            $user = User::where('email', $identifier)->first();
+            if ($user) {
+                $user->update(['isVerifiedEmail' => 1]);
+            }
         }
 
         return response()->json(['status' => true,'statusCode'  => 200,'message' => 'OTP verified successfully'], 200);
@@ -530,6 +669,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'identifier' => ['required', 'string'],
             'channel'    => ['required', 'in:email,phone'],
+            'type'       => ['nullable', 'in:registration,login,reset'],
         ]);
 
         if ($validator->fails()) {
@@ -540,33 +680,57 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $identifier = $request->input('identifier');
         $channel = $request->input('channel');
+        $identifier = OtpCode::normalizeIdentifier($request->input('identifier'), $channel);
+        $type = $request->input('type')
+            ?: OtpCode::where('identifier', $identifier)->where('channel', $channel)->value('purpose')
+            ?: 'registration';
 
-        $otp = rand(100000, 999999);
-        $expiresAt = now()->addMinutes(10);
-
-        OtpCode::updateOrCreate(
-            ['identifier' => $identifier, 'channel' => $channel],
-            [
-                'code' => bcrypt($otp),
-                'expires_at' => $expiresAt,
-                'verified_at' => null,
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
-        );
-
-        if ($channel === 'email') {
-            Mail::to($identifier)->send(new OtpMail($otp));
-        } else if ($channel === 'phone') {
-            SmsService::send($identifier, "Your OTP is {$otp}. Valid for 10 minutes.");
+        $issued = OtpCode::issue($identifier, $channel, $type);
+        if (! $issued['ok']) {
+            return response()->json([
+                'success'     => false,
+                'status'      => false,
+                'statusCode'  => $issued['status'],
+                'message'     => $issued['message'],
+                'retry_after' => $issued['retry_after'] ?? null,
+            ], $issued['status']);
         }
 
+        $this->deliverOtp($issued['identifier'], $channel, $issued['otp'], $type);
+
         return response()->json([
-            'success' => true,
-            'status'  => true,
-            'message' => 'OTP resent successfully'
+            'success'     => true,
+            'status'      => true,
+            'message'     => 'OTP resent successfully',
+            'expires_in'  => $issued['expires_in'],
+            'retry_after' => OtpCode::COOLDOWN_SECONDS,
         ], 200);
+    }
+
+    private function resetUser(string $identifier, string $channel): ?User
+    {
+        $user = $channel === 'phone'
+            ? User::findByPhone($identifier)
+            : User::where('email', PasswordResetGuard::normalizeEmail($identifier))->first();
+
+        if (! $user || LoginThrottle::isDisabled($user)) {
+            return null;
+        }
+
+        return $user;
+    }
+
+    private function deliverOtp(string $identifier, string $channel, string $otp, string $type): void
+    {
+        try {
+            if ($channel === 'email') {
+                Mail::to($identifier)->send(new OtpMail($otp, $type));
+            } elseif ($channel === 'phone') {
+                SmsService::send($identifier, "Your OTP is {$otp}. Valid for 10 minutes.");
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

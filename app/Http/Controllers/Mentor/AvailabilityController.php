@@ -157,6 +157,11 @@ class AvailabilityController extends Controller
         }
 
         $user = auth()->user();
+        $kept = [];
+        foreach ($schedule as $day => $row) {
+            $kept[$day] = array_column($row['ranges'] ?? [], 'from');
+        }
+        $this->availabilityService->assertBookedWindowsRemain($user, $kept);
         $prefs = $user->preferences ?? [];
         $prefs['weekly_schedule'] = $schedule;
         $prefs['weekly_slots'] = $weeklySlots;
@@ -176,25 +181,21 @@ class AvailabilityController extends Controller
             'min_notice_hours' => 'required|integer|in:1,2,6,12,24',
         ]);
 
-        $user = auth()->user();
-        $prefs = $user->preferences ?? [];
-        $prefs['session_settings'] = $data;
-        $user->update(['preferences' => $prefs]);
+        $this->availabilityService->saveSessionSettings(auth()->user(), $data);
 
         return response()->json(['message' => 'Settings saved.']);
     }
 
-    public function toggleLive()
+    public function toggleLive(Request $request)
     {
         $user = auth()->user();
-        $user->update(['is_active' => ! $user->is_active]);
+        $live = ! $this->availabilityService->isAcceptingBookings($user);
+        $this->availabilityService->setAcceptingBookings($user, $live);
 
-        $live = (bool) $user->is_active;
-
-        if (request()->expectsJson() || request()->ajax()) {
+        if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
-                'message'   => $live ? 'You are now live and bookable.' : 'You are now unavailable.',
-                'is_active' => $live,
+                'message'            => $live ? 'You are now live and bookable.' : 'You are now unavailable.',
+                'accepting_bookings' => $live,
             ]);
         }
 
@@ -207,27 +208,16 @@ class AvailabilityController extends Controller
             'blocked_date' => 'required|date|after_or_equal:today',
         ]);
 
-        $user = auth()->user();
-        $prefs = $user->preferences ?? [];
-        $dates = collect($prefs['blocked_dates'] ?? []);
-        $dates->push($data['blocked_date']);
-        $prefs['blocked_dates'] = $dates->unique()->sort()->values()->all();
-        $user->update(['preferences' => $prefs]);
+        $this->availabilityService->blockDate(auth()->user(), $data['blocked_date']);
 
         return response()->json(['message' => 'Date blocked.']);
     }
 
-    public function unblockDate(string $date)
+    public function unblockDate(Request $request, string $date)
     {
-        $user = auth()->user();
-        $prefs = $user->preferences ?? [];
-        $prefs['blocked_dates'] = collect($prefs['blocked_dates'] ?? [])
-            ->reject(fn ($d) => $d === $date)
-            ->values()
-            ->all();
-        $user->update(['preferences' => $prefs]);
+        $this->availabilityService->unblockDate(auth()->user(), $date);
 
-        if (request()->expectsJson() || request()->ajax()) {
+        if ($request->expectsJson() || $request->ajax()) {
             return response()->json(['message' => 'Date unblocked.']);
         }
 

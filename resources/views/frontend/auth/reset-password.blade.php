@@ -18,11 +18,18 @@
             </div>
             <div class="form-group">
                 <label class="form-label">New Password</label>
-                <input type="password" name="password" class="form-input" placeholder="Min. 8 characters" required>
+                <div class="password-field">
+                    <input type="password" name="password" class="form-input" placeholder="Min. 8 characters" required minlength="8" autocomplete="new-password">
+                    @include('frontend.partials.password-toggle')
+                </div>
+                <div class="form-hint">At least 8 characters, with uppercase, lowercase, and a number.</div>
             </div>
             <div class="form-group">
                 <label class="form-label">Confirm Password</label>
-                <input type="password" name="password_confirmation" class="form-input" placeholder="Repeat password" required>
+                <div class="password-field">
+                    <input type="password" name="password_confirmation" class="form-input" placeholder="Repeat password" required autocomplete="new-password">
+                    @include('frontend.partials.password-toggle')
+                </div>
             </div>
             <button type="submit" class="btn btn-primary btn-full btn-lg">Reset Password →</button>
         </form>

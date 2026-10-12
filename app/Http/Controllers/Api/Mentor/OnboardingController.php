@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Mentor;
 
 use App\Http\Controllers\Controller;
+use App\Models\ConsultationSession;
 use App\Support\IndianPhone;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\DB;
@@ -62,6 +63,9 @@ class OnboardingController extends Controller
                 'message'    => 'User record not found.',
             ], 401);
         }
+        if ($locked = $this->locked($user)) {
+            return $locked;
+        }
 
         $data = $request->validate([
             'name'     => 'required|string|max:100',
@@ -110,6 +114,9 @@ class OnboardingController extends Controller
                 'message'    => 'User record not found.',
             ], 401);
         }
+        if ($locked = $this->locked($user)) {
+            return $locked;
+        }
 
         $data = $request->validate([
             'designation'      => 'required|string|max:100',
@@ -144,6 +151,9 @@ class OnboardingController extends Controller
                 'message'    => 'User record not found.',
             ], 401);
         }
+        if ($locked = $this->locked($user)) {
+            return $locked;
+        }
 
         $request->validate([
             'expertise'   => 'required|array|min:1',
@@ -177,11 +187,14 @@ class OnboardingController extends Controller
                 'message'    => 'User record not found.',
             ], 401);
         }
+        if ($locked = $this->locked($user)) {
+            return $locked;
+        }
 
         $data = $request->validate([
             'preferences'                  => 'nullable|array',
             'preferences.preferred_time' => 'nullable|string',
-            'preferences.session_length' => 'nullable|integer',
+            'preferences.session_length' => 'nullable|integer|in:'.implode(',', ConsultationSession::BOOKING_DURATIONS),
             'strengths'                    => 'nullable|array',
             'strengths.*'                  => 'string',
         ]);
@@ -221,11 +234,25 @@ class OnboardingController extends Controller
             ], 401);
         }
 
+        if ($user->onboarding_completed || $user->mentor_status === 'approved') {
+            return response()->json([
+                'status'               => true,
+                'statuscode'           => 200,
+                'message'              => $user->mentor_status === 'approved'
+                    ? 'Your mentor profile is already approved.'
+                    : 'Your profile is already submitted for review.',
+                'mentor_status'        => $user->mentor_status,
+                'onboarding_completed' => (bool) $user->onboarding_completed,
+                'user'                 => $user,
+            ]);
+        }
+
         $missingFields = [];
 
         if (empty($user->bio))         $missingFields[] = 'bio';
         if (empty($user->designation)) $missingFields[] = 'designation';
         if (empty($user->expertise))   $missingFields[] = 'expertise';
+        if ((float) $user->rate_per_minute < 1) $missingFields[] = 'rate_per_minute';
 
         if (!empty($missingFields)) {
             return response()->json([
@@ -325,6 +352,23 @@ class OnboardingController extends Controller
     // ─────────────────────────────────────────────
     //  DELETE /mentor/account
     // ─────────────────────────────────────────────
+    private function locked($user): ?JsonResponse
+    {
+        if (! $user->onboarding_completed && $user->mentor_status !== 'approved') {
+            return null;
+        }
+
+        return response()->json([
+            'status'               => false,
+            'statuscode'           => 422,
+            'message'              => $user->mentor_status === 'approved'
+                ? 'Your mentor profile is already approved. Update it from profile settings.'
+                : 'Your profile is already submitted for review.',
+            'mentor_status'        => $user->mentor_status,
+            'onboarding_completed' => (bool) $user->onboarding_completed,
+        ], 422);
+    }
+
     public function destroyAccount(Request $request): JsonResponse
     {
         $request->user()->deleteAccount();

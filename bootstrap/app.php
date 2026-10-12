@@ -7,8 +7,10 @@ use App\Http\Middleware\AuthMiddleware;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\MentorApproved;
 use App\Http\Middleware\OnboardingComplete;
+use App\Http\Middleware\Api\AdminMiddleware;
 use App\Http\Middleware\Api\MentorMiddleware;
 use App\Http\Middleware\Api\MenteeMiddleware;
+use App\Http\Middleware\EnsureAccountIsActive;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -28,6 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'onboarding.complete' => OnboardingComplete::class,
             'mentor' => MentorMiddleware::class,
             'mentee' => MenteeMiddleware::class,
+            'admin'  => AdminMiddleware::class,
+            'active' => EnsureAccountIsActive::class,
+        ]);
+        $middleware->web(append: [
+            EnsureAccountIsActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

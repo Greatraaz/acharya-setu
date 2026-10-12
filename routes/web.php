@@ -540,6 +540,7 @@ Route::middleware('auth')->group(function () {
     Route::get( '/account',         fn() => view('account.settings', ['user' => auth()->user()]))->name('account');
     Route::put( '/account',         [LoginController::class, 'updateAccount'])->name('account.update');
     Route::post('/account/avatar',  [LoginController::class, 'updateAvatar']) ->name('account.avatar');
+    Route::delete('/account/avatar',[LoginController::class, 'removeAvatar'])->name('account.avatar.remove');
     Route::put( '/account/password',[LoginController::class, 'changePassword'])->name('account.password');
     Route::delete('/account',       [LoginController::class, 'destroyAccount'])->name('account.destroy');
 

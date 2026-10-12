@@ -145,6 +145,11 @@ class AvailabilityController extends Controller
         $this->assertNoOverlaps($d['slots']);
 
         $mentor = $request->user();
+        $kept = [];
+        foreach ($d['slots'] as $slot) {
+            $kept[$slot['day_of_week']][] = $slot['start_time'];
+        }
+        $this->availabilityService->assertBookedWindowsRemain($mentor, $kept);
         MentorAvailability::where('mentor_id', $mentor->id)->delete();
 
         foreach ($d['slots'] as $slot) {
@@ -257,13 +262,42 @@ class AvailabilityController extends Controller
 
         $start = $d['start_time'] ?? substr((string) $slot->start_time, 0, 5);
         $end = $d['end_time'] ?? substr((string) $slot->end_time, 0, 5);
+        $day = $d['day_of_week'] ?? $slot->day_of_week;
         if ($start >= $end) {
             throw ValidationException::withMessages([
                 'end_time' => 'End time must be after start time.',
             ]);
         }
+        $mins = (int) abs(\Carbon\Carbon::createFromFormat('H:i', $start)->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i', $end)));
+        if (! in_array($mins, \App\Models\ConsultationSession::BOOKING_DURATIONS, true)) {
+            throw ValidationException::withMessages([
+                'end_time' => 'Each slot must be exactly 30, 60, 90, or 120 minutes.',
+            ]);
+        }
+        $this->assertNoOverlaps(array_merge(
+            MentorAvailability::where('mentor_id', $request->user()->id)
+                ->where('id', '!=', $slot->id)
+                ->get()
+                ->map(fn ($row) => [
+                    'day_of_week'  => $row->day_of_week,
+                    'start_time'   => substr((string) $row->start_time, 0, 5),
+                    'end_time'     => substr((string) $row->end_time, 0, 5),
+                    'is_available' => (bool) $row->is_available,
+                ])
+                ->all(),
+            [[
+                'day_of_week'  => $day,
+                'start_time'   => $start,
+                'end_time'     => $end,
+                'is_available' => true,
+            ]]
+        ));
 
-        $slot->update($d);
+        $slot->update(array_merge($d, [
+            'day_of_week' => $day,
+            'start_time'  => $start,
+            'end_time'    => $end,
+        ]));
         $this->availabilityService->syncPreferencesFromTable($request->user());
 
         return response()->json([
@@ -288,6 +322,14 @@ class AvailabilityController extends Controller
             ], 404);
         }
 
+        if ($this->availabilityService->slotHasUpcomingBooking($request->user(), $slot->day_of_week, (string) $slot->start_time)) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'This slot has an upcoming booking. Cancel that session before removing the window.',
+            ], 422);
+        }
+
         $slot->delete();
         $this->availabilityService->syncPreferencesFromTable($request->user());
 
@@ -295,6 +337,62 @@ class AvailabilityController extends Controller
             'status'     => true,
             'statuscode' => 200,
             'message'    => 'Slot deleted successfully',
+        ]);
+    }
+
+    public function updateSettings(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'buffer_minutes'   => 'required|integer|in:0,15,30,60',
+            'advance_days'     => 'required|integer|in:3,7,14,30',
+            'min_notice_hours' => 'required|integer|in:1,2,6,12,24',
+        ]);
+        $this->availabilityService->saveSessionSettings($request->user(), $data);
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Settings saved.',
+            'settings'   => $data,
+        ]);
+    }
+
+    public function blockDate(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'blocked_date' => 'required|date|after_or_equal:today',
+        ]);
+        $date = $this->availabilityService->blockDate($request->user(), $data['blocked_date']);
+
+        return response()->json([
+            'status'       => true,
+            'statuscode'   => 200,
+            'message'      => 'Date blocked.',
+            'blocked_date' => $date,
+        ]);
+    }
+
+    public function unblockDate(Request $request, string $date): JsonResponse
+    {
+        $this->availabilityService->unblockDate($request->user(), $date);
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Date unblocked.',
+        ]);
+    }
+
+    public function toggleLive(Request $request): JsonResponse
+    {
+        $live = ! $this->availabilityService->isAcceptingBookings($request->user());
+        $this->availabilityService->setAcceptingBookings($request->user(), $live);
+
+        return response()->json([
+            'status'             => true,
+            'statuscode'         => 200,
+            'message'            => $live ? 'You are now live and bookable.' : 'You are now unavailable.',
+            'accepting_bookings' => $live,
         ]);
     }
 

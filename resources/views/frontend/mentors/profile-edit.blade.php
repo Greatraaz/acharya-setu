@@ -15,6 +15,15 @@
             <a href="{{ auth()->user()->profile_url }}" target="_blank" class="btn btn-outline">👁 Preview Profile</a>
         </div>
 
+        @if(session('success'))
+        <div class="alert alert-success" style="margin-bottom:20px;">{{ session('success') }}</div>
+        @endif
+        @if(!empty($pendingChange))
+        <div class="alert alert-warning" style="margin-bottom:20px;">
+            Your last profile edit is waiting for review. The public profile still shows the approved details.
+        </div>
+        @endif
+
         @if($errors->any())
         <div class="alert alert-error" style="margin-bottom:20px;">
             <span class="alert-icon">❌</span>

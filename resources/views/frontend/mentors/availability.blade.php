@@ -16,8 +16,9 @@
             <div style="display:flex;gap:10px;">
                 <form action="{{ route('mentor.availability.toggle-live') }}" method="POST">
                     @csrf
-                    <button class="btn {{ auth()->user()->is_active ? 'btn-outline' : 'btn-success' }}" type="submit">
-                        {{ auth()->user()->is_active ? '⏸ Go Unavailable' : '✅ Go Live' }}
+                    @php $acceptingBookings = (auth()->user()->preferences['accepting_bookings'] ?? true) !== false && auth()->user()->is_active; @endphp
+                    <button class="btn {{ $acceptingBookings ? 'btn-outline' : 'btn-success' }}" type="submit">
+                        {{ $acceptingBookings ? '⏸ Go Unavailable' : '✅ Go Live' }}
                     </button>
                 </form>
             </div>

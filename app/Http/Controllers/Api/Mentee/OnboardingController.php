@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Mentee;
 use App\Http\Controllers\Controller;
 use App\Models\EducationStream;
 use App\Services\MenteeOnboardingService;
-use App\Services\MentorMatcherService;
 use App\Support\IndianPhone;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\DB;
@@ -45,13 +44,17 @@ class OnboardingController extends Controller
     // ─────────────────────────────────────────────
     public function saveStep1(Request $request): JsonResponse
     {
+        if ($locked = $this->locked($request)) {
+            return $locked;
+        }
+
         $user = $request->user();
 
         $data = $request->validate([
             'name'     => 'required|string|max:100',
             'gender'   => 'nullable|in:male,female,other',
             'phone'    => IndianPhone::rules(),
-            'address'  => 'nullable|string|max:200',
+            'address'  => 'required|string|max:200',
             // File upload OR base64 string (data URI or raw base64)
             'avatar'   => 'nullable',
             'mimeType' => 'nullable|string|in:image/jpeg,image/png,image/webp,image/jpg',
@@ -180,19 +183,28 @@ class OnboardingController extends Controller
     // ─────────────────────────────────────────────
     public function saveStep2(Request $request): JsonResponse
     {
+        if ($locked = $this->locked($request)) {
+            return $locked;
+        }
+
         $user = $request->user();
 
+        $data = $request->validate([
+            'education_stream' => 'required|string|max:100',
+            'field'            => 'nullable|string|max:100',
+            'college'          => 'nullable|string|max:200',
+            'year'             => 'nullable|string|max:50',
+        ]);
+
         $user->update([
-            'education_stream' => $request->input('education_stream'),
-            'field'            => $request->input('field'),
-            'college'          => $request->input('college'),
-            'year'             => $request->input('year'),
+            'education_stream' => $data['education_stream'],
+            'field'            => $data['field'] ?? null,
+            'college'          => $data['college'] ?? null,
+            'year'             => $data['year'] ?? null,
             'onboarding_step'  => 2,
         ]);
 
-        if ($request->filled('education_stream')) {
-            app(MenteeOnboardingService::class)->assignCatalogStream($user->fresh(), $request->input('education_stream'));
-        }
+        app(MenteeOnboardingService::class)->assignCatalogStream($user->fresh(), $data['education_stream']);
 
         return response()->json([
             'status'     => true,
@@ -208,6 +220,10 @@ class OnboardingController extends Controller
     // ─────────────────────────────────────────────
     public function saveStep3(Request $request): JsonResponse
     {
+        if ($locked = $this->locked($request)) {
+            return $locked;
+        }
+
         $user = $request->user();
 
         $data = $request->validate([
@@ -248,6 +264,10 @@ class OnboardingController extends Controller
     // ─────────────────────────────────────────────
     public function saveStep4(Request $request): JsonResponse
     {
+        if ($locked = $this->locked($request)) {
+            return $locked;
+        }
+
         $user = $request->user();
 
         $data = $request->validate([
@@ -284,41 +304,35 @@ class OnboardingController extends Controller
     public function complete(Request $request): JsonResponse
     {
         $user = $request->user();
+        $result = app(MenteeOnboardingService::class)->complete($user);
 
-        $missing = app(MenteeOnboardingService::class)->missingCompletionFields($user);
-
-        if (!empty($missing)) {
+        if (! $result['completed']) {
             return response()->json([
                 'status'         => false,
                 'statuscode'     => 422,
                 'message'        => 'Please complete all onboarding steps before finishing.',
-                'missing_fields' => $missing,
+                'missing_fields' => $result['missing'],
             ], 422);
         }
 
-        $user->update([
-            'onboarding_completed' => true,
-            'onboarding_step'      => 4,
-        ]);
-
         $user->refresh();
-        $assignment = app(MentorMatcherService::class)->assignBestMentor($user);
-        $assignedMentor = $assignment['mentor'];
-        $welcomeCredit = app(\App\Services\OfferService::class)->creditNewJoineeIfEligible($user->fresh());
+        $assignedMentor = $result['mentor'];
 
         return response()->json([
             'status'               => true,
             'statuscode'           => 200,
-            'message'              => $assignment['assigned']
-                ? 'Onboarding complete! A mentor has been assigned to you.'
-                : 'Onboarding complete!',
+            'message'              => ! empty($result['already'])
+                ? 'Onboarding is already complete.'
+                : ($result['assigned']
+                    ? 'Onboarding complete! A mentor has been assigned to you.'
+                    : 'Onboarding complete!'),
             'onboarding_completed' => true,
-            'welcome_wallet_credit'=> $welcomeCredit,
+            'welcome_wallet_credit'=> $result['welcome_credit'],
             'assigned_mentor'      => $assignedMentor ? $assignedMentor->only([
                 'id', 'name', 'field', 'expertise', 'bio', 'avatar_url',
                 'rating', 'experience_years', 'company', 'designation',
             ]) : null,
-            'mentor_match_score'   => $assignment['match_score'],
+            'mentor_match_score'   => $result['match_score'],
             'user'                 => $user->fresh(),
         ]);
     }
@@ -381,6 +395,21 @@ class OnboardingController extends Controller
                 ],
             ],
         ]);
+    }
+
+    private function locked(Request $request): ?JsonResponse
+    {
+        $user = $request->user();
+        if (! $user || ! $user->onboarding_completed) {
+            return null;
+        }
+
+        return response()->json([
+            'status'               => false,
+            'statuscode'           => 422,
+            'message'              => 'Onboarding is already complete.',
+            'onboarding_completed' => true,
+        ], 422);
     }
 
     // ─────────────────────────────────────────────

@@ -5,6 +5,10 @@
 
    "use strict";
 
+   window.addEventListener("pageshow", (event) => {
+       if (event.persisted) window.location.reload();
+   });
+
    /* ── CSRF Token Helper ────────────────────────────────────── */
    function getCsrf() {
        return document.querySelector('meta[name="csrf-token"]')?.content || "";
@@ -120,6 +124,17 @@
            });
    };
    
+   window.togglePasswordVisibility = function (btn) {
+       const field = btn.closest(".password-field");
+       const input = field?.querySelector("input");
+       if (!input) return;
+       const show = input.type === "password";
+       input.type = show ? "text" : "password";
+       field.classList.toggle("is-visible", show);
+       btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+       btn.setAttribute("aria-pressed", show ? "true" : "false");
+   };
+
    /* ── Button Loading State ─────────────────────────────────── */
    function setButtonLoading(btn, loading) {
        if (!btn) return;
@@ -410,36 +425,43 @@
    /* ── OTP Inputs ──────────────────────────────────────────── */
    window.initOtpInputs = function (containerSel) {
        const container = document.querySelector(containerSel || ".otp-grid");
-       if (!container) return;
+       if (!container || container.dataset.otpReady === "1") return;
+       container.dataset.otpReady = "1";
    
        const inputs = [...container.querySelectorAll(".otp-input")];
    
+       const spread = (start, raw) => {
+           const chars = String(raw || "").replace(/\D/g, "").slice(0, inputs.length - start);
+           inputs.forEach((box, index) => {
+               if (index < start) return;
+               const ch = chars[index - start] || "";
+               box.value = ch;
+               box.classList.toggle("filled", ch !== "");
+           });
+           const focusAt = chars.length
+               ? Math.min(start + chars.length, inputs.length - 1)
+               : start;
+           inputs[focusAt]?.focus();
+       };
+
        inputs.forEach((inp, i) => {
+           inp.setAttribute("inputmode", "numeric");
+           inp.setAttribute("autocomplete", i === 0 ? "one-time-code" : "off");
            inp.addEventListener("keydown", (e) => {
                if (e.key === "Backspace" && !inp.value) {
                    inputs[i - 1]?.focus();
                }
            });
-           inp.addEventListener("input", (e) => {
-               const val = inp.value.replace(/\D/g, "").slice(-1);
-               inp.value = val;
-               if (val) {
-                   inp.classList.add("filled");
-                   inputs[i + 1]?.focus();
-               } else {
-                   inp.classList.remove("filled");
-               }
+           inp.addEventListener("input", () => {
+               if (inp.dataset.otpLock === "1") return;
+               inp.dataset.otpLock = "1";
+               spread(i, inp.value);
+               inp.dataset.otpLock = "0";
            });
            inp.addEventListener("paste", (e) => {
                e.preventDefault();
-               const text = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
-               [...text].forEach((ch, j) => {
-                   if (inputs[i + j]) {
-                       inputs[i + j].value = ch;
-                       inputs[i + j].classList.add("filled");
-                   }
-               });
-               (inputs[i + text.length] || inputs[inputs.length - 1]).focus();
+               const text = (e.clipboardData || window.clipboardData).getData("text");
+               spread(i, text);
            });
        });
    };
@@ -454,24 +476,34 @@
        const link = document.querySelector(linkSel);
        const timerEl = document.querySelector(timerSel);
        if (!link) return;
-   
+
+       if (link._otpTimer) clearInterval(link._otpTimer);
+       if (link._otpVis) document.removeEventListener("visibilitychange", link._otpVis);
+
+       const deadline = Date.now() + seconds * 1000;
+       const wrap = timerEl?.closest("[data-resend-wrap]");
        link.style.pointerEvents = "none";
        link.style.opacity = ".4";
-       if (timerEl) {
-           timerEl.textContent = seconds;
-           timerEl.closest("[data-resend-wrap]")?.classList.remove("hidden");
-       }
-   
-       const interval = setInterval(() => {
-           seconds--;
-           if (timerEl) timerEl.textContent = seconds;
-           if (seconds <= 0) {
-               clearInterval(interval);
+       wrap?.classList.remove("hidden");
+
+       const tick = () => {
+           const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+           if (timerEl) timerEl.textContent = String(left);
+           if (left <= 0) {
+               clearInterval(link._otpTimer);
                link.style.pointerEvents = "auto";
                link.style.opacity = "1";
-               timerEl?.closest("[data-resend-wrap]")?.classList.add("hidden");
+               wrap?.classList.add("hidden");
+               document.removeEventListener("visibilitychange", link._otpVis);
            }
-       }, 1000);
+       };
+
+       tick();
+       link._otpTimer = setInterval(tick, 250);
+       link._otpVis = () => {
+           if (document.visibilityState === "visible") tick();
+       };
+       document.addEventListener("visibilitychange", link._otpVis);
    };
    
    /* ── Multi-step Form ─────────────────────────────────────── */
@@ -1485,8 +1517,7 @@
                    loader: true,
                    onSuccess: (data) => {
                        showToast("success", data.message || successMsg);
-                       const loginRedirect = document.getElementById("login-redirect")?.value;
-                       const target = loginRedirect || data.redirect || redirectTo;
+                       const target = data.redirect || redirectTo;
                        if (target) setTimeout(() => (location.href = target), 1200);
                        if (form.dataset.resetOnSuccess !== undefined) form.reset();
                    },

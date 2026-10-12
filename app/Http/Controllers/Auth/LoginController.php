@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\OtpCode;
 use App\Models\User;
 use App\Support\IndianPhone;
+use App\Support\LoginThrottle;
+use App\Support\ProfileUpdate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
@@ -22,12 +25,30 @@ class LoginController extends Controller
     // Email + password login
     public function login(Request $request)
     {
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
+
         $request->validate([
             'email'    => 'required|email',
             'password' => 'required',
         ]);
 
-        if (! Auth::guard('web')->attempt($request->only('email','password'), true)) {
+        if ($wait = LoginThrottle::availableIn($request->email, $request->ip() ?: 'local')) {
+            $msg = LoginThrottle::lockedMessage($wait);
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => $msg], 429);
+            }
+            throw ValidationException::withMessages(['email' => $msg]);
+        }
+
+        $remember = $request->boolean('remember');
+        if (! $remember) {
+            config(['session.expire_on_close' => true]);
+        }
+
+        if (! Auth::guard('web')->attempt($request->only('email','password'), $remember)) {
+            LoginThrottle::hit($request->email, $request->ip() ?: 'local');
             $msg = 'These credentials do not match our records.';
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['message' => $msg], 422);
@@ -35,15 +56,28 @@ class LoginController extends Controller
             throw ValidationException::withMessages(['email' => $msg]);
         }
 
+        $user = Auth::guard('web')->user();
+        if (! $user || LoginThrottle::isDisabled($user)) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            $msg = 'This account has been disabled.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => $msg], 403);
+            }
+            throw ValidationException::withMessages(['email' => $msg]);
+        }
+
+        LoginThrottle::clear($request->email, $request->ip() ?: 'local');
         $request->session()->regenerate();
 
-        $redirect = $this->redirectAfterLogin(auth()->user());
+        $redirect = $this->redirectAfterLogin($user);
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'message'  => 'Welcome back!',
                 'redirect' => $redirect,
-                'user'     => auth()->user()->only('id','name','email','role'),
+                'user'     => $user->only('id','name','email','role'),
             ]);
         }
 
@@ -66,48 +100,112 @@ class LoginController extends Controller
             return redirect()->route('admin.login');
         }
 
-        return redirect()->route('login');
+        return redirect()->route('login')->withHeaders([
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, private',
+            'Pragma'        => 'no-cache',
+        ]);
     }
 
     // Account settings update (shared for mentor+mentee)
     public function updateAccount(Request $request)
     {
         $user = auth()->user();
-        $data = $request->validate([
-            'name'   => 'required|string|max:100',
-            'phone'  => IndianPhone::rules(),
-            'gender' => 'nullable|string',
-        ]);
-
-        if (array_key_exists('phone', $data)) {
-            $data['phone'] = IndianPhone::normalize($data['phone']);
+        $rules = [
+            'name' => 'required|string|max:100',
+            'phone' => IndianPhone::rules(),
+            'gender' => 'nullable|in:male,female,other',
+            'notifications' => 'nullable|array',
+            'notifications.session_reminders' => 'nullable|boolean',
+            'notifications.product_updates' => 'nullable|boolean',
+        ];
+        if ($user->role === 'mentee') {
+            $rules = array_merge($rules, [
+                'education_stream' => 'nullable|string|max:100',
+                'college' => 'nullable|string|max:200',
+                'year' => 'nullable|string|max:50',
+                'goals' => 'nullable|string|max:500',
+                'preferred_language' => 'nullable|string|max:100',
+                'mentoring_format' => 'nullable|in:video,audio,chat,hybrid',
+                'weekly_time_commitment' => 'nullable|string|max:100',
+                'monthly_budget' => 'nullable|string|max:100',
+            ]);
         }
 
-        $user->update($data);
+        $data = $request->validate($rules);
+        $data = $this->profilePayload($user, $data);
+        $result = ProfileUpdate::save($user, $data);
 
         if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['message' => 'Account updated.']);
+            return response()->json(['message' => $result['message']]);
         }
-        return back()->with('success','Account updated.');
+        return back()->with('success', $result['message']);
     }
 
     public function updateAvatar(Request $request)
     {
-        $request->validate(['avatar' => 'required|image|max:2048']);
-        $path = $request->file('avatar')->store('avatars','public');
-        auth()->user()->update(['avatar_url' => '/storage/'.$path]);
+        $request->validate([
+            'avatar' => 'required|file|image|mimes:jpeg,jpg,png,webp|max:2048',
+        ]);
+        $url = ProfileUpdate::storeAvatar(auth()->user(), $request->file('avatar'));
 
         if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['message' => 'Photo updated.', 'url' => '/storage/'.$path]);
+            return response()->json(['message' => 'Photo updated.', 'url' => $url]);
         }
-        return back()->with('success','Photo updated.');
+        return back()->with('success', 'Photo updated.');
+    }
+
+    public function removeAvatar(Request $request)
+    {
+        ProfileUpdate::clearAvatar(auth()->user());
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['message' => 'Photo removed.']);
+        }
+        return back()->with('success', 'Photo removed.');
+    }
+
+    private function profilePayload($user, array $data): array
+    {
+        $preferences = [];
+        foreach (['preferred_language', 'mentoring_format', 'weekly_time_commitment', 'monthly_budget'] as $key) {
+            if (array_key_exists($key, $data) && $data[$key] !== null && $data[$key] !== '') {
+                $preferences[$key] = $data[$key];
+            }
+            unset($data[$key]);
+        }
+        if (! empty($data['notifications']) && is_array($data['notifications'])) {
+            $preferences['notifications'] = [
+                'session_reminders' => filter_var($data['notifications']['session_reminders'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'product_updates' => filter_var($data['notifications']['product_updates'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            ];
+        }
+        unset($data['notifications']);
+
+        if (array_key_exists('goals', $data)) {
+            $data['career_goals'] = collect(preg_split('/\s*,\s*/', (string) $data['goals']))
+                ->map(fn ($goal) => trim((string) $goal))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+            unset($data['goals']);
+        }
+        if ($preferences !== []) {
+            $data['preferences'] = $preferences;
+        }
+
+        unset($data['email'], $data['role'], $data['mentor_status'], $data['password']);
+
+        return $data;
     }
 
     public function changePassword(Request $request)
     {
         $request->validate([
             'current_password' => 'required',
-            'password'         => 'required|confirmed|min:8',
+            'password'         => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
+        ], [
+            'password.confirmed' => 'The new password and confirmation do not match.',
         ]);
 
         $user = auth()->user();

@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Support\LoginThrottle;
+use App\Support\PasswordReset as PasswordResetGuard;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class ForgotPasswordController extends Controller
 {
@@ -19,19 +20,36 @@ class ForgotPasswordController extends Controller
 
     public function sendLink(Request $request)
     {
+        $email = PasswordResetGuard::normalizeEmail((string) $request->input('email', ''));
+        $request->merge(['email' => $email]);
         $request->validate(['email' => 'required|email']);
 
-        $status = Password::sendResetLink($request->only('email'));
+        $user = User::where('email', $email)->first();
+        $msg = 'If an account exists for this email, a reset link has been sent.';
 
-        if ($status === Password::RESET_LINK_SENT) {
-            $msg = 'Password reset link sent to your email!';
-            if ($request->ajax()) return response()->json(['message' => $msg]);
-            return back()->with('success', $msg);
+        if ($user && ! LoginThrottle::isDisabled($user)) {
+            try {
+                $status = Password::sendResetLink(['email' => $email]);
+            } catch (\Throwable $e) {
+                report($e);
+                $status = Password::RESET_LINK_SENT;
+            }
+
+            if ($status === Password::RESET_THROTTLED) {
+                $msg = 'Please wait a minute before requesting another reset link.';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['message' => $msg], 429);
+                }
+
+                return back()->withErrors(['email' => $msg]);
+            }
         }
 
-        $msg = 'No account found with that email address.';
-        if ($request->ajax()) return response()->json(['message' => $msg], 422);
-        return back()->withErrors(['email' => $msg]);
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['message' => $msg]);
+        }
+
+        return back()->with('success', $msg);
     }
 
     public function showReset(Request $request, ?string $token = null)
@@ -51,30 +69,48 @@ class ForgotPasswordController extends Controller
 
     public function resetPassword(Request $request)
     {
+        $request->merge([
+            'email' => PasswordResetGuard::normalizeEmail((string) $request->input('email', '')),
+        ]);
+
         $request->validate([
             'token'    => 'required',
             'email'    => 'required|email',
-            'password' => 'required|confirmed|min:8',
+            'password' => ['required', 'confirmed', PasswordRule::min(8)->mixedCase()->numbers()],
         ]);
 
+        $outcome = PasswordResetGuard::inspect($request->email, $request->token);
+        if ($outcome !== 'ok') {
+            $msg = PasswordResetGuard::message($outcome);
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+
+            return back()->withErrors(['email' => $msg])->withInput($request->only('email'));
+        }
+
         $status = Password::reset(
-            $request->only('email','password','password_confirmation','token'),
+            $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {
-                $data = ['password' => Hash::make($password)];
-
-                if (Schema::hasColumn('users', 'remember_token')) {
-                    $data['remember_token'] = Str::random(60);
-                }
-
-                $user->forceFill($data)->save();
+                PasswordResetGuard::apply($user, $password);
                 event(new PasswordReset($user));
             }
         );
 
         if ($status === Password::PASSWORD_RESET) {
-            return redirect()->route('login')->with('success','Password reset! Please sign in.');
+            $msg = 'Password reset. Please sign in with your new password.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => $msg, 'redirect' => route('login')]);
+            }
+
+            return redirect()->route('login')->with('success', $msg);
         }
 
-        return back()->withErrors(['email' => __($status)]);
+        $msg = PasswordResetGuard::message('invalid');
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['message' => $msg], 422);
+        }
+
+        return back()->withErrors(['email' => $msg])->withInput($request->only('email'));
     }
 }
