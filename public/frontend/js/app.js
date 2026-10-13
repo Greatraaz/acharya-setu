@@ -57,9 +57,12 @@
                if (!res.ok) {
                    return res.json().then(
                        (err) => {
+                           const fieldErrors = err.errors || {};
+                           const firstField = Object.values(fieldErrors).flat().find((msg) => typeof msg === "string" && msg !== "");
+                           const generic = !err.message || err.message === "The given data was invalid.";
                            throw {
-                               message: err.message || Object.values(err.errors || {})[0]?.[0] || "An error occurred.",
-                               errors: err.errors || {},
+                               message: (!generic && err.message) || firstField || "An error occurred.",
+                               errors: fieldErrors,
                                status: res.status,
                                topup_url: err.topup_url || null,
                                wallet_balance: err.wallet_balance,
@@ -597,7 +600,7 @@
            });
        }
 
-       function renderSlotsEmpty(kind) {
+       function renderSlotsEmpty(kind, customText) {
            const grid = document.getElementById("timeGrid");
            if (!grid) return;
 
@@ -611,11 +614,14 @@
                pick_date: "Select an available date to see time slots.",
                loading: "Loading available times…",
            };
+           const text = customText || messages[kind] || messages.no_slots;
 
            grid.innerHTML = `<div class="booking-empty-state" data-empty="${kind || "no_slots"}">
                <span class="booking-empty-state__icon">${kind === "no_schedule" ? "📅" : "⏰"}</span>
-               <p class="booking-empty-state__text">${messages[kind] || messages.no_slots}</p>
+               <p class="booking-empty-state__text"></p>
            </div>`;
+           const msg = grid.querySelector(".booking-empty-state__text");
+           if (msg) msg.textContent = text;
            selectedTime = null;
            selectedSlotMax = null;
        }
@@ -811,9 +817,14 @@
                    return;
                }
                if (!info.available) {
-                   btn.classList.add("disabled", "unavailable");
-                   btn.disabled = true;
-                   btn.title = isToday ? "No remaining slots today" : "Mentor not available";
+                   if (info.message) {
+                       btn.classList.add("unavailable");
+                       btn.title = info.message;
+                   } else {
+                       btn.classList.add("disabled", "unavailable");
+                       btn.disabled = true;
+                       btn.title = isToday ? "No remaining slots today" : "Mentor not available";
+                   }
                } else {
                    btn.classList.add("has-slots");
                    const dot = document.createElement("i");
@@ -828,7 +839,14 @@
        }
 
        function selectDate(btn) {
-           if (!btn || btn.classList.contains("disabled") || btn.disabled || !btn.dataset.date) return;
+           if (!btn || !btn.dataset.date) return;
+           const info = dayAvailability[btn.dataset.date];
+           if (info && info.available === false && info.message) {
+               if (typeof showToast === "function") showToast("error", info.message);
+               renderSlotsEmpty(info.closed_reason || "closed", info.message);
+               return;
+           }
+           if (btn.classList.contains("disabled") || btn.disabled) return;
            document.querySelectorAll("#dateGrid .cal-day").forEach((c) => c.classList.remove("selected"));
            btn.classList.add("selected");
            selectedDate = btn.dataset.date;
@@ -894,6 +912,8 @@
                    constrainDurationButtons();
                    if (mentorHasSchedule === false) {
                        renderSlotsEmpty("no_schedule");
+                   } else if (data.message && data.closed_reason) {
+                       renderSlotsEmpty(data.closed_reason, data.message);
                    } else if (!lastSlotPayload.available || !lastSlotPayload.slots.length) {
                        renderSlotsEmpty(selectedDuration ? "no_duration" : "no_slots");
                    } else {
@@ -1175,7 +1195,7 @@
    
            document.querySelectorAll("[data-filter]").forEach((el) => {
                const key = filterKey(el);
-               if (!key || key === "session_type" || key === "availability") return;
+               if (!key) return;
    
                if (el.tagName === "SELECT") {
                    if (el.value) params.set(key, el.value);
@@ -1211,6 +1231,9 @@
                min_rating: params.getAll("min_rating"),
                exp: params.getAll("exp").concat(params.getAll("experience")),
                rate_max: params.getAll("rate_max"),
+               session_type: params.getAll("session_type"),
+               availability: params.getAll("availability"),
+               duration: params.getAll("duration"),
            };
    
            document.querySelectorAll("[data-filter]").forEach((el) => {

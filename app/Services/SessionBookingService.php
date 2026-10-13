@@ -49,14 +49,9 @@ class SessionBookingService
         $time = substr((string) ($data['time'] ?? ''), 0, 5);
         $data['time'] = $time;
         $scheduledAt = Carbon::parse($data['date'].' '.$time, 'Asia/Kolkata');
-        if ($scheduledAt->lessThanOrEqualTo(Carbon::now('Asia/Kolkata'))) {
-            return $this->fail('That time slot has already passed. Please choose a later time.', 422);
-        }
-        if (! $this->availability->isSlotOpen($mentor, (string) $data['date'], $time, $duration)) {
-            return $this->fail(
-                'That slot is not available for a '.$duration.'-minute session. Pick a mentor window that matches this duration exactly.',
-                422
-            );
+        $refusal = $this->availability->bookingRefusal($mentor, (string) $data['date'], $time, $duration);
+        if ($refusal) {
+            return $this->fail($refusal, 422);
         }
         $planAllowance = $mentee->planSessionAllowance($duration);
         $coveredByPlan = $baseAmount > 0 && ($planAllowance['covered'] ?? false);

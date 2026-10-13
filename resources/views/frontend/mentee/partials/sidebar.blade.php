@@ -12,13 +12,7 @@
         <span class="si-icon">📊</span> Dashboard
     </a>
 
-    <div class="sidebar-section-label">Learning</div>
-    <a href="{{ route('mentee.journey.index') }}" class="sidebar-item @if(request()->routeIs('mentee.journey.*')) active @endif">
-        <span class="si-icon">🗺️</span> My Journey
-    </a>
-    <a href="{{ route('mentee.tasks.index') }}" class="sidebar-item @if(request()->routeIs('mentee.tasks*')) active @endif">
-        <span class="si-icon">✅</span> My Tasks
-    </a>
+    <div class="sidebar-section-label">Mentorship</div>
     <a href="{{ route('mentors.search') }}" class="sidebar-item @if(request()->routeIs('mentors.search', 'mentors.show')) active @endif">
         <span class="si-icon">🔍</span> Find Mentors
     </a>
@@ -29,6 +23,14 @@
         <span class="si-icon">📅</span> My Sessions
         @if($upcomingCount > 0)<span class="si-badge">{{ $upcomingCount }}</span>@endif
     </a>
+
+    <div class="sidebar-section-label">Learning</div>
+    <a href="{{ route('mentee.journey.index') }}" class="sidebar-item @if(request()->routeIs('mentee.journey.*')) active @endif">
+        <span class="si-icon">🗺️</span> My Journey
+    </a>
+    <a href="{{ route('mentee.tasks.index') }}" class="sidebar-item @if(request()->routeIs('mentee.tasks*')) active @endif">
+        <span class="si-icon">✅</span> My Tasks
+    </a>
     <a href="{{ route('mentee.assessments.index') }}" class="sidebar-item @if(request()->routeIs('mentee.assessments*')) active @endif">
         <span class="si-icon">📝</span> Assessments
     </a>
@@ -38,27 +40,26 @@
     <a href="{{ route('mentee.mentor-videos.index') }}" class="sidebar-item @if(request()->routeIs('mentee.mentor-videos*')) active @endif">
         <span class="si-icon">🎬</span> Videos
     </a>
-    {{-- <a href="{{ route('mentee.wellness.index') }}" class="sidebar-item @if(request()->routeIs('mentee.wellness*')) active @endif">
-        <span class="si-icon">🏥</span> Wellness Survey
-    </a> --}}
 
-    <div class="sidebar-section-label">Community</div>
-    <a href="{{ route('mentee.community.index') }}" class="sidebar-item @if(request()->routeIs('mentee.community*')) active @endif">
-        <span class="si-icon">💬</span> Channels
-    </a>
-    <a href="{{ route('mentee.jobs') }}" class="sidebar-item @if(request()->routeIs('mentee.jobs*')) active @endif">
-        <span class="si-icon">💼</span> Job Listings
-    </a>
-
-    <div class="sidebar-section-label">Account</div>
-    <a href="{{ route('mentee.plans') }}" class="sidebar-item @if(request()->routeIs('mentee.plans*')) active @endif">
-        <span class="si-icon">⭐</span> Plans
-    </a>
+    <div class="sidebar-section-label">Career</div>
     <a href="{{ route('mentee.career-services.index') }}" class="sidebar-item @if(request()->routeIs('mentee.career-services*')) active @endif">
         <span class="si-icon">📄</span> Career Services
     </a>
     <a href="{{ route('mentee.mock-interviews.index') }}" class="sidebar-item @if(request()->routeIs('mentee.mock-interviews*')) active @endif">
         <span class="si-icon">🎤</span> Mock Interviews
+    </a>
+    <a href="{{ route('mentee.jobs') }}" class="sidebar-item @if(request()->routeIs('mentee.jobs*')) active @endif">
+        <span class="si-icon">💼</span> Job Listings
+    </a>
+
+    <div class="sidebar-section-label">Community</div>
+    <a href="{{ route('mentee.community.index') }}" class="sidebar-item @if(request()->routeIs('mentee.community*')) active @endif">
+        <span class="si-icon">💬</span> Channels
+    </a>
+
+    <div class="sidebar-section-label">Account</div>
+    <a href="{{ route('mentee.plans') }}" class="sidebar-item @if(request()->routeIs('mentee.plans*')) active @endif">
+        <span class="si-icon">⭐</span> Plans
     </a>
     <a href="{{ route('mentee.wallet') }}" class="sidebar-item @if(request()->routeIs('mentee.wallet*')) active @endif">
         <span class="si-icon">💰</span> Wallet

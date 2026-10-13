@@ -9,15 +9,6 @@
         <span class="si-icon">📊</span> Dashboard
     </a>
 
-    <div class="sidebar-section-label">Sessions</div>
-    <a href="{{ route('mentor.sessions') }}" class="sidebar-item @if(request()->routeIs('mentor.sessions*')) active @endif">
-        <span class="si-icon">📅</span> My Sessions
-        @if($pendingCount > 0)<span class="si-badge">{{ $pendingCount }}</span>@endif
-    </a>
-    <a href="{{ route('mentor.availability') }}" class="sidebar-item @if(request()->routeIs('mentor.availability*')) active @endif">
-        <span class="si-icon">⏰</span> Set Availability
-    </a>
-
     <div class="sidebar-section-label">Mentees</div>
     <a href="{{ route('mentor.requests') }}" class="sidebar-item @if(request()->routeIs('mentor.requests*')) active @endif">
         <span class="si-icon">📨</span> Requests
@@ -29,6 +20,17 @@
     <a href="{{ route('mentor.mentees') }}" class="sidebar-item @if(request()->routeIs('mentor.mentees*')) active @endif">
         <span class="si-icon">🎓</span> My Mentees
     </a>
+
+    <div class="sidebar-section-label">Sessions</div>
+    <a href="{{ route('mentor.sessions') }}" class="sidebar-item @if(request()->routeIs('mentor.sessions*')) active @endif">
+        <span class="si-icon">📅</span> My Sessions
+        @if($pendingCount > 0)<span class="si-badge">{{ $pendingCount }}</span>@endif
+    </a>
+    <a href="{{ route('mentor.availability') }}" class="sidebar-item @if(request()->routeIs('mentor.availability*')) active @endif">
+        <span class="si-icon">⏰</span> Set Availability
+    </a>
+
+    <div class="sidebar-section-label">Teaching</div>
     <a href="{{ route('mentor.curriculum.tracks') }}" class="sidebar-item @if(request()->routeIs('mentor.curriculum*')) active @endif">
         <span class="si-icon">🗺️</span> Curriculum
     </a>
@@ -43,6 +45,12 @@
         @endphp
         @if($submissionReviewCount > 0)<span class="si-badge">{{ $submissionReviewCount }}</span>@endif
     </a>
+    <a href="{{ route('mentor.assessments.index') }}" class="sidebar-item @if(request()->routeIs('mentor.assessments*')) active @endif">
+        <span class="si-icon">🧠</span> Assessment Categories
+    </a>
+    <a href="{{ route('mentor.assessment-questions.index') }}" class="sidebar-item @if(request()->routeIs('mentor.assessment-questions*')) active @endif">
+        <span class="si-icon">❓</span> Assessment Questions
+    </a>
 
     <div class="sidebar-section-label">Content</div>
     <a href="{{ route('mentor.videos.index') }}" class="sidebar-item @if(request()->routeIs('mentor.videos*')) active @endif">
@@ -50,14 +58,6 @@
     </a>
     <a href="{{ route('mentor.community') }}" class="sidebar-item @if(request()->routeIs('mentor.community*')) active @endif">
         <span class="si-icon">💬</span> Community
-    </a>
-
-    <div class="sidebar-section-label">Assessments</div>
-    <a href="{{ route('mentor.assessments.index') }}" class="sidebar-item @if(request()->routeIs('mentor.assessments*')) active @endif">
-        <span class="si-icon">🧠</span> Categories
-    </a>
-    <a href="{{ route('mentor.assessment-questions.index') }}" class="sidebar-item @if(request()->routeIs('mentor.assessment-questions*')) active @endif">
-        <span class="si-icon">❓</span> Questions
     </a>
 
     <div class="sidebar-section-label">Account</div>

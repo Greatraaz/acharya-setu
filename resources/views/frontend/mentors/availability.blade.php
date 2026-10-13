@@ -33,7 +33,7 @@
                     Enable a day, then add slots of any length. Example: <strong>09:00–10:00</strong> (60 min) then <strong>10:00–10:30</strong> (30 min). Adjacent times are allowed; overlapping times are not.
                 </p>
 
-                <form action="{{ route('mentor.availability.update') }}" method="POST"
+                <form id="weekly-schedule-form" action="{{ route('mentor.availability.update') }}" method="POST"
                       data-ajax-form="{{ route('mentor.availability.update') }}"
                       data-success="Availability saved successfully!">
                     @csrf
@@ -307,6 +307,50 @@ function removeRange(btn) {
     row.remove();
     reindexRanges(day);
 }
+
+function scheduleProblemMessage() {
+    const days = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+    for (const day of days) {
+        const enabled = document.querySelector(`input[type="checkbox"][name="days[${day}][enabled]"]`);
+        if (!enabled || !enabled.checked) continue;
+        const wrap = document.getElementById('dayslots-' + day);
+        if (!wrap) continue;
+        const label = day.charAt(0).toUpperCase() + day.slice(1);
+        const ranges = [...wrap.querySelectorAll('[data-range-row]')].map((row) => {
+            const times = row.querySelectorAll('input[type="time"]');
+            return { from: (times[0]?.value || '').slice(0, 5), to: (times[1]?.value || '').slice(0, 5) };
+        }).filter((range) => range.from && range.to);
+        for (const range of ranges) {
+            if (range.from >= range.to) {
+                return `This cannot be done. The end time must be after the start time on ${label}.`;
+            }
+        }
+        for (let i = 0; i < ranges.length; i++) {
+            for (let j = i + 1; j < ranges.length; j++) {
+                const a = ranges[i];
+                const b = ranges[j];
+                const same = a.from === b.from && a.to === b.to;
+                const overlaps = a.from < b.to && b.from < a.to;
+                if (same || overlaps) {
+                    return `Overlapping times cannot be allowed on ${label}: ${a.from}–${a.to} and ${b.from}–${b.to}.`;
+                }
+            }
+        }
+    }
+    return '';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('weekly-schedule-form');
+    if (!form) return;
+    form.addEventListener('submit', (e) => {
+        const message = scheduleProblemMessage();
+        if (!message) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (typeof showToast === 'function') showToast('error', message);
+    }, true);
+});
 
 function applyWeekdays() {
     ['monday','tuesday','wednesday','thursday','friday'].forEach(day => {

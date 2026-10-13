@@ -157,6 +157,78 @@ span[class*="rounded-full"] {
     gap: 0.5rem;
 }
 
+/* Desktop: fields share one row, controls fill their column and share one height. */
+@media (min-width: 768px) {
+    form.admin-filter-form {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: flex-end !important;
+        gap: 0.75rem !important;
+    }
+    form.admin-filter-form > div:not(.admin-filter-actions) {
+        flex: 1 1 9.5rem !important;
+        width: auto !important;
+        min-width: 9.5rem !important;
+        max-width: none !important;
+    }
+    form.admin-filter-form > div.admin-filter-search {
+        flex: 1.35 1 12rem !important;
+        min-width: 12rem !important;
+    }
+    form.admin-filter-form > .admin-filter-actions,
+    form.admin-filter-form > button,
+    form.admin-filter-form > a {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        max-width: none !important;
+        margin-left: 0 !important;
+        align-self: flex-end;
+    }
+    form.admin-filter-form > .admin-filter-actions {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+    form.admin-filter-form .relative {
+        width: 100%;
+    }
+    form.admin-filter-form input:not([type="hidden"]),
+    form.admin-filter-form select {
+        display: block;
+        width: 100% !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
+        margin: 0;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        line-height: 40px !important;
+        box-sizing: border-box;
+    }
+    form.admin-filter-form select {
+        padding-right: 2rem !important;
+        background-color: #fff;
+    }
+    form.admin-filter-form > .admin-filter-actions > button,
+    form.admin-filter-form > .admin-filter-actions > a,
+    form.admin-filter-form > button,
+    form.admin-filter-form > a {
+        height: 40px !important;
+        min-height: 40px !important;
+        width: auto !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        line-height: 1 !important;
+        box-sizing: border-box;
+        white-space: nowrap;
+    }
+}
+
 /* Admin page header actions — keep add/create labels on one line */
 main .flex.items-center.justify-between > a.inline-flex,
 main .flex.items-center.justify-between > button.inline-flex,

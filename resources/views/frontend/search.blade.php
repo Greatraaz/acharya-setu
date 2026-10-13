@@ -112,20 +112,31 @@
                     <label class="filter-option"><input type="checkbox" data-filter="exp" value="15+" @checked(in_array('15+', $expSelected, true))> 15+ years</label>
                 </div>
 
+                {{-- Meeting duration --}}
+                <div class="filter-section">
+                    <div class="filter-section-title">Meeting duration</div>
+                    <label class="filter-option"><input type="radio" data-filter="duration" name="duration" value="" @checked(!request()->filled('duration'))> Any</label>
+                    @foreach(\App\Models\ConsultationSession::BOOKING_DURATIONS as $minutes)
+                    <label class="filter-option"><input type="radio" data-filter="duration" name="duration" value="{{ $minutes }}" @checked((string) request('duration') === (string) $minutes)> {{ $minutes }} minutes</label>
+                    @endforeach
+                </div>
+
                 {{-- Session type --}}
                 <div class="filter-section">
                     <div class="filter-section-title">Session Type</div>
-                    <label class="filter-option"><input type="checkbox" data-filter="session_type" value="video"> 🎥 Video Call</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="session_type" value="audio"> 🎙️ Audio Only</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="session_type" value="chat"> 💬 Chat</label>
+                    @php $sessionSelected = (array) request('session_type', []); @endphp
+                    <label class="filter-option"><input type="checkbox" data-filter="session_type" value="video" @checked(in_array('video', $sessionSelected, true))> 🎥 Video Call</label>
+                    <label class="filter-option"><input type="checkbox" data-filter="session_type" value="audio" @checked(in_array('audio', $sessionSelected, true))> 🎙️ Audio Only</label>
+                    <label class="filter-option"><input type="checkbox" data-filter="session_type" value="chat" @checked(in_array('chat', $sessionSelected, true))> 💬 Chat</label>
                 </div>
 
                 {{-- Availability --}}
                 <div class="filter-section">
                     <div class="filter-section-title">Availability</div>
-                    <label class="filter-option"><input type="checkbox" data-filter="availability" value="today"> Available Today</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="availability" value="weekend"> Weekends</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="availability" value="evening"> Evenings (6–10 PM)</label>
+                    @php $availabilitySelected = (array) request('availability', []); @endphp
+                    <label class="filter-option"><input type="checkbox" data-filter="availability" value="today" @checked(in_array('today', $availabilitySelected, true))> Available Today</label>
+                    <label class="filter-option"><input type="checkbox" data-filter="availability" value="weekend" @checked(in_array('weekend', $availabilitySelected, true))> Weekends</label>
+                    <label class="filter-option"><input type="checkbox" data-filter="availability" value="evening" @checked(in_array('evening', $availabilitySelected, true))> Evenings (6–10 PM)</label>
                 </div>
             </div>
 

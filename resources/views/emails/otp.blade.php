@@ -3,6 +3,8 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="color-scheme" content="dark" />
+        <meta name="supported-color-schemes" content="dark" />
         <title>Your OTP — Vedrix</title>
         <style>
             * {
@@ -49,14 +51,16 @@
                 padding: 40px;
             }
             .greeting {
-                font-size: 20px;
+                font-size: 22px;
                 font-weight: 700;
-                margin-bottom: 10px;
+                line-height: 1.35;
+                color: #ffffff !important;
+                margin-bottom: 12px;
             }
             .desc {
-                font-size: 14px;
-                color: #a1a1aa;
-                line-height: 1.75;
+                font-size: 15px;
+                color: #d4d4d8 !important;
+                line-height: 1.7;
                 margin-bottom: 28px;
             }
             .otp-box {
@@ -104,7 +108,7 @@
             }
             .footer p {
                 font-size: 12px;
-                color: #52525b;
+                color: #a1a1aa !important;
                 line-height: 1.7;
             }
             .footer a {
@@ -136,11 +140,11 @@
                 </div>
             </div>
             <div class="body">
-                <div class="greeting">
+                <div class="greeting" style="color:#ffffff;font-size:22px;font-weight:700;line-height:1.35;margin:0 0 12px;">
                     @if($type === 'registration') Verify your email address @elseif($type === 'login') Your login OTP
                     @else Reset your password @endif
                 </div>
-                <p class="desc">
+                <p class="desc" style="color:#d4d4d8;font-size:15px;line-height:1.7;margin:0 0 28px;">
                     @if($type === 'registration') Thanks for signing up! Enter the OTP below to verify your email and
                     complete registration. @elseif($type === 'login') Use this OTP to sign in to your Vedrix
                     account. @else Use this OTP to reset your Vedrix account password. @endif
@@ -157,7 +161,7 @@
                     never ask for your OTP.
                 </div>
 
-                <p style="font-size: 13px; color: #71717a; line-height: 1.7">
+                <p style="font-size: 13px; color: #d4d4d8; line-height: 1.7; margin: 0">
                     If you didn't request this, please ignore this email. Your account is safe.<br /><br />
                     — The Vedrix Team
                 </p>
@@ -168,7 +172,7 @@
                     <a href="{{ config('app.url') }}">vedrix.com</a> &nbsp;|&nbsp;
                     <a href="mailto:hello@vedrix.com">hello@vedrix.com</a>
                 </p>
-                <p style="margin-top: 6px">Bangalore, India 🇮🇳</p>
+                <p style="margin-top: 6px; color: #a1a1aa">Noida, India 🇮🇳</p>
             </div>
         </div>
     </body>

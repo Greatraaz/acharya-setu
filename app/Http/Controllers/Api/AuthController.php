@@ -273,9 +273,6 @@ class AuthController extends Controller
             'phone' => IndianPhone::rules(),
             'gender' => ['nullable', 'in:male,female,other'],
             'preferences' => ['nullable', 'array'],
-            'preferences.notifications' => ['nullable', 'array'],
-            'preferences.notifications.session_reminders' => ['nullable', 'boolean'],
-            'preferences.notifications.product_updates' => ['nullable', 'boolean'],
         ];
 
         if ($user->role === 'mentee') {

@@ -93,55 +93,44 @@ class AvailabilityController extends Controller
             $enabled = ! empty($row['enabled']);
             $ranges = [];
 
-            foreach ($row['ranges'] ?? [] as $range) {
-                $from = $range['from'] ?? null;
-                $to = $range['to'] ?? null;
-                if (! $from || ! $to) {
-                    continue;
+            if ($enabled) {
+                foreach ($row['ranges'] ?? [] as $range) {
+                    $from = $range['from'] ?? null;
+                    $to = $range['to'] ?? null;
+                    if (! $from || ! $to) {
+                        continue;
+                    }
+                    if ($from >= $to) {
+                        throw ValidationException::withMessages([
+                            "days.{$day}.ranges" => 'This cannot be done. The end time must be after the start time on '.ucfirst($day).'.',
+                        ]);
+                    }
+                    $mins = (int) abs(Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to)));
+                    if ($mins < 15) {
+                        throw ValidationException::withMessages([
+                            "days.{$day}.ranges" => "Each slot on {$day} must be at least 15 minutes ({$from}–{$to}).",
+                        ]);
+                    }
+                    if (! in_array($mins, \App\Models\ConsultationSession::BOOKING_DURATIONS, true)) {
+                        throw ValidationException::withMessages([
+                            "days.{$day}.ranges" => "Each slot on {$day} must be exactly 30, 60, 90, or 120 minutes ({$from}–{$to} is {$mins} min).",
+                        ]);
+                    }
+                    $ranges[] = [
+                        'from'     => $from,
+                        'to'       => $to,
+                        'duration' => $mins,
+                    ];
                 }
-                if ($from >= $to) {
-                    throw ValidationException::withMessages([
-                        "days.{$day}.ranges" => "Each slot end time must be after start time for {$day}.",
-                    ]);
-                }
-                $mins = (int) abs(Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to)));
-                if ($mins < 15) {
-                    throw ValidationException::withMessages([
-                        "days.{$day}.ranges" => "Each slot on {$day} must be at least 15 minutes ({$from}–{$to}).",
-                    ]);
-                }
-                if (! in_array($mins, \App\Models\ConsultationSession::BOOKING_DURATIONS, true)) {
-                    throw ValidationException::withMessages([
-                        "days.{$day}.ranges" => "Each slot on {$day} must be exactly 30, 60, 90, or 120 minutes ({$from}–{$to} is {$mins} min).",
-                    ]);
-                }
-                $ranges[] = [
-                    'from'     => $from,
-                    'to'       => $to,
-                    'duration' => $mins,
-                ];
             }
 
             $ranges = $this->uniqueSortedRanges($ranges);
+            $this->assertRangesDoNotOverlap($day, $ranges);
 
             if ($enabled && $ranges === []) {
                 throw ValidationException::withMessages([
                     "days.{$day}.ranges" => "Add at least one time slot for {$day}, or turn the day off.",
                 ]);
-            }
-
-            foreach ($ranges as $i => $a) {
-                foreach ($ranges as $j => $b) {
-                    if ($i >= $j) {
-                        continue;
-                    }
-                    // Adjacent is OK (09:00–10:00 then 10:00–10:30); only reject true overlap
-                    if ($a['from'] < $b['to'] && $b['from'] < $a['to']) {
-                        throw ValidationException::withMessages([
-                            "days.{$day}.ranges" => "Overlapping slots on {$day}: {$a['from']}–{$a['to']} and {$b['from']}–{$b['to']}.",
-                        ]);
-                    }
-                }
             }
 
             $schedule[$day] = [
@@ -159,7 +148,10 @@ class AvailabilityController extends Controller
         $user = auth()->user();
         $kept = [];
         foreach ($schedule as $day => $row) {
-            $kept[$day] = array_column($row['ranges'] ?? [], 'from');
+            $kept[$day] = array_map(
+                fn ($range) => ['from' => $range['from'], 'to' => $range['to']],
+                $row['ranges'] ?? []
+            );
         }
         $this->availabilityService->assertBookedWindowsRemain($user, $kept);
         $prefs = $user->preferences ?? [];
@@ -224,6 +216,30 @@ class AvailabilityController extends Controller
         return back()->with('success', 'Date unblocked.');
     }
 
+    /**
+     * Identical and overlapping windows are rejected. Touching windows (10:00–11:00 then 11:00–11:30) are allowed.
+     *
+     * @param  list<array{from:string,to:string}>  $ranges
+     */
+    private function assertRangesDoNotOverlap(string $day, array $ranges): void
+    {
+        $label = ucfirst($day);
+
+        for ($i = 0; $i < count($ranges); $i++) {
+            for ($j = $i + 1; $j < count($ranges); $j++) {
+                $a = $ranges[$i];
+                $b = $ranges[$j];
+                $same = $a['from'] === $b['from'] && $a['to'] === $b['to'];
+                $overlaps = $a['from'] < $b['to'] && $b['from'] < $a['to'];
+                if ($same || $overlaps) {
+                    throw ValidationException::withMessages([
+                        "days.{$day}.ranges" => "Overlapping times cannot be allowed on {$label}: {$a['from']}–{$a['to']} and {$b['from']}–{$b['to']}.",
+                    ]);
+                }
+            }
+        }
+    }
+
     private function dayKeys(): array
     {
         return ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -248,20 +264,19 @@ class AvailabilityController extends Controller
      */
     private function uniqueSortedRanges(array $ranges): array
     {
-        usort($ranges, fn ($a, $b) => strcmp($a['from'], $b['from']));
-        $unique = [];
-        foreach ($ranges as $range) {
+        usort($ranges, fn ($a, $b) => strcmp($a['from'].$a['to'], $b['from'].$b['to']));
+
+        return array_values(array_map(function ($range) {
             $from = $range['from'];
             $to = $range['to'];
-            $mins = (int) ($range['duration'] ?? Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to)));
-            $unique[$from.'-'.$to] = [
+            $mins = (int) ($range['duration'] ?? abs(Carbon::createFromFormat('H:i', $from)->diffInMinutes(Carbon::createFromFormat('H:i', $to))));
+
+            return [
                 'from'     => $from,
                 'to'       => $to,
                 'duration' => $mins,
             ];
-        }
-
-        return array_values($unique);
+        }, $ranges));
     }
 
     /** Ensure UI always gets ranges[], including legacy from/to schedules. */

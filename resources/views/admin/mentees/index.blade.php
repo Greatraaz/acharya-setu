@@ -59,27 +59,27 @@ $stats = [
 
     {{-- Filters --}}
     <div class="bg-white border border-gray-200 rounded-2xl p-4">
-        <form method="GET" class="admin-filter-form flex flex-wrap items-end gap-3">
-            <div class="flex-1 min-w-48">
+        <form method="GET" class="admin-filter-form">
+            <div class="admin-filter-search">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
                 <div class="relative">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input type="text" name="search" value="{{ request('search') }}"
                            placeholder="Name, email…"
-                           class="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
+                           class="w-full border border-gray-200 rounded-lg pl-9 pr-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
                 </div>
             </div>
 
             <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
                 <div class="relative">
-                    <select name="status" class="border border-gray-200 rounded-xl px-3.5 py-2 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
+                    <select name="status" class="w-full border border-gray-200 rounded-lg pl-3 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer">
                         <option value="">All</option>
                         <option value="active"   {{ request('status') === 'active'   ? 'selected' : '' }}>Active</option>
                         <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                     </select>
-                    <span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                     </span>
                 </div>
             </div>
@@ -87,13 +87,13 @@ $stats = [
             <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">Onboarding</label>
                 <div class="relative">
-                    <select name="onboarded" class="border border-gray-200 rounded-xl px-3.5 py-2 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
+                    <select name="onboarded" class="w-full border border-gray-200 rounded-lg pl-3 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer">
                         <option value="">All</option>
                         <option value="1" {{ request('onboarded') === '1' ? 'selected' : '' }}>Completed</option>
                         <option value="0" {{ request('onboarded') === '0' ? 'selected' : '' }}>Pending</option>
                     </select>
-                    <span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                     </span>
                 </div>
             </div>
@@ -101,13 +101,13 @@ $stats = [
             <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">Mentor Assigned</label>
                 <div class="relative">
-                    <select name="assigned" class="border border-gray-200 rounded-xl px-3.5 py-2 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
+                    <select name="assigned" class="w-full border border-gray-200 rounded-lg pl-3 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer">
                         <option value="">All</option>
                         <option value="yes" {{ request('assigned') === 'yes' ? 'selected' : '' }}>Assigned</option>
                         <option value="no"  {{ request('assigned') === 'no'  ? 'selected' : '' }}>Unassigned</option>
                     </select>
-                    <span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                     </span>
                 </div>
             </div>
@@ -115,19 +115,21 @@ $stats = [
             <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">Plan Subscription</label>
                 <div class="relative">
-                    <select name="subscribed" class="border border-gray-200 rounded-xl px-3.5 py-2 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
+                    <select name="subscribed" class="w-full border border-gray-200 rounded-lg pl-3 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer">
                         <option value="">All</option>
                         <option value="yes" {{ request('subscribed') === 'yes' ? 'selected' : '' }}>Subscribed</option>
                         <option value="no"  {{ request('subscribed') === 'no'  ? 'selected' : '' }}>Not Subscribed</option>
                     </select>
-                    <span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                     </span>
                 </div>
             </div>
 
-            <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">Filter</button>
-            <a href="{{ route('admin.mentees.index') }}" class="text-sm text-gray-500 border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
+            <div class="admin-filter-actions">
+                <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 rounded-lg transition-colors">Filter</button>
+                <a href="{{ route('admin.mentees.index') }}" class="text-sm text-gray-500 border border-gray-200 px-3 rounded-lg hover:bg-gray-50 transition-colors">Reset</a>
+            </div>
         </form>
     </div>
 

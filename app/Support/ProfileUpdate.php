@@ -42,7 +42,7 @@ final class ProfileUpdate
         }
 
         if ($user->role === 'mentee') {
-            foreach (['education_stream', 'college', 'year', 'field', 'career_goals'] as $key) {
+            foreach (['education_stream', 'college', 'year', 'field', 'career_goals', 'location'] as $key) {
                 if (array_key_exists($key, $data)) {
                     $immediate[$key] = $data[$key];
                 }

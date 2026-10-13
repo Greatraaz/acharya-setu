@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\OtpCode;
 use App\Models\User;
+use App\Services\MenteeOnboardingService;
 use App\Support\IndianPhone;
 use App\Support\LoginThrottle;
 use App\Support\ProfileUpdate;
@@ -113,21 +114,22 @@ class LoginController extends Controller
         $rules = [
             'name' => 'required|string|max:100',
             'phone' => IndianPhone::rules(),
-            'gender' => 'nullable|in:male,female,other',
-            'notifications' => 'nullable|array',
-            'notifications.session_reminders' => 'nullable|boolean',
-            'notifications.product_updates' => 'nullable|boolean',
+            'gender' => 'nullable|in:male,female,other,prefer_not_to_say',
         ];
         if ($user->role === 'mentee') {
             $rules = array_merge($rules, [
+                'address' => 'nullable|string|max:200',
                 'education_stream' => 'nullable|string|max:100',
+                'field' => 'nullable|string|max:100',
                 'college' => 'nullable|string|max:200',
                 'year' => 'nullable|string|max:50',
-                'goals' => 'nullable|string|max:500',
+                'tracks' => 'nullable|array',
+                'tracks.*' => 'string|max:100',
                 'preferred_language' => 'nullable|string|max:100',
-                'mentoring_format' => 'nullable|in:video,audio,chat,hybrid',
                 'weekly_time_commitment' => 'nullable|string|max:100',
                 'monthly_budget' => 'nullable|string|max:100',
+                'session_modes' => 'nullable|array',
+                'session_modes.*' => 'in:video,audio,chat,in_person',
             ]);
         }
 
@@ -166,32 +168,27 @@ class LoginController extends Controller
 
     private function profilePayload($user, array $data): array
     {
-        $preferences = [];
-        foreach (['preferred_language', 'mentoring_format', 'weekly_time_commitment', 'monthly_budget'] as $key) {
-            if (array_key_exists($key, $data) && $data[$key] !== null && $data[$key] !== '') {
-                $preferences[$key] = $data[$key];
-            }
-            unset($data[$key]);
+        if (array_key_exists('address', $data)) {
+            $data['location'] = $data['address'];
+            unset($data['address']);
         }
-        if (! empty($data['notifications']) && is_array($data['notifications'])) {
-            $preferences['notifications'] = [
-                'session_reminders' => filter_var($data['notifications']['session_reminders'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'product_updates' => filter_var($data['notifications']['product_updates'] ?? false, FILTER_VALIDATE_BOOLEAN),
-            ];
-        }
-        unset($data['notifications']);
 
-        if (array_key_exists('goals', $data)) {
-            $data['career_goals'] = collect(preg_split('/\s*,\s*/', (string) $data['goals']))
-                ->map(fn ($goal) => trim((string) $goal))
+        if (array_key_exists('tracks', $data) && is_array($data['tracks'])) {
+            $data['career_goals'] = collect($data['tracks'])
+                ->map(fn ($track) => trim((string) $track))
                 ->filter()
                 ->unique()
                 ->values()
                 ->all();
-            unset($data['goals']);
+            unset($data['tracks']);
         }
-        if ($preferences !== []) {
-            $data['preferences'] = $preferences;
+
+        if ($user->role === 'mentee') {
+            $data['preferences'] = app(MenteeOnboardingService::class)->mergePreferences($user, $data);
+        }
+
+        foreach (['preferred_language', 'mentoring_format', 'weekly_time_commitment', 'monthly_budget', 'session_modes'] as $key) {
+            unset($data[$key]);
         }
 
         unset($data['email'], $data['role'], $data['mentor_status'], $data['password']);

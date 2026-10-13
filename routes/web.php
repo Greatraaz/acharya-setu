@@ -537,7 +537,30 @@ Route::middleware('auth')->group(function () {
     })->name('dashboard');
 
     // Profile (shared — lets both roles update basic account info)
-    Route::get( '/account',         fn() => view('account.settings', ['user' => auth()->user()]))->name('account');
+    Route::get('/account', function () {
+        $user = auth()->user();
+        $streams = [];
+        $tracks = [];
+        $preferences = is_array($user->preferences) ? $user->preferences : [];
+
+        if ($user->role === 'mentee') {
+            $onboarding = app(\App\Services\MenteeOnboardingService::class);
+            $catalog = $onboarding->catalogStreams();
+            $streams = $catalog->isNotEmpty()
+                ? $catalog->all()
+                : [
+                    'Technology', 'Business & Management', 'Design & Arts', 'Science & Research',
+                    'Healthcare', 'Law', 'Finance', 'Marketing', 'Operations', 'Other',
+                ];
+            if ($user->education_stream && ! in_array($user->education_stream, $streams, true)) {
+                array_unshift($streams, $user->education_stream);
+            }
+            $preferences = $onboarding->preferencesForForm($preferences);
+            $tracks = $onboarding->menteeTracks($user->id);
+        }
+
+        return view('account.settings', compact('user', 'streams', 'tracks', 'preferences'));
+    })->name('account');
     Route::put( '/account',         [LoginController::class, 'updateAccount'])->name('account.update');
     Route::post('/account/avatar',  [LoginController::class, 'updateAvatar']) ->name('account.avatar');
     Route::delete('/account/avatar',[LoginController::class, 'removeAvatar'])->name('account.avatar.remove');

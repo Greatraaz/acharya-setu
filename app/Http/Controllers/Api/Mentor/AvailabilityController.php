@@ -147,7 +147,13 @@ class AvailabilityController extends Controller
         $mentor = $request->user();
         $kept = [];
         foreach ($d['slots'] as $slot) {
-            $kept[$slot['day_of_week']][] = $slot['start_time'];
+            if (($slot['is_available'] ?? true) === false) {
+                continue;
+            }
+            $kept[$slot['day_of_week']][] = [
+                'from' => $slot['start_time'],
+                'to'   => $slot['end_time'],
+            ];
         }
         $this->availabilityService->assertBookedWindowsRemain($mentor, $kept);
         MentorAvailability::where('mentor_id', $mentor->id)->delete();
@@ -227,6 +233,15 @@ class AvailabilityController extends Controller
             ], 404);
         }
 
+        $turningOff = (bool) $slot->is_available;
+        if ($turningOff && $this->availabilityService->slotHasUpcomingBooking($request->user(), $slot->day_of_week, (string) $slot->start_time)) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'This cannot be done. This slot has a confirmed booking and cannot be changed.',
+            ], 422);
+        }
+
         $slot->update(['is_available' => ! $slot->is_available]);
         $this->availabilityService->syncPreferencesFromTable($request->user());
 
@@ -253,6 +268,14 @@ class AvailabilityController extends Controller
             ], 404);
         }
 
+        if ($this->availabilityService->slotHasUpcomingBooking($request->user(), $slot->day_of_week, (string) $slot->start_time)) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'This cannot be done. This slot has a confirmed booking and cannot be changed.',
+            ], 422);
+        }
+
         $d = $request->validate([
             'day_of_week'  => 'sometimes|string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
             'start_time'   => 'sometimes|string|date_format:H:i',
@@ -265,7 +288,7 @@ class AvailabilityController extends Controller
         $day = $d['day_of_week'] ?? $slot->day_of_week;
         if ($start >= $end) {
             throw ValidationException::withMessages([
-                'end_time' => 'End time must be after start time.',
+                'end_time' => 'This cannot be done. The end time must be after the start time.',
             ]);
         }
         $mins = (int) abs(\Carbon\Carbon::createFromFormat('H:i', $start)->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i', $end)));
@@ -326,7 +349,7 @@ class AvailabilityController extends Controller
             return response()->json([
                 'status'     => false,
                 'statuscode' => 422,
-                'message'    => 'This slot has an upcoming booking. Cancel that session before removing the window.',
+                'message'    => 'This cannot be done. This slot has a confirmed booking and cannot be removed.',
             ], 422);
         }
 
@@ -398,6 +421,14 @@ class AvailabilityController extends Controller
 
     public function destroyAll(Request $request): JsonResponse
     {
+        if ($this->availabilityService->mentorHasUpcomingBooking($request->user())) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'This cannot be done. Availability that contains a confirmed booking cannot be removed.',
+            ], 422);
+        }
+
         $deleted = MentorAvailability::where('mentor_id', $request->user()->id)->delete();
         $this->availabilityService->syncPreferencesFromTable($request->user());
 
@@ -436,7 +467,7 @@ class AvailabilityController extends Controller
             }
             if ($start >= $end) {
                 throw ValidationException::withMessages([
-                    "slots.{$i}.end_time" => 'End time must be after start time.',
+                    "slots.{$i}.end_time" => 'This cannot be done. The end time must be after the start time.',
                 ]);
             }
 
@@ -483,10 +514,11 @@ class AvailabilityController extends Controller
                 for ($j = $i + 1; $j < count($ranges); $j++) {
                     $a = $ranges[$i];
                     $b = $ranges[$j];
-                    // Adjacent OK (10:00 end + 10:00 start); only reject true overlap
-                    if ($a['from'] < $b['to'] && $b['from'] < $a['to']) {
+                    $same = $a['from'] === $b['from'] && $a['to'] === $b['to'];
+                    $overlaps = $a['from'] < $b['to'] && $b['from'] < $a['to'];
+                    if ($same || $overlaps) {
                         throw ValidationException::withMessages([
-                            'slots' => "Overlapping slots on {$day}: {$a['from']}–{$a['to']} and {$b['from']}–{$b['to']}.",
+                            'slots' => "Overlapping times cannot be allowed on {$day}: {$a['from']}–{$a['to']} and {$b['from']}–{$b['to']}.",
                         ]);
                     }
                 }

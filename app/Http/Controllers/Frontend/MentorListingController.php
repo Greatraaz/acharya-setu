@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\SessionReview;
 use App\Services\MentorAvailabilityService;
+use App\Support\MentorBrowseQuery;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -206,6 +207,129 @@ class MentorListingController extends Controller
                 }
             });
         }
+
+        $this->applySessionTypeFilter($query, $request);
+        $this->applyAvailabilityFilter($query, $request);
+
+        $duration = MentorBrowseQuery::durationMinutes($request);
+        if ($duration !== null) {
+            MentorBrowseQuery::whereSupportsDuration($query, $duration);
+        }
+    }
+
+    private function applySessionTypeFilter($query, Request $request): void
+    {
+        $types = array_values(array_intersect(
+            array_filter((array) $request->input('session_type', [])),
+            ['video', 'audio', 'chat']
+        ));
+        if ($types === []) {
+            return;
+        }
+
+        $query->where(function ($q) use ($types) {
+            if (in_array('video', $types, true)) {
+                $q->orWhere(function ($video) {
+                    $video->whereRaw("JSON_CONTAINS(COALESCE(preferences, JSON_OBJECT()), '\"video\"', '$.session_modes')")
+                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.mentoring_format')) IN ('video', 'hybrid', 'one_on_one', 'group')")
+                        ->orWhere(function ($unset) {
+                            $unset->whereRaw("JSON_EXTRACT(preferences, '$.session_modes') IS NULL")
+                                ->where(function ($format) {
+                                    $format->whereRaw("JSON_EXTRACT(preferences, '$.mentoring_format') IS NULL")
+                                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.mentoring_format')) IN ('null', '')");
+                                });
+                        });
+                });
+            }
+            if (in_array('audio', $types, true)) {
+                $q->orWhereRaw("JSON_CONTAINS(COALESCE(preferences, JSON_OBJECT()), '\"audio\"', '$.session_modes')")
+                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.mentoring_format')) = 'audio'");
+            }
+            if (in_array('chat', $types, true)) {
+                $q->orWhereRaw("JSON_CONTAINS(COALESCE(preferences, JSON_OBJECT()), '\"chat\"', '$.session_modes')")
+                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.mentoring_format')) = 'chat'");
+            }
+        });
+    }
+
+    private function applyAvailabilityFilter($query, Request $request): void
+    {
+        $flags = array_values(array_intersect(
+            array_filter((array) $request->input('availability', [])),
+            ['today', 'weekend', 'evening']
+        ));
+        if ($flags === []) {
+            return;
+        }
+
+        $now = Carbon::now('Asia/Kolkata');
+        $query->whereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.accepting_bookings')), 'true') NOT IN ('false', '0')");
+
+        $query->where(function ($outer) use ($flags, $now) {
+            foreach ($flags as $flag) {
+                $outer->orWhere(function ($q) use ($flag, $now) {
+                    if ($flag === 'today') {
+                        $day = strtolower($now->format('l'));
+                        $q->whereRaw(
+                            "JSON_SEARCH(preferences, 'one', ?, NULL, '$.blocked_dates') IS NULL",
+                            [$now->toDateString()]
+                        );
+                        $this->whereHasWindow($q, [$day], $now->copy()->addMinutes(5)->format('H:i:s'));
+
+                        return;
+                    }
+                    if ($flag === 'weekend') {
+                        $this->whereHasWindow($q, ['saturday', 'sunday']);
+
+                        return;
+                    }
+                    $this->whereHasWindow($q, [
+                        'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+                    ], null, true);
+                });
+            }
+        });
+    }
+
+    /**
+     * @param  list<string>  $days
+     */
+    private function whereHasWindow($query, array $days, ?string $endAfter = null, bool $evening = false): void
+    {
+        $query->where(function ($q) use ($days, $endAfter, $evening) {
+            $q->whereExists(function ($sub) use ($days, $endAfter, $evening) {
+                $sub->selectRaw('1')
+                    ->from('mentor_availabilities')
+                    ->whereColumn('mentor_availabilities.mentor_id', 'users.id')
+                    ->where('is_available', true)
+                    ->whereRaw(
+                        'LOWER(day_of_week) IN ('.implode(',', array_fill(0, count($days), '?')).')',
+                        $days
+                    );
+                if ($endAfter) {
+                    $sub->whereRaw('TIME(end_time) > ?', [$endAfter]);
+                }
+                if ($evening) {
+                    $sub->whereRaw("TIME(start_time) < '22:00:00' AND TIME(end_time) > '18:00:00'");
+                }
+            });
+
+            foreach ($days as $day) {
+                $q->orWhere(function ($json) use ($day, $endAfter, $evening) {
+                    $json->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.weekly_schedule.{$day}.enabled')) IN ('true', '1')");
+                    if ($endAfter) {
+                        $json->whereRaw(
+                            "JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.weekly_schedule.{$day}.to')) > ?",
+                            [substr($endAfter, 0, 5)]
+                        );
+                    }
+                    if ($evening) {
+                        $json->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.weekly_schedule.{$day}.from')) < '22:00'")
+                            ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.weekly_schedule.{$day}.to')) > '18:00'");
+                    }
+                });
+            }
+        });
     }
 
     /** @return list<string> */

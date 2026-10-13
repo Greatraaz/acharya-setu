@@ -44,11 +44,13 @@ class MentorAvailabilityService
             }
 
             $daysOut[] = [
-                'date'       => $date->toDateString(),
-                'day'        => $dayKey,
-                'available'  => (bool) ($payload['available'] ?? false),
-                'slot_count' => (int) ($payload['available'] ? max(1, count($slots)) : 0),
-                'label'      => $label,
+                'date'          => $date->toDateString(),
+                'day'           => $dayKey,
+                'available'     => (bool) ($payload['available'] ?? false),
+                'slot_count'    => (int) ($payload['available'] ? max(1, count($slots)) : 0),
+                'label'         => $label,
+                'closed_reason' => $payload['closed_reason'] ?? null,
+                'message'       => $payload['message'] ?? null,
             ];
         }
 
@@ -94,8 +96,21 @@ class MentorAvailabilityService
         $meta = $schedule['days'][$dayKey] ?? null;
         $ranges = ($meta['enabled'] ?? false) ? ($meta['ranges'] ?? []) : [];
 
-        if (! $this->isAcceptingBookings($mentor) || in_array($date, $schedule['blocked_dates'] ?? [], true) || ! $this->withinAdvanceWindow($date, $settings['advance_days'])) {
+        $closedReason = null;
+        $closedMessage = null;
+        if (! $this->isAcceptingBookings($mentor)) {
             $ranges = [];
+            $closedReason = 'not_accepting';
+            $closedMessage = 'This cannot be done. This mentor is not accepting bookings.';
+        } elseif (in_array($date, $schedule['blocked_dates'] ?? [], true)) {
+            $ranges = [];
+            $closedReason = 'blocked';
+            $closedMessage = 'This cannot be done. The mentor is unavailable on that date.';
+        } elseif (! $this->withinAdvanceWindow($date, $settings['advance_days'])) {
+            $ranges = [];
+            $closedReason = 'horizon';
+            $days = (int) $settings['advance_days'];
+            $closedMessage = "This cannot be done. Bookings can only be made up to {$days} days ahead.";
         }
 
         $duration = ($duration !== null && $duration > 0) ? (int) $duration : null;
@@ -135,8 +150,19 @@ class MentorAvailabilityService
             ];
         }
 
-        $starts = $this->excludePastSlots($date, array_column($options, 'start_time'));
-        $starts = $this->excludeShortNotice($date, $starts, $settings['min_notice_hours']);
+        $rawStarts = array_column($options, 'start_time');
+        $afterPast = $this->excludePastSlots($date, $rawStarts);
+        $starts = $this->excludeShortNotice($date, $afterPast, $settings['min_notice_hours']);
+        if ($closedReason === null && $rawStarts !== [] && $starts === []) {
+            if ($afterPast === []) {
+                $closedReason = 'past';
+                $closedMessage = 'That time slot has already passed. Please choose a later time.';
+            } else {
+                $closedReason = 'notice';
+                $hours = (int) $settings['min_notice_hours'];
+                $closedMessage = "This cannot be done. Bookings need at least {$hours} hours notice.";
+            }
+        }
         $options = array_values(array_filter(
             $options,
             fn ($opt) => in_array($opt['start_time'], $starts, true)
@@ -158,7 +184,61 @@ class MentorAvailabilityService
             'label'            => ($meta['enabled'] ?? false) ? ($meta['label'] ?? null) : null,
             'ranges'           => $ranges,
             'free_start'       => false,
+            'closed_reason'    => $closedReason,
+            'message'          => $closedMessage,
+            'min_notice_hours' => (int) $settings['min_notice_hours'],
+            'advance_days'     => (int) $settings['advance_days'],
         ];
+    }
+
+    /**
+     * Why a booking must be refused, or null when the slot can be booked.
+     */
+    public function bookingRefusal(User $mentor, string $date, string $time, int $duration): ?string
+    {
+        $time = substr(trim($time), 0, 5);
+        if (! preg_match('/^\d{2}:\d{2}$/', $time)) {
+            return 'This cannot be done. Choose a valid time.';
+        }
+
+        try {
+            $slotAt = Carbon::createFromFormat('Y-m-d H:i', $date.' '.$time, 'Asia/Kolkata');
+        } catch (\Throwable) {
+            return 'This cannot be done. Choose a valid date and time.';
+        }
+
+        $now = Carbon::now('Asia/Kolkata');
+        if ($slotAt->lessThanOrEqualTo($now)) {
+            return 'That time slot has already passed. Please choose a later time.';
+        }
+
+        $settings = $this->sessionSettings($mentor);
+        $schedule = $this->resolvedSchedule($mentor);
+
+        if (! $this->isAcceptingBookings($mentor)) {
+            return 'This cannot be done. This mentor is not accepting bookings.';
+        }
+        if (in_array($date, $schedule['blocked_dates'] ?? [], true)) {
+            return 'This cannot be done. The mentor is unavailable on that date.';
+        }
+        if (! $this->withinAdvanceWindow($date, $settings['advance_days'])) {
+            $days = (int) $settings['advance_days'];
+
+            return "This cannot be done. Bookings can only be made up to {$days} days ahead.";
+        }
+        if ($settings['min_notice_hours'] > 0 && $slotAt->lt($now->copy()->addHours((int) $settings['min_notice_hours']))) {
+            $hours = (int) $settings['min_notice_hours'];
+
+            return "This cannot be done. Bookings need at least {$hours} hours notice.";
+        }
+        if ($this->excludePastSlots($date, [$time]) === []) {
+            return 'That time slot has already passed. Please choose a later time.';
+        }
+        if (! $this->isSlotOpen($mentor, $date, $time, $duration)) {
+            return 'That slot is not available for a '.$duration.'-minute session. Pick a mentor window that matches this duration exactly.';
+        }
+
+        return null;
     }
 
     public function isSlotOpen(User $mentor, string $date, string $time, ?int $duration = null): bool
@@ -539,6 +619,11 @@ class MentorAvailabilityService
         }
 
         $key = $day->toDateString();
+        if ($this->dateHasUpcomingBooking($mentor, $key)) {
+            throw ValidationException::withMessages([
+                'blocked_date' => 'This cannot be done. That date has a confirmed booking and cannot be blocked.',
+            ]);
+        }
         $prefs = is_array($mentor->preferences) ? $mentor->preferences : [];
         $dates = collect($prefs['blocked_dates'] ?? [])
             ->map(fn ($value) => Carbon::parse($value, 'Asia/Kolkata')->toDateString())
@@ -566,37 +651,77 @@ class MentorAvailabilityService
     }
 
     /**
-     * @param  array<string, list<string>>  $keptStarts  day key (monday or Monday) => start times H:i
+     * @param  array<string, list<array{from:string,to?:string}|string>>  $keptStarts
      */
     public function assertBookedWindowsRemain(User $mentor, array $keptStarts): void
     {
         $normalized = [];
         foreach ($keptStarts as $day => $times) {
-            $normalized[strtolower((string) $day)] = array_map(
-                fn ($time) => substr((string) $time, 0, 5),
-                $times
-            );
+            $key = strtolower((string) $day);
+            foreach ($times as $time) {
+                $normalized[$key][] = is_array($time)
+                    ? [
+                        'from' => substr((string) ($time['from'] ?? ''), 0, 5),
+                        'to'   => substr((string) ($time['to'] ?? ''), 0, 5),
+                    ]
+                    : substr((string) $time, 0, 5);
+            }
         }
 
-        $lost = ConsultationSession::query()
+        $sessions = ConsultationSession::query()
+            ->where('mentor_id', $mentor->id)
+            ->where('scheduled_at', '>', now())
+            ->occupyingSlot()
+            ->get(['scheduled_at', 'duration_minutes']);
+
+        foreach ($sessions as $session) {
+            $at = Carbon::parse($session->scheduled_at)->timezone('Asia/Kolkata');
+            $day = strtolower($at->format('l'));
+            $start = $at->format('H:i');
+            $end = $at->copy()->addMinutes(max(15, (int) ($session->duration_minutes ?: 15)))->format('H:i');
+            $windows = $normalized[$day] ?? [];
+            $kept = false;
+            foreach ($windows as $window) {
+                if (is_string($window)) {
+                    $kept = substr($window, 0, 5) === $start;
+                } else {
+                    $from = substr((string) ($window['from'] ?? ''), 0, 5);
+                    $to = substr((string) ($window['to'] ?? ''), 0, 5);
+                    $kept = $from === $start && ($to === '' || $to === $end);
+                }
+                if ($kept) {
+                    break;
+                }
+            }
+            if (! $kept) {
+                throw ValidationException::withMessages([
+                    'slots' => "This cannot be done. {$at->format('l')} {$start}–{$end} already has a confirmed booking and cannot be changed or removed.",
+                ]);
+            }
+        }
+    }
+
+    public function mentorHasUpcomingBooking(User $mentor): bool
+    {
+        return ConsultationSession::query()
+            ->where('mentor_id', $mentor->id)
+            ->where('scheduled_at', '>', now())
+            ->occupyingSlot()
+            ->exists();
+    }
+
+    public function dateHasUpcomingBooking(User $mentor, string $date): bool
+    {
+        $key = Carbon::parse($date, 'Asia/Kolkata')->toDateString();
+
+        return ConsultationSession::query()
             ->where('mentor_id', $mentor->id)
             ->where('scheduled_at', '>', now())
             ->occupyingSlot()
             ->get(['scheduled_at'])
-            ->filter(function ($session) use ($normalized) {
-                $at = Carbon::parse($session->scheduled_at)->timezone('Asia/Kolkata');
-                $day = strtolower($at->format('l'));
-                $time = $at->format('H:i');
-
-                return ! in_array($time, $normalized[$day] ?? [], true);
+            ->contains(function ($session) use ($key) {
+                return Carbon::parse($session->scheduled_at)->timezone('Asia/Kolkata')->toDateString() === $key;
             });
-
-        if ($lost->isNotEmpty()) {
-            $first = Carbon::parse($lost->first()->scheduled_at)->timezone('Asia/Kolkata');
-            throw ValidationException::withMessages([
-                'slots' => 'Keep the '.$first->format('D H:i').' window. It already has an upcoming booking.',
-            ]);
-        }
     }
 
     public function slotHasUpcomingBooking(User $mentor, string $dayOfWeek, string $startTime): bool
@@ -611,7 +736,7 @@ class MentorAvailabilityService
             ->contains(function ($session) use ($dayOfWeek, $startTime) {
                 $at = Carbon::parse($session->scheduled_at)->timezone('Asia/Kolkata');
 
-                return $at->format('l') === $dayOfWeek && $at->format('H:i') === $startTime;
+                return strcasecmp($at->format('l'), $dayOfWeek) === 0 && $at->format('H:i') === $startTime;
             });
     }
 

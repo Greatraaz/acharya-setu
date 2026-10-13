@@ -13,37 +13,40 @@
             'Overview' => [
                 ['admin.dashboard',         '📊', 'Dashboard'],
             ],
-            'Users' => [
-                ['admin.mentors.index',      '👨‍💼', 'Mentors'],
-                ['admin.mentees.index',     '🎓', 'Mentee'],
+            'People' => [
+                ['admin.mentors.index',          '👨‍💼', 'Mentors'],
+                ['admin.mentees.index',          '🎓', 'Mentees'],
+                ['admin.mentor-approvals.index', '✅', 'Mentor Approvals'],
             ],
-            'Activity' => [
-                ['admin.sessions.index',     '📅', 'Sessions'],
-                ['admin.transactions.index', '🧾', 'Transactions'],
-                ['admin.wallet.index',       '💰', 'Wallet'],
-                ['admin.wallet.add-fund',    '➕', 'Add Fund'],
-                ['admin.offers.index',       '🎁', 'Offers'],
+            'Sessions' => [
+                ['admin.sessions.index',  '📅', 'Sessions'],
+                ['admin.call-logs.index', '📞', 'Call Records'],
+            ],
+            'Finance' => [
+                ['admin.wallet.index',        '💰', 'Wallet'],
+                ['admin.wallet.add-fund',     '➕', 'Add Fund'],
+                ['admin.transactions.index',  '🧾', 'Transactions'],
+                ['admin.withdrawals.index',   '🏦', 'Withdrawals'],
+                ['admin.offers.index',        '🎁', 'Offers'],
+                ['admin.plans.index',         '⭐', 'Premium Plans'],
+                ['admin.subscriptions.index', '📋', 'Subscriptions'],
+            ],
+            'Learning' => [
+                ['admin.curriculum.catalog',         '📚', 'Curriculum Streams'],
+                ['admin.curriculum.streams',         '🗺️', '6-Month Journey Manager'],
+                ['admin.mentee-tasks.index',         '✅', 'Mentee Tasks'],
+                ['admin.quizzes.index',              '🎯', 'Quizzes & MCQs'],
+                ['admin.assessments.index',          '📝', 'Assessment Categories'],
+                ['admin.assessment-questions.index', '❓', 'Assessment Questions'],
+                ['admin.mentor-videos.index',        '🎬', 'Mentor Videos'],
+            ],
+            'Services' => [
                 ['admin.career-services.index', '📄', 'Career Services'],
                 ['admin.mock-interviews.index', '🎤', 'Mock Interviews'],
-                ['admin.mentor-videos.index', '🎬', 'Mentor Videos'],
-                ['admin.withdrawals.index',  '🏦', 'Withdrawals'],
-                ['admin.call-logs.index',  '📞', 'Call Records'],
+                ['admin.jobs.index',            '💼', 'Job Listings'],
             ],
-            'Curriculum' => [
-                ['admin.mentor-approvals.index', '✅', 'Mentor Approvals'],
-                ['admin.curriculum.catalog',    '📚', 'Curriculum Streams'],
-                ['admin.curriculum.streams',    '🗺️', '6-Month Journey Manager'],
-                ['admin.mentee-tasks.index',    '✅', 'Mentee Tasks'],
-            ],
-            'Content' => [
-                ['admin.quizzes.index',      '🎯', 'Quizzes & MCQs'],
-                ['admin.assessments.index',  '📝', 'Assessments Categories'],
-                ['admin.assessment-questions.index',  '❓', 'Assessment Questions'],
-                ['admin.jobs.index',         '💼', 'Job Listings'],
-                // ['admin.wellness.index',     '🧘', 'Wellness Surveys'],
-                ['admin.community.index',    '💬', 'Community Channels'],
-                ['admin.plans.index', '⭐', 'Premium Plans'],
-                ['admin.subscriptions.index', '📋', 'Subscriptions'],
+            'Community' => [
+                ['admin.community.index', '💬', 'Community Channels'],
             ],
             'Utilities' => [
                 'type' => 'group',
@@ -65,11 +68,9 @@
                     return [$route, $item['icon'], $item['label']];
                 })->push(['admin.events-webinars.index', '🎥', 'Events & Webinars'])->values()->all(),
             ],
-            'Configuration' => [
-                ['admin.settings.index',  '⚙️', 'App Settings'],
-            ],
-            'Log Activity' => [
-                ['admin.logs.index',  '📜', 'Logs'],
+            'Settings' => [
+                ['admin.settings.index', '⚙️', 'App Settings'],
+                ['admin.logs.index',     '📜', 'Logs'],
             ],
         ];
         @endphp

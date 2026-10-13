@@ -89,11 +89,11 @@ $stats = [
 
     {{-- Filters --}}
     <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5">
-        <form method="GET" class="admin-filter-form grid grid-cols-1 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-end gap-3">
+        <form method="GET" class="admin-filter-form">
             @if(request('mentor_status'))
             <input type="hidden" name="mentor_status" value="{{ request('mentor_status') }}">
             @endif
-            <div class="sm:col-span-2 xl:flex-1 xl:min-w-48 w-full min-w-0">
+            <div class="admin-filter-search min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
                 <div class="relative">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -103,13 +103,13 @@ $stats = [
                 </div>
             </div>
 
-            <div class="w-full min-w-0">
+            <div class="min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Field</label>
                 <input type="text" name="field" value="{{ request('field') }}" placeholder="Engineering, Design…"
                        class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
             </div>
 
-            <div class="w-full min-w-0">
+            <div class="min-w-0">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Pending Changes</label>
                 <div class="relative">
                     <select name="pending_changes" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 pr-8 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 appearance-none cursor-pointer transition-all">
@@ -122,9 +122,9 @@ $stats = [
                 </div>
             </div>
 
-            <div class="admin-filter-actions sm:col-span-2 flex flex-col sm:flex-row gap-2 xl:ml-auto xl:w-auto">
-                <button type="submit" class="w-full sm:w-auto sm:flex-1 xl:flex-none bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">Filter</button>
-                <a href="{{ route('admin.mentors.index') }}" class="w-full sm:w-auto sm:flex-1 xl:flex-none text-center text-sm text-gray-500 border border-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors whitespace-nowrap">Reset</a>
+            <div class="admin-filter-actions">
+                <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 rounded-xl transition-colors whitespace-nowrap">Filter</button>
+                <a href="{{ route('admin.mentors.index') }}" class="text-center text-sm text-gray-500 border border-gray-200 px-3 rounded-xl hover:bg-gray-50 transition-colors whitespace-nowrap">Reset</a>
             </div>
         </form>
     </div>

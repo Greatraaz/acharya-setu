@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\ConsultationSession;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -33,7 +34,37 @@ class MentorBrowseQuery
             ->when($field !== '', fn (Builder $q) => $q->where('field', 'like', '%'.$field.'%'))
             ->when($request->filled('company'), fn (Builder $q) => $q->where('company', 'like', '%'.$request->input('company').'%'))
             ->when($request->filled('gender'), fn (Builder $q) => $q->where('gender', $request->input('gender')))
-            ->when($request->filled('min_rating'), fn (Builder $q) => $q->where('rating', '>=', (float) $request->input('min_rating')));
+            ->when($request->filled('min_rating'), fn (Builder $q) => $q->where('rating', '>=', (float) $request->input('min_rating')))
+            ->when(self::durationMinutes($request) !== null, function (Builder $q) use ($request) {
+                self::whereSupportsDuration($q, (int) self::durationMinutes($request));
+            });
+    }
+
+    public static function durationMinutes(Request $request): ?int
+    {
+        if (! $request->filled('duration')) {
+            return null;
+        }
+
+        $minutes = (int) $request->input('duration');
+
+        return in_array($minutes, ConsultationSession::BOOKING_DURATIONS, true) ? $minutes : null;
+    }
+
+    public static function whereSupportsDuration(Builder $query, int $minutes): Builder
+    {
+        return $query->where(function (Builder $q) use ($minutes) {
+            $q->whereExists(function ($sub) use ($minutes) {
+                $sub->selectRaw('1')
+                    ->from('mentor_availabilities')
+                    ->whereColumn('mentor_availabilities.mentor_id', 'users.id')
+                    ->where('is_available', true)
+                    ->whereRaw('TIMESTAMPDIFF(MINUTE, TIME(start_time), TIME(end_time)) = ?', [$minutes]);
+            })->orWhereRaw(
+                "CAST(JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.session_length')) AS UNSIGNED) = ?",
+                [$minutes]
+            );
+        });
     }
 
     public static function applySort(Builder $query, string $sort = 'best'): Builder
