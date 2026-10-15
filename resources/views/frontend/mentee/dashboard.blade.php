@@ -63,6 +63,58 @@
             </div>
         </div>
 
+        <div class="card mentee-dash__txn-card">
+            <div class="mentee-dash__card-head">
+                <h3 class="mentee-dash__card-title">Transactions</h3>
+                <a href="{{ route('mentee.wallet') }}" class="mentee-dash__card-link">Wallet →</a>
+            </div>
+            <p class="mentee-dash__txn-note">Wallet activity, plan purchases, Razorpay session payments, and other charges.</p>
+            <div class="table-scroll">
+                <table class="data-table mentee-txn-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Details</th>
+                            <th>Category</th>
+                            <th>Method</th>
+                            <th>Reference</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($transactions as $txn)
+                        <tr>
+                            <td style="white-space:nowrap;">{{ $txn->at?->timezone('Asia/Kolkata')->format('d M Y, h:i A') ?? '—' }}</td>
+                            <td>
+                                @if($txn->url)
+                                    <a href="{{ $txn->url }}" class="mentee-txn-title">{{ $txn->title }}</a>
+                                @else
+                                    <div class="mentee-txn-title">{{ $txn->title }}</div>
+                                @endif
+                                @if($txn->detail)
+                                    <div class="mentee-txn-detail">{{ $txn->detail }}</div>
+                                @endif
+                            </td>
+                            <td>{{ $txn->category }}</td>
+                            <td>{{ $txn->method }}</td>
+                            <td class="mentee-txn-ref">{{ $txn->reference }}</td>
+                            <td class="mentee-txn-amount mentee-txn-amount--{{ $txn->direction }}">
+                                {{ $txn->direction === 'in' ? '+' : '−' }}₹{{ number_format($txn->amount, 2) }}
+                            </td>
+                            <td>{{ $txn->status }}</td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="7" class="mentee-txn-empty">No transactions yet. Wallet top-ups, plans, and session payments will appear here.</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @include('frontend.partials.pagination', ['paginator' => $transactions])
+        </div>
+
         <div class="mentee-dash__panels mentee-dash__panels--2">
             <div class="card mentee-dash__plan-card">
                 <div class="mentee-dash__card-head">
@@ -73,37 +125,8 @@
                 </div>
                 @if($hasPlan)
                 <div class="mentee-dash__plan-name">{{ $plan['plan_name'] }}</div>
-                <div class="mentee-dash__plan-grid">
-                    <div class="mentee-dash__plan-stat">
-                        <span class="mentee-dash__plan-label">Sessions used</span>
-                        <span class="mentee-dash__plan-value">{{ $plan['used'] ?? 0 }}</span>
-                    </div>
-                    <div class="mentee-dash__plan-stat">
-                        <span class="mentee-dash__plan-label">Remaining</span>
-                        <span class="mentee-dash__plan-value">
-                            @if(!empty($plan['unlimited']))
-                                Unlimited
-                            @elseif(isset($plan['remaining']))
-                                {{ $plan['remaining'] }}
-                            @else
-                                —
-                            @endif
-                        </span>
-                    </div>
-                    @if(!empty($plan['limit']) && (int) $plan['limit'] > 0)
-                    <div class="mentee-dash__plan-stat">
-                        <span class="mentee-dash__plan-label">Monthly limit</span>
-                        <span class="mentee-dash__plan-value">{{ $plan['limit'] }}</span>
-                    </div>
-                    @endif
-                </div>
-                @if(($plan['covered'] ?? false) && !empty($plan['unlimited']))
-                <p class="mentee-dash__plan-hint">Included sessions are unlimited on your current plan.</p>
-                @elseif(($plan['covered'] ?? false) && ($plan['remaining'] ?? 0) > 0)
-                <p class="mentee-dash__plan-hint">Book sessions without extra cost while allowance lasts.</p>
-                @elseif(($plan['covered'] ?? false))
-                <p class="mentee-dash__plan-hint">Monthly allowance used — wallet or pay-per-session applies.</p>
-                @endif
+                <p class="mentee-dash__plan-hint" style="margin-top:0;margin-bottom:12px;">Free benefits left on this plan.</p>
+                @include('frontend.mentee.partials.benefit-balance', ['benefitBalance' => $benefitBalance ?? []])
                 @else
                 <div class="mentee-dash__empty mentee-dash__empty--compact">
                     <div class="mentee-dash__empty-icon">📦</div>

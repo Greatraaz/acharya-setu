@@ -118,29 +118,63 @@
 
                 {{-- Reviews --}}
                 <div id="section-reviews" class="hidden">
+                    @php
+                        $reviewCount = $reviews->count();
+                        $score = $reviewCount > 0
+                            ? round((float) $reviews->avg('overall_rating'), 1)
+                            : (float) ($mentor->rating ?? 0);
+                        $filledStars = max(0, min(5, (int) round($score)));
+                    @endphp
                     <div class="card" style="margin-bottom:16px;">
-                        <div style="display:flex;align-items:center;gap:24px;margin-bottom:20px;">
+                        <div style="display:flex;align-items:center;gap:24px;">
                             <div style="text-align:center;">
-                                <div style="font-size:48px;font-weight:900;color:var(--brand);line-height:1;">{{ number_format($mentor->rating ?? 4.9, 1) }}</div>
-                                <div class="stars">★★★★★</div>
-                                <div style="font-size:12px;color:var(--text-2);">{{ $mentor->total_sessions ?? 0 }} reviews</div>
+                                <div style="font-size:48px;font-weight:900;color:var(--brand);line-height:1;">{{ number_format($score, 1) }}</div>
+                                <div class="stars">{{ str_repeat('★', $filledStars) }}{{ str_repeat('☆', 5 - $filledStars) }}</div>
+                                <div style="font-size:12px;color:var(--text-2);">{{ $reviewCount }} {{ \Illuminate\Support\Str::plural('review', $reviewCount) }}</div>
                             </div>
                         </div>
                     </div>
 
-                    @foreach($reviews ?? [] as $review)
+                    @forelse($reviews as $review)
+                    @php
+                        $reviewerName = $review->reviewer->name ?? 'Mentee';
+                        $overall = max(0, min(5, (int) $review->overall_rating));
+                        $detailScores = array_filter([
+                            'Communication' => $review->communication_rating,
+                            'Knowledge' => $review->knowledge_rating,
+                            'Punctuality' => $review->punctuality_rating,
+                            'Helpfulness' => $review->helpfulness_rating,
+                        ], fn ($value) => $value !== null && $value !== '');
+                    @endphp
                     <div class="testimonial-card" style="margin-bottom:12px;">
-                        <div class="stars">{{ str_repeat('★', $review->overall_rating) }}</div>
-                        <p class="testimonial-text">{{ $review->review_text }}</p>
+                        <div class="stars">{{ str_repeat('★', $overall) }}{{ str_repeat('☆', 5 - $overall) }}</div>
+                        @if(filled($review->review_text))
+                        <p class="testimonial-text">“{{ $review->review_text }}”</p>
+                        @endif
+                        @if($detailScores !== [])
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                            @foreach($detailScores as $label => $value)
+                            <span style="font-size:12px;color:var(--text-2);background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:4px 10px;">{{ $label }} {{ (int) $value }}/5</span>
+                            @endforeach
+                        </div>
+                        @endif
                         <div class="testimonial-author">
-                            <div class="author-avatar">{{ strtoupper(substr($review->reviewer->name, 0, 1)) }}</div>
+                            <div class="author-avatar">{{ strtoupper(substr($reviewerName, 0, 1)) }}</div>
                             <div>
-                                <div class="author-name">{{ $review->reviewer->name }}</div>
-                                <div class="author-role">{{ $review->submitted_at?->diffForHumans() }}</div>
+                                <div class="author-name">{{ $reviewerName }}</div>
+                                <div class="author-role">
+                                    {{ $review->submitted_at?->diffForHumans() ?? $review->created_at?->diffForHumans() }}
+                                    @if($review->would_recommend) · Would recommend @endif
+                                </div>
                             </div>
                         </div>
                     </div>
-                    @endforeach
+                    @empty
+                    <div class="card" style="text-align:center;padding:28px 16px;">
+                        <div style="font-size:28px;margin-bottom:8px;">⭐</div>
+                        <p style="font-size:14px;color:var(--text-2);margin:0;">No reviews yet. Feedback from mentees will appear here.</p>
+                    </div>
+                    @endforelse
                 </div>
             </div>
 
@@ -341,6 +375,14 @@ function openSessionPayment(order) {
 }
 
 function launchSessionRzp(order) {
+    const draft = order.booking_draft || {};
+    if (typeof armUnpaidSessionHold === 'function') {
+        armUnpaidSessionHold({
+            mentor_id: draft.mentor_id || document.getElementById('booking-mentor-id')?.value,
+            date: draft.date,
+            time: draft.time,
+        });
+    }
     const options = {
         key: order.key,
         amount: order.amount,
@@ -350,7 +392,14 @@ function launchSessionRzp(order) {
         order_id: order.order_id,
         prefill: order.prefill || {},
         theme: { color: '#f59e0b' },
+        modal: {
+            ondismiss: function () {
+                if (typeof releaseUnpaidSessionHold === 'function') releaseUnpaidSessionHold(false);
+                showToast('info', 'Payment was not completed. That time slot is available again.');
+            },
+        },
         handler: function (response) {
+            if (typeof markSessionPaymentSettled === 'function') markSessionPaymentSettled();
             AjaxPost('{{ route('mentee.sessions.verify') }}', {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
@@ -367,7 +416,8 @@ function launchSessionRzp(order) {
     };
     const rzp = new Razorpay(options);
     rzp.on('payment.failed', function () {
-        showToast('error', 'Payment failed. Your slot hold will expire if unpaid.');
+        if (typeof releaseUnpaidSessionHold === 'function') releaseUnpaidSessionHold(false);
+        showToast('error', 'Payment failed. That time slot is available again.');
     });
     rzp.open();
 }

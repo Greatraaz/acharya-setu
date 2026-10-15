@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Models\PlanInvoice;
 use App\Models\UserSubscription;
+use App\Services\CounsellingBenefitService;
 use App\Services\PlanInvoiceService;
 use Illuminate\Http\Request;
 
@@ -50,8 +51,23 @@ class SubscriptionController extends Controller
     public function show(UserSubscription $subscription)
     {
         $subscription->load(['user', 'plan', 'invoice']);
+        $counselling = $subscription->user
+            ? app(CounsellingBenefitService::class)->snapshot($subscription->user)
+            : null;
 
-        return view('admin.subscriptions.show', compact('subscription'));
+        return view('admin.subscriptions.show', compact('subscription', 'counselling'));
+    }
+
+    public function reconcileCounselling(UserSubscription $subscription)
+    {
+        $user = $subscription->user;
+        if (! $user) {
+            return back()->with('error', 'This subscription has no mentee to reconcile.');
+        }
+
+        $message = app(CounsellingBenefitService::class)->reconcile($user);
+
+        return redirect()->route('admin.subscriptions.show', $subscription)->with('success', $message);
     }
 
     public function generateInvoice(UserSubscription $subscription)

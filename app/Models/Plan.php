@@ -737,6 +737,93 @@ class Plan extends Model
     }
 
     /**
+     * Monthly minute allowance from plan benefits.
+     * -1 means unlimited. Null means the benefit is not included.
+     */
+    public function allowanceMinutes(string $benefitKey, ?string $billing = null): ?int
+    {
+        $key = strtolower(trim($benefitKey));
+        $raw = is_array($this->benefits) ? $this->benefits : [];
+
+        if ($raw !== [] && ! array_is_list($raw)) {
+            $legacyKey = match ($key) {
+                'in_house', 'in_house_mentor' => 'in_house_mentor',
+                'career_counselling', 'counsellor', 'counselling' => 'career_counselling',
+                default => null,
+            };
+            if ($legacyKey && isset($raw[$legacyKey]) && is_array($raw[$legacyKey])) {
+                if (! empty($raw[$legacyKey]['unlimited'])) {
+                    return -1;
+                }
+                $mins = (int) ($raw[$legacyKey]['minutes_per_month'] ?? 0);
+
+                return $mins > 0 ? $mins : null;
+            }
+        }
+
+        $labels = match ($key) {
+            'in_house', 'in_house_mentor' => [
+                'in-house mentor allowance',
+                'in-house mentor',
+                'in house mentor',
+            ],
+            'career_counselling', 'counsellor', 'counselling' => [
+                'career counselling',
+                'counsellor',
+            ],
+            default => [],
+        };
+
+        if ($labels === []) {
+            return null;
+        }
+
+        return self::minutesFromBenefitValue($this->benefitValueMatching($labels, $billing));
+    }
+
+    /**
+     * Parse a minute allowance from benefit text.
+     * Examples: "60 min / month" → 60, "2 hours / month" → 120, "None" → null, "Unlimited" → -1.
+     */
+    public static function minutesFromBenefitValue(?string $value): ?int
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $lower = strtolower($value);
+        if (
+            str_contains($lower, 'paid add-on')
+            || str_contains($lower, 'paid addon')
+            || $lower === 'addon'
+            || $lower === 'none'
+            || $lower === 'n/a'
+            || $lower === '-'
+        ) {
+            return null;
+        }
+
+        if (str_contains($lower, 'unlimited')) {
+            return -1;
+        }
+
+        if (preg_match('/(\d+(?:\.\d+)?)\s*(hours?|hrs?)\b/', $lower, $m)) {
+            $mins = (int) round(((float) $m[1]) * 60);
+
+            return $mins > 0 ? $mins : null;
+        }
+
+        if (preg_match('/(\d+)\s*(?:minutes?|mins?)\b/', $lower, $m)) {
+            $mins = (int) $m[1];
+
+            return $mins > 0 ? $mins : null;
+        }
+
+        return null;
+    }
+
+    /**
      * Max free mock-interview duration (minutes) from plan benefits, or null if paid add-on / unknown.
      * Examples: "1 × 45 min per quarter" → 45, "1 × 45/60 min per quarter" → 60, "1 x 60 min per month" → 60.
      */

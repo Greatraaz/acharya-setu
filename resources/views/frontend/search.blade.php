@@ -442,6 +442,14 @@ function openSessionPayment(order) {
 }
 
 function launchSessionRzp(order) {
+    const draft = order.booking_draft || {};
+    if (typeof armUnpaidSessionHold === 'function') {
+        armUnpaidSessionHold({
+            mentor_id: draft.mentor_id || document.getElementById('booking-mentor-id')?.value,
+            date: draft.date,
+            time: draft.time,
+        });
+    }
     const options = {
         key: order.key,
         amount: order.amount,
@@ -451,7 +459,14 @@ function launchSessionRzp(order) {
         order_id: order.order_id,
         prefill: order.prefill || {},
         theme: { color: '#f59e0b' },
+        modal: {
+            ondismiss: function () {
+                if (typeof releaseUnpaidSessionHold === 'function') releaseUnpaidSessionHold(false);
+                showToast('info', 'Payment was not completed. That time slot is available again.');
+            },
+        },
         handler: function (response) {
+            if (typeof markSessionPaymentSettled === 'function') markSessionPaymentSettled();
             AjaxPost('{{ route('mentee.sessions.verify') }}', {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
@@ -469,7 +484,8 @@ function launchSessionRzp(order) {
     };
     const rzp = new Razorpay(options);
     rzp.on('payment.failed', function () {
-        showToast('error', 'Payment failed. Your slot hold will expire if unpaid.');
+        if (typeof releaseUnpaidSessionHold === 'function') releaseUnpaidSessionHold(false);
+        showToast('error', 'Payment failed. That time slot is available again.');
     });
     rzp.open();
 }

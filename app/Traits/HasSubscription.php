@@ -257,16 +257,7 @@ trait HasSubscription
      */
     public function freeSessionMinutesUsed(): int
     {
-        [$start, $end] = $this->planUsageWindow();
-
-        return (int) ConsultationSession::where('mentee_id', $this->id)
-            ->where('payment_method', 'plan')
-            ->whereBetween('scheduled_at', [$start, $end])
-            ->where(function ($q) {
-                $q->where('status', '!=', ConsultationSession::STATUS_CANCELLED)
-                    ->orWhere('forfeit_plan_benefit', true);
-            })
-            ->sum('duration_minutes');
+        return app(\App\Services\CounsellingBenefitService::class)->countedMinutes($this);
     }
 
     /**

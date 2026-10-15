@@ -13,6 +13,59 @@
    function getCsrf() {
        return document.querySelector('meta[name="csrf-token"]')?.content || "";
    }
+
+   window.pendingSessionHold = null;
+   window.sessionPaymentSettled = false;
+
+   window.armUnpaidSessionHold = function (hold) {
+       if (!hold || !hold.mentor_id || !hold.date || !hold.time) return;
+       window.pendingSessionHold = {
+           mentor_id: hold.mentor_id,
+           date: hold.date,
+           time: String(hold.time).slice(0, 5),
+       };
+       window.sessionPaymentSettled = false;
+   };
+
+   window.markSessionPaymentSettled = function () {
+       window.sessionPaymentSettled = true;
+       window.pendingSessionHold = null;
+   };
+
+   window.releaseUnpaidSessionHold = function (useBeacon) {
+       const hold = window.pendingSessionHold;
+       if (!hold || window.sessionPaymentSettled) return;
+       window.pendingSessionHold = null;
+
+       const body = new FormData();
+       body.append("_token", getCsrf());
+       body.append("mentor_id", hold.mentor_id);
+       body.append("date", hold.date);
+       body.append("time", hold.time);
+
+       const url = "/mentee/sessions/release-hold";
+       if (useBeacon && navigator.sendBeacon) {
+           navigator.sendBeacon(url, body);
+           return;
+       }
+
+       fetch(url, {
+           method: "POST",
+           body,
+           credentials: "same-origin",
+           keepalive: true,
+           headers: { "X-Requested-With": "XMLHttpRequest", Accept: "application/json" },
+       }).finally(() => {
+           if (window.BookingWidget && typeof window.BookingWidget.loadSlots === "function") {
+               window.BookingWidget.loadSlots(hold.date);
+           }
+       });
+   };
+
+   window.addEventListener("pagehide", (event) => {
+       if (event.persisted) return;
+       window.releaseUnpaidSessionHold(true);
+   });
    
    /* ══════════════════════════════════════════════════════════
       GENERIC AJAX FUNCTION

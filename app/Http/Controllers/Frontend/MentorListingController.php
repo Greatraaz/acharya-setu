@@ -94,7 +94,14 @@ class MentorListingController extends Controller
             ->where('slug', $slug)
             ->firstOrFail();
 
-        $reviews = [];
+        $reviews = SessionReview::query()
+            ->where('reviewee_id', $mentor->id)
+            ->where('reviewer_role', 'mentee')
+            ->where('is_public', true)
+            ->with('reviewer:id,name')
+            ->orderByDesc('submitted_at')
+            ->orderByDesc('id')
+            ->get();
         $availabilityOverview = $this->availabilityService->weekOverview(
             $mentor,
             Carbon::now('Asia/Kolkata')->startOfDay(),

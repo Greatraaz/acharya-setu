@@ -216,23 +216,13 @@ class ConsultationSession extends Model
             return true;
         }
 
-        $payload = [
-            'mentee_id'         => $menteeId,
-            'order_id'          => $orderId,
-            'duration_minutes' => $durationMinutes,
-        ];
+        $payload = self::slotHoldPayload($menteeId, $orderId, $durationMinutes);
 
         if (! Cache::add($key, $payload, $ttl)) {
             return false;
         }
 
-        $dayKey = self::slotHoldDayKey($mentorId, $scheduledAt->toDateString());
-        $day = Cache::get($dayKey, []);
-        if (! is_array($day)) {
-            $day = [];
-        }
-        $day[$scheduledAt->format('H:i')] = $payload;
-        Cache::put($dayKey, $day, $ttl);
+        self::rememberDayHold($mentorId, $scheduledAt, $payload, $ttl);
 
         return true;
     }
@@ -264,21 +254,31 @@ class ConsultationSession extends Model
     ): void {
         $scheduledAt = $scheduledAt->copy()->timezone(self::SCHEDULE_TIMEZONE);
         $durationMinutes = max(self::MIN_SLOT_MINUTES, $durationMinutes);
-        $payload = [
-            'mentee_id'         => $menteeId,
-            'order_id'          => $orderId,
-            'duration_minutes' => $durationMinutes,
-        ];
+        $payload = self::slotHoldPayload($menteeId, $orderId, $durationMinutes);
         $ttl = now()->addMinutes(self::PAYMENT_HOLD_MINUTES);
         Cache::put(self::slotHoldCacheKey($mentorId, $scheduledAt), $payload, $ttl);
+        self::rememberDayHold($mentorId, $scheduledAt, $payload, $ttl);
+    }
 
-        $dayKey = self::slotHoldDayKey($mentorId, $scheduledAt->toDateString());
-        $day = Cache::get($dayKey, []);
-        if (! is_array($day)) {
-            $day = [];
-        }
+    /**
+     * @return array{mentee_id:int,order_id:string,duration_minutes:int,expires_at:int}
+     */
+    private static function slotHoldPayload(int $menteeId, string $orderId, int $durationMinutes): array
+    {
+        return [
+            'mentee_id'          => $menteeId,
+            'order_id'           => $orderId,
+            'duration_minutes'   => $durationMinutes,
+            'expires_at'         => now()->addMinutes(self::PAYMENT_HOLD_MINUTES)->getTimestamp(),
+        ];
+    }
+
+    private static function rememberDayHold(int $mentorId, Carbon $scheduledAt, array $payload, \DateTimeInterface $ttl): void
+    {
+        $date = $scheduledAt->toDateString();
+        $day = self::heldDayMap($mentorId, $date);
         $day[$scheduledAt->format('H:i')] = $payload;
-        Cache::put($dayKey, $day, $ttl);
+        Cache::put(self::slotHoldDayKey($mentorId, $date), $day, $ttl);
     }
 
     public static function clearSlotHold(int $mentorId, Carbon $scheduledAt): void
@@ -331,9 +331,45 @@ class ConsultationSession extends Model
     /** @return array<string, array> */
     private static function heldDayMap(int $mentorId, string $date): array
     {
-        $day = Cache::get(self::slotHoldDayKey($mentorId, $date), []);
+        $dayKey = self::slotHoldDayKey($mentorId, $date);
+        $day = Cache::get($dayKey, []);
+        if (! is_array($day)) {
+            return [];
+        }
 
-        return is_array($day) ? $day : [];
+        $now = now()->getTimestamp();
+        $active = [];
+        foreach ($day as $start => $payload) {
+            if (! is_array($payload)) {
+                continue;
+            }
+
+            $expires = (int) ($payload['expires_at'] ?? 0);
+            if ($expires > 0 && $expires <= $now) {
+                continue;
+            }
+
+            try {
+                $scheduledAt = Carbon::parse($date.' '.substr((string) $start, 0, 5), self::SCHEDULE_TIMEZONE);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            $live = Cache::get(self::slotHoldCacheKey($mentorId, $scheduledAt));
+            if (! is_array($live)) {
+                continue;
+            }
+
+            $active[(string) $start] = $live;
+        }
+
+        if ($active === []) {
+            Cache::forget($dayKey);
+        } elseif ($active !== $day) {
+            Cache::put($dayKey, $active, now()->addMinutes(self::PAYMENT_HOLD_MINUTES));
+        }
+
+        return $active;
     }
 
     /**
@@ -741,6 +777,100 @@ class ConsultationSession extends Model
             'cancelled_at'        => now(),
             'cancellation_reason' => $reason,
         ]);
+    }
+
+    /**
+     * Who cancelled, why, and where the refund went. Used on session and wallet screens.
+     *
+     * @return array{
+     *   actor_name: string,
+     *   role: string,
+     *   role_label: string,
+     *   reason: string,
+     *   when: ?string,
+     *   percent: float,
+     *   lines: list<string>,
+     *   wallet_reference: ?string,
+     *   wallet_refunded: float,
+     *   razorpay_refunded: float
+     * }|null
+     */
+    public function cancellationInfo(): ?array
+    {
+        if ($this->status !== self::STATUS_CANCELLED) {
+            return null;
+        }
+
+        $settlement = is_array($this->cancellation_settlement) ? $this->cancellation_settlement : [];
+        $role = (string) ($settlement['cancelled_by_role'] ?? '');
+        if ($role === '' && $this->cancelled_by) {
+            $role = match (true) {
+                (int) $this->cancelled_by === (int) $this->mentor_id => 'mentor',
+                (int) $this->cancelled_by === (int) $this->mentee_id => 'mentee',
+                default => 'admin',
+            };
+        }
+
+        $roleLabel = match ($role) {
+            'mentor' => 'Mentor',
+            'mentee' => 'Mentee',
+            'admin' => 'Admin',
+            default => 'User',
+        };
+
+        $name = trim((string) ($settlement['cancelled_by_name'] ?? $this->cancelledBy?->name ?? ''));
+        if ($name === '') {
+            $name = $roleLabel;
+        }
+
+        $reason = trim((string) ($this->cancellation_reason ?: ($settlement['cancellation_reason'] ?? '')));
+        if ($reason === '') {
+            $reason = 'No reason provided.';
+        }
+
+        $wallet = round((float) ($settlement['wallet_refunded'] ?? 0), 2);
+        $razor = round((float) ($settlement['razorpay_refunded'] ?? 0), 2);
+        $percent = (float) ($settlement['refund_percent'] ?? 0);
+        $razorOk = (bool) ($settlement['razorpay_refund_ok'] ?? true);
+        $lines = [];
+
+        if ($wallet > 0) {
+            $lines[] = '₹'.number_format($wallet, 2).' refunded to the mentee wallet.';
+        }
+        if ($razor > 0 && $razorOk) {
+            $lines[] = '₹'.number_format($razor, 2).' refunded to the original online payment.';
+        } elseif ($razor > 0) {
+            $lines[] = 'Online refund of ₹'.number_format($razor, 2).' did not complete.';
+        }
+        if (! empty($settlement['coupon_restored'])) {
+            $lines[] = 'Coupon restored.';
+        }
+        if (! empty($settlement['plan_benefit_restored'])) {
+            $lines[] = 'Plan benefit restored.';
+        } elseif (! empty($settlement['plan_benefit_forfeited'])) {
+            $lines[] = 'Plan benefit forfeited.';
+        }
+
+        $mentorKept = round((float) ($settlement['mentor_credited'] ?? 0), 2);
+        if ($mentorKept > 0) {
+            $lines[] = 'Mentor kept ₹'.number_format($mentorKept, 2).' after the platform fee.';
+        }
+        if ($lines === []) {
+            $lines[] = 'No payment was taken, so there is no cash refund.';
+        }
+
+        return [
+            'actor_name'         => $name,
+            'role'                => $role,
+            'role_label'          => $roleLabel,
+            'reason'              => $reason,
+            'when'                => $this->cancelled_at?->timezone(self::SCHEDULE_TIMEZONE)->format('D, d M Y · g:i A'),
+            'percent'             => $percent,
+            'lines'               => $lines,
+            'wallet_reference'    => $settlement['wallet_reference'] ?? null,
+            'wallet_refunded'     => $wallet,
+            'razorpay_refunded'   => $razor,
+        ];
     }
 
     /** Mentee may cancel when at least 6 hours remain before start. */

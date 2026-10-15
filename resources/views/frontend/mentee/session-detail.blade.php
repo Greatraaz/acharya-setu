@@ -31,12 +31,16 @@
                             @if($session->canJoinCall())
                                 <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
                             @endif
-                            @if($session->canMenteeCancel())
-                                <button type="button" class="btn btn-outline" style="color:var(--error);" onclick="cancelSession({{ $session->id }})">Cancel</button>
+                            @if($session->status === 'upcoming')
+                                <button type="button" class="btn btn-outline" style="color:var(--error);" onclick="cancelSession({{ $session->id }}, {{ $session->canMenteeCancel() ? 'true' : 'false' }})">Cancel</button>
                             @endif
                         </div>
                     </div>
                 </div>
+
+                @include('frontend.sessions.partials.plan-lapse', ['session' => $session, 'audience' => 'mentee'])
+
+                @include('frontend.sessions.partials.cancellation', ['session' => $session])
 
                 @if($session->agenda)
                 <div class="card session-detail-card">
@@ -97,6 +101,10 @@
                             <span>Amount</span>
                             <strong>₹{{ number_format((float) ($session->amount ?? 0), 0) }}</strong>
                         </div>
+                        <div class="booking-summary-row">
+                            <span>Payment</span>
+                            <strong>{{ $session->payment_status === 'refunded' ? 'Refunded' : ($session->payment_status === 'partially_refunded' ? 'Partially refunded' : $session->paymentMethodLabel()) }}</strong>
+                        </div>
                         @if($session->booking_ref)
                         <div class="booking-summary-row">
                             <span>Ref</span>
@@ -116,7 +124,11 @@
 
 @push('scripts')
 <script>
-function cancelSession(id) {
+function cancelSession(id, allowed) {
+    if (allowed === false) {
+        showToast('error', 'This cannot be done. Sessions can only be cancelled at least 6 hours before the start time.');
+        return;
+    }
     if (!confirm('Cancel this session?\n\n• ≥24 hours before start: full refund (wallet/Razorpay/coupon/plan benefit restored)\n• 6–24 hours before start: 50% refund to wallet/Razorpay only')) return;
     AjaxPost(`/mentee/sessions/${id}`, { reason: 'Cancelled by mentee' }, {
         method: 'DELETE',

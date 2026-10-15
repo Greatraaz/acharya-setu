@@ -117,6 +117,13 @@ class SessionNotificationMail extends Mailable
                 $parts[] = 'Reason: '.$this->session->cancellation_reason;
             }
 
+            $info = $this->session->cancellationInfo();
+            if ($info) {
+                foreach ($info['lines'] as $line) {
+                    $parts[] = $line;
+                }
+            }
+
             return $parts !== [] ? implode(' · ', $parts) : null;
         }
 

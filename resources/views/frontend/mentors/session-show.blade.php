@@ -19,6 +19,7 @@
 
             {{-- Left: Session details --}}
             <div class="session-detail-main">
+                @include('frontend.sessions.partials.plan-lapse', ['session' => $session, 'audience' => 'mentor'])
                 {{-- Header card --}}
                 <div class="card session-detail-card">
                     <div class="session-detail-header-top">
@@ -35,11 +36,13 @@
                             </div>
                         </div>
                         <div class="session-detail-actions">
-                            @if($session->status === 'upcoming' && $session->canJoinCall())
-                                <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
+                            @if($session->status === 'upcoming')
+                                @if($session->canJoinCall())
+                                    <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
+                                @endif
                                 <button class="btn btn-outline" onclick="openMeetingLinkModal()">🔗 Meeting link</button>
                                 <button type="button" class="btn btn-outline" onclick="completeSession({{ $session->id }})">✓ Mark Complete</button>
-                                <button class="btn btn-ghost" style="color:var(--error);" onclick="declineSession({{ $session->id }})">Cancel</button>
+                                <button class="btn btn-ghost" style="color:var(--error);" onclick="openCancelSession({{ $session->id }})">Cancel</button>
                             @elseif($session->status === 'completed')
                                 <span style="font-size:13px;color:var(--success);font-weight:600;">✅ Completed</span>
                             @endif
@@ -99,16 +102,7 @@
                 </div>
                 @endif
 
-                {{-- Cancellation info --}}
-                @if($session->status === 'cancelled')
-                <div class="alert alert-error">
-                    <span class="alert-icon">❌</span>
-                    <div>
-                        <strong>Session Cancelled</strong>
-                        <p style="margin-top:2px;font-size:12px;">{{ $session->cancellation_reason ?? 'No reason provided.' }}</p>
-                    </div>
-                </div>
-                @endif
+                @include('frontend.sessions.partials.cancellation', ['session' => $session])
             </div>
 
             {{-- Right: Mentee info + receipt --}}
@@ -171,11 +165,23 @@
                         </div>
                         <div class="booking-summary-row" style="padding-top:10px;border-top:1px solid var(--border);">
                             <span style="font-weight:700;">Your earnings</span>
-                            <strong style="color:var(--success);">₹{{ number_format($payout['net'], 0) }}</strong>
+                            @if($session->status === 'cancelled')
+                                <strong>₹{{ number_format((float) data_get($session->cancellation_settlement, 'mentor_credited', 0), 0) }}</strong>
+                            @else
+                                <strong style="color:var(--success);">₹{{ number_format($payout['net'], 0) }}</strong>
+                            @endif
                         </div>
                         <div class="booking-summary-row" style="font-size:11px;color:var(--text-3);">
                             <span>Status</span>
-                            <span>{{ $session->status === 'completed' ? '✅ Credited' : '⏳ Pending' }}</span>
+                            <span>
+                                @if($session->status === 'cancelled')
+                                    Cancelled — mentee refunded
+                                @elseif($session->status === 'completed')
+                                    ✅ Credited
+                                @else
+                                    ⏳ Pending
+                                @endif
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -213,6 +219,7 @@
         </div>
     </div>
 </div>
+@include('frontend.mentors.partials.cancel-session-modal')
 @endsection
 
 @push('scripts')
@@ -225,13 +232,7 @@ function acceptSession(id) {
     });
 }
 function declineSession(id) {
-    confirm('Decline this session?', () => {
-        AjaxPost(`/mentor/sessions/${id}/cancel`, {}, {
-            loader: true,
-            onSuccess: () => { showToast('info', 'Session declined.'); location.href = '{{ route("mentor.sessions") }}'; },
-            onError: () => showToast('error', 'Could not decline.')
-        });
-    }, { title: 'Decline session?', confirmText: 'Yes, decline', danger: true });
+    openCancelSession(id);
 }
 function openMeetingLinkModal() {
     openModal('meeting-link-modal');

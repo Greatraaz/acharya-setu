@@ -153,25 +153,70 @@ class WalletTransactionController extends Controller
 
     public function adjust(Request $request, string $type, int $id)
     {
-        $request->validate([
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'action'      => 'required|in:credit,debit',
             'amount'      => 'required|numeric|min:0.01',
             'description' => 'required|string|max:255',
+        ], [
+            'amount.min'     => 'Amount must be greater than zero. A negative adjustment is not allowed.',
+            'amount.numeric' => 'Enter a valid amount. A negative adjustment is not allowed.',
         ]);
 
         $user = $this->resolveWalletUser($type, $id);
 
+        if ($validator->fails()) {
+            $message = $validator->errors()->first();
+            ActivityLogger::record(
+                'wallet_adjustment_rejected',
+                "Rejected wallet adjustment for {$user->name}. {$message}",
+                'wallet',
+                'warning'
+            );
+
+            return back()->withInput()->withErrors($validator)->with('error', $message);
+        }
+
+        $amount = round((float) $request->amount, 2);
+
+        if ($request->action === 'debit' && $amount > (float) $user->wallet_balance) {
+            $message = 'This debit would make the wallet negative. Available balance is ₹'
+                .number_format((float) $user->wallet_balance, 2)
+                .'. No ledger entry was created.';
+            ActivityLogger::record(
+                'wallet_adjustment_rejected',
+                "Rejected debit of ₹{$amount} for {$user->name} ({$user->email}). {$message}",
+                'wallet',
+                'warning'
+            );
+
+            return back()->withInput()->with('error', $message);
+        }
+
         try {
             $this->walletService->{$request->action}(
                 $user,
-                (float) $request->amount,
+                $amount,
                 $request->description,
                 ['performed_by' => Auth::id()]
             );
 
+            ActivityLogger::record(
+                'wallet_adjusted',
+                ucfirst($request->action)." ₹{$amount} on {$user->name}'s wallet. {$request->description}",
+                'wallet',
+                'info'
+            );
+
             return back()->with('success', 'Wallet adjusted successfully.');
-        } catch (\Exception $e) {
-            return back()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            ActivityLogger::record(
+                'wallet_adjustment_rejected',
+                "Rejected {$request->action} of ₹{$amount} for {$user->name}. {$e->getMessage()}",
+                'wallet',
+                'warning'
+            );
+
+            return back()->withInput()->with('error', $e->getMessage());
         }
     }
 

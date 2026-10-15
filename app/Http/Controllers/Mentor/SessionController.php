@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Mentor;
 
 use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
+use App\Services\CounsellingBenefitService;
 use App\Services\SessionCancellationService;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
@@ -20,7 +21,7 @@ class SessionController extends Controller
         ConsultationSession::expireMissedSessions($mentorId);
 
         $query = ConsultationSession::where('mentor_id', $mentorId)
-            ->with('mentee')
+            ->with(['mentee', 'cancelledBy:id,name'])
             ->latest('scheduled_at');
 
         $filter = $request->input('filter', $request->input('status', 'all'));
@@ -43,8 +44,11 @@ class SessionController extends Controller
         }
 
         $sessions = $query->paginate(15)->withQueryString();
+        $benefits = app(CounsellingBenefitService::class);
+        $benefits->annotate($sessions->getCollection());
+        $inHouseHistory = $benefits->mentorHistory(auth()->user());
 
-        return view('frontend.mentors.sessions', compact('sessions', 'filter', 'search'));
+        return view('frontend.mentors.sessions', compact('sessions', 'filter', 'search', 'inHouseHistory'));
     }
 
     public function show(int $id)
@@ -52,13 +56,18 @@ class SessionController extends Controller
         ConsultationSession::expireMissedSessions(auth()->id());
 
         $session = ConsultationSession::where('mentor_id', auth()->id())
-            ->with(['mentee', 'notes', 'menteeReview'])
+            ->with(['mentee', 'notes', 'menteeReview', 'cancelledBy:id,name'])
             ->findOrFail($id);
+        app(CounsellingBenefitService::class)->annotate(collect([$session]));
         return view('frontend.mentors.session-show', compact('session'));
     }
 
     public function cancel(int $id, Request $request)
     {
+        $data = $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
         $session = ConsultationSession::where('mentor_id', auth()->id())
             ->where('status', ConsultationSession::STATUS_UPCOMING)
             ->findOrFail($id);
@@ -68,7 +77,7 @@ class SessionController extends Controller
                 $session,
                 auth()->user(),
                 SessionCancellationService::ROLE_MENTOR,
-                $request->input('reason')
+                $data['reason']
             );
         } catch (InvalidArgumentException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

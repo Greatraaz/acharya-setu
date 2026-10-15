@@ -90,7 +90,9 @@
                         ['Scheduled', ($st?->format('D, d M Y · H:i') ?? '—').' – '.($se?->format('H:i') ?? '—').' ('.$tz.')'],
                         ['Duration', $session->duration_minutes.' minutes'],
                         ['Amount', $amountLabel],
-                        ['Mentor earned', $payout['list_amount'] > 0 ? '₹'.number_format($payout['net'], 0).' (after '.(int) round($payout['fee_rate'] * 100).'% fee)' : '—'],
+                        ['Mentor earned', $session->status === 'cancelled'
+                            ? '₹'.number_format((float) data_get($session->cancellation_settlement, 'mentor_credited', 0), 0).' (cancelled)'
+                            : ($payout['list_amount'] > 0 ? '₹'.number_format($payout['net'], 0).' (after '.(int) round($payout['fee_rate'] * 100).'% fee)' : '—')],
                         ['Payment method', $session->paymentMethodLabel()],
                         ['Provider', ucfirst($session->meeting_provider ?? 'Not set')],
                     ] as [$label, $value])
@@ -130,11 +132,20 @@
                 @endif
 
                 @if($session->status === 'cancelled')
+                @php $cancelInfo = $session->cancellationInfo(); @endphp
                 <div class="mt-4 p-4 bg-red-50 rounded-xl border border-red-100">
-                    <div class="text-xs text-red-600 font-semibold uppercase tracking-wide mb-1">Cancellation Details</div>
-                    <p class="text-sm text-gray-700">Cancelled by <strong>{{ $session->cancelledBy?->name ?? 'Admin' }}</strong> on {{ $session->cancelled_at?->format('d M Y H:i') }}</p>
-                    @if($session->cancellation_reason)
-                    <p class="text-sm text-gray-600 mt-1">Reason: {{ $session->cancellation_reason }}</p>
+                    <div class="text-xs text-red-600 font-semibold uppercase tracking-wide mb-1">Cancellation & refund</div>
+                    @if($cancelInfo)
+                    <p class="text-sm text-gray-700">Cancelled by <strong>{{ $cancelInfo['actor_name'] }}</strong> ({{ $cancelInfo['role_label'] }})@if($cancelInfo['when']) on {{ $cancelInfo['when'] }}@endif</p>
+                    <p class="text-sm text-gray-600 mt-1">Reason: {{ $cancelInfo['reason'] }}</p>
+                    <ul class="mt-2 space-y-1 text-sm text-gray-700">
+                        @foreach($cancelInfo['lines'] as $line)
+                        <li>{{ $line }}</li>
+                        @endforeach
+                    </ul>
+                    @if($cancelInfo['wallet_reference'])
+                    <p class="text-xs text-gray-500 mt-2">Wallet transaction {{ $cancelInfo['wallet_reference'] }}</p>
+                    @endif
                     @endif
                 </div>
                 @endif
@@ -387,14 +398,17 @@
 </div>
 
 {{-- Cancel modal --}}
-<div id="cancel-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+<div id="cancel-modal" class="{{ $errors->has('reason') ? '' : 'hidden' }} fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
         <h3 class="text-base font-bold text-gray-900 mb-1">Cancel Session</h3>
-        <p class="text-sm text-gray-500 mb-4">This action cannot be undone. Please provide a reason.</p>
+        <p class="text-sm text-gray-500 mb-4">The mentee receives a full refund in their wallet, including any amount paid online. A reason is optional.</p>
         <form method="POST" action="{{ route('admin.sessions.cancel', $session) }}">
             @csrf
-            <textarea name="reason" rows="3" placeholder="Reason for cancellation (optional)…"
-                      class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 resize-none mb-4"></textarea>
+            <textarea name="reason" rows="3" maxlength="500" placeholder="Why is this session being cancelled? (optional)"
+                      class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 resize-none mb-2">{{ old('reason') }}</textarea>
+            @error('reason')
+            <p class="text-xs text-red-600 mb-3">{{ $message }}</p>
+            @enderror
             <div class="flex gap-3">
                 <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
                     Cancel Session

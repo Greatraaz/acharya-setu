@@ -430,6 +430,7 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     // Book a session (called from mentor profile / search)
     Route::post('/sessions',          [BookingController::class, 'store'])       ->name('sessions.book');
     Route::post('/sessions/verify-payment', [BookingController::class, 'verifyPayment'])->name('sessions.verify');
+    Route::post('/sessions/release-hold', [BookingController::class, 'releaseHold'])->name('sessions.release-hold');
     Route::get( '/sessions/{id}/review', [BookingController::class, 'reviewForm'])->name('sessions.review');
     Route::post('/sessions/{id}/review', [BookingController::class, 'submitReview'])->name('sessions.review.post');
 
@@ -849,6 +850,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('subscriptions',                        [SubscriptionController::class, 'index'])->name('subscriptions.index');
     Route::get('subscriptions/{subscription}',         [SubscriptionController::class, 'show'])->name('subscriptions.show');
     Route::post('subscriptions/{subscription}/invoice',[SubscriptionController::class, 'generateInvoice'])->name('subscriptions.invoice');
+    Route::post('subscriptions/{subscription}/reconcile-counselling', [SubscriptionController::class, 'reconcileCounselling'])->name('subscriptions.reconcile-counselling');
     Route::get('invoices',                             [AdminInvoiceController::class, 'index'])->name('invoices.index');
     Route::get('invoices/{invoice}',                   [AdminInvoiceController::class, 'show'])->name('invoices.show');
     Route::get('invoices/{invoice}/print',             [AdminInvoiceController::class, 'print'])->name('invoices.print');

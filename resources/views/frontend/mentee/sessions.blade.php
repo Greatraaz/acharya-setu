@@ -97,8 +97,18 @@
                         <span>🕐 {{ $session->scheduled_at?->format('g:i A') ?? '—' }}</span>
                         <span>⏱ {{ $session->duration_minutes ?? 30 }} min</span>
                         <span class="session-card-meta__price">💰 ₹{{ number_format((float) ($session->amount ?? 0), 0) }}</span>
-                        <span>{{ $session->paymentMethodLabel() }}</span>
+                        <span>{{ $session->payment_status === 'refunded' ? 'Refunded' : ($session->payment_status === 'partially_refunded' ? 'Partially refunded' : $session->paymentMethodLabel()) }}</span>
                     </div>
+                    @include('frontend.sessions.partials.plan-lapse', ['session' => $session, 'audience' => 'mentee'])
+                    @php $cancelInfo = $statusKey === 'cancelled' ? $session->cancellationInfo() : null; @endphp
+                    @if($cancelInfo)
+                    <div class="session-card-notes">
+                        Cancelled by {{ $cancelInfo['actor_name'] }} ({{ $cancelInfo['role_label'] }}). {{ $cancelInfo['reason'] }}
+                        @foreach($cancelInfo['lines'] as $line)
+                            {{ $line }}
+                        @endforeach
+                    </div>
+                    @endif
                     @if($session->agenda ?? $session->topic_notes ?? false)
                     <div class="session-card-notes">
                         📝 <em>{{ Str::limit($session->agenda ?? $session->topic_notes, 120) }}</em>
@@ -114,8 +124,8 @@
                     @if($session->canJoinCall())
                         <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">🎥 Join</a>
                     @endif
-                    @if($canCancel)
-                        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="cancelSession({{ $session->id }})">Cancel</button>
+                    @if($statusKey === 'upcoming')
+                        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="cancelSession({{ $session->id }}, {{ $canCancel ? 'true' : 'false' }})">Cancel</button>
                     @endif
                     @if($statusKey === 'completed' && ($session->can_review ?? true))
                         <a href="{{ route('mentee.sessions.review', $session->id) }}" class="btn btn-ghost btn-sm">⭐ Review</a>
@@ -157,7 +167,11 @@
 
 @push('scripts')
 <script>
-function cancelSession(id) {
+function cancelSession(id, allowed) {
+    if (allowed === false) {
+        showToast('error', 'This cannot be done. Sessions can only be cancelled at least 6 hours before the start time.');
+        return;
+    }
     if (!confirm('Cancel this session?\n\n• ≥24 hours before start: full refund (wallet/Razorpay/coupon/plan benefit restored)\n• 6–24 hours before start: 50% refund to wallet/Razorpay only')) return;
     AjaxPost(`/mentee/sessions/${id}`, { reason: 'Cancelled by mentee' }, {
         method: 'DELETE',

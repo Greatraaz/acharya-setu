@@ -55,6 +55,10 @@ class SessionBookingService
         }
         $planAllowance = $mentee->planSessionAllowance($duration);
         $coveredByPlan = $baseAmount > 0 && ($planAllowance['covered'] ?? false);
+        $activeSub = $mentee->activeSubscription();
+        if ($coveredByPlan && $activeSub?->expires_at && $scheduledAt->gt($activeSub->expires_at)) {
+            $coveredByPlan = false;
+        }
 
         $couponDiscount = 0.0;
         $appliedOffer = null;

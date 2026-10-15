@@ -130,6 +130,8 @@
         <div class="p-5">
             <form method="POST"
                   action="{{ route('admin.wallet.adjust', [$user->role === 'admin' ? 'admin' : 'customer', $user->id]) }}"
+                  data-balance="{{ number_format((float) $user->wallet_balance, 2, '.', '') }}"
+                  onsubmit="return guardWalletAdjustment(this)"
                   class="flex flex-wrap items-end gap-3 min-w-0">
                 @csrf
 
@@ -137,8 +139,8 @@
                     <label class="text-xs font-medium text-gray-600">Action</label>
                     <select name="action"
                         class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="credit">Credit</option>
-                        <option value="debit">Debit</option>
+                        <option value="credit" @selected(old('action', 'credit') === 'credit')>Credit</option>
+                        <option value="debit" @selected(old('action') === 'debit')>Debit</option>
                     </select>
                 </div>
 
@@ -146,14 +148,15 @@
                     <label class="text-xs font-medium text-gray-600">Amount (₹)</label>
                     <div class="relative">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">₹</span>
-                        <input type="number" name="amount" step="0.01" min="0.01" required
+                        <input type="number" name="amount" step="0.01" min="0.01" required value="{{ old('amount') }}"
                             class="w-full text-sm border border-gray-200 rounded-lg pl-7 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
+                    <p class="text-[11px] text-gray-400">Debit cannot exceed ₹{{ number_format((float) $user->wallet_balance, 2) }}. Negative amounts are rejected.</p>
                 </div>
 
                 <div class="flex flex-col gap-1 flex-1 min-w-[200px]">
                     <label class="text-xs font-medium text-gray-600">Reason</label>
-                    <input type="text" name="description" required placeholder="Reason for adjustment"
+                    <input type="text" name="description" required placeholder="Reason for adjustment" value="{{ old('description') }}"
                         class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
 
@@ -281,4 +284,20 @@
     </div>
 
 </div>
+<script>
+function guardWalletAdjustment(form) {
+    const amount = Number(form.amount.value);
+    const balance = Number(form.dataset.balance || 0);
+    if (!(amount > 0)) {
+        alert('Amount must be greater than zero. A negative adjustment is not allowed.');
+        return false;
+    }
+    const action = form.elements.namedItem('action').value;
+    if (action === 'debit' && amount > balance + 0.001) {
+        alert('This debit would make the wallet negative. Available balance is ₹' + balance.toFixed(2) + '. No ledger entry will be created.');
+        return false;
+    }
+    return true;
+}
+</script>
 @endsection

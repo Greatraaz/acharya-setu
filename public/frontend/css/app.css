@@ -6369,7 +6369,7 @@
        transform: translateY(-1px);
        box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35);
    }
-   .session-detail-meta {
+   .session-detail-banner .session-detail-meta {
        display: flex;
        flex-wrap: wrap;
        gap: 18px;
@@ -8537,6 +8537,43 @@
        min-width: 0;
        overflow-x: hidden;
    }
+   .mentee-dash__txn-card {
+       margin-bottom: 24px;
+   }
+   .mentee-dash__txn-note {
+       margin: -6px 0 14px;
+       font-size: 13px;
+       color: var(--text-2);
+   }
+   .mentee-txn-title {
+       font-weight: 650;
+       color: var(--text);
+       text-decoration: none;
+   }
+   a.mentee-txn-title:hover {
+       color: var(--brand);
+   }
+   .mentee-txn-detail,
+   .mentee-txn-ref {
+       font-size: 12px;
+       color: var(--text-2);
+       word-break: break-word;
+   }
+   .mentee-txn-amount {
+       font-weight: 700;
+       white-space: nowrap;
+   }
+   .mentee-txn-amount--in {
+       color: var(--success);
+   }
+   .mentee-txn-amount--out {
+       color: var(--error);
+   }
+   .mentee-txn-empty {
+       text-align: center;
+       color: var(--text-2);
+       padding: 28px 12px !important;
+   }
    .mentee-dash__header {
        display: flex;
        justify-content: space-between;
@@ -8710,6 +8747,99 @@
        color: var(--text-3);
        margin: 14px 0 0;
        line-height: 1.45;
+   }
+   .mentee-benefits {
+       list-style: none;
+       margin: 0;
+       padding: 0;
+       display: grid;
+       gap: 10px;
+   }
+   .mentee-benefits__item {
+       padding: 10px 12px;
+       border: 1px solid var(--border);
+       border-radius: 12px;
+   }
+   .mentee-benefits__top {
+       display: flex;
+       justify-content: space-between;
+       align-items: flex-start;
+       gap: 10px;
+   }
+   .mentee-benefits__label {
+       font-size: 13px;
+       font-weight: 700;
+       color: var(--text);
+   }
+   .mentee-benefits__left {
+       font-size: 13px;
+       font-weight: 700;
+       color: var(--text);
+       text-align: right;
+   }
+   .mentee-benefits__status {
+       display: inline-block;
+       margin-top: 6px;
+       font-size: 11px;
+       font-weight: 700;
+       padding: 2px 8px;
+       border-radius: 999px;
+   }
+   .mentee-benefits__status--available {
+       background: #ecfdf3;
+       color: #15803d;
+   }
+   .mentee-benefits__status--used,
+   .mentee-benefits__status--addon {
+       background: #f3f4f6;
+       color: #6b7280;
+   }
+   .mentee-benefits__status--next_free {
+       background: #fff7ed;
+       color: #c2410c;
+   }
+   .mentee-benefits__msg {
+       margin: 6px 0 0;
+       font-size: 12px;
+       color: var(--text-3);
+       line-height: 1.4;
+   }
+   .mentee-benefits__history {
+       margin-top: 8px;
+       display: grid;
+       gap: 6px;
+   }
+   .mentee-benefits__history-label {
+       font-size: 11px;
+       font-weight: 700;
+       letter-spacing: 0.04em;
+       text-transform: uppercase;
+       color: var(--text-3);
+   }
+   .mentee-benefits__history-row {
+       display: flex;
+       justify-content: space-between;
+       gap: 8px;
+       font-size: 12px;
+       color: var(--text-2);
+       line-height: 1.4;
+   }
+   .mentee-benefits__history-flag {
+       flex-shrink: 0;
+       font-size: 11px;
+       font-weight: 700;
+   }
+   .mentee-benefits__history-flag.is-counted { color: #15803d; }
+   .mentee-benefits__history-flag.is-open { color: #c2410c; }
+   .plan-lapse-note {
+       margin-top: 8px;
+       font-size: 12px;
+       line-height: 1.45;
+       color: #9a3412;
+       background: #fff7ed;
+       border: 1px solid #fed7aa;
+       border-radius: 8px;
+       padding: 8px 10px;
    }
    .mentee-dash__agenda {
        list-style: none;

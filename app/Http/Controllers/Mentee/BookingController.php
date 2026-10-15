@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
 use App\Services\SessionBookingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class BookingController extends Controller
 {
@@ -69,6 +70,31 @@ class BookingController extends Controller
         return response()->json(array_merge($payload, [
             'redirect' => route('mentee.sessions'),
         ]), $result['http']);
+    }
+
+    public function releaseHold(Request $request)
+    {
+        $data = $request->validate([
+            'mentor_id' => 'required|integer',
+            'date'      => 'required|date',
+            'time'      => 'required|string|max:8',
+        ]);
+
+        $scheduledAt = Carbon::parse(
+            $data['date'].' '.substr($data['time'], 0, 5),
+            ConsultationSession::SCHEDULE_TIMEZONE
+        );
+
+        $released = ConsultationSession::releaseOwnUnpaidHold(
+            (int) auth()->id(),
+            (int) $data['mentor_id'],
+            $scheduledAt
+        );
+
+        return response()->json([
+            'ok'       => true,
+            'released' => $released > 0,
+        ]);
     }
 
     public function reviewForm(int $id)

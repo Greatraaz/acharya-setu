@@ -46,6 +46,10 @@
                     <button type="submit" class="btn btn-ghost btn-sm">Cancel plan</button>
                 </form>
             </div>
+            <div style="margin-top:16px;">
+                <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">Free benefits left</div>
+                @include('frontend.mentee.partials.benefit-balance', ['benefitBalance' => $benefitBalance ?? []])
+            </div>
         </div>
         @endif
 

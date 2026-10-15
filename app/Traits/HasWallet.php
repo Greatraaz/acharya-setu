@@ -68,16 +68,30 @@ trait HasWallet
     private function recordTransaction(string $type, float $amount, string $description, array $options): WalletTransaction
     {
         return DB::transaction(function () use ($type, $amount, $description, $options) {
+            $amount = round($amount, 2);
+            if ($amount <= 0) {
+                throw new \InvalidArgumentException('Amount must be greater than zero. A negative adjustment is not allowed.');
+            }
+
             // Lock row to prevent race conditions
             $this->newQuery()->lockForUpdate()->find($this->id);
             $this->refresh();
 
             $balanceBefore = $this->wallet_balance;
+            $outgoing = in_array($type, ['debit', 'transfer_out'], true);
 
-            if (in_array($type, ['credit', 'refund', 'transfer_in'])) {
-                $this->increment('wallet_balance', $amount);
-            } else {
+            if ($outgoing && $balanceBefore < $amount) {
+                throw new \RuntimeException(
+                    'This debit would make the wallet negative. Available balance is ₹'
+                    .number_format($balanceBefore, 2)
+                    .'. No ledger entry was created.'
+                );
+            }
+
+            if ($outgoing) {
                 $this->decrement('wallet_balance', $amount);
+            } else {
+                $this->increment('wallet_balance', $amount);
             }
 
             $this->refresh();

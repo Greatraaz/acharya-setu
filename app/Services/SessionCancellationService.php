@@ -15,9 +15,12 @@ use InvalidArgumentException;
  * Cancel consultation sessions and settle refunds / mentor retention.
  *
  * Policy:
- * - Mentor or admin cancel → 100% refund to original payment sources; restore coupon;
- *   plan free minutes auto-return (session cancelled without forfeit).
- * - Mentee cancel ≥ 24h before start → same as full refund.
+ * - Mentor or admin cancel → 100% of what the mentee paid is credited to the mentee
+ *   wallet (including money originally paid online), so the website balance and
+ *   transaction history show the full refund. Coupon restored. Plan benefit restored.
+ *   Mentor is not paid.
+ * - Mentee cancel ≥ 24h before start → 100% back to the original sources. If the
+ *   online refund fails, that amount is credited to the wallet instead.
  * - Mentee cancel ≥ 6h and < 24h before start → 50% refund to wallet/Razorpay only;
  *   coupon NOT restored; plan benefit forfeited; retained 50% → mentor after admin fee.
  * - Mentee cancel < 6h before start → not allowed.
@@ -108,18 +111,20 @@ class SessionCancellationService
         $refundPercent = (float) $policy['refund_percent'];
         $isFull = $refundPercent >= 100.0;
 
-        $defaultReason = match ($cancelledByRole) {
-            self::ROLE_MENTOR => 'Cancelled by mentor',
-            self::ROLE_ADMIN  => 'Cancelled by admin',
-            default           => 'Cancelled by mentee',
-        };
+        $storedReason = trim((string) $reason);
+        if ($storedReason === '') {
+            $storedReason = match ($cancelledByRole) {
+                self::ROLE_MENTOR => 'Cancelled by mentor',
+                self::ROLE_ADMIN  => 'Cancelled by admin',
+                default           => 'Cancelled by mentee',
+            };
+        }
 
         return DB::transaction(function () use (
             $session,
             $actor,
             $cancelledByRole,
-            $reason,
-            $defaultReason,
+            $storedReason,
             $policy,
             $refundPercent,
             $isFull,
@@ -135,10 +140,16 @@ class SessionCancellationService
             }
 
             [$walletPaid, $razorPaid] = $this->resolvePaidSplit($locked);
+            $paidTotal = round($walletPaid + $razorPaid, 2);
 
             $walletRefund = round($walletPaid * ($refundPercent / 100), 2);
             $razorRefund = round($razorPaid * ($refundPercent / 100), 2);
-            $retainedGross = round(($walletPaid + $razorPaid) - ($walletRefund + $razorRefund), 2);
+            $refundToWallet = in_array($cancelledByRole, [self::ROLE_MENTOR, self::ROLE_ADMIN], true) && $isFull;
+            if ($refundToWallet) {
+                $walletRefund = round($paidTotal * ($refundPercent / 100), 2);
+                $razorRefund = 0.0;
+            }
+            $retainedGross = round($paidTotal - ($walletRefund + $razorRefund), 2);
 
             $forfeitPlan = ! $isFull
                 && in_array($locked->payment_method, ['plan', 'free'], true);
@@ -148,31 +159,8 @@ class SessionCancellationService
                 $couponRestored = $this->offers->restoreSessionRedemption($locked);
             }
 
-            $walletTxn = null;
-            if ($walletRefund > 0) {
-                $mentee = $locked->mentee ?? User::find($locked->mentee_id);
-                if ($mentee) {
-                    $walletTxn = $mentee->refundWallet(
-                        $walletRefund,
-                        'Refund for cancelled session '.$locked->booking_ref,
-                        [
-                            'reference'            => 'REF-W-'.$locked->booking_ref.($isFull ? '' : '-P'.$refundPercent),
-                            'transactionable_type' => ConsultationSession::class,
-                            'transactionable_id'   => $locked->id,
-                            'performed_by'         => $actor->id,
-                            'meta'                 => [
-                                'source'          => 'session_cancellation',
-                                'policy'          => $policy['policy'],
-                                'refund_percent'  => $refundPercent,
-                                'booking_ref'     => $locked->booking_ref,
-                                'session_id'      => $locked->id,
-                            ],
-                        ]
-                    );
-                }
-            }
-
             $razorpayOk = true;
+            $walletFallback = 0.0;
             if ($razorRefund > 0) {
                 $paymentId = (string) ($locked->razorpay_payment_id ?: '');
                 $razorpayOk = $this->refundRazorpayPayment(
@@ -186,6 +174,59 @@ class SessionCancellationService
                         'refund_percent' => (string) $refundPercent,
                     ]
                 );
+
+                if (! $razorpayOk) {
+                    $walletFallback = $razorRefund;
+                    $walletRefund = round($walletRefund + $razorRefund, 2);
+                    $razorRefund = 0.0;
+                }
+            }
+
+            $roleLabel = match ($cancelledByRole) {
+                self::ROLE_MENTOR => 'mentor',
+                self::ROLE_ADMIN  => 'admin',
+                default           => 'mentee',
+            };
+            $refundLabel = $isFull ? 'Full refund' : number_format($refundPercent, 0).'% refund';
+            $refundDescription = $refundLabel.' for session '.$locked->booking_ref
+                .'. Cancelled by '.$actor->name.' ('.$roleLabel.'). Reason: '.$storedReason;
+
+            $walletReference = 'REF-W-'.$locked->booking_ref.($isFull ? '' : '-P'.(int) $refundPercent);
+            $walletTxn = null;
+            if ($walletRefund > 0) {
+                $mentee = $locked->mentee ?? User::find($locked->mentee_id);
+                if ($mentee) {
+                    $walletTxn = $mentee->refundWallet(
+                        $walletRefund,
+                        $refundDescription,
+                        [
+                            'reference'             => $walletReference,
+                            'transactionable_type' => ConsultationSession::class,
+                            'transactionable_id'   => $locked->id,
+                            'performed_by'          => $actor->id,
+                            'meta'                  => [
+                                'source'                 => 'session_cancellation',
+                                'policy'                 => $policy['policy'],
+                                'refund_percent'         => $refundPercent,
+                                'booking_ref'            => $locked->booking_ref,
+                                'session_id'             => $locked->id,
+                                'cancelled_by_id'        => $actor->id,
+                                'cancelled_by_name'      => $actor->name,
+                                'cancelled_by_role'      => $cancelledByRole,
+                                'cancellation_reason'    => $storedReason,
+                                'original_payment_method'=> $locked->payment_method,
+                                'wallet_paid'            => $walletPaid,
+                                'razorpay_paid'          => $razorPaid,
+                                'wallet_fallback'        => $walletFallback,
+                                'destination'            => 'wallet',
+                            ],
+                        ]
+                    );
+                }
+            }
+
+            if ($walletRefund > 0 && ! $walletTxn) {
+                throw new InvalidArgumentException('The mentee wallet could not be refunded.');
             }
 
             $mentorCredited = 0.0;
@@ -224,11 +265,12 @@ class SessionCancellationService
                 }
             }
 
+            $returned = round($walletRefund + $razorRefund, 2);
             $paymentStatus = $locked->payment_status;
-            if (in_array($locked->payment_status, ['paid', 'pending'], true)) {
-                if ($isFull && ($walletPaid + $razorPaid) > 0) {
+            if ($paidTotal > 0 && in_array($locked->payment_status, ['paid', 'pending', 'partially_refunded'], true)) {
+                if ($returned + 0.009 >= $paidTotal) {
                     $paymentStatus = 'refunded';
-                } elseif (! $isFull && ($walletRefund + $razorRefund) > 0) {
+                } elseif ($returned > 0) {
                     $paymentStatus = 'partially_refunded';
                 }
             }
@@ -236,12 +278,18 @@ class SessionCancellationService
             $settlement = [
                 'policy'                 => $policy['policy'],
                 'cancelled_by_role'      => $cancelledByRole,
+                'cancelled_by_id'        => $actor->id,
+                'cancelled_by_name'      => $actor->name,
+                'cancellation_reason'    => $storedReason,
                 'refund_percent'         => $refundPercent,
+                'refund_destination'     => $refundToWallet || $walletFallback > 0 ? 'wallet' : 'original',
                 'hours_until_start'      => $this->hoursUntilStart($locked),
                 'wallet_paid'            => $walletPaid,
                 'razorpay_paid'          => $razorPaid,
+                'paid_total'             => $paidTotal,
                 'wallet_refunded'        => $walletRefund,
                 'razorpay_refunded'      => $razorRefund,
+                'wallet_fallback'        => $walletFallback,
                 'razorpay_refund_ok'     => $razorpayOk,
                 'coupon_restored'        => $couponRestored,
                 'plan_benefit_restored'  => in_array($locked->payment_method, ['plan', 'free'], true) && ! $forfeitPlan,
@@ -250,6 +298,7 @@ class SessionCancellationService
                 'platform_fee'           => $platformFee,
                 'mentor_credited'        => $mentorCredited,
                 'wallet_txn_id'          => $walletTxn?->id,
+                'wallet_reference'       => $walletTxn?->reference,
                 'settled_at'             => now()->toDateTimeString(),
             ];
 
@@ -257,11 +306,36 @@ class SessionCancellationService
                 'status'                   => ConsultationSession::STATUS_CANCELLED,
                 'cancelled_by'             => $actor->id,
                 'cancelled_at'             => now(),
-                'cancellation_reason'      => $reason ?: $defaultReason,
+                'cancellation_reason'      => $storedReason,
                 'forfeit_plan_benefit'     => $forfeitPlan,
                 'cancellation_settlement'  => $settlement,
                 'payment_status'           => $paymentStatus,
             ]);
+
+            $invoice = $locked->sessionInvoice;
+            if ($invoice) {
+                $meta = is_array($invoice->meta) ? $invoice->meta : [];
+                $meta['cancellation'] = [
+                    'cancelled_by_role'  => $cancelledByRole,
+                    'cancelled_by_name'  => $actor->name,
+                    'reason'             => $storedReason,
+                    'refund_percent'     => $refundPercent,
+                    'wallet_refunded'    => $walletRefund,
+                    'razorpay_refunded'  => $razorRefund,
+                    'wallet_reference'   => $walletTxn?->reference,
+                    'payment_status'     => $paymentStatus,
+                ];
+                $invoiceStatus = $invoice->status;
+                if ($paymentStatus === 'refunded') {
+                    $invoiceStatus = 'refunded';
+                } elseif ($paymentStatus === 'partially_refunded') {
+                    $invoiceStatus = 'partially_refunded';
+                }
+                $invoice->update([
+                    'meta'   => $meta,
+                    'status' => $invoiceStatus,
+                ]);
+            }
 
             return [
                 'session'               => $locked->fresh(['mentor', 'mentee']),
@@ -336,16 +410,27 @@ class SessionCancellationService
         $wallet = round((float) ($session->wallet_amount ?? 0), 2);
         $razor = round((float) ($session->razorpay_amount ?? 0), 2);
         $amount = round((float) ($session->amount ?? 0), 2);
+        $settled = in_array($session->payment_status, ['paid', 'partially_refunded', 'refunded'], true);
 
-        if ($wallet <= 0 && $razor <= 0 && $amount > 0 && $session->payment_status === 'paid') {
+        if ($wallet <= 0 && $razor <= 0 && $amount > 0 && $settled) {
             return match ($session->payment_method) {
                 'razorpay' => [0.0, $amount],
-                'hybrid'   => [$amount, 0.0], // legacy incomplete split — prefer wallet credit
                 default    => [$amount, 0.0],
             };
         }
 
-        // Prefer stored split; if both zero but waived/plan, nothing to refund as cash.
+        if ($amount > 0 && $settled) {
+            $covered = round($wallet + $razor, 2);
+            if ($covered + 0.009 < $amount) {
+                $gap = round($amount - $covered, 2);
+                if ($session->payment_method === 'razorpay' && $wallet <= 0) {
+                    $razor = round($razor + $gap, 2);
+                } else {
+                    $wallet = round($wallet + $gap, 2);
+                }
+            }
+        }
+
         return [max(0, $wallet), max(0, $razor)];
     }
 
@@ -412,7 +497,17 @@ class SessionCancellationService
      */
     private function buildMessage(array $settlement): string
     {
-        $parts = ['Session cancelled.'];
+        $who = trim((string) ($settlement['cancelled_by_name'] ?? ''));
+        $role = (string) ($settlement['cancelled_by_role'] ?? '');
+        $why = trim((string) ($settlement['cancellation_reason'] ?? ''));
+        $parts = ['Session cancelled'];
+        if ($who !== '') {
+            $parts[0] .= ' by '.$who.($role !== '' ? ' ('.$role.')' : '');
+        }
+        $parts[0] .= '.';
+        if ($why !== '') {
+            $parts[] = 'Reason: '.$why.'.';
+        }
 
         $wallet = (float) ($settlement['wallet_refunded'] ?? 0);
         $razor = (float) ($settlement['razorpay_refunded'] ?? 0);

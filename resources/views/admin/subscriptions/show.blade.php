@@ -43,6 +43,66 @@
         </div>
     </div>
 
+    @if($counselling)
+    <div class="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-800">In-house counselling usage</h3>
+                <p class="text-xs text-gray-500 mt-1">
+                    @if($counselling['unlimited'])
+                        Unlimited minutes. {{ $counselling['used'] }} min counted this period.
+                    @else
+                        {{ $counselling['used'] }} min counted of {{ $counselling['limit'] ?? 0 }} min.
+                        {{ $counselling['remaining'] ?? 0 }} min left.
+                    @endif
+                    @if($counselling['raw_used'] !== $counselling['used'])
+                        Ledger before excluding uncovered bookings: {{ $counselling['raw_used'] }} min.
+                    @endif
+                </p>
+            </div>
+            <form method="POST" action="{{ route('admin.subscriptions.reconcile-counselling', $subscription) }}">
+                @csrf
+                <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl">Reconcile usage</button>
+            </form>
+        </div>
+
+        @if(count($counselling['lapsed']))
+        <div class="bg-amber-50 border border-amber-200 text-amber-900 text-sm px-4 py-3 rounded-xl">
+            {{ count($counselling['lapsed']) }} confirmed booking(s) are scheduled after this plan expires, so those minutes are not counted.
+        </div>
+        @endif
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs uppercase text-gray-400 border-b border-gray-100">
+                        <th class="py-2 pr-3">When</th>
+                        <th class="py-2 pr-3">With</th>
+                        <th class="py-2 pr-3">Minutes</th>
+                        <th class="py-2">Ledger</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($counselling['rows'] as $row)
+                    <tr class="border-b border-gray-50">
+                        <td class="py-2 pr-3 whitespace-nowrap">{{ $row['at'] }}</td>
+                        <td class="py-2 pr-3">{{ $row['with'] }}</td>
+                        <td class="py-2 pr-3">{{ $row['minutes'] }}</td>
+                        <td class="py-2 {{ $row['counts'] ? 'text-green-700' : 'text-amber-700' }}">
+                            {{ $row['counts'] ? 'Counted' : 'Not covered — plan expires first' }}
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="4" class="py-3 text-gray-400">No plan-covered counselling sessions in this period.</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
     <div class="bg-white border border-gray-200 rounded-2xl p-6">
         <div class="flex items-center justify-between gap-3 flex-wrap">
             <div>

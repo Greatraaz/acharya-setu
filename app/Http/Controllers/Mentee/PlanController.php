@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\Plan;
 use App\Models\UserSubscription;
+use App\Services\PlanBenefitConsumptionService;
 use App\Services\PlanCheckoutService;
 use App\Services\PlanInvoiceService;
 use Carbon\Carbon;
@@ -38,6 +39,9 @@ class PlanController extends Controller
             fn (Plan $plan) => [$plan->id => $checkout->quote($plan, $current, 'yearly')]
         );
         $quotes = $quotesMonthly;
+        $benefitBalance = $current
+            ? app(PlanBenefitConsumptionService::class)->forUser($user)
+            : ['items' => []];
 
         $search = trim((string) $request->input('search', $request->input('q', '')));
 
@@ -59,7 +63,8 @@ class PlanController extends Controller
             'quotesMonthly',
             'quotesYearly',
             'history',
-            'search'
+            'search',
+            'benefitBalance'
         ));
     }
 

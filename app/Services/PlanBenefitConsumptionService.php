@@ -30,12 +30,16 @@ class PlanBenefitConsumptionService
         return [
             'billing'  => $billing,
             'timezone' => 'Asia/Kolkata',
-            'items'    => [
-                $this->careerCounsellingItem($user, $billing),
-                $this->careerServiceItem($user, 'resume', $billing),
-                $this->careerServiceItem($user, 'linkedin', $billing),
-                $this->mockInterviewItem($user, $billing),
-            ],
+            'items'    => array_map(
+                fn (array $item) => $this->withDisplay($item),
+                [
+                    $this->careerCounsellingItem($user, $billing),
+                    $this->inHouseMentorItem($user, $billing),
+                    $this->careerServiceItem($user, 'resume', $billing),
+                    $this->careerServiceItem($user, 'linkedin', $billing),
+                    $this->mockInterviewItem($user, $billing),
+                ]
+            ),
         ];
     }
 
@@ -100,8 +104,89 @@ class PlanBenefitConsumptionService
                 'starts_at' => $periodStart->toDateTimeString(),
                 'ends_at'   => $periodEnd->toDateTimeString(),
             ],
+            'history'           => app(CounsellingBenefitService::class)->history($user, 'counselling'),
             'message'           => $message,
         ];
+    }
+
+    /**
+     * In-house mentor minutes from the plan benefit, minus plan-covered time
+     * already booked with the mentee's assigned mentor this period.
+     *
+     * @return array<string, mixed>
+     */
+    private function inHouseMentorItem(User $user, string $billing): array
+    {
+        $subscription = $user->activeSubscription();
+        $plan = $subscription?->plan;
+        $allowance = $plan?->allowanceMinutes('in_house_mentor', $billing);
+        [$periodStart, $periodEnd] = $user->planUsageWindow();
+        $subEnd = $subscription?->expires_at?->copy()->timezone('Asia/Kolkata');
+
+        $included = $allowance !== null;
+        $unlimited = $allowance !== null && $allowance < 0;
+        $limit = $unlimited ? null : $allowance;
+        $used = $included ? $this->inHouseMinutesUsed($user) : 0;
+        $remaining = $unlimited ? null : max(0, (int) $limit - $used);
+        $paymentRequired = $included && ! $unlimited && (int) $remaining <= 0;
+        $nextFreeAt = null;
+
+        if ($paymentRequired && $periodEnd && $subEnd && $periodEnd->lt($subEnd)) {
+            $nextFreeAt = $periodEnd->copy();
+        }
+
+        $status = $this->status(
+            included: $included,
+            remaining: $unlimited ? 1 : (int) $remaining,
+            nextFreeAt: $nextFreeAt,
+            billing: $billing,
+            unlimited: $unlimited,
+        );
+
+        $left = $unlimited ? 'unlimited' : $this->formatDuration((int) $remaining);
+        $cap = $unlimited ? null : $this->formatDuration((int) $limit);
+
+        $message = match ($status) {
+            'addon' => 'In-house mentor time is not included on your current plan.',
+            'available' => $unlimited
+                ? 'Unlimited free in-house mentor time on your plan.'
+                : "You have {$left} of {$cap} free in-house mentor time left this period.",
+            'next_free' => 'You\'ve used this period\'s free in-house mentor time. Next free benefit on '
+                .$nextFreeAt->timezone('Asia/Kolkata')->format('d M Y').'. Extra sessions require payment.',
+            'used' => 'You\'ve used your free in-house mentor time for this plan period. Extra sessions require payment.',
+            default => 'In-house mentor entitlement unavailable.',
+        };
+
+        return [
+            'key'               => 'in_house_mentor',
+            'label'             => 'In-house mentor',
+            'included'          => $included,
+            'tracking_enabled'  => true,
+            'unit'              => 'minutes',
+            'included_limit'    => $unlimited ? null : $limit,
+            'used'              => $used,
+            'remaining'         => $remaining,
+            'unlimited'         => $unlimited,
+            'payment_required'  => $paymentRequired,
+            'status'            => $status,
+            'next_free_at'      => $nextFreeAt?->toDateTimeString(),
+            'period'            => [
+                'label'     => 'monthly_bucket',
+                'starts_at' => $periodStart->toDateTimeString(),
+                'ends_at'   => $periodEnd->toDateTimeString(),
+            ],
+            'history'           => app(CounsellingBenefitService::class)->history($user, 'in_house'),
+            'message'           => $message,
+        ];
+    }
+
+    private function inHouseMinutesUsed(User $user): int
+    {
+        if (! $user->assigned_mentor_id) {
+            return 0;
+        }
+
+        return app(CounsellingBenefitService::class)->countedMinutes($user, (int) $user->assigned_mentor_id);
     }
 
     /**
@@ -229,6 +314,75 @@ class PlanBenefitConsumptionService
             ],
             'message'           => $message,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     * @return array<string, mixed>
+     */
+    private function withDisplay(array $item): array
+    {
+        $status = (string) ($item['status'] ?? 'addon');
+        $item['status_label'] = match ($status) {
+            'available' => 'Available',
+            'next_free' => 'Next free',
+            'used'      => 'Used up',
+            default     => 'Not included',
+        };
+
+        if (! ($item['included'] ?? false)) {
+            $item['left_label'] = 'Not included';
+
+            return $item;
+        }
+
+        if ($item['unlimited'] ?? false) {
+            $item['left_label'] = 'Unlimited';
+
+            return $item;
+        }
+
+        $remaining = (int) ($item['remaining'] ?? 0);
+        $limit = (int) ($item['included_limit'] ?? 0);
+        $unit = (string) ($item['unit'] ?? '');
+
+        if ($unit === 'minutes') {
+            $item['left_label'] = $this->formatDuration($remaining).' left of '.$this->formatDuration($limit);
+
+            return $item;
+        }
+
+        $noun = match ($item['key'] ?? '') {
+            'resume' => 'resume',
+            'linkedin' => 'profile review',
+            'mock_interview' => 'mock interview',
+            default => 'credit',
+        };
+        $plural = $limit === 1 ? $noun : $noun.'s';
+        $item['left_label'] = $remaining.' of '.$limit.' free '.$plural.' left';
+
+        return $item;
+    }
+
+    private function formatDuration(int $minutes): string
+    {
+        if ($minutes <= 0) {
+            return '0 min';
+        }
+
+        $hours = intdiv($minutes, 60);
+        $mins = $minutes % 60;
+
+        if ($hours === 0) {
+            return $mins.' min';
+        }
+
+        $hourLabel = $hours === 1 ? '1 hr' : $hours.' hrs';
+        if ($mins === 0) {
+            return $hourLabel.' ('.$minutes.' min)';
+        }
+
+        return $hourLabel.' '.$mins.' min ('.$minutes.' min)';
     }
 
     private function status(

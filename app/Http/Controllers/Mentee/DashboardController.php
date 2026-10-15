@@ -12,6 +12,8 @@ use App\Models\MentorRequest;
 use App\Models\Message;
 use App\Models\Quiz;
 use App\Models\User;
+use App\Services\MenteeTransactionLedger;
+use App\Services\PlanBenefitConsumptionService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
@@ -72,6 +74,7 @@ class DashboardController extends Controller
 
         $canViewProgress = $mentee->canAccessProgressReport();
         $planAllowance = $mentee->planSessionAllowance();
+        $benefitBalance = app(PlanBenefitConsumptionService::class)->forUser($mentee);
         $assignedMentor = $mentee->assignedMentor;
 
         $pendingMentorRequests = MentorRequest::where('mentee_id', $menteeId)
@@ -94,6 +97,7 @@ class DashboardController extends Controller
         $recentJobs = $this->loadRecentJobs();
         $communityData = $this->loadCommunityData($mentee);
         $agendaItems = $this->buildAgendaItems($sessionsNext24h, $pendingMentorRequests, $pendingAssessments, $availableQuizzes);
+        $transactions = app(MenteeTransactionLedger::class)->paginate($mentee);
 
         return view('frontend.mentee.dashboard', compact(
             'upcomingSessions',
@@ -104,6 +108,7 @@ class DashboardController extends Controller
             'stats',
             'canViewProgress',
             'planAllowance',
+            'benefitBalance',
             'assignedMentor',
             'pendingMentorRequests',
             'sessionsNext24h',
@@ -111,6 +116,7 @@ class DashboardController extends Controller
             'availableQuizzes',
             'recentJobs',
             'agendaItems',
+            'transactions',
         ) + $communityData);
     }
 

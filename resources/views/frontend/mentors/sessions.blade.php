@@ -14,6 +14,25 @@
             </div>
         </div>
 
+        <div class="card" style="margin-bottom:16px;padding:16px 18px;">
+            <h3 style="font-size:14px;font-weight:700;margin:0 0 10px;">In-house mentor hours</h3>
+            @forelse($inHouseHistory ?? [] as $row)
+            <div class="mentee-benefits__history-row" style="padding:6px 0;border-bottom:1px solid var(--border);">
+                <div>
+                    <strong>{{ $row['at'] }}</strong>
+                    · {{ $row['with'] }}
+                    · {{ $row['minutes'] }} min
+                    @if(!empty($row['ref'])) · {{ $row['ref'] }} @endif
+                </div>
+                <span class="mentee-benefits__history-flag {{ $row['counts'] ? 'is-counted' : 'is-open' }}">
+                    {{ $row['counts'] ? 'Counted' : 'Not covered' }}
+                </span>
+            </div>
+            @empty
+            <p style="font-size:13px;color:var(--text-2);margin:0;">No in-house mentor hours with your assigned mentees yet.</p>
+            @endforelse
+        </div>
+
         <form method="GET" action="{{ route('mentor.sessions') }}" class="session-toolbar">
             <div class="session-filter-tabs">
                 @foreach(['all'=>'All','upcoming'=>'Upcoming','completed'=>'Completed','cancelled'=>'Cancelled'] as $key=>$label)
@@ -86,8 +105,23 @@
                         <span>📅 {{ $session->scheduled_at->format('D, d M Y') }}</span>
                         <span>🕐 {{ $session->scheduled_at->format('g:i A') }}</span>
                         <span>⏱ {{ $session->duration_minutes }} min</span>
-                        <span class="session-card-meta__earn">💰 ₹{{ number_format($session->mentor_earning ?? 0, 0) }}</span>
+                        @php
+                            $shownEarning = $statusKey === 'cancelled'
+                                ? (float) data_get($session->cancellation_settlement, 'mentor_credited', 0)
+                                : (float) ($session->mentor_earning ?? 0);
+                        @endphp
+                        <span class="session-card-meta__earn">💰 ₹{{ number_format($shownEarning, 0) }}</span>
                     </div>
+                    @include('frontend.sessions.partials.plan-lapse', ['session' => $session, 'audience' => 'mentor'])
+                    @php $cancelInfo = $statusKey === 'cancelled' ? $session->cancellationInfo() : null; @endphp
+                    @if($cancelInfo)
+                    <div class="session-card-notes">
+                        Cancelled by {{ $cancelInfo['actor_name'] }} ({{ $cancelInfo['role_label'] }}). {{ $cancelInfo['reason'] }}
+                        @if($cancelInfo['wallet_refunded'] > 0)
+                            · ₹{{ number_format($cancelInfo['wallet_refunded'], 2) }} refunded to the mentee wallet.
+                        @endif
+                    </div>
+                    @endif
                     @if($session->agenda ?? $session->topic_notes ?? false)
                     <div class="session-card-notes">
                         📝 <em>{{ Str::limit($session->agenda ?? $session->topic_notes, 120) }}</em>
@@ -106,7 +140,7 @@
                             🔗 {{ $session->meeting_link ? 'Edit Link' : 'Add Link' }}
                         </button>
                         <button type="button" class="btn btn-ghost btn-sm" onclick="completeSession({{ $session->id }})">Mark complete</button>
-                        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="declineSession({{ $session->id }})">Cancel</button>
+                        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="openCancelSession({{ $session->id }})">Cancel</button>
                     @endif
                 </div>
             </div>
@@ -171,18 +205,13 @@
         </div>
     </div>
 </div>
+@include('frontend.mentors.partials.cancel-session-modal')
 @endsection
 
 @push('scripts')
 <script>
 function declineSession(id) {
-    confirm('Cancel this session?', () => {
-        AjaxPost(`/mentor/sessions/${id}/cancel`, { reason: 'Cancelled by mentor' }, {
-            loader: true,
-            onSuccess: () => { showToast('info', 'Session cancelled.'); location.reload(); },
-            onError: e => showToast('error', e.message || 'Could not cancel session.')
-        });
-    }, { title: 'Cancel session?', confirmText: 'Yes, cancel', danger: true });
+    openCancelSession(id);
 }
 function completeSession(id) {
     confirm('Mark this session as completed?', () => {

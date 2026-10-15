@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Mentee;
 use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
+use App\Services\CounsellingBenefitService;
 use App\Services\SessionCancellationService;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
@@ -17,7 +18,7 @@ class SessionController extends Controller
         ConsultationSession::expireMissedSessions(null, auth()->id());
 
         $query = ConsultationSession::where('mentee_id', auth()->id())
-            ->with(['mentor', 'sessionInvoice'])->latest('scheduled_at');
+            ->with(['mentor', 'sessionInvoice', 'cancelledBy:id,name'])->latest('scheduled_at');
 
         $status = $request->input('status');
         if ($status && $status !== 'all' && array_key_exists($status, ConsultationSession::STATUSES)) {
@@ -38,6 +39,7 @@ class SessionController extends Controller
         }
 
         $sessions = $query->paginate(15)->withQueryString();
+        app(CounsellingBenefitService::class)->annotate($sessions->getCollection());
 
         return view('frontend.mentee.sessions', compact('sessions', 'search'));
     }
@@ -47,8 +49,9 @@ class SessionController extends Controller
         ConsultationSession::expireMissedSessions(null, auth()->id());
 
         $session = ConsultationSession::where('mentee_id', auth()->id())
-            ->with(['mentor','sessionInvoice','notes'])
+            ->with(['mentor', 'sessionInvoice', 'notes', 'cancelledBy:id,name'])
             ->findOrFail($id);
+        app(CounsellingBenefitService::class)->annotate(collect([$session]));
         return view('frontend.mentee.session-detail', compact('session'));
     }
 
