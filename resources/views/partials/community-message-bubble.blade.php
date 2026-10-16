@@ -27,7 +27,7 @@
 
     <div class="community-bubble {{ $bubbleClass }}">
         @if(! $isMine)
-        <div class="community-bubble__author">{{ $message->user->name }}</div>
+        <div class="community-bubble__author">{{ $message->authorName() }}</div>
         @endif
 
         @if($message->parent)
@@ -35,13 +35,13 @@
                 class="community-bubble__quote"
                 onclick="event.stopPropagation(); CommunityMsgMenu.scrollToMessage({{ $message->parent->id }})"
                 title="Go to original message">
-            <span class="community-bubble__quote-author">{{ $message->parent->user->name ?? 'User' }}</span>
+            <span class="community-bubble__quote-author">{{ $message->parent->authorName() }}</span>
             <span class="community-bubble__quote-text">{{ Str::limit($quoteText, 140) }}</span>
         </button>
         @endif
 
         @if($message->body)
-        <p class="community-bubble__text">{{ $message->body }}</p>
+        <p class="community-bubble__text">{{ $message->linkedBody() }}</p>
         @endif
 
         @if($message->image_url)
@@ -82,7 +82,7 @@
         @csrf
         <input type="hidden" name="parent_id" value="{{ $message->id }}">
         <div class="community-thread__composer">
-            <input type="text" name="body" placeholder="Reply to {{ $message->user->name }}…" class="community-thread__composer-input">
+            <input type="text" name="body" placeholder="Reply to {{ $message->authorName() }}…" class="community-thread__composer-input">
             <label class="community-thread__composer-icon" title="Add image">
                 <input type="file" name="image" accept="image/*" class="hidden" onchange="previewReplyImage(this, {{ $message->id }})">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -112,7 +112,7 @@ class WalletController extends Controller
         if (empty($creds['key']) || empty($creds['secret'])) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Payment gateway is not configured.',
+                'message' => $creds['message'] ?: 'Payment gateway is not configured.',
             ], 503);
         }
 
@@ -327,8 +327,10 @@ class WalletController extends Controller
 
         return [
             'enabled' => $settings['enabled'] ?? true,
-            'key'     => $settings['key'] ?: env('RAZORPAY_KEY_ID', ''),
-            'secret'  => $settings['secret'] ?: env('RAZORPAY_KEY_SECRET', ''),
+            'key'     => (string) ($settings['key'] ?? ''),
+            'secret'  => (string) ($settings['secret'] ?? ''),
+            'message' => $settings['message'] ?? null,
+            'mode'    => $settings['mode'] ?? 'test',
         ];
     }
 }

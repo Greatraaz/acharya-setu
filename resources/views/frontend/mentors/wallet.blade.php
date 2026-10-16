@@ -3,7 +3,7 @@
 
 @section('content')
 @php
-    $feeRate = $platformFeeRate ?? 0.20;
+    $feeRate = 0.20;
     $netRate = 1 - $feeRate;
 @endphp
 <div class="dash-layout">
@@ -58,7 +58,7 @@
             <span class="alert-icon">ℹ️</span>
             <div style="font-size:13px;">
                 <strong>Your rate: ₹{{ number_format(auth()->user()->rate_per_minute ?? 0, 2) }}/min</strong> ·
-                Vedrix retains a <strong>{{ (int) ($feeRate * 100) }}% platform fee</strong>.
+                Vedrix charges a <strong>20% platform fee</strong>.
                 You receive ₹{{ number_format((auth()->user()->rate_per_minute ?? 0) * $netRate, 1) }}/min.
                 <a href="{{ route('mentor.profile.edit') }}" style="color:var(--brand);margin-left:8px;">Change rate →</a>
             </div>

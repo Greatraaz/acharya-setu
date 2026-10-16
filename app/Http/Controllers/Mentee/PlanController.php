@@ -329,8 +329,8 @@ class PlanController extends Controller
 
         return [
             'enabled' => $settings['enabled'] ?? true,
-            'key'     => $settings['key'] ?: config('services.razorpay.key', env('RAZORPAY_KEY_ID', '')),
-            'secret'  => $settings['secret'] ?: config('services.razorpay.secret', env('RAZORPAY_KEY_SECRET', '')),
+            'key'     => (string) ($settings['key'] ?? ''),
+            'secret'  => (string) ($settings['secret'] ?? ''),
         ];
     }
 

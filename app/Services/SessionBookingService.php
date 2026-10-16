@@ -600,7 +600,7 @@ class SessionBookingService
             ]);
         }
         if (empty($creds['key']) || empty($creds['secret'])) {
-            return $this->fail('Payment gateway is not configured.', 503, [
+            return $this->fail($creds['message'] ?? 'Payment gateway is not configured.', 503, [
                 'topup_url' => route('mentee.wallet'),
             ]);
         }
@@ -824,8 +824,10 @@ class SessionBookingService
 
         return [
             'enabled' => $settings['enabled'] ?? true,
-            'key'     => $settings['key'] ?: config('services.razorpay.key', env('RAZORPAY_KEY_ID', '')),
-            'secret'  => $settings['secret'] ?: config('services.razorpay.secret', env('RAZORPAY_KEY_SECRET', '')),
+            'key'     => (string) ($settings['key'] ?? ''),
+            'secret'  => (string) ($settings['secret'] ?? ''),
+            'message' => $settings['message'] ?? null,
+            'mode'    => $settings['mode'] ?? 'test',
         ];
     }
 

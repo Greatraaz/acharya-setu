@@ -374,14 +374,17 @@ async function pollLogs() {
             const row  = document.createElement('div');
             row.className = 'flex items-start gap-3 px-4 py-3 bg-white border border-gray-200 rounded-xl animate-pulse-once';
             row.style.animationDuration = '.4s';
+            const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+            }[ch]));
             row.innerHTML = `
                 <span class="text-sm mt-0.5 flex-shrink-0">${icon}</span>
                 <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${lc.bg} ${lc.text}">
                     <span class="w-1.5 h-1.5 rounded-full ${lc.dot}"></span>${ucfirst(log.level)}
                 </span>
-                <span class="text-sm text-gray-800 flex-1">${log.description}</span>
-                <span class="text-xs font-mono text-gray-400 flex-shrink-0">${log.causer_name || 'System'}</span>
-                <span class="text-xs text-gray-300 flex-shrink-0 font-mono">${log.logged_at.slice(11,19)}</span>
+                <span class="text-sm text-gray-800 flex-1">${esc(log.description)}</span>
+                <span class="text-xs font-mono text-gray-400 flex-shrink-0">${esc(log.causer_name || 'System')}</span>
+                <span class="text-xs text-gray-300 flex-shrink-0 font-mono">${esc(String(log.logged_at || '').slice(11,19))}</span>
             `;
             container.prepend(row);
             // keep max 20 live entries

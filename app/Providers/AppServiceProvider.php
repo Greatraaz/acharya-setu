@@ -7,10 +7,14 @@ use App\Models\InsightEvent;
 use App\Observers\ConsultationSessionObserver;
 use App\Services\PublicFileStorage;
 use Carbon\Carbon;
+use App\Mail\RedactingLogTransport;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Log\LogManager;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Psr\Log\LoggerInterface;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,6 +38,16 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Throwable $e) {
             report($e);
         }
+
+        Mail::extend('log', function (array $config = []) {
+            $logger = $this->app->make(LoggerInterface::class);
+
+            if ($logger instanceof LogManager) {
+                $logger = $logger->channel($config['channel'] ?? config('mail.log_channel'));
+            }
+
+            return new RedactingLogTransport($logger);
+        });
 
         ResetPassword::createUrlUsing(function (object $user, string $token) {
             return url('/reset-password/'.$token).'?'.http_build_query([

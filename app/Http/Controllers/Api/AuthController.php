@@ -10,6 +10,7 @@ use App\Models\WalletTransaction;
 use App\Mail\OtpMail;
 use App\Services\SmsService;
 use App\Support\IndianPhone;
+use App\Support\SensitiveLog;
 use App\Support\LoginThrottle;
 use App\Support\PasswordReset as PasswordResetGuard;
 use App\Support\ProfileUpdate;
@@ -18,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Rule;
@@ -727,7 +729,10 @@ class AuthController extends Controller
                 SmsService::send($identifier, "Your OTP is {$otp}. Valid for 10 minutes.");
             }
         } catch (\Throwable $e) {
-            report($e);
+            Log::error('OTP delivery failed.', [
+                'channel' => $channel,
+                'error'   => SensitiveLog::redact($e->getMessage()),
+            ]);
         }
     }
 }

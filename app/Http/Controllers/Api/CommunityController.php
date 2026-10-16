@@ -896,11 +896,16 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
 
         $channel->markRead($user);
 
+        $payload = $message->load([
+            'user:id,name,avatar_url,role',
+            'parent.user:id,name,avatar_url,role',
+        ])->toApiArray($user->id);
+        $escaped = Message::containsMarkup($message->body);
+
         return response()->json([
-            'message' => $message->load([
-                'user:id,name,avatar_url,role',
-                'parent.user:id,name,avatar_url,role',
-            ])->toApiArray($user->id),
+            'message' => $payload,
+            'content_escaped' => $escaped,
+            'notice' => $escaped ? Message::plainTextNotice() : null,
         ], 201);
     }
 

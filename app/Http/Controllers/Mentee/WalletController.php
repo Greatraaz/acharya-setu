@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Mentee;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\ConsultationSession;
 use App\Models\SessionInvoice;
 use App\Models\WalletTransaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class WalletController extends Controller
 {
@@ -100,38 +103,63 @@ class WalletController extends Controller
     {
         $request->validate(['amount' => 'required|integer|min:100|max:100000']);
 
-        $amountPaise = $request->amount * 100;   // Razorpay uses paise
+        $creds = $this->razorpayCredentials();
+        if (! ($creds['enabled'] ?? false)) {
+            return response()->json(['message' => 'Online payment is disabled. Ask an admin to enable Razorpay.'], 422);
+        }
+        if ($creds['key'] === '' || $creds['secret'] === '') {
+            return response()->json([
+                'message' => $creds['message'] ?: 'Payment gateway is not configured.',
+            ], 503);
+        }
+
+        $user = auth()->user();
+        $amountPaise = (int) $request->amount * 100;
 
         try {
-            $api = new \Razorpay\Api\Api(
-                config('services.razorpay.key'),
-                config('services.razorpay.secret')
-            );
+            $response = Http::withBasicAuth($creds['key'], $creds['secret'])
+                ->acceptJson()
+                ->post('https://api.razorpay.com/v1/orders', [
+                    'amount'   => $amountPaise,
+                    'currency' => 'INR',
+                    'receipt'  => Str::limit('wal_'.$user->id.'_'.time(), 40, ''),
+                    'notes'    => [
+                        'user_id' => (string) $user->id,
+                        'purpose' => 'wallet_topup',
+                        'amount'  => (string) $request->amount,
+                    ],
+                ]);
 
-            $order = $api->order->create([
-                'amount'   => $amountPaise,
-                'currency' => 'INR',
-                'receipt'  => 'wallet_' . auth()->id() . '_' . time(),
-                'notes'    => ['user_id' => auth()->id(), 'purpose' => 'wallet_topup'],
-            ]);
+            if (! $response->successful()) {
+                Log::error('Razorpay wallet top-up order failed.', [
+                    'user_id' => $user->id,
+                    'status'  => $response->status(),
+                    'body'    => $response->body(),
+                ]);
 
-            return response()->json([
-                'order_id' => $order->id,
-                'amount'   => $amountPaise,
-                'currency' => 'INR',
-                'key'      => config('services.razorpay.key'),
-                'name'     => 'Vedrix',
-                'description' => 'Wallet Top-up',
-                'prefill'  => [
-                    'name'  => auth()->user()->name,
-                    'email' => auth()->user()->email,
-                    'contact' => auth()->user()->phone ?? '',
-                ],
-            ]);
+                return response()->json(['message' => 'Payment gateway error. Please try again.'], 502);
+            }
+
+            $order = $response->json();
         } catch (\Throwable $e) {
-            Log::error('Razorpay order create failed: ' . $e->getMessage());
+            Log::error('Razorpay order create failed: '.$e->getMessage());
+
             return response()->json(['message' => 'Payment gateway error. Please try again.'], 500);
         }
+
+        return response()->json([
+            'order_id' => $order['id'] ?? null,
+            'amount'   => $amountPaise,
+            'currency' => 'INR',
+            'key'      => $creds['key'],
+            'name'     => 'Vedrix',
+            'description' => 'Wallet Top-up',
+            'prefill'  => [
+                'name'    => $user->name,
+                'email'   => $user->email,
+                'contact' => $user->phone ?? '',
+            ],
+        ]);
     }
 
     /**
@@ -148,9 +176,11 @@ class WalletController extends Controller
         ]);
 
         // Verify signature
-        $expectedSig = hash_hmac('sha256',
-            $request->razorpay_order_id . '|' . $request->razorpay_payment_id,
-            config('services.razorpay.secret')
+        $creds = $this->razorpayCredentials();
+        $expectedSig = hash_hmac(
+            'sha256',
+            $request->razorpay_order_id.'|'.$request->razorpay_payment_id,
+            $creds['secret']
         );
 
         if ($expectedSig !== $request->razorpay_signature) {
@@ -178,5 +208,23 @@ class WalletController extends Controller
             'message' => "₹" . number_format($amount, 0) . " added to your wallet!",
             'balance' => $user->fresh()->wallet_balance,
         ]);
+    }
+
+    /**
+     * Same keys session booking uses (admin settings, then .env).
+     *
+     * @return array{enabled: bool, key: string, secret: string, message: string|null, mode: string}
+     */
+    private function razorpayCredentials(): array
+    {
+        $settings = AppSetting::razorpay();
+
+        return [
+            'enabled' => (bool) ($settings['enabled'] ?? false),
+            'key'     => (string) ($settings['key'] ?? ''),
+            'secret'  => (string) ($settings['secret'] ?? ''),
+            'message' => $settings['message'] ?? null,
+            'mode'    => $settings['mode'] ?? 'test',
+        ];
     }
 }

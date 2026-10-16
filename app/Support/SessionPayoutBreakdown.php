@@ -10,11 +10,16 @@ use App\Models\ConsultationSession;
  * Mentor always earns against the FULL session list price (rate × duration).
  * Coupon discounts and plan free minutes reduce what the mentee pays;
  * the platform (admin) absorbs that cost via platform_subsidy.
- * Platform fee = 20% of list price; mentor net = 80% of list price.
+ * The platform fee is a fixed 20%.
  */
 final class SessionPayoutBreakdown
 {
     public const FEE_RATE = 0.20;
+
+    public static function rateForSession(?ConsultationSession $session): float
+    {
+        return self::FEE_RATE;
+    }
 
     /**
      * @return array{
@@ -39,14 +44,15 @@ final class SessionPayoutBreakdown
             ? round(max(0, $platformSubsidy), 2)
             : round(max(0, $list - $paid), 2);
 
-        $fee = round($list * self::FEE_RATE, 2);
+        $rate = self::FEE_RATE;
+        $fee = round($list * $rate, 2);
         $net = round($list - $fee, 2);
 
         return [
             'gross'            => $list,
             'platform_fee'     => $fee,
             'net'              => $net,
-            'fee_rate'         => self::FEE_RATE,
+            'fee_rate'         => $rate,
             'list_amount'      => $list,
             'mentee_paid'      => $paid,
             'coupon_discount'  => $discount,

@@ -9,6 +9,7 @@ use App\Mail\OtpMail;
 use App\Services\SmsService;
 use App\Support\IndianPhone;
 use App\Support\RegistrationData;
+use App\Support\SensitiveLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -59,7 +60,7 @@ class OtpController extends Controller
         try {
             Mail::to($issued['identifier'])->send(new OtpMail($issued['otp'], 'registration'));
         } catch (\Throwable $e) {
-            Log::error('OTP email failed: ' . $e->getMessage());
+            Log::error('OTP email failed: ' . SensitiveLog::redact($e->getMessage()));
         }
 
         return response()->json([

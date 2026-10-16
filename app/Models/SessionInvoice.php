@@ -106,11 +106,16 @@ class SessionInvoice extends Model
     {
         $meta = is_array($this->meta) ? $this->meta : [];
 
+        if (isset($meta['gross_amount'], $meta['platform_fee'], $meta['net_amount'])) {
+            return SessionPayoutBreakdown::fromMeta($meta);
+        }
+
         if (isset($meta['list_amount']) && (float) $meta['list_amount'] > 0) {
             return SessionPayoutBreakdown::fromGross(
                 (float) $meta['list_amount'],
                 (float) ($meta['coupon_discount'] ?? 0),
-                isset($meta['mentee_paid']) ? (float) $meta['mentee_paid'] : (float) ($this->total_amount ?: 0)
+                isset($meta['mentee_paid']) ? (float) $meta['mentee_paid'] : (float) ($this->total_amount ?: 0),
+                isset($meta['platform_subsidy']) ? (float) $meta['platform_subsidy'] : null,
             );
         }
 

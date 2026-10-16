@@ -542,6 +542,17 @@
     white-space: pre-wrap;
 }
 
+.community-bubble__link {
+    color: var(--ct-accent, #2563eb);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    word-break: break-all;
+}
+
+.community-bubble__link:hover {
+    opacity: 0.85;
+}
+
 .community-bubble__media-link {
     display: block;
     margin-top: 6px;

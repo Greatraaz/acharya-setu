@@ -28,6 +28,8 @@ class OtpCode extends Model
 
     protected $fillable = ['identifier', 'channel', 'purpose', 'code', 'attempts', 'expires_at', 'verified_at'];
 
+    protected $hidden = ['code'];
+
     protected $casts = [
         'expires_at'  => 'datetime',
         'verified_at' => 'datetime',

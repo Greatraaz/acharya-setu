@@ -681,7 +681,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Key ID <span class="key-badge">razorpay_key_id</span></label>
-                                <input type="text" name="razorpay_key_id" class="form-input font-mono text-sm" value="{{ config_val('razorpay_key_id') }}" placeholder="rzp_live_xxxxx">
+                                <input type="text" name="razorpay_key_id" class="form-input font-mono text-sm" value="{{ config_val('razorpay_key_id') }}" placeholder="rzp_test_xxxxx or rzp_live_xxxxx">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Key Secret <span class="key-badge">razorpay_key_secret</span></label>
@@ -703,6 +703,7 @@
                                     <option value="live" {{ config_val('razorpay_mode') === 'live' ? 'selected' : '' }}>Live</option>
                                     <option value="test" {{ config_val('razorpay_mode','test') === 'test' ? 'selected' : '' }}>Test / Sandbox</option>
                                 </select>
+                                <p class="text-xs text-gray-500 mt-1">Test mode only accepts a key starting with <span class="font-mono">rzp_test_</span>. A live key is ignored while this is set to Test.</p>
                             </div>
                         </div>
                     </div>

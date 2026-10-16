@@ -688,8 +688,8 @@ class SessionsController extends Controller
 
         return [
             'enabled' => $settings['enabled'] ?? true,
-            'key'     => $settings['key'] ?: env('RAZORPAY_KEY_ID', ''),
-            'secret'  => $settings['secret'] ?: env('RAZORPAY_KEY_SECRET', ''),
+            'key'     => (string) ($settings['key'] ?? ''),
+            'secret'  => (string) ($settings['secret'] ?? ''),
         ];
     }
 

@@ -1,7 +1,5 @@
 @php
-    use App\Support\SessionPayoutBreakdown;
     $summary = $sessionSummary ?? [];
-    $feePct = (int) round(SessionPayoutBreakdown::FEE_RATE * 100);
 @endphp
 
 <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
@@ -9,7 +7,7 @@
         ['Invoices', number_format($summary['count'] ?? 0), 'text-gray-900'],
         ['Mentee Paid', '₹'.number_format($summary['total'] ?? 0, 2), 'text-indigo-600'],
         ['Coupon Subsidy', '₹'.number_format($summary['coupon_total'] ?? $summary['platform_subsidy'] ?? 0, 2), 'text-amber-600'],
-        ['Admin Commission ('.$feePct.'% of list)', '₹'.number_format($summary['commission'] ?? 0, 2), 'text-rose-600'],
+        ['Admin Commission', '₹'.number_format($summary['commission'] ?? 0, 2), 'text-rose-600'],
         ['Mentor Earnings', '₹'.number_format($summary['mentor_net'] ?? 0, 2), 'text-emerald-600'],
         ['Via Wallet / Razorpay', '₹'.number_format(($summary['wallet'] ?? 0) + ($summary['razorpay'] ?? 0), 2), 'text-slate-700'],
     ] as [$label, $value, $color])
@@ -59,7 +57,7 @@
     <div class="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-gray-100">
         <div>
             <h3 class="text-sm font-semibold text-gray-800">Session payment invoices</h3>
-            <p class="text-xs text-gray-400 mt-0.5">Mentor earns {{ $feePct === 20 ? '80' : (100 - $feePct) }}% of full session price · Coupon discount is borne by admin/platform</p>
+            <p class="text-xs text-gray-400 mt-0.5">Platform fee is 20% of the session list price. Coupon discount is borne by the platform.</p>
         </div>
         <span class="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full">{{ $sessionInvoices->total() ?? 0 }} results</span>
     </div>

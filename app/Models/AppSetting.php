@@ -90,29 +90,67 @@ class AppSetting extends Model
     public static function razorpay(): array
     {
         $s = static::allCached();
-        $mode = $s['razorpay_mode'] ?? 'test';
+        $mode = strtolower((string) ($s['razorpay_mode'] ?? 'test')) === 'live' ? 'live' : 'test';
+        $prefix = $mode === 'live' ? 'rzp_live_' : 'rzp_test_';
 
-        $key = static::firstNonEmpty([
-            $s["razorpay_{$mode}_key"] ?? null,
-            $s['razorpay_key_id'] ?? null,
-            $s['razorpay_key'] ?? null,
-            config('services.razorpay.key'),
-            env('RAZORPAY_KEY_ID'),
-        ]);
+        $pairs = [
+            [
+                $s["razorpay_{$mode}_key"] ?? null,
+                static::decryptIfNeeded($s["razorpay_{$mode}_secret"] ?? null),
+            ],
+            [
+                $s['razorpay_key_id'] ?? null,
+                static::decryptIfNeeded($s['razorpay_key_secret'] ?? null),
+            ],
+            [
+                $s['razorpay_key'] ?? null,
+                static::decryptIfNeeded($s['razorpay_secret'] ?? null),
+            ],
+            [
+                config('services.razorpay.key'),
+                config('services.razorpay.secret'),
+            ],
+            [
+                env('RAZORPAY_KEY_ID'),
+                env('RAZORPAY_KEY_SECRET'),
+            ],
+        ];
 
-        $secret = static::firstNonEmpty([
-            static::decryptIfNeeded($s["razorpay_{$mode}_secret"] ?? null),
-            static::decryptIfNeeded($s['razorpay_key_secret'] ?? null),
-            static::decryptIfNeeded($s['razorpay_secret'] ?? null),
-            config('services.razorpay.secret'),
-            env('RAZORPAY_KEY_SECRET'),
-        ]);
+        $key = '';
+        $secret = '';
+        $sawOtherMode = false;
+
+        foreach ($pairs as [$candidateKey, $candidateSecret]) {
+            $candidateKey = trim((string) $candidateKey);
+            $candidateSecret = trim((string) $candidateSecret);
+            if ($candidateKey === '') {
+                continue;
+            }
+            if (! str_starts_with($candidateKey, $prefix)) {
+                $sawOtherMode = true;
+                continue;
+            }
+            if ($candidateSecret === '') {
+                continue;
+            }
+            $key = $candidateKey;
+            $secret = $candidateSecret;
+            break;
+        }
+
+        $message = null;
+        if ($key === '' || $secret === '') {
+            $message = $sawOtherMode
+                ? 'Razorpay mode is '.ucfirst($mode).', but the saved key is not a '.$prefix.' key. Paste the '.ucfirst($mode).' Key ID and secret in admin settings.'
+                : 'Payment gateway is not configured.';
+        }
 
         return [
             'mode'    => $mode,
             'enabled' => static::toBool($s['razorpay_enabled'] ?? false),
             'key'     => $key,
             'secret'  => $secret,
+            'message' => $message,
         ];
     }
 

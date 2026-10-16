@@ -117,11 +117,11 @@
                     <div style="display:flex;justify-content:{{ (int)$message->user_id === (int)auth()->id() ? 'flex-end' : 'flex-start' }};margin-bottom:12px;">
                         <div style="max-width:min(78%,640px);background:{{ (int)$message->user_id === (int)auth()->id() ? '#d9fdd3' : '#fff' }};border-radius:10px;padding:10px 12px;border:1px solid rgba(0,0,0,.06);">
                             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
-                                <strong style="font-size:12px;color:#0f172a;">{{ $message->user->name ?? 'User' }}</strong>
+                                <strong style="font-size:12px;color:#0f172a;">{{ $message->authorName() }}</strong>
                                 <span style="font-size:11px;color:#64748b;">{{ $message->created_at?->diffForHumans() }}</span>
                             </div>
                             @if($message->body)
-                                <div style="font-size:13px;color:#0f172a;line-height:1.55;white-space:pre-wrap;">{{ $message->body }}</div>
+                                <div style="font-size:13px;color:#0f172a;line-height:1.55;white-space:pre-wrap;">{{ $message->linkedBody() }}</div>
                             @endif
                             @if($message->image_url)
                                 <div style="margin-top:8px;">
@@ -162,11 +162,11 @@
                                     @foreach($message->replies as $reply)
                                         <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;">
                                             <div style="font-size:11px;font-weight:700;color:#0f172a;">
-                                                {{ $reply->user->name ?? 'User' }}
+                                                {{ $reply->authorName() }}
                                                 <span style="font-weight:500;color:#64748b;"> · {{ $reply->created_at?->diffForHumans() }}</span>
                                             </div>
                                             @if($reply->body)
-                                                <div style="font-size:12px;color:#334155;line-height:1.5;white-space:pre-wrap;">{{ $reply->body }}</div>
+                                                <div style="font-size:12px;color:#334155;line-height:1.5;white-space:pre-wrap;">{{ $reply->linkedBody() }}</div>
                                             @endif
                                             @if($reply->image_url)
                                                 <div style="margin-top:6px;">

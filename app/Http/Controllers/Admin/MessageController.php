@@ -42,7 +42,13 @@ class MessageController extends Controller
 
         $channel->markRead($user);
 
-        return redirect()->route($this->communityShowRoute(), $channel->slug);
+        $redirect = redirect()->route($this->communityShowRoute(), $channel->slug);
+
+        if (Message::containsMarkup($attrs['body'])) {
+            return $redirect->with('success', Message::plainTextNotice());
+        }
+
+        return $redirect;
     }
 
     public function older(Request $request, Channel $channel)

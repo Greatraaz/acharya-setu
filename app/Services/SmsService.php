@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AppSetting;
+use App\Support\SensitiveLog;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -35,9 +36,8 @@ class SmsService
                 default    => static::logOnly($phone, $message),
             };
         } catch (\Throwable $e) {
-            Log::error("[SmsService] Failed ({$provider}): " . $e->getMessage(), [
-                'phone'   => $phone,
-                'message' => $message,
+            Log::error("[SmsService] Failed ({$provider}): " . SensitiveLog::redact($e->getMessage()), [
+                'phone' => $phone,
             ]);
             return false;
         }
@@ -96,7 +96,7 @@ class SmsService
         $success = $response->successful() &&
                    ($response->json('type') === 'success' || $response->status() === 200);
 
-        Log::info("[SmsService] MSG91 to {$phone}", ['status' => $response->status(), 'body' => $response->body()]);
+        Log::info("[SmsService] MSG91 to {$phone}", ['status' => $response->status()]);
         return $success;
     }
 
@@ -173,7 +173,7 @@ class SmsService
             'numbers'  => $phone,
         ]);
 
-        Log::info("[SmsService] Fast2SMS to {$phone}", ['status' => $response->status(), 'body' => $response->body()]);
+        Log::info("[SmsService] Fast2SMS to {$phone}", ['status' => $response->status()]);
         return $response->successful();
     }
 
@@ -181,9 +181,8 @@ class SmsService
 
     private static function logOnly(string $phone, string $message): bool
     {
-        Log::info("[SmsService] No provider — SMS not sent", [
-            'phone'   => $phone,
-            'message' => $message,
+        Log::info('[SmsService] No provider — SMS not sent. Message body omitted from logs.', [
+            'phone' => $phone,
         ]);
         return true; // Return true so dev flow isn't broken
     }

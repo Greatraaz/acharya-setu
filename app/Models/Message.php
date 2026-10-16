@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ActivityLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,14 +42,96 @@ class Message extends Model
 
     protected static function booted(): void
     {
+        static::created(function (self $message): void {
+            if (! self::containsMarkup($message->body)) {
+                return;
+            }
+
+            (new ActivityLogger())
+                ->event('chat_html_escaped')
+                ->description('Chat message #'.$message->id.' was stored as plain text. HTML and script content is shown as text and is not run.')
+                ->module('community')
+                ->success()
+                ->withMeta([
+                    'message_id' => $message->id,
+                    'channel_id' => $message->channel_id,
+                    'stored_as'  => 'plain_text',
+                ])
+                ->log();
+        });
+
         static::deleting(function (self $message) {
             $message->deleteStoredMedia();
         });
     }
 
+    public static function containsMarkup(?string $body): bool
+    {
+        $body = (string) $body;
+
+        return $body !== '' && preg_match('/[<>]|javascript\s*:|on\w+\s*=/i', $body) === 1;
+    }
+
+    public static function plainTextNotice(): string
+    {
+        return 'Your message was posted as plain text. HTML and script content is shown as text and will not run.';
+    }
+
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
+    }
+
+    public function authorName(): string
+    {
+        $name = trim((string) ($this->user?->name ?? ''));
+
+        return $name !== '' ? $name : 'Deleted user';
+    }
+
+    public function linkedBody(): \Illuminate\Support\HtmlString
+    {
+        return new \Illuminate\Support\HtmlString(self::linkify($this->body));
+    }
+
+    public static function linkify(?string $body): string
+    {
+        $escaped = e((string) $body);
+
+        $linked = preg_replace_callback(
+            '/(?<![\w@])((?:https?:\/\/|www\.)[^\s<]+)/i',
+            function (array $match): string {
+                $core = $match[1];
+                $suffix = '';
+
+                while ($core !== '' && preg_match('/[.,;:!?)\]]$/', $core)) {
+                    $last = substr($core, -1);
+                    if ($last === ')' && substr_count($core, '(') >= substr_count($core, ')')) {
+                        break;
+                    }
+                    if ($last === ']' && substr_count($core, '[') >= substr_count($core, ']')) {
+                        break;
+                    }
+                    $suffix = $last.$suffix;
+                    $core = substr($core, 0, -1);
+                }
+
+                if ($core === '' || preg_match('/^(?:https?:\/\/|www\.)$/i', $core)) {
+                    return $match[0];
+                }
+
+                $href = preg_match('/^www\./i', $core) ? 'https://'.$core : $core;
+                $scheme = strtolower((string) parse_url(html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8'), PHP_URL_SCHEME));
+                if (! in_array($scheme, ['http', 'https'], true)) {
+                    return $match[0];
+                }
+
+                return '<a href="'.$href.'" class="community-bubble__link" target="_blank" rel="noopener noreferrer">'.$core.'</a>'.$suffix;
+            },
+            $escaped
+        );
+
+        return $linked ?? $escaped;
     }
 
     public function channel(): BelongsTo

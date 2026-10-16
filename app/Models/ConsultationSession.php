@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ConsultationSession extends Model
@@ -25,7 +26,7 @@ class ConsultationSession extends Model
         'title', 'agenda', 'mentor_notes', 'meeting_link', 'meeting_provider', 'meeting_channel',
         'status', 'cancellation_reason', 'cancelled_by', 'cancelled_at', 'started_at', 'ended_at',
         'actual_duration_seconds', 'amount', 'list_amount', 'currency', 'payment_status', 'payment_method',
-        'offer_id', 'coupon_discount', 'platform_subsidy', 'forfeit_plan_benefit',
+        'offer_id', 'coupon_discount', 'platform_subsidy', 'platform_fee_rate', 'forfeit_plan_benefit',
         'wallet_amount', 'razorpay_amount', 'payment_reference',
         'razorpay_order_id', 'razorpay_payment_id', 'cancellation_settlement',
     ];
@@ -38,6 +39,7 @@ class ConsultationSession extends Model
         'list_amount'              => 'decimal:2',
         'coupon_discount'          => 'decimal:2',
         'platform_subsidy'         => 'decimal:2',
+        'platform_fee_rate'        => 'float',
         'wallet_amount'            => 'decimal:2',
         'razorpay_amount'          => 'decimal:2',
         'forfeit_plan_benefit'     => 'boolean',
@@ -65,6 +67,16 @@ class ConsultationSession extends Model
 
             if (empty($session->status)) {
                 $session->status = self::STATUS_UPCOMING;
+            }
+
+            if ($session->platform_fee_rate === null) {
+                try {
+                    if (Schema::hasColumn($session->getTable(), 'platform_fee_rate')) {
+                        $session->platform_fee_rate = SessionPayoutBreakdown::FEE_RATE;
+                    }
+                } catch (\Throwable) {
+                    // Leave unset when the column is not available yet.
+                }
             }
         });
     }

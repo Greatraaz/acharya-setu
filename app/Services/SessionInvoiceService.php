@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AppSetting;
 use App\Models\ConsultationSession;
 use App\Models\SessionInvoice;
+use App\Support\SessionPayoutBreakdown;
 use Illuminate\Support\Facades\DB;
 
 class SessionInvoiceService
@@ -32,6 +33,7 @@ class SessionInvoiceService
             }
 
             $seller = AppSetting::billing();
+            $payout = SessionPayoutBreakdown::fromSession($locked);
             $user = $locked->mentee;
             $total = (float) $locked->amount;
             $couponDiscount = round((float) ($locked->coupon_discount ?? 0), 2);
@@ -101,6 +103,10 @@ class SessionInvoiceService
                     'coupon_discount' => $couponDiscount,
                     'platform_subsidy' => $platformSubsidy,
                     'mentee_paid' => $total,
+                    'gross_amount' => $payout['gross'],
+                    'platform_fee' => $payout['platform_fee'],
+                    'platform_fee_rate' => $payout['fee_rate'],
+                    'net_amount' => $payout['net'],
                     'offer_id' => $locked->offer_id,
                     'payment_method' => $locked->payment_method,
                 ],

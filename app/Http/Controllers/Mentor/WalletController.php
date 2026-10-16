@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
 use App\Models\WalletTransaction;
 use App\Models\WithdrawalRequest;
-use App\Support\SessionPayoutBreakdown;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -65,9 +64,7 @@ class WalletController extends Controller
             ->latest()
             ->paginate(10, ['*'], 'withdrawals_page');
 
-        $platformFeeRate = SessionPayoutBreakdown::FEE_RATE;
-
-        return view('frontend.mentors.wallet', compact('transactions', 'stats', 'platformFeeRate', 'withdrawals'));
+        return view('frontend.mentors.wallet', compact('transactions', 'stats', 'withdrawals'));
     }
 
     public function withdraw(Request $request)

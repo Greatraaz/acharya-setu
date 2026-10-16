@@ -231,8 +231,9 @@ class SessionCancellationService
 
             $mentorCredited = 0.0;
             $platformFee = 0.0;
+            $feeRate = SessionPayoutBreakdown::rateForSession($locked);
             if ($retainedGross > 0 && $cancelledByRole === self::ROLE_MENTEE && ! $isFull) {
-                $fee = round($retainedGross * SessionPayoutBreakdown::FEE_RATE, 2);
+                $fee = round($retainedGross * $feeRate, 2);
                 $net = round($retainedGross - $fee, 2);
                 $platformFee = $fee;
                 $mentorCredited = $net;
@@ -255,7 +256,7 @@ class SessionCancellationService
                                     'session_id'        => $locked->id,
                                     'retained_gross'    => $retainedGross,
                                     'platform_fee'      => $fee,
-                                    'platform_fee_rate' => SessionPayoutBreakdown::FEE_RATE,
+                                    'platform_fee_rate' => $feeRate,
                                     'net_amount'        => $net,
                                     'refund_percent'    => $refundPercent,
                                 ],
@@ -296,6 +297,7 @@ class SessionCancellationService
                 'plan_benefit_forfeited' => $forfeitPlan,
                 'retained_gross'         => $retainedGross,
                 'platform_fee'           => $platformFee,
+                'platform_fee_rate'      => $feeRate,
                 'mentor_credited'        => $mentorCredited,
                 'wallet_txn_id'          => $walletTxn?->id,
                 'wallet_reference'       => $walletTxn?->reference,
@@ -445,8 +447,8 @@ class SessionCancellationService
         }
 
         $settings = AppSetting::razorpay();
-        $key = $settings['key'] ?: config('services.razorpay.key', env('RAZORPAY_KEY_ID', ''));
-        $secret = $settings['secret'] ?: config('services.razorpay.secret', env('RAZORPAY_KEY_SECRET', ''));
+        $key = (string) ($settings['key'] ?? '');
+        $secret = (string) ($settings['secret'] ?? '');
 
         if ($key === '' || $secret === '') {
             Log::error('Cannot refund session cancellation — Razorpay not configured.', [

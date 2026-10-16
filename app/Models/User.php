@@ -47,7 +47,15 @@ class User extends Authenticatable
         'terms_accepted_at', 'terms_version',
     ];
  
-    protected $hidden = ['password', 'remember_token', 'deleted_email', 'deleted_phone'];
+    public const SECRET_ATTRIBUTES = [
+        'password',
+        'remember_token',
+        'deleted_email',
+        'deleted_phone',
+        'bank_details',
+    ];
+
+    protected $hidden = self::SECRET_ATTRIBUTES;
  
     protected $casts = [
         'expertise'            => 'array',
@@ -92,6 +100,10 @@ class User extends Authenticatable
         $results = [];
 
         foreach ($attributes as $attribute) {
+            if (in_array($attribute, self::SECRET_ATTRIBUTES, true)) {
+                continue;
+            }
+
             if ($attribute === 'preferences') {
                 $results[$attribute] = $this->preferencesForResponse();
                 continue;
@@ -106,6 +118,11 @@ class User extends Authenticatable
     public function toArray(): array
     {
         $array = parent::toArray();
+
+        foreach (self::SECRET_ATTRIBUTES as $secret) {
+            unset($array[$secret]);
+        }
+
         $array['preferences'] = $this->preferencesForResponse();
 
         return $array;
