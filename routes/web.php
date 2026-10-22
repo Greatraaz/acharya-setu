@@ -99,6 +99,7 @@ use App\Http\Controllers\Admin\InsightEventController;
 use App\Http\Controllers\Admin\DownloadCentreController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\Admin\BulkEmailController;
 
 use App\Http\Controllers\Frontend\InsightController;
 
@@ -608,6 +609,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     // ── Notifications ─────────────────────────────────────────
     Route::get('/notifications',           [NotificationController::class, 'index'])    ->name('notifications.index');
     Route::post('/notifications/seen',     [NotificationController::class, 'markSeen']) ->name('notifications.seen');
+
+    // ── Bulk email ────────────────────────────────────────────
+    Route::get('/bulk-emails',             [BulkEmailController::class, 'create'])->name('bulk-emails.create');
+    Route::post('/bulk-emails',            [BulkEmailController::class, 'store'])->name('bulk-emails.store');
+    Route::get('/bulk-emails/preview',     [BulkEmailController::class, 'preview'])->name('bulk-emails.preview');
+    Route::get('/bulk-emails/search',      [BulkEmailController::class, 'search'])->name('bulk-emails.search');
 
     // ── Mentor Approvals ──────────────────────────────────────
     Route::prefix('mentors')->name('mentors.')->group(function () {

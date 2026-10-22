@@ -47,6 +47,7 @@
             ],
             'Community' => [
                 ['admin.community.index', '💬', 'Community Channels'],
+                ['admin.bulk-emails.create', '✉️', 'Bulk Email'],
             ],
             'Utilities' => [
                 'type' => 'group',
