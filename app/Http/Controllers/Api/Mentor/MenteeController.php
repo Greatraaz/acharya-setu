@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Mentor;
 
 use App\Http\Controllers\Controller;
 use App\Models\{User, MenteeEnrollment, StudentCurriculumProgress};
+use App\Support\MentorMenteeJoinedAt;
 use Illuminate\Http\{Request, JsonResponse};
 
 class MenteeController extends Controller
@@ -44,6 +45,8 @@ class MenteeController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
+        MentorMenteeJoinedAt::attach(collect($paginator->items()), (int) $mentor->id);
+
         $mentees = collect($paginator->items())
             ->map(fn (User $mentee) => $this->formatMentee($mentee, $mentor->id))
             ->values();
@@ -71,6 +74,7 @@ class MenteeController extends Controller
     {
         $mentor = $request->user();
         $menteeModel = $this->findMentorMentee($mentor->id, $mentee);
+        MentorMenteeJoinedAt::for($menteeModel, (int) $mentor->id);
 
         $menteeModel->load([
             'enrollments' => fn ($q) => $q->where('mentor_id', $mentor->id)->with('stream'),
@@ -134,6 +138,7 @@ class MenteeController extends Controller
             'onboarding_step'      => $mentee->onboarding_step,
             'onboarding_completed' => (bool) $mentee->onboarding_completed,
             'is_active'            => (bool) $mentee->is_active,
+            'joined_at'            => $mentee->mentor_joined_at?->toDateString(),
             'enrollments'          => $enrollments,
             'enrollments_count'    => $enrollments->count(),
         ];

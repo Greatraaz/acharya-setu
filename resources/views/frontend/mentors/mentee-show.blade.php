@@ -24,6 +24,10 @@
                 <div><span style="color:var(--text-3);">Field</span><div style="font-weight:600;">{{ $mentee->field ?: '—' }}</div></div>
                 <div><span style="color:var(--text-3);">Location</span><div style="font-weight:600;">{{ $mentee->location ?: '—' }}</div></div>
                 <div><span style="color:var(--text-3);">Year</span><div style="font-weight:600;">{{ $mentee->year ?: '—' }}</div></div>
+                <div>
+                    <span style="color:var(--text-3);">Joined</span>
+                    <div style="font-weight:600;">{{ ($joinedAt ?? $mentee->mentor_joined_at)?->format('d M Y') ?: '—' }}</div>
+                </div>
             </div>
             @if($mentee->bio)
             <p style="margin-top:14px;font-size:13px;color:var(--text-2);">{{ $mentee->bio }}</p>

@@ -45,6 +45,9 @@
                         @if($mentee->field)<span>{{ $mentee->field }}</span>@endif
                     </div>
                     @endif
+                    @if($mentee->mentor_joined_at)
+                    <div class="mentor-mentee-card__joined">Joined {{ $mentee->mentor_joined_at->format('d M Y') }}</div>
+                    @endif
                 </div>
                 <div class="mentor-mentee-card__actions">
                     <a href="{{ route('mentor.journey.show', $mentee->id) }}" class="btn btn-outline btn-sm">Journey</a>

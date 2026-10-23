@@ -13,6 +13,7 @@ use App\Models\StudentCurriculumProgress;
 use App\Models\User;
 use App\Services\CurriculumSubmissionReviewService;
 use App\Support\ChannelIndexQuery;
+use App\Support\MentorMenteeJoinedAt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -73,6 +74,8 @@ class PortalController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        MentorMenteeJoinedAt::attach($mentees->getCollection(), (int) auth()->id());
+
         return view('frontend.mentors.mentees', compact('mentees', 'search'));
     }
 
@@ -80,6 +83,7 @@ class PortalController extends Controller
     {
         $mentee = $this->findMentorMentee($id);
         $mentorId = auth()->id();
+        $joinedAt = MentorMenteeJoinedAt::for($mentee, (int) $mentorId);
 
         $this->syncEnrollmentsFromTracks($mentorId, $mentee->id);
 
@@ -100,7 +104,7 @@ class PortalController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        return view('frontend.mentors.mentee-show', compact('mentee', 'sessions', 'enrollments', 'tracks'));
+        return view('frontend.mentors.mentee-show', compact('mentee', 'sessions', 'enrollments', 'tracks', 'joinedAt'));
     }
 
     public function journey(Request $request)

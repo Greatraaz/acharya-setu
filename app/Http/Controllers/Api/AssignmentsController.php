@@ -32,9 +32,9 @@ class AssignmentsController extends Controller
             'mentee_id' => 'required|uuid|exists:users,id',
             'mentor_id' => 'required|uuid|exists:users,id',
         ]);
-        User::where('id', $d['mentee_id'])->update(['assigned_mentor_id' => $d['mentor_id']]);
         $mentee = User::query()->find($d['mentee_id']);
         if ($mentee) {
+            $mentee->update(['assigned_mentor_id' => $d['mentor_id']]);
             $notifications = app(\App\Services\NotificationService::class);
             $notifications->send(
                 $mentee,

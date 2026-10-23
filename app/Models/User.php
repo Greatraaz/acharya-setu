@@ -38,7 +38,7 @@ class User extends Authenticatable
         'wallet_balance', 'bio', 'expertise', 'field', 'college', 'year',
         'gender', 'rating', 'total_sessions', 'avatar_url', 'phone', 'bank_details', 'location',
         'linkedin', 'company', 'designation', 'experience_years',
-        'is_active', 'rate_per_minute', 'assigned_mentor_id',
+        'is_active', 'rate_per_minute', 'assigned_mentor_id', 'assigned_mentor_at',
         'deleted_email', 'deleted_phone',
         'subscription_plan', 'mentor_status', 'education_stream',
         'career_goals', 'strengths', 'preferences',
@@ -69,6 +69,7 @@ class User extends Authenticatable
         'rating'               => 'decimal:2',
         'rate_per_minute'      => 'decimal:2',
         'approved_at'          => 'datetime',
+        'assigned_mentor_at'   => 'datetime',
         'terms_accepted_at'    => 'datetime',
         'email_verified_at'    => 'datetime',
     ];
@@ -131,6 +132,14 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::saving(function (User $user) {
+            if ($user->isDirty('assigned_mentor_id')) {
+                if (blank($user->assigned_mentor_id)) {
+                    $user->assigned_mentor_at = null;
+                } elseif (! $user->isDirty('assigned_mentor_at')) {
+                    $user->assigned_mentor_at = now();
+                }
+            }
+
             if ($user->role !== 'mentor') {
                 return;
             }
