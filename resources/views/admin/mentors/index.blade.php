@@ -236,7 +236,7 @@ $stats = [
 
                         {{-- Actions --}}
                         <td class="px-4 py-4">
-                            <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div class="flex items-center justify-end gap-1 flex-wrap">
                                 <a href="{{ route('admin.mentors.review', $mentor) }}"
                                    class="text-xs font-medium px-2.5 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg transition-colors">
                                     Review

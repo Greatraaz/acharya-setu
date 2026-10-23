@@ -3,6 +3,7 @@ use Illuminate\Support\Facades\Route;
 
 // ── Controllers ─────────────────────────────────────────────
 use App\Http\Controllers\Frontend\HomeController;
+use App\Http\Controllers\Frontend\PushNotificationController;
 use App\Http\Controllers\Frontend\MentorListingController;
 use App\Http\Controllers\Frontend\ContactController;
 use App\Http\Controllers\Frontend\BlogController as FrontendBlogController;
@@ -219,6 +220,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/forgot-password',         [ForgotPasswordController::class, 'sendLink'])   ->name('password.email');
     Route::get( '/reset-password/{token?}', [ForgotPasswordController::class, 'showReset'])  ->name('password.reset');
     Route::post('/reset-password',          [ForgotPasswordController::class, 'resetPassword'])->name('password.update');
+});
+
+Route::middleware('auth:web')->group(function () {
+    Route::get('/notifications/feed', [PushNotificationController::class, 'feed'])->name('notifications.feed');
+    Route::post('/notifications/{id}/read', [PushNotificationController::class, 'markRead'])->name('notifications.read')->whereNumber('id');
+    Route::post('/notifications/read-all', [PushNotificationController::class, 'markAllRead'])->name('notifications.read-all');
 });
 
 // ── Logout (works even if session already expired) ───────────

@@ -500,6 +500,12 @@
                     <div class="divider"></div>
                     @endforeach
                 </div>
+                <div class="section-card">
+                    <h3>Device push (Firebase)</h3>
+                    <p class="section-desc">Optional. Paste a Firebase Cloud Messaging server key to push to Android/iOS/web apps that register a device token. In-app notifications still work without this.</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">FCM server key</label>
+                    <input type="password" name="fcm_server_key" class="form-input" placeholder="{{ config_val('fcm_server_key') ? 'Saved — leave blank to keep' : 'AAAA…' }}" autocomplete="off">
+                </div>
             </form>
         </div>
 

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Plans, WalletTransaction, Notification};
+use App\Models\{Plans, WalletTransaction};
 use Illuminate\Http\{Request, JsonResponse};
 
 class PlansController extends Controller
@@ -30,12 +30,14 @@ class PlansController extends Controller
                 'status'       => 'completed',
             ]);
         }
-        Notification::create([
-            'user_id' => $request->user()->id,
-            'type'    => 'subscription',
-            'title'   => 'Plan Upgraded!',
-            'body'    => "Welcome to {$plan->name}!",
-        ]);
+        app(\App\Services\NotificationService::class)->send(
+            $request->user(),
+            'subscription',
+            'Plan Upgraded!',
+            "Welcome to {$plan->name}!",
+            ['plan_slug' => $plan->slug],
+            app(\App\Services\NotificationService::class)->roleUrl($request->user(), 'plans')
+        );
         return response()->json(['message' => "Subscribed to {$plan->name}", 'plan' => $plan]);
     }
 }

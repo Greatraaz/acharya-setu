@@ -109,7 +109,7 @@
                 <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 16 16"><path d="M8 1a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zm4.5 8a3.5 3.5 0 0 1 3.5 3.5V14a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1v-1.5A3.5 3.5 0 0 1 3.5 9h9z"/></svg>
                 </div>
-                <span class="text-xs font-semibold text-gray-600">Pending Approvals</span>
+                <span class="text-xs font-semibold text-gray-600">Pending mentor approvals</span>
             </div>
             <div class="text-2xl font-bold text-amber-600">{{ $stats['pendingMentors'] }}</div>
             <div class="text-xs text-amber-600 mt-1 font-medium">Review now →</div>

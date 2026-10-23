@@ -58,5 +58,15 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('events_webinar', fn ($value) => InsightEvent::findOrFail($value));
 
         ConsultationSession::observe(ConsultationSessionObserver::class);
+
+        if (! $this->app->runningInConsole()) {
+            try {
+                if (\Illuminate\Support\Facades\Cache::add('session_reminders_tick', 1, now()->addMinutes(5))) {
+                    \Illuminate\Support\Facades\Artisan::call('notifications:session-reminders');
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
     }
 }

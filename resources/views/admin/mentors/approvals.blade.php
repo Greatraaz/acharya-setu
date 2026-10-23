@@ -137,7 +137,7 @@ FILE: resources/views/admin/mentors/approvals.blade.php
                             <div class="text-[10px] text-gray-400">{{ $mentor->created_at->diffForHumans() }}</div>
                         </td>
                         <td class="px-4 py-4">
-                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                            <div class="flex items-center gap-1 flex-wrap justify-end">
                                 <a href="{{ route('admin.mentors.review', $mentor) }}"
                                    class="text-xs font-medium px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg transition-colors">
                                     Review

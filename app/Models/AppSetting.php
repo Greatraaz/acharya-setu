@@ -267,6 +267,19 @@ class AppSetting extends Model
         ];
     }
 
+    /** Firebase Cloud Messaging server key (legacy HTTP). Empty when not configured. */
+    public static function fcmServerKey(): string
+    {
+        $s = static::allCached();
+        $raw = static::firstNonEmpty([
+            $s['fcm_server_key'] ?? null,
+            config('services.fcm.server_key'),
+            env('FCM_SERVER_KEY'),
+        ]);
+
+        return (string) (static::decryptIfNeeded($raw) ?: '');
+    }
+
     /** Career + mock interview paid add-on prices. */
     public static function careerAddons(): array
     {

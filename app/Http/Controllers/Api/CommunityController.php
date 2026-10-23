@@ -604,6 +604,16 @@ public function deleteChannel(Request $request, int $channelId): JsonResponse
                     'role'          => $invitee->role,
                     'status'        => $invitation->status,
                 ];
+
+                $notifications = app(\App\Services\NotificationService::class);
+                $notifications->send(
+                    $invitee,
+                    'community_invite',
+                    'Channel invitation',
+                    $user->name.' invited you to #'.$channel->name.'.',
+                    ['channel_id' => $channel->id, 'invitation_id' => $invitation->id],
+                    $notifications->roleUrl($invitee, 'community.index')
+                );
             }
         });
 

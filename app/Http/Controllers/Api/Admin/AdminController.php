@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{User,Session,Task,Video,JobListing,Quiz,QuizQuestion,PremiumPlan,Channel,Assessment,Notification,Message};
+use App\Models\{User,Session,Task,Video,JobListing,Quiz,QuizQuestion,PremiumPlan,Channel,Assessment,Message};
 use Illuminate\Http\{Request,JsonResponse};
 
 class AdminController extends Controller
@@ -169,9 +169,11 @@ class AdminController extends Controller
     {
         $d=$request->validate(['title'=>'required|string','body'=>'required|string','type'=>'sometimes|string','role'=>'nullable|in:mentor,mentee']);
         $q=User::where('is_active',true); if($d['role']??null) $q->where('role',$d['role']);
-        $users=$q->pluck('id');
-        $notifs=$users->map(fn($uid)=>['id'=>\Illuminate\Support\Str::uuid(),'user_id'=>$uid,'type'=>$d['type']??'broadcast','title'=>$d['title'],'body'=>$d['body'],'is_read'=>false,'created_at'=>now(),'updated_at'=>now()]);
-        Notification::insert($notifs->toArray());
+        $users=$q->get();
+        $notifications = app(\App\Services\NotificationService::class);
+        foreach ($users as $user) {
+            $notifications->send($user, $d['type']??'broadcast', $d['title'], $d['body']);
+        }
         return response()->json(['message'=>"Sent to {$users->count()} users"]);
     }
 }

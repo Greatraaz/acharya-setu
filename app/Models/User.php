@@ -247,6 +247,16 @@ class User extends Authenticatable
         return $this->hasMany(User::class, 'assigned_mentor_id');
     }
 
+    public function appNotifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
     /**
      * Mentee IDs linked to a mentor via sessions, assignment, enrollment, or curriculum tracks.
      */

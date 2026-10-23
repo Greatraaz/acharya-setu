@@ -93,6 +93,24 @@ class CurriculumTask extends Model
         return $this->belongsTo(User::class, 'mentee_id');
     }
 
+    public function notifyAssignee(): void
+    {
+        $mentee = $this->mentee ?: User::query()->find($this->mentee_id);
+        if (! $mentee) {
+            return;
+        }
+
+        $notifications = app(\App\Services\NotificationService::class);
+        $notifications->send(
+            $mentee,
+            'task_assigned',
+            'New task assigned',
+            'New task: '.$this->title,
+            ['curriculum_task_id' => $this->id],
+            $notifications->roleUrl($mentee, 'journey.index')
+        );
+    }
+
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);

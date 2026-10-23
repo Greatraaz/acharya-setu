@@ -81,6 +81,26 @@
 
         {{-- Right side --}}
         <div class="navbar-right">
+            @auth
+                @if(in_array(auth()->user()->role, ['mentor', 'mentee'], true))
+                    <div class="notif-bell" id="notifBell" data-feed-url="{{ route('notifications.feed') }}" data-read-all-url="{{ route('notifications.read-all') }}" data-read-url="{{ url('/notifications') }}" data-user-id="{{ auth()->id() }}">
+                        <button type="button" class="notif-bell__btn" id="notifBellBtn" aria-label="Notifications" aria-expanded="false">
+                            <span class="notif-bell__icon" aria-hidden="true">🔔</span>
+                            <span class="notif-bell__badge" id="notifBadge" hidden>0</span>
+                        </button>
+                        <div class="notif-panel" id="notifPanel" hidden>
+                            <div class="notif-panel__head">
+                                <div class="notif-panel__title">Notifications</div>
+                                <button type="button" class="notif-panel__mark" id="notifMarkAll">Mark all read</button>
+                            </div>
+                            <div class="notif-panel__list" id="notifList">
+                                <div class="notif-panel__empty">No notifications yet.</div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            @endauth
+
             {{-- Theme toggle --}}
             <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">☀️</button>
 
@@ -254,6 +274,11 @@
 </footer>
 
 <script src="{{ asset('frontend/js/app.js') }}?v={{ filemtime(public_path('frontend/js/app.js')) }}"></script>
+@auth
+    @if(in_array(auth()->user()->role, ['mentor', 'mentee'], true))
+        @include('frontend.partials.push-notifications')
+    @endif
+@endauth
 @stack('scripts')
 </body>
 </html>

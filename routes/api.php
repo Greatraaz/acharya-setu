@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AssessmentsController;
 use App\Http\Controllers\Api\VideosController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\NotificationsController;
+use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\CareerTracksController;
 use App\Http\Controllers\Api\CommunityController;
 use App\Http\Controllers\Api\JobsController;
@@ -111,6 +112,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('/change-password', [AuthController::class, 'changePassword']);
         Route::patch('/onboarding',     [AuthController::class, 'updateOnboarding']);
     });
+
+    Route::post('/device-tokens', [DeviceTokenController::class, 'store']);
+    Route::delete('/device-tokens', [DeviceTokenController::class, 'destroy']);
 
     /**********************************************************
      * Admin Routes

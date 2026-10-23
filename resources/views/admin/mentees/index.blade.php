@@ -264,7 +264,7 @@ $stats = [
 
                         {{-- Actions --}}
                         <td class="px-4 py-4">
-                            <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div class="flex items-center justify-end gap-1 flex-wrap">
                                 <a href="{{ route('admin.mentees.show', $mentee) }}"
                                    class="text-xs font-medium px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors">
                                     View

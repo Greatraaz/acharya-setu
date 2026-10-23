@@ -366,7 +366,7 @@ class CurriculumController extends Controller
 
         $attachments = $this->processUploadedAttachments($request, $data['attachments'] ?? []);
 
-        CurriculumTask::create([
+        $task = CurriculumTask::create([
             'week_id'         => $week->id,
             'mentee_id'       => $data['mentee_id'],
             'plan_id'         => $data['plan_id'] ?? null,
@@ -378,6 +378,8 @@ class CurriculumController extends Controller
             'is_active'       => $request->boolean('is_active', true),
             'submission_type' => $data['submission_type'] ?? 'none',
         ]);
+
+        $task->notifyAssignee();
 
         return redirect()->back()->with('success', 'Task created.');
     }

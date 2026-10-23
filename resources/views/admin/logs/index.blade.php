@@ -222,7 +222,7 @@
 
                         {{-- Actions --}}
                         <td class="px-4 py-3.5">
-                            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                            <div class="flex items-center gap-1 flex-wrap justify-end">
                                 <a href="{{ route('admin.logs.show', $log) }}"
                                    class="text-xs text-gray-400 hover:text-blue-600 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors">
                                     View

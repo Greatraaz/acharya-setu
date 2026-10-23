@@ -3,6 +3,7 @@
 use App\Services\PublicFileStorage;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -27,3 +28,5 @@ Artisan::command('mentors:backfill-slugs', function () {
 
     return 0;
 })->purpose('Generate missing public profile slugs for mentors');
+
+Schedule::command('notifications:session-reminders')->everyFiveMinutes();

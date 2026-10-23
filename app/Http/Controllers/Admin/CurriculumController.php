@@ -369,7 +369,9 @@ class CurriculumController extends Controller
         $data['is_active']   = $request->boolean('is_active', true);
         $data['submission_type'] = $data['submission_type'] ?? 'none';
  
-        CurriculumTask::create($data);
+        $task = CurriculumTask::create($data);
+        $task->notifyAssignee();
+
         return redirect()->back()->with('success', 'Task created.');
     }
  

@@ -532,6 +532,8 @@ class CurriculumController extends Controller
             'submission_type'   => $data['submission_type'] ?? 'none',
         ]);
 
+        $task->notifyAssignee();
+
         return response()->json([
             'status'     => true,
             'statuscode' => 201,

@@ -180,6 +180,18 @@ class ChannelController extends Controller
 
         $channel->addMember($invitee);
 
+        if (in_array($invitee->role, ['mentor', 'mentee'], true)) {
+            $notifications = app(\App\Services\NotificationService::class);
+            $notifications->send(
+                $invitee,
+                'community_invite',
+                'Channel invitation',
+                'You were added to #'.$channel->name.'.',
+                ['channel_id' => $channel->id],
+                $notifications->roleUrl($invitee, 'community.show', $channel->slug)
+            );
+        }
+
         return back()->with('success', $invitee->name . ' invited to #' . $channel->name);
     }
 

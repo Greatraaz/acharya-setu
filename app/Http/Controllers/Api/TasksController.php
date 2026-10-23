@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\{CurriculumTask, Notification};
+use App\Models\{CurriculumTask};
 use Illuminate\Http\{Request, JsonResponse};
 
 class  TasksController extends Controller
@@ -34,12 +34,13 @@ class  TasksController extends Controller
 
         try {
             $t = CurriculumTask::create(array_merge($d, ['assigned_by' => $request->user()->id, 'status' => 'pending']));
-            Notification::create([
-                'user_id' => $d['user_id'],
-                'type'    => 'task_assigned',
-                'title'   => 'New Task',
-                'body'    => "New task: {$d['title']}",
-            ]);
+            app(\App\Services\NotificationService::class)->send(
+                (int) $d['user_id'],
+                'task_assigned',
+                'New Task',
+                "New task: {$d['title']}",
+                ['task_id' => $t->id]
+            );
             return response()->json([
                 'status'     => true,
                 'statuscode' => 201,

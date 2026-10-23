@@ -44,6 +44,16 @@ class SessionMailService
             return;
         }
 
+        try {
+            app(NotificationService::class)->sessionEvent($session, $event);
+        } catch (\Throwable $e) {
+            Log::warning('Session push notification failed.', [
+                'session_id' => $session->id,
+                'event'      => $event,
+                'error'      => $e->getMessage(),
+            ]);
+        }
+
         if ($session->mentee) {
             $this->send($session, $event, 'mentee', $session->mentee);
         }

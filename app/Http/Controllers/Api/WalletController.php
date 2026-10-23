@@ -258,6 +258,16 @@ class WalletController extends Controller
                     ],
                 ]
             );
+
+            $notifications = app(\App\Services\NotificationService::class);
+            $notifications->send(
+                $user,
+                'wallet_topup',
+                'Wallet credited',
+                '₹'.number_format($amount, 0).' was added to your wallet.',
+                ['amount' => $amount, 'reference' => $paymentId],
+                $notifications->roleUrl($user, 'wallet')
+            );
         } catch (\Throwable $e) {
             Log::error('Wallet credit after Razorpay verify failed.', [
                 'user_id' => $user->id,

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\{User, Notification};
+use App\Models\{User};
 use Illuminate\Http\{Request, JsonResponse};
 
 
@@ -33,12 +33,18 @@ class AssignmentsController extends Controller
             'mentor_id' => 'required|uuid|exists:users,id',
         ]);
         User::where('id', $d['mentee_id'])->update(['assigned_mentor_id' => $d['mentor_id']]);
-        Notification::create([
-            'user_id' => $d['mentee_id'],
-            'type'    => 'mentor_assigned',
-            'title'   => 'Mentor Assigned!',
-            'body'    => 'A mentor has been assigned to you!',
-        ]);
+        $mentee = User::query()->find($d['mentee_id']);
+        if ($mentee) {
+            $notifications = app(\App\Services\NotificationService::class);
+            $notifications->send(
+                $mentee,
+                'mentor_assigned',
+                'Mentor Assigned!',
+                'A mentor has been assigned to you!',
+                ['mentor_id' => $d['mentor_id']],
+                $notifications->roleUrl($mentee, 'mentor.change')
+            );
+        }
         return response()->json(['message' => 'Mentor assigned']);
     }
 }

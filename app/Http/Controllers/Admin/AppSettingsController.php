@@ -34,6 +34,7 @@ class AppSettingsController extends Controller
         'zoom_client_secret', 'zoom_webhook_secret',
         'google_client_secret',
         'aws_secret',
+        'fcm_server_key',
     ];
 
     /**

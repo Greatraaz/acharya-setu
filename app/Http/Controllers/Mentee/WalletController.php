@@ -204,6 +204,16 @@ class WalletController extends Controller
             'status'         => 'completed',
         ]);
 
+        $notifications = app(\App\Services\NotificationService::class);
+        $notifications->send(
+            $user,
+            'wallet_topup',
+            'Wallet credited',
+            '₹'.number_format((float) $amount, 0).' was added to your wallet.',
+            ['amount' => $amount, 'reference' => $request->razorpay_payment_id],
+            $notifications->roleUrl($user, 'wallet')
+        );
+
         return response()->json([
             'message' => "₹" . number_format($amount, 0) . " added to your wallet!",
             'balance' => $user->fresh()->wallet_balance,

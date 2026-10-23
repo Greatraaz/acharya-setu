@@ -422,6 +422,8 @@ class AssessmentService
             ->values()
             ->all();
 
+        $previous = $assessment->assignedMentees()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+
         $sync = [];
         foreach ($ids as $menteeId) {
             $sync[$menteeId] = [
@@ -430,6 +432,25 @@ class AssessmentService
         }
 
         $assessment->assignedMentees()->sync($sync);
+
+        $newlyAssigned = array_values(array_diff($ids, $previous));
+        if ($newlyAssigned !== []) {
+            $notifications = app(NotificationService::class);
+            foreach ($newlyAssigned as $menteeId) {
+                $mentee = User::query()->find($menteeId);
+                if (! $mentee) {
+                    continue;
+                }
+                $notifications->send(
+                    $mentee,
+                    'assessment_assigned',
+                    'New assessment',
+                    'You have a new assessment: '.$assessment->title,
+                    ['assessment_id' => $assessment->id],
+                    $notifications->roleUrl($mentee, 'assessments.index')
+                );
+            }
+        }
     }
 
     public function syncScoreBands(

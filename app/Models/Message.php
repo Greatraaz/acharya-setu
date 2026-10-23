@@ -43,21 +43,21 @@ class Message extends Model
     protected static function booted(): void
     {
         static::created(function (self $message): void {
-            if (! self::containsMarkup($message->body)) {
-                return;
+            if (self::containsMarkup($message->body)) {
+                (new ActivityLogger())
+                    ->event('chat_html_escaped')
+                    ->description('Chat message #'.$message->id.' was stored as plain text. HTML and script content is shown as text and is not run.')
+                    ->module('community')
+                    ->success()
+                    ->withMeta([
+                        'message_id' => $message->id,
+                        'channel_id' => $message->channel_id,
+                        'stored_as'  => 'plain_text',
+                    ])
+                    ->log();
             }
 
-            (new ActivityLogger())
-                ->event('chat_html_escaped')
-                ->description('Chat message #'.$message->id.' was stored as plain text. HTML and script content is shown as text and is not run.')
-                ->module('community')
-                ->success()
-                ->withMeta([
-                    'message_id' => $message->id,
-                    'channel_id' => $message->channel_id,
-                    'stored_as'  => 'plain_text',
-                ])
-                ->log();
+            $message->notifyReplyRecipient();
         });
 
         static::deleting(function (self $message) {
@@ -87,6 +87,48 @@ class Message extends Model
         $name = trim((string) ($this->user?->name ?? ''));
 
         return $name !== '' ? $name : 'Deleted user';
+    }
+
+    public function notifyReplyRecipient(): void
+    {
+        if (! $this->parent_id) {
+            return;
+        }
+
+        $parent = $this->parent()->with('user')->first();
+        $recipient = $parent?->user;
+        if (! $recipient || (int) $recipient->id === (int) $this->user_id) {
+            return;
+        }
+
+        if (! in_array($recipient->role, ['mentor', 'mentee'], true)) {
+            return;
+        }
+
+        $channel = $this->channel;
+        $author = $this->authorName();
+        $preview = trim(mb_substr(strip_tags((string) $this->body), 0, 80));
+        $body = $preview !== ''
+            ? $author.' replied: '.$preview
+            : $author.' replied to your message.';
+
+        $notifications = app(\App\Services\NotificationService::class);
+        $url = $channel
+            ? $notifications->roleUrl($recipient, 'community.show', $channel->slug)
+            : $notifications->roleUrl($recipient, 'community.index');
+
+        $notifications->send(
+            $recipient,
+            'community_reply',
+            'New reply',
+            $body,
+            [
+                'message_id' => $this->id,
+                'channel_id' => $this->channel_id,
+                'parent_id'  => $this->parent_id,
+            ],
+            $url
+        );
     }
 
     public function linkedBody(): \Illuminate\Support\HtmlString

@@ -67,8 +67,15 @@ class MentorApprovalController extends Controller
             auth()->user()->name . " approved mentor: {$mentor->name}",
             'users', 'success'
         );
- 
-        // Send welcome email: Notification::send($mentor, new MentorApprovedNotification());
+
+        app(\App\Services\NotificationService::class)->send(
+            $mentor,
+            'mentor_approved',
+            'You are approved',
+            'Your mentor profile is live. You can start accepting mentees.',
+            [],
+            route('mentor.dashboard')
+        );
  
         return redirect()->back()->with('success', "{$mentor->name} has been approved as a mentor.");
     }
@@ -84,6 +91,14 @@ class MentorApprovalController extends Controller
             'mentor_rejected',
             auth()->user()->name . " rejected mentor: {$mentor->name}",
             'users', 'warning'
+        );
+
+        app(\App\Services\NotificationService::class)->send(
+            $mentor,
+            'mentor_rejected',
+            'Application not approved',
+            'Your mentor application was not approved. You can review the notes and apply again.',
+            ['reason' => $request->reason]
         );
  
         return redirect()->back()->with('success', "{$mentor->name}'s application has been rejected.");

@@ -33,12 +33,23 @@ class MentorRequestService
             throw new InvalidArgumentException('You already have a pending request to this mentor.');
         }
 
-        return MentorRequest::create([
+        $request = MentorRequest::create([
             'mentee_id' => $mentee->id,
             'mentor_id' => $mentorId,
             'message'   => $message,
             'status'    => MentorRequest::STATUS_PENDING,
         ])->load('mentor');
+
+        app(NotificationService::class)->send(
+            $mentor,
+            'mentor_request',
+            'New mentee request',
+            $mentee->name.' asked you to be their mentor.',
+            ['mentor_request_id' => $request->id, 'mentee_id' => $mentee->id],
+            app(NotificationService::class)->roleUrl($mentor, 'requests')
+        );
+
+        return $request;
     }
 
     public function cancel(User $mentee, MentorRequest $request): void
@@ -89,7 +100,18 @@ class MentorRequestService
                 ]);
         });
 
-        return $request->fresh()->load('mentee');
+        $fresh = $request->fresh()->load('mentee');
+
+        app(NotificationService::class)->send(
+            $mentee,
+            'mentor_request_accepted',
+            'Mentor request accepted',
+            $mentor->name.' accepted your mentorship request.',
+            ['mentor_request_id' => $request->id, 'mentor_id' => $mentor->id],
+            app(NotificationService::class)->roleUrl($mentee, 'mentor.change')
+        );
+
+        return $fresh;
     }
 
     public function reject(User $mentor, MentorRequest $request, ?string $note = null): MentorRequest
@@ -108,6 +130,20 @@ class MentorRequestService
             'responded_at' => now(),
         ]);
 
-        return $request->fresh()->load('mentee');
+        $fresh = $request->fresh()->load('mentee');
+        $mentee = User::query()->find($request->mentee_id);
+
+        if ($mentee) {
+            app(NotificationService::class)->send(
+                $mentee,
+                'mentor_request_rejected',
+                'Mentor request declined',
+                $mentor->name.' declined your mentorship request.',
+                ['mentor_request_id' => $request->id, 'mentor_id' => $mentor->id],
+                app(NotificationService::class)->roleUrl($mentee, 'mentor.change')
+            );
+        }
+
+        return $fresh;
     }
 }

@@ -59,7 +59,7 @@ class MenteeTaskService
             ? $this->processUploadedAttachments($request, [])
             : [];
 
-        return MenteeTask::create([
+        $task = MenteeTask::create([
             'mentee_id'         => $menteeId,
             'mentor_id'         => $mentorId,
             'created_by'        => $actor->id,
@@ -77,6 +77,21 @@ class MenteeTaskService
                 ? filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN)
                 : true,
         ]);
+
+        $mentee = User::query()->find($menteeId);
+        if ($mentee) {
+            $notifications = app(NotificationService::class);
+            $notifications->send(
+                $mentee,
+                'task_assigned',
+                'New task assigned',
+                'New task: '.$task->title,
+                ['task_id' => $task->id],
+                $notifications->roleUrl($mentee, 'tasks.show', $task->id)
+            );
+        }
+
+        return $task;
     }
 
     public function update(User $actor, MenteeTask $task, array $data, ?Request $request = null): MenteeTask
