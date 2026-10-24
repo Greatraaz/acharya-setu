@@ -30,3 +30,4 @@ Artisan::command('mentors:backfill-slugs', function () {
 })->purpose('Generate missing public profile slugs for mentors');
 
 Schedule::command('notifications:session-reminders')->everyFiveMinutes();
+Schedule::command('subscriptions:auto-approve-cancels')->everyFifteenMinutes();

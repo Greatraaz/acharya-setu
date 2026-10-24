@@ -8,12 +8,14 @@ use App\Models\Plan;
 use App\Models\UserSubscription;
 use App\Services\PlanCheckoutService;
 use App\Services\PlanInvoiceService;
+use App\Services\SubscriptionCancelService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class PlanController extends Controller
 {
@@ -85,6 +87,13 @@ class PlanController extends Controller
                 'status'  => false,
                 'message' => 'Plan not found or currently inactive.',
             ], 404);
+        }
+
+        if (app(SubscriptionCancelService::class)->pendingForUser($user)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'A yearly cancellation request is pending. Wait for it to finish before changing plans.',
+            ], 422);
         }
 
         $current = $this->currentSubscription($user->id);
@@ -410,7 +419,20 @@ class PlanController extends Controller
                 'entitlements'    => [
                     'sessions' => $user->planSessionAllowance(),
                 ],
+                'cancellation'    => app(SubscriptionCancelService::class)->previewForUser($user),
             ],
+        ], 200);
+    }
+
+    // GET /api/v1/mentee/plans/subscription/cancel-preview
+    public function cancelPreview(Request $request): JsonResponse
+    {
+        $preview = app(SubscriptionCancelService::class)->previewForUser($request->user());
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Cancellation preview fetched successfully.',
+            'data'    => $preview,
         ], 200);
     }
 
@@ -557,28 +579,28 @@ class PlanController extends Controller
     {
         $data = $request->validate([
             'subscription_id' => 'required|string',
+            'reason'          => 'nullable|string|max:1000',
         ]);
 
-        $user = $request->user();
+        try {
+            $cancelRequest = app(SubscriptionCancelService::class)->requestCancel(
+                $request->user(),
+                $data['subscription_id'],
+                $data['reason'] ?? null
+            );
+        } catch (InvalidArgumentException $e) {
+            $status = str_contains(strtolower($e->getMessage()), 'not found') ? 404 : 422;
 
-        $subscription = UserSubscription::where('user_id', $user->id)
-            ->where('subscription_id', $data['subscription_id'])
-            ->where('status', 'active')
-            ->where('payment_status', 'paid')
-            ->first();
-
-        if (!$subscription) {
             return response()->json([
                 'status'  => false,
-                'message' => 'Active subscription not found.',
-            ], 404);
+                'message' => $e->getMessage(),
+            ], $status);
         }
-
-        $subscription->update(['status' => 'cancelled']);
 
         return response()->json([
             'status'  => true,
-            'message' => 'Subscription cancelled successfully.',
+            'message' => 'Cancellation request submitted. Admin will review it, or it will auto-approve in 72 hours.',
+            'data'    => app(SubscriptionCancelService::class)->formatRequest($cancelRequest),
         ], 200);
     }
 

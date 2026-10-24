@@ -9,11 +9,13 @@ use App\Models\UserSubscription;
 use App\Services\PlanBenefitConsumptionService;
 use App\Services\PlanCheckoutService;
 use App\Services\PlanInvoiceService;
+use App\Services\SubscriptionCancelService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class PlanController extends Controller
 {
@@ -42,6 +44,7 @@ class PlanController extends Controller
         $benefitBalance = $current
             ? app(PlanBenefitConsumptionService::class)->forUser($user)
             : ['items' => []];
+        $cancellation = app(SubscriptionCancelService::class)->previewForUser($user);
 
         $search = trim((string) $request->input('search', $request->input('q', '')));
 
@@ -64,7 +67,8 @@ class PlanController extends Controller
             'quotesYearly',
             'history',
             'search',
-            'benefitBalance'
+            'benefitBalance',
+            'cancellation'
         ));
     }
 
@@ -81,6 +85,12 @@ class PlanController extends Controller
             return response()->json(['message' => 'Plan not found or currently inactive.'], 404);
         }
         $plan = $activePlan;
+
+        if (app(SubscriptionCancelService::class)->pendingForUser($user)) {
+            return response()->json([
+                'message' => 'A yearly cancellation request is pending. Wait for it to finish before changing plans.',
+            ], 422);
+        }
 
         $current = $this->currentSubscription($user->id);
 
@@ -306,21 +316,20 @@ class PlanController extends Controller
     {
         $request->validate([
             'subscription_id' => 'required|string',
+            'reason'          => 'nullable|string|max:1000',
         ]);
 
-        $subscription = UserSubscription::where('user_id', auth()->id())
-            ->where('subscription_id', $request->subscription_id)
-            ->where('status', 'active')
-            ->where('payment_status', 'paid')
-            ->first();
-
-        if (! $subscription) {
-            return back()->with('error', 'Active subscription not found.');
+        try {
+            app(SubscriptionCancelService::class)->requestCancel(
+                $request->user(),
+                $request->subscription_id,
+                $request->input('reason')
+            );
+        } catch (InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        $subscription->update(['status' => 'cancelled']);
-
-        return back()->with('success', 'Subscription cancelled successfully.');
+        return back()->with('success', 'Cancellation request submitted. Admin will review it, or it will auto-approve in 72 hours.');
     }
 
     private function razorpayCredentials(): array

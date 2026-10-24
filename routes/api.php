@@ -141,6 +141,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('/subscriptions',               [AdminSubscriptionInvoice::class, 'subscriptions']);
         Route::get('/subscriptions/{id}',          [AdminSubscriptionInvoice::class, 'showSubscription'])->whereNumber('id');
         Route::post('/subscriptions/{id}/invoice', [AdminSubscriptionInvoice::class, 'generateInvoice'])->whereNumber('id');
+        Route::get('/subscription-cancels', [AdminSubscriptionInvoice::class, 'cancelRequests']);
+        Route::post('/subscription-cancels/{id}/approve', [AdminSubscriptionInvoice::class, 'approveCancel'])->whereNumber('id');
+        Route::post('/subscription-cancels/{id}/reject', [AdminSubscriptionInvoice::class, 'rejectCancel'])->whereNumber('id');
         Route::get('/invoices',                    [AdminSubscriptionInvoice::class, 'invoices']);
         Route::get('/invoices/{id}',               [AdminSubscriptionInvoice::class, 'showInvoice'])->whereNumber('id');
         Route::get('/invoices/{id}/download',      [AdminSubscriptionInvoice::class, 'downloadInvoice'])->whereNumber('id');
@@ -312,6 +315,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'active'])->group(function () {
             Route::get('/subscription/active', [PlanController::class, 'activeSubscription']);
             Route::get('/subscription/history', [PlanController::class, 'subscriptionHistory']);
             Route::get('/subscription/consumption', [PlanController::class, 'subscriptionConsumption']);
+            Route::get('/subscription/cancel-preview', [PlanController::class, 'cancelPreview']);
             Route::post('/subscription/cancel', [PlanController::class, 'cancelSubscription']);
         });
 

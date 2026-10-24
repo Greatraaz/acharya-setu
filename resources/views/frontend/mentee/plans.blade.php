@@ -40,11 +40,30 @@
                         · {{ max(0, $current->daysRemaining()) }} days left
                     </div>
                 </div>
-                <form action="{{ route('mentee.plans.cancel') }}" method="POST" onsubmit="return confirm('Cancel your active subscription?');">
-                    @csrf
-                    <input type="hidden" name="subscription_id" value="{{ $current->subscription_id }}">
-                    <button type="submit" class="btn btn-ghost btn-sm">Cancel plan</button>
-                </form>
+                @php
+                    $cancelPreview = $cancellation ?? ['can_cancel' => false, 'quote' => null, 'request' => null];
+                    $cancelQuote = $cancelPreview['quote'] ?? null;
+                    $cancelRequest = $cancelPreview['request'] ?? null;
+                @endphp
+                @if(!empty($cancelRequest) && ($cancelRequest['status'] ?? '') === 'pending')
+                <div style="font-size:12px;color:var(--text-2);max-width:280px;text-align:right;">
+                    Cancellation requested. Refund ₹{{ number_format((float) ($cancelRequest['refund_amount'] ?? 0), 2) }}
+                    pending admin approval.
+                    Auto-approves {{ \Carbon\Carbon::parse($cancelRequest['auto_approve_at'])->format('d M Y, g:i A') }}.
+                </div>
+                @elseif(!empty($cancelPreview['can_cancel']) && $cancelQuote)
+                <div style="text-align:right;max-width:300px;">
+                    <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;line-height:1.45;">
+                        {{ $cancelQuote['summary'] }}
+                    </div>
+                    <form action="{{ route('mentee.plans.cancel') }}" method="POST"
+                          onsubmit="return confirm('Submit a yearly cancellation request? Current month is kept and unused months will be refunded after approval.');">
+                        @csrf
+                        <input type="hidden" name="subscription_id" value="{{ $current->subscription_id }}">
+                        <button type="submit" class="btn btn-ghost btn-sm">Request cancellation</button>
+                    </form>
+                </div>
+                @endif
             </div>
             <div style="margin-top:16px;">
                 <div style="font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">Free benefits left</div>

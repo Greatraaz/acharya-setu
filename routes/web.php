@@ -865,6 +865,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('subscriptions/{subscription}',         [SubscriptionController::class, 'show'])->name('subscriptions.show');
     Route::post('subscriptions/{subscription}/invoice',[SubscriptionController::class, 'generateInvoice'])->name('subscriptions.invoice');
     Route::post('subscriptions/{subscription}/reconcile-counselling', [SubscriptionController::class, 'reconcileCounselling'])->name('subscriptions.reconcile-counselling');
+    Route::get('subscription-cancels', [SubscriptionController::class, 'cancelIndex'])->name('subscription-cancels.index');
+    Route::post('subscription-cancels/{cancel}/approve', [SubscriptionController::class, 'approveCancel'])->name('subscription-cancels.approve')->whereNumber('cancel');
+    Route::post('subscription-cancels/{cancel}/reject', [SubscriptionController::class, 'rejectCancel'])->name('subscription-cancels.reject')->whereNumber('cancel');
     Route::get('invoices',                             [AdminInvoiceController::class, 'index'])->name('invoices.index');
     Route::get('invoices/{invoice}',                   [AdminInvoiceController::class, 'show'])->name('invoices.show');
     Route::get('invoices/{invoice}/print',             [AdminInvoiceController::class, 'print'])->name('invoices.print');

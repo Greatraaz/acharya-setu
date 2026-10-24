@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PlanInvoice;
+use App\Models\SubscriptionCancelRequest;
 use App\Models\UserSubscription;
 use App\Services\PlanInvoicePdfService;
 use App\Services\PlanInvoiceService;
+use App\Services\SubscriptionCancelService;
 use Illuminate\Http\{JsonResponse, Request};
+use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
 
 class SubscriptionInvoiceController extends Controller
@@ -253,5 +256,88 @@ class SubscriptionInvoiceController extends Controller
         $invoice = \App\Models\CareerServiceInvoice::findOrFail($id);
 
         return app(\App\Services\CareerServiceInvoicePdfService::class)->download($invoice);
+    }
+
+    public function cancelRequests(Request $request, SubscriptionCancelService $cancels): JsonResponse
+    {
+        $query = SubscriptionCancelRequest::with(['user:id,name,email,phone', 'subscription.plan:id,name'])
+            ->latest('id');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $page = $query->paginate((int) $request->get('per_page', 20));
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Cancellation requests fetched successfully.',
+            'data'       => collect($page->items())->map(function (SubscriptionCancelRequest $item) use ($cancels) {
+                return array_merge($cancels->formatRequest($item), [
+                    'user'         => $item->user ? [
+                        'id'    => $item->user->id,
+                        'name'  => $item->user->name,
+                        'email' => $item->user->email,
+                    ] : null,
+                    'subscription' => $item->subscription ? [
+                        'id'              => $item->subscription->id,
+                        'subscription_id' => $item->subscription->subscription_id,
+                        'plan_name'       => $item->subscription->plan?->name,
+                    ] : null,
+                ]);
+            })->values(),
+            'meta'       => [
+                'current_page' => $page->currentPage(),
+                'last_page'    => $page->lastPage(),
+                'per_page'     => $page->perPage(),
+                'total'        => $page->total(),
+            ],
+        ]);
+    }
+
+    public function approveCancel(Request $request, int $id, SubscriptionCancelService $cancels): JsonResponse
+    {
+        $cancel = SubscriptionCancelRequest::findOrFail($id);
+
+        try {
+            $fresh = $cancels->approve($cancel, $request->user());
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Cancellation approved. Refund processed and yearly plan cancelled.',
+            'data'       => $cancels->formatRequest($fresh),
+        ]);
+    }
+
+    public function rejectCancel(Request $request, int $id, SubscriptionCancelService $cancels): JsonResponse
+    {
+        $data = $request->validate(['admin_note' => 'nullable|string|max:1000']);
+        $cancel = SubscriptionCancelRequest::findOrFail($id);
+
+        try {
+            $fresh = $cancels->reject($cancel, $request->user(), $data['admin_note'] ?? null);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'message'    => 'Cancellation request declined.',
+            'data'       => $cancels->formatRequest($fresh),
+        ]);
     }
 }

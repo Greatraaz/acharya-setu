@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\CareerServiceService;
 use App\Services\OfferService;
 use App\Services\PlanBenefitConsumptionService;
+use App\Services\SubscriptionCancelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -66,7 +67,7 @@ class ConfigController extends Controller
                     'total_refunded'  => (float) ($wallet['total_refunded'] ?? 0),
                 ],
 
-                'subscription' => $this->subscriptionPayload($subscription, $plan, $billing),
+                'subscription' => $this->subscriptionPayload($user, $subscription, $plan, $billing),
 
                 'entitlements' => [
                     'can_access_progress_report' => $user->canAccessProgressReport(),
@@ -139,7 +140,7 @@ class ConfigController extends Controller
         return Plan::normalizeBilling($billing);
     }
 
-    private function subscriptionPayload($subscription, $plan, string $billing): ?array
+    private function subscriptionPayload(User $user, $subscription, $plan, string $billing): ?array
     {
         if (! $subscription) {
             return null;
@@ -158,6 +159,7 @@ class ConfigController extends Controller
             'expires_at'      => $subscription->expires_at?->toDateTimeString(),
             'days_remaining'  => $subscription->daysRemaining(),
             'plan'            => $plan ? $this->slimPlanPayload($plan, $billing) : null,
+            'cancellation'    => app(SubscriptionCancelService::class)->previewForUser($user),
         ];
     }
 

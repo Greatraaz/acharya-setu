@@ -13,6 +13,31 @@
     <div class="bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3 rounded-xl">{{ session('error') }}</div>
     @endif
 
+    @if($pendingCancel ?? null)
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+                <h3 class="text-sm font-semibold text-amber-900">Pending yearly cancellation</h3>
+                <p class="text-sm text-amber-800 mt-1">
+                    Refund ₹{{ number_format((float) $pendingCancel->refund_amount, 2) }}
+                    ({{ $pendingCancel->refund_months }} unused months). Current month ₹{{ number_format((float) $pendingCancel->consumed_amount, 2) }} is kept.
+                    Auto-approves {{ $pendingCancel->auto_approve_at?->format('d M Y, g:i A') }}.
+                </p>
+            </div>
+            <div class="flex gap-2">
+                <form method="POST" action="{{ route('admin.subscription-cancels.approve', $pendingCancel) }}">
+                    @csrf
+                    <button class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-xl">Approve &amp; refund</button>
+                </form>
+                <form method="POST" action="{{ route('admin.subscription-cancels.reject', $pendingCancel) }}" onsubmit="return confirm('Decline this cancellation?');">
+                    @csrf
+                    <button class="bg-white border border-amber-300 text-amber-900 text-sm font-medium px-4 py-2 rounded-xl">Decline</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="bg-white border border-gray-200 rounded-2xl p-6 grid md:grid-cols-2 gap-6">
         <div>
             <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Mentee</h3>

@@ -30,6 +30,7 @@
                 ['admin.offers.index',        '🎁', 'Offers'],
                 ['admin.plans.index',         '⭐', 'Premium Plans'],
                 ['admin.subscriptions.index', '📋', 'Subscriptions'],
+                ['admin.subscription-cancels.index', '↩️', 'Plan Cancellations'],
             ],
             'Learning' => [
                 ['admin.curriculum.catalog',         '📚', 'Curriculum Streams'],

@@ -53,6 +53,18 @@ class UserSubscription extends Model
         return $this->hasMany(PlanInvoice::class, 'user_subscription_id');
     }
 
+    public function cancelRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SubscriptionCancelRequest::class, 'user_subscription_id');
+    }
+
+    public function pendingCancelRequest(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(SubscriptionCancelRequest::class, 'user_subscription_id')
+            ->where('status', SubscriptionCancelRequest::STATUS_PENDING)
+            ->latestOfMany();
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────────
 
     public function isActive(): bool
