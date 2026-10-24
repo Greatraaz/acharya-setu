@@ -894,7 +894,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::get('logs/latest',    [ActivityLogController::class, 'latest'])     ->name('logs.latest');
     Route::get('logs/export',    [ActivityLogController::class, 'export'])     ->name('logs.export');
     Route::post('logs/purge',    [ActivityLogController::class, 'bulkDestroy'])->name('logs.bulk-destroy');
-    Route::get('logs/{log}',     [ActivityLogController::class, 'show'])       ->name('logs.show');
-    Route::delete('logs/{log}',  [ActivityLogController::class, 'destroy'])    ->name('logs.destroy');
+    Route::get('logs/{log}',     [ActivityLogController::class, 'show'])       ->name('logs.show')->whereNumber('log');
+    Route::match(['delete', 'post'], 'logs/{log}', [ActivityLogController::class, 'destroy'])
+        ->name('logs.destroy')
+        ->whereNumber('log');
 });
 

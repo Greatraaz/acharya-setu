@@ -67,10 +67,18 @@ class ActivityLogController extends Controller
         ));
     }
  
-    public function show(ActivityLog $log)
+    public function show(int $log)
     {
-        $log->load('causer');
-        return view('admin.logs.show', compact('log'));
+        $entry = ActivityLog::with('causer')->find($log);
+        if (!$entry) {
+            return redirect()
+                ->route('admin.logs.index')
+                ->with('error', 'That log entry no longer exists.');
+        }
+
+        NotificationController::dismissLog($entry->id);
+
+        return view('admin.logs.show', ['log' => $entry]);
     }
  
     public function export(Request $request)
@@ -105,10 +113,17 @@ class ActivityLogController extends Controller
         ]);
     }
  
-    public function destroy(ActivityLog $log)
+    public function destroy(int $log)
     {
-        $log->delete();
-        return redirect()->back()->with('success', 'Log entry deleted.');
+        $entry = ActivityLog::find($log);
+        if ($entry) {
+            NotificationController::dismissLog($entry->id);
+            $entry->delete();
+        }
+
+        return redirect()
+            ->route('admin.logs.index')
+            ->with('success', 'Log entry deleted.');
     }
  
     public function bulkDestroy(Request $request)

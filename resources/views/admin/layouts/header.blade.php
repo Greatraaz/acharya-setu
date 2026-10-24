@@ -15,7 +15,7 @@
             @php
                 $adminUser = auth()->user();
                 try {
-                    $notifItems = collect(\App\Http\Controllers\Admin\NotificationController::buildNotifications());
+                    $notifItems = collect(\App\Http\Controllers\Admin\NotificationController::visibleNotifications());
                 } catch (\Throwable $e) {
                     $notifItems = collect();
                 }

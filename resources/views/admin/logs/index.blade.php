@@ -39,6 +39,11 @@
         {{ session('success') }}
     </div>
     @endif
+    @if(session('error'))
+    <div class="flex items-center gap-2 bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3 rounded-xl">
+        {{ session('error') }}
+    </div>
+    @endif
 
     {{-- Stats row --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
