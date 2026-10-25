@@ -21,20 +21,28 @@ class AdminBulkMail extends Mailable
     public function build()
     {
         $mail = AppSetting::mail();
+        $name = trim((string) ($this->recipient->name ?? ''));
+        $firstName = $name !== '' ? explode(' ', $name)[0] : 'there';
+        $appName = (string) (AppSetting::get('app_name') ?: config('app.name', 'Vedrix'));
 
-        return $this->from($mail['from_address'], $mail['from_name'])
+        return $this->from($mail['from_address'], $mail['from_name'] ?: $appName)
             ->subject($this->personalize($this->subjectLine))
             ->view('emails.admin-bulk')
             ->with([
                 'recipient' => $this->recipient,
+                'firstName' => $firstName,
                 'headline'  => $this->personalize($this->subjectLine),
                 'bodyHtml'  => $this->bodyHtml(),
+                'appName'   => $appName,
+                'logoUrl'   => 'https://vedrix.online/frontend/images/logo-dark.png',
+                'homeUrl'   => 'https://vedrix.online',
+                'homeHost'  => 'vedrix.online',
             ]);
     }
 
     private function bodyHtml(): string
     {
-        $html = $this->personalize($this->bodyText);
+        $html = $this->normalizeSpaces($this->personalize($this->bodyText));
 
         if (trim(strip_tags($html)) === trim($html)) {
             return nl2br(e($html), false);
@@ -45,7 +53,15 @@ class AdminBulkMail extends Mailable
         $html = preg_replace('/\son\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html) ?? $html;
         $html = preg_replace('/javascript\s*:/i', '', $html) ?? $html;
 
-        return strip_tags($html, '<p><br><strong><b><em><i><u><s><a><ul><ol><li><h1><h2><h3><blockquote><span><div>');
+        return strip_tags($html, '<p><br><strong><b><em><i><u><s><a><ul><ol><li><h1><h2><h3><blockquote><span><div><hr>');
+    }
+
+    private function normalizeSpaces(string $html): string
+    {
+        $html = str_replace("\xC2\xA0", ' ', $html);
+        $html = preg_replace('/&nbsp;|&#160;|&#xA0;/i', ' ', $html) ?? $html;
+
+        return $html;
     }
 
     private function personalize(string $text): string

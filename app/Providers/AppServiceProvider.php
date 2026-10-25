@@ -62,7 +62,7 @@ class AppServiceProvider extends ServiceProvider
         if (! $this->app->runningInConsole()) {
             try {
                 if (\Illuminate\Support\Facades\Cache::add('session_reminders_tick', 1, now()->addMinutes(5))) {
-                    \Illuminate\Support\Facades\Artisan::call('notifications:session-reminders');
+                    app(\App\Services\NotificationService::class)->sendDueSessionReminders();
                 }
             } catch (\Throwable $e) {
                 report($e);

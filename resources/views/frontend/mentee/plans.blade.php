@@ -49,7 +49,6 @@
                 <div style="font-size:12px;color:var(--text-2);max-width:280px;text-align:right;">
                     Cancellation requested. Refund ₹{{ number_format((float) ($cancelRequest['refund_amount'] ?? 0), 2) }}
                     pending admin approval.
-                    Auto-approves {{ \Carbon\Carbon::parse($cancelRequest['auto_approve_at'])->format('d M Y, g:i A') }}.
                 </div>
                 @elseif(!empty($cancelPreview['can_cancel']) && $cancelQuote)
                 <div style="text-align:right;max-width:300px;">

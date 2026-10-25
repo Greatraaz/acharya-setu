@@ -60,7 +60,6 @@ class SubscriptionCancelService
             'refund_amount'       => $refundAmount,
             'currency'            => $subscription->currency ?: 'INR',
             'refund_destination'  => $destination,
-            'auto_approve_hours'  => self::AUTO_APPROVE_HOURS,
             'summary'             => $this->summary($consumedMonths, $refundMonths, $consumedAmount, $refundAmount, $destination),
         ];
     }
@@ -157,7 +156,7 @@ class SubscriptionCancelService
                 $user,
                 'subscription_cancel_requested',
                 'Cancellation request submitted',
-                'Your yearly plan cancellation is waiting for admin approval. It will auto-approve in 72 hours if not reviewed.'
+                'Your yearly plan cancellation is waiting for admin approval.'
             );
 
             ActivityLogger::record(
@@ -306,15 +305,14 @@ class SubscriptionCancelService
         return $approved;
     }
 
-    public function formatRequest(SubscriptionCancelRequest $request): array
+    public function formatRequest(SubscriptionCancelRequest $request, bool $forAdmin = false): array
     {
-        return [
+        $data = [
             'id'                 => (int) $request->id,
             'status'             => $request->status,
             'reason'             => $request->reason,
             'admin_note'         => $request->admin_note,
             'requested_at'       => $request->requested_at?->toDateTimeString(),
-            'auto_approve_at'    => $request->auto_approve_at?->toDateTimeString(),
             'reviewed_at'        => $request->reviewed_at?->toDateTimeString(),
             'approved_by'        => $request->approved_by,
             'consumed_months'    => (int) $request->consumed_months,
@@ -327,7 +325,6 @@ class SubscriptionCancelService
             'refund_destination' => $request->refund_destination,
             'razorpay_refunded'  => (float) $request->razorpay_refunded,
             'wallet_refunded'    => (float) $request->wallet_refunded,
-            'hours_until_auto_approve' => $request->hoursUntilAutoApprove(),
             'summary'            => $this->summary(
                 (int) $request->consumed_months,
                 (int) $request->refund_months,
@@ -336,6 +333,13 @@ class SubscriptionCancelService
                 (string) $request->refund_destination
             ),
         ];
+
+        if ($forAdmin) {
+            $data['auto_approve_at'] = $request->auto_approve_at?->toDateTimeString();
+            $data['hours_until_auto_approve'] = $request->hoursUntilAutoApprove();
+        }
+
+        return $data;
     }
 
     public function isYearly(UserSubscription $subscription): bool
@@ -404,6 +408,7 @@ class SubscriptionCancelService
     private function quoteFromRequest(SubscriptionCancelRequest $request): array
     {
         $snapshot = is_array($request->snapshot) ? $request->snapshot : [];
+        unset($snapshot['auto_approve_hours'], $snapshot['auto_approve_at']);
 
         return array_merge($snapshot, [
             'consumed_months'    => (int) $request->consumed_months,

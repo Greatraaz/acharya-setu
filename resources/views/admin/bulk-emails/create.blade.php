@@ -11,6 +11,16 @@
 @endphp
 
 @section('content')
+<style>
+.preview-email-body p { margin: 0 0 10px; }
+.preview-email-body p:last-child { margin-bottom: 0; }
+.preview-email-body a { color: #d97706; text-decoration: underline; }
+.preview-email-body ul, .preview-email-body ol { margin: 0 0 10px; padding-left: 1.1rem; }
+.preview-email-body h1, .preview-email-body h2, .preview-email-body h3 { color: #18181b; font-weight: 700; margin: 12px 0 6px; }
+.preview-email-body h1 { font-size: 1.1rem; }
+.preview-email-body h2 { font-size: 1rem; }
+.preview-email-body h3 { font-size: 0.95rem; }
+</style>
 <div class="min-w-0 max-w-full space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -137,26 +147,90 @@
             </form>
         </div>
 
-        <div class="xl:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="xl:col-span-2 space-y-6">
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-100">
+                    <h6 class="font-semibold text-gray-800">Email preview</h6>
+                    <p class="text-xs text-gray-400 mt-0.5">How recipients will see this message.</p>
+                </div>
+                <div class="p-4 bg-gray-100">
+                    <div class="mx-auto max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+                        <div class="h-1.5 bg-amber-500"></div>
+                        <div class="bg-zinc-950 px-5 py-3.5 text-center">
+                            <img src="{{ $emailLogo }}" alt="{{ $appName }}" class="mx-auto h-9 w-auto object-contain">
+                        </div>
+                        <div class="px-5 py-5">
+                            <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-600">Message from {{ $appName }}</p>
+                            <h3 id="preview-headline" class="mt-1 text-base font-extrabold leading-snug text-zinc-900">Your subject will appear here</h3>
+                            <p class="mt-3 text-sm font-semibold text-zinc-800">Hi there,</p>
+                            <div id="preview-body" class="preview-email-body mt-3 text-sm leading-relaxed text-zinc-600">
+                                <p class="text-gray-400">Start writing to see the preview.</p>
+                            </div>
+                        </div>
+                        <div class="px-5 pb-4 text-center">
+                            <span class="inline-block rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-zinc-950">Open {{ $appName }}</span>
+                        </div>
+                        <div class="border-t border-gray-100 bg-gray-50 px-5 py-3 text-center">
+                            <p class="text-[11px] text-gray-400">© {{ date('Y') }} {{ $appName }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-100">
                 <h6 class="font-semibold text-gray-800">Recent sends</h6>
-                <p class="text-xs text-gray-400 mt-0.5">From the activity log. The message body is not stored here.</p>
             </div>
-            <div class="divide-y divide-gray-50">
+            <div class="divide-y divide-gray-100">
                 @forelse($recent as $log)
-                <div class="px-5 py-3.5">
-                    <p class="text-sm text-gray-800">{{ $log->description }}</p>
-                    <p class="text-xs text-gray-400 mt-0.5">
-                        {{ $log->causer_name ?: 'Admin' }}
-                        · {{ optional($log->logged_at)->diffForHumans() }}
-                        @if(data_get($log->properties, 'meta.subject'))
-                            · {{ data_get($log->properties, 'meta.subject') }}
+                @php
+                    $meta = $log->meta ?? [];
+                    $subject = trim((string) ($meta['subject'] ?? ''));
+                    $body = (string) ($meta['body'] ?? '');
+                    $audienceKey = (string) ($meta['audience'] ?? '');
+                    $audienceLabel = (string) ($meta['audience_label'] ?? \App\Support\BulkEmailAudience::label($audienceKey ?: 'all'));
+                    $recipientCount = (int) ($meta['recipient_count'] ?? 0);
+                    $recipients = collect($meta['recipients'] ?? []);
+                    $plainBody = trim(preg_replace('/\s+/', ' ', html_entity_decode(str_ireplace(['&nbsp;', '&#160;', '&#xA0;'], ' ', strip_tags($body)), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+                @endphp
+                <div class="px-5 py-4 space-y-2.5">
+                    <div class="flex items-start justify-between gap-3">
+                        <p class="text-sm font-semibold text-gray-900 leading-snug">
+                            {{ $subject !== '' ? $subject : ($log->description ?: 'Bulk email') }}
+                        </p>
+                        <span class="flex-shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Sent</span>
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        To {{ $recipientCount > 0 ? number_format($recipientCount).' ' : '' }}{{ $audienceLabel }}
+                        · {{ $log->causer_name ?: 'Admin' }}
+                        · {{ optional($log->logged_at)->timezone(config('app.timezone'))->format('d M Y, g:i A') }}
+                        <span class="text-gray-400">({{ optional($log->logged_at)->diffForHumans() }})</span>
+                    </p>
+                    @if($recipients->isNotEmpty())
+                    <p class="text-xs text-gray-600 leading-relaxed">
+                        {{ $recipients->pluck('name')->filter()->implode(', ') }}
+                        @if($recipientCount > $recipients->count())
+                            <span class="text-gray-400">and {{ number_format($recipientCount - $recipients->count()) }} more</span>
                         @endif
                     </p>
+                    @endif
+                    @if($plainBody !== '')
+                    <details class="group rounded-xl border border-gray-100 bg-gray-50">
+                        <summary class="cursor-pointer list-none px-3 py-2 text-xs font-medium text-gray-600 hover:text-gray-800">
+                            <span class="group-open:hidden">Show message</span>
+                            <span class="hidden group-open:inline">Hide message</span>
+                            <span class="ml-1 font-normal text-gray-400">— {{ \Illuminate\Support\Str::limit($plainBody, 72) }}</span>
+                        </summary>
+                        <div class="preview-email-body border-t border-gray-100 px-3 py-3 text-sm text-gray-700 leading-relaxed bg-white rounded-b-xl">
+                            {!! $body !!}
+                        </div>
+                    </details>
+                    @endif
                 </div>
                 @empty
                 <div class="px-5 py-10 text-center text-sm text-gray-400">No bulk emails sent yet.</div>
                 @endforelse
+            </div>
             </div>
         </div>
     </div>
@@ -166,6 +240,20 @@
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3/tinymce.min.js"></script>
 <script>
+function updateEmailPreview() {
+    const headline = document.getElementById('preview-headline');
+    const body = document.getElementById('preview-body');
+    const subject = document.getElementById('subject')?.value.trim();
+    headline.textContent = subject || 'Your subject will appear here';
+    let html = '';
+    if (window.tinymce && tinymce.get('body')) {
+        html = tinymce.get('body').getContent() || '';
+    } else {
+        html = document.getElementById('body')?.value || '';
+    }
+    const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
+    body.innerHTML = text ? html : '<p class="text-gray-400">Start writing to see the preview.</p>';
+}
 tinymce.init({
     selector: 'textarea.tinymce-email',
     height: 360,
@@ -173,9 +261,14 @@ tinymce.init({
     plugins: 'lists link wordcount',
     toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | removeformat',
     branding: false,
+    entity_encoding: 'raw',
     placeholder: 'Write your message here. You can use @{{name}}, @{{first_name}}, or @{{email}}.',
-    content_style: 'body { font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 1.6; }'
+    content_style: 'body { font-family: Segoe UI, Tahoma, sans-serif; font-size: 15px; line-height: 1.75; color: #3f3f46; } a { color: #d97706; }',
+    setup: function (editor) {
+        editor.on('Change KeyUp SetContent Undo Redo', updateEmailPreview);
+    }
 });
+document.getElementById('subject')?.addEventListener('input', updateEmailPreview);
 (function () {
     const form = document.getElementById('bulk-email-form');
     const picker = document.getElementById('specific-picker');
@@ -330,6 +423,7 @@ tinymce.init({
 
     paintAudienceCards();
     refreshCount();
+    updateEmailPreview();
 })();
 </script>
 @endpush

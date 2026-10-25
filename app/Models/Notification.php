@@ -41,13 +41,33 @@ class Notification extends Model
         ])->save();
     }
 
+    public static function withoutAutoApproveCopy(string $body): string
+    {
+        $clean = preg_replace(
+            [
+                '/\s*It will auto-approve in 72 hours if not reviewed\.?/i',
+                '/,?\s*or it will auto-approve in 72 hours\.?/i',
+                '/\s*Auto-approves[^.]*\.?/i',
+            ],
+            '',
+            $body
+        ) ?? $body;
+
+        return trim(preg_replace('/[ \t]+/u', ' ', $clean) ?? $clean);
+    }
+
     public function toFeedArray(): array
     {
+        $body = self::withoutAutoApproveCopy((string) $this->body);
+        if ($body !== (string) ($this->attributes['body'] ?? '') && $this->exists) {
+            $this->forceFill(['body' => $body])->saveQuietly();
+        }
+
         return [
             'id'               => $this->id,
             'type'             => $this->type,
             'title'            => $this->title,
-            'body'             => $this->body,
+            'body'             => $body,
             'data'             => $this->data ?: new \stdClass(),
             'url'              => $this->url,
             'is_read'          => (bool) $this->is_read,

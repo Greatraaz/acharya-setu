@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ConsultationSession;
 use App\Services\NotificationService;
 use Illuminate\Console\Command;
 
@@ -14,22 +13,7 @@ class SendSessionReminders extends Command
 
     public function handle(NotificationService $notifications): int
     {
-        $from = now()->addMinutes(10);
-        $to   = now()->addMinutes(20);
-
-        $sessions = ConsultationSession::query()
-            ->with(['mentor', 'mentee'])
-            ->where('status', ConsultationSession::STATUS_UPCOMING)
-            ->whereBetween('scheduled_at', [$from, $to])
-            ->get();
-
-        $sent = 0;
-
-        foreach ($sessions as $session) {
-            $notifications->sessionEvent($session, 'reminder');
-            $sent++;
-        }
-
+        $sent = $notifications->sendDueSessionReminders();
         $this->info("Sent {$sent} session reminder(s).");
 
         return self::SUCCESS;

@@ -7,6 +7,7 @@ use App\Jobs\SendAdminBulkEmailJob;
 use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\DynamicMailer;
 use App\Support\BulkEmailAudience;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -26,10 +27,15 @@ class BulkEmailController extends Controller
         $recent = ActivityLog::query()
             ->where('event', 'bulk_email_sent')
             ->latest('logged_at')
-            ->limit(8)
+            ->limit(5)
             ->get();
 
-        return view('admin.bulk-emails.create', compact('counts', 'recent'));
+        return view('admin.bulk-emails.create', [
+            'counts' => $counts,
+            'recent' => $recent,
+            'emailLogo' => asset('frontend/images/logo-dark.png'),
+            'appName' => (string) (\App\Models\AppSetting::get('app_name') ?: config('app.name', 'Vedrix')),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -66,22 +72,44 @@ class BulkEmailController extends Controller
         $subject = trim($data['subject']);
         $body = trim($data['body']);
 
+        try {
+            DynamicMailer::verify();
+        } catch (\Throwable $e) {
+            return back()
+                ->withInput()
+                ->withErrors(['audience' => DynamicMailer::friendlyError($e)]);
+        }
+
         foreach (array_chunk($recipientIds, 40) as $chunk) {
             SendAdminBulkEmailJob::dispatchAfterResponse($chunk, $subject, $body);
         }
 
         $count = count($recipientIds);
         $label = BulkEmailAudience::label($audience);
+        $sample = User::query()
+            ->whereIn('id', array_slice($recipientIds, 0, 8))
+            ->orderBy('name')
+            ->get(['id', 'name', 'email'])
+            ->map(fn (User $user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ])
+            ->values()
+            ->all();
 
         (new ActivityLogger())
             ->event('bulk_email_sent')
             ->module('communication')
             ->success()
-            ->description('Bulk email queued for '.$count.' '.$label.'.')
+            ->description('Sent "'.\Illuminate\Support\Str::limit($subject, 120).'" to '.$count.' '.$label.'.')
             ->withMeta([
                 'audience' => $audience,
+                'audience_label' => $label,
                 'recipient_count' => $count,
                 'subject' => $subject,
+                'body' => $body,
+                'recipients' => $sample,
             ])
             ->log();
 

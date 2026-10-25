@@ -329,7 +329,7 @@ class PlanController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Cancellation request submitted. Admin will review it, or it will auto-approve in 72 hours.');
+        return back()->with('success', 'Cancellation request submitted. Admin will review it.');
     }
 
     private function razorpayCredentials(): array

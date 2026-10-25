@@ -8,7 +8,7 @@ When a mentee cancels:
 2. **Unused remaining months** are refunded.
 3. Money goes back to the **same place they paid** (Razorpay card/UPI, or wallet).
 4. The mentee only **creates a request**. Admin approves it, then the refund and cancel happen.
-5. If admin does nothing, the request is **auto-approved after 72 hours**.
+5. If admin does nothing, the request is still auto-approved after 72 hours in the backend. **Do not show this 72-hour auto-approve copy to the mentee** in the app, notifications, or success messages.
 
 Example: yearly plan bought in January.
 
@@ -75,7 +75,6 @@ GET /api/v1/mentee/config
       "refund_amount": 14994.98,
       "currency": "INR",
       "refund_destination": "razorpay",
-      "auto_approve_hours": 72,
       "summary": "6 months already used (₹14,995.02) will not be refunded. ₹14,994.98 for 6 remaining months will be refunded to your original payment method."
     },
     "request": null
@@ -98,8 +97,6 @@ If they already submitted a request:
     "refund_amount": 14994.98,
     "consumed_months": 6,
     "refund_months": 6,
-    "auto_approve_at": "2026-10-26 14:22:00",
-    "hours_until_auto_approve": 70,
     "summary": "..."
   }
 }
@@ -137,13 +134,11 @@ Content-Type: application/json
 ```json
 {
   "status": true,
-  "message": "Cancellation request submitted. Admin will review it, or it will auto-approve in 72 hours.",
+  "message": "Cancellation request submitted. Admin will review it.",
   "data": {
     "id": 15,
     "status": "pending",
-    "refund_amount": 14994.98,
-    "auto_approve_at": "2026-10-26 14:22:00",
-    "hours_until_auto_approve": 72
+    "refund_amount": 14994.98
   }
 }
 ```
@@ -165,7 +160,7 @@ After this call, keep showing the plan as **active** with a pending-request bann
 
 | `status` | App UI |
 |---|---|
-| `pending` | Banner: waiting for admin. Show `auto_approve_at` / `hours_until_auto_approve`. Plan still active. |
+| `pending` | Banner: waiting for admin. Do not mention auto-approve or 72 hours. Plan still active. |
 | `approved` | Plan cancelled. Refund sent. Refresh subscription. |
 | `rejected` | Plan still active. They can request again. Show `admin_note` if present. |
 
@@ -186,7 +181,7 @@ Deep-link those to the Plans screen.
 **Helper:** use `quote.summary` as-is.  
 
 **Pending:**  
-`Cancellation requested. ₹{refund_amount} will be refunded after approval, or automatically in {hours_until_auto_approve} hours.`
+`Cancellation requested. ₹{refund_amount} will be refunded after admin approval.`
 
 **Monthly:** hide cancel. Optional: “Monthly plans cannot be cancelled.”
 

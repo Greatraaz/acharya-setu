@@ -137,15 +137,24 @@ class AppSettingsController extends Controller
     public function testEmail()
     {
         try {
-            \Mail::raw('This is a test email from ' . config_val('app_name', config('app.name')), function ($msg) {
-                $msg->to(config_val('contact_email', config('mail.from.address')))
-                    ->subject('SMTP Test — ' . now()->format('d M Y H:i'));
-            });
+            \App\Services\DynamicMailer::verify();
+
+            $to = config_val('contact_email') ?: config_val('mail_from_address') ?: auth()->user()?->email;
+            if (! is_string($to) || filter_var($to, FILTER_VALIDATE_EMAIL) === false) {
+                throw new \RuntimeException('Set a valid Contact Email or From Address before testing.');
+            }
+
+            \App\Services\DynamicMailer::sendRaw(
+                $to,
+                'SMTP Test — ' . now()->format('d M Y H:i'),
+                '<p>This is a test email from ' . e(config_val('app_name', config('app.name'))) . '.</p>'
+            );
+
             return redirect()->route('admin.settings.index', ['#email'])
-                ->with('success', 'Test email sent successfully. Check your inbox.');
+                ->with('success', 'Test email sent successfully to '.$to.'. Check that inbox.');
         } catch (\Exception $e) {
             return redirect()->route('admin.settings.index', ['#email'])
-                ->with('error', 'Email test failed: ' . $e->getMessage());
+                ->with('error', \App\Services\DynamicMailer::friendlyError($e));
         }
     }
 

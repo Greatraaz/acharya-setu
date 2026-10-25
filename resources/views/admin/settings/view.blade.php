@@ -523,7 +523,7 @@
                 </div>
                 <div class="section-card">
                     <h3>SMTP Configuration</h3>
-                    <p class="section-desc">Set up your mail server for sending transactional emails.</p>
+                    <p class="section-desc">Set up your mail server for sending transactional emails. Username and From Address must be the same mailbox. On Hostinger that is an email you created for vedrix.online (not hello@vedrix.com). For Gmail, use an App Password.</p>
                     <div class="grid grid-cols-2 gap-4">
                         @foreach([
                             ['mail_driver','Mail Driver','select',['smtp'=>'SMTP','mailgun'=>'Mailgun','sendgrid'=>'SendGrid','ses'=>'Amazon SES']],
@@ -531,9 +531,9 @@
                             ['mail_host','SMTP Host','text','smtp.mailtrap.io'],
                             ['mail_port','SMTP Port','number','587'],
                             ['mail_username','Username','text','SMTP username'],
-                            ['mail_password','Password','password','SMTP password'],
+                            ['mail_password','Password','password','Gmail App Password (not your Gmail login)'],
                             ['mail_from_name','From Name','text','MyApp Support'],
-                            ['mail_from_address','From Address','email','no-reply@yourapp.com'],
+                            ['mail_from_address','From Address','email','Must match SMTP Username'],
                         ] as $field)
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">{{ $field[1] }}</label>

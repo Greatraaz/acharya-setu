@@ -274,7 +274,7 @@ class SubscriptionInvoiceController extends Controller
             'statuscode' => 200,
             'message'    => 'Cancellation requests fetched successfully.',
             'data'       => collect($page->items())->map(function (SubscriptionCancelRequest $item) use ($cancels) {
-                return array_merge($cancels->formatRequest($item), [
+                return array_merge($cancels->formatRequest($item, true), [
                     'user'         => $item->user ? [
                         'id'    => $item->user->id,
                         'name'  => $item->user->name,
@@ -314,7 +314,7 @@ class SubscriptionInvoiceController extends Controller
             'status'     => true,
             'statuscode' => 200,
             'message'    => 'Cancellation approved. Refund processed and yearly plan cancelled.',
-            'data'       => $cancels->formatRequest($fresh),
+            'data'       => $cancels->formatRequest($fresh, true),
         ]);
     }
 
@@ -337,7 +337,7 @@ class SubscriptionInvoiceController extends Controller
             'status'     => true,
             'statuscode' => 200,
             'message'    => 'Cancellation request declined.',
-            'data'       => $cancels->formatRequest($fresh),
+            'data'       => $cancels->formatRequest($fresh, true),
         ]);
     }
 }

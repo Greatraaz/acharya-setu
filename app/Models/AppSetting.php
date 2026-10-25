@@ -69,18 +69,35 @@ class AppSetting extends Model
     {
         $s = static::allCached();
 
+        $host = trim((string) ($s['mail_host'] ?? $s['smtp_host'] ?? ''));
+        $username = trim((string) ($s['mail_username'] ?? $s['smtp_username'] ?? ''));
         $fromAddress = trim((string) ($s['mail_from_address'] ?? ''));
-        if ($fromAddress === '' || filter_var($fromAddress, FILTER_VALIDATE_EMAIL) === false) {
-            $fromAddress = 'hello@vedrix.com';
+        $password = static::decryptIfNeeded($s['mail_password'] ?? null)
+            ?? static::decryptIfNeeded($s['smtp_password'] ?? null)
+            ?? '';
+        $password = is_string($password) ? trim($password) : '';
+        if ($password !== '' && (str_contains(strtolower($host), 'gmail') || str_contains(strtolower($host), 'google'))) {
+            $password = str_replace(' ', '', $password);
+        }
+
+        // Hostinger and most SMTP hosts only relay mail when From matches the
+        // authenticated mailbox. A mismatched fallback like hello@vedrix.com
+        // is rejected with 550 "Sender is not allowed to relay emails".
+        if (filter_var($username, FILTER_VALIDATE_EMAIL)) {
+            if ($fromAddress === '' || strcasecmp($fromAddress, $username) !== 0) {
+                $fromAddress = $username;
+            }
+        } elseif ($fromAddress === '' || filter_var($fromAddress, FILTER_VALIDATE_EMAIL) === false) {
+            $fromAddress = 'hello@vedrix.online';
         }
 
         return [
             'driver'       => $s['mail_driver'] ?? $s['mail_mailer'] ?? 'smtp',
-            'host'         => $s['mail_host'] ?? $s['smtp_host'] ?? '',
+            'host'         => $host,
             'port'         => (int) ($s['mail_port'] ?? $s['smtp_port'] ?? 587),
             'encryption'   => $s['mail_encryption'] ?? $s['smtp_encryption'] ?? 'tls',
-            'username'     => $s['mail_username'] ?? $s['smtp_username'] ?? '',
-            'password'     => $s['mail_password'] ?? $s['smtp_password'] ?? '',
+            'username'     => $username,
+            'password'     => $password,
             'from_address' => $fromAddress,
             'from_name'    => $s['mail_from_name'] ?? ($s['app_name'] ?? 'Vedrix'),
         ];

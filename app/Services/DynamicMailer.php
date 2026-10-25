@@ -27,14 +27,19 @@ class DynamicMailer
     public static function configure(): void
     {
         $cfg = AppSetting::mail();
+        $encryption = strtolower((string) ($cfg['encryption'] ?? 'tls'));
+        $scheme = in_array($encryption, ['ssl', 'smtps'], true) ? 'smtps' : null;
+        $driver = in_array($cfg['driver'] ?? '', ['smtp', 'log', 'array', 'sendmail'], true)
+            ? $cfg['driver']
+            : 'smtp';
 
-        // Override the mail config at runtime
-        Config::set('mail.default', $cfg['driver']);
+        Config::set('mail.default', $driver);
         Config::set('mail.mailers.smtp', [
             'transport'  => 'smtp',
+            'scheme'     => $scheme,
             'host'       => $cfg['host'],
             'port'       => $cfg['port'],
-            'encryption' => $cfg['encryption'],
+            'encryption' => $encryption === 'none' ? null : $encryption,
             'username'   => $cfg['username'],
             'password'   => $cfg['password'],
             'timeout'    => 30,
@@ -42,9 +47,49 @@ class DynamicMailer
         Config::set('mail.from.address', $cfg['from_address']);
         Config::set('mail.from.name',    $cfg['from_name']);
 
-        // Force Laravel to rebuild the mailer with new config
         app()->forgetInstance('mail.manager');
         app()->forgetInstance('mailer');
+    }
+
+    public static function verify(): void
+    {
+        static::configure();
+
+        $cfg = AppSetting::mail();
+        if (($cfg['driver'] ?? 'smtp') === 'smtp') {
+            if ($cfg['host'] === '' || $cfg['username'] === '' || $cfg['password'] === '') {
+                throw new \RuntimeException('SMTP host, username, or password is missing. Save them in Settings → Email, then try again.');
+            }
+
+            if (
+                filter_var($cfg['username'], FILTER_VALIDATE_EMAIL)
+                && strcasecmp((string) $cfg['from_address'], (string) $cfg['username']) !== 0
+            ) {
+                throw new \RuntimeException(
+                    'From Address must be the same mailbox as SMTP Username ('.$cfg['username'].'). Hostinger will reject any other sender with a relay error.'
+                );
+            }
+        }
+
+        $mailer = Mail::mailer();
+        if (method_exists($mailer, 'getSymfonyTransport')) {
+            $mailer->getSymfonyTransport()->start();
+        }
+    }
+
+    public static function friendlyError(\Throwable $e): string
+    {
+        $message = $e->getMessage();
+
+        if (str_contains($message, '535') || str_contains($message, 'BadCredentials') || str_contains($message, 'Username and Password not accepted')) {
+            return 'Gmail rejected the SMTP login. Use a Google App Password (Google Account → Security → 2-Step Verification → App passwords), not your normal Gmail password. Paste it in Settings → Email, save, then send a test email.';
+        }
+
+        if (str_contains($message, '550') || str_contains($message, 'not allowed to relay') || str_contains($message, 'Relaying denied')) {
+            return 'The mail server refused the sender. On Hostinger, From Address must be a real mailbox on vedrix.online and must match SMTP Username exactly (for example info@vedrix.online). hello@vedrix.com will be rejected.';
+        }
+
+        return 'Email could not be sent: '.$message;
     }
 
     /**

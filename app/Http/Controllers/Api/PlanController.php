@@ -599,7 +599,7 @@ class PlanController extends Controller
 
         return response()->json([
             'status'  => true,
-            'message' => 'Cancellation request submitted. Admin will review it, or it will auto-approve in 72 hours.',
+            'message' => 'Cancellation request submitted. Admin will review it.',
             'data'    => app(SubscriptionCancelService::class)->formatRequest($cancelRequest),
         ], 200);
     }

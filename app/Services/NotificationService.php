@@ -33,7 +33,7 @@ class NotificationService
                 'user_id' => $user->id,
                 'type'    => $type,
                 'title'   => $title,
-                'body'    => $body,
+                'body'    => Notification::withoutAutoApproveCopy($body),
                 'data'    => $data,
                 'url'     => $url,
                 'is_read' => false,
@@ -58,6 +58,25 @@ class NotificationService
         foreach ($userIds as $id) {
             $this->send($id, $type, $title, $body, $data, $url);
         }
+    }
+
+    public function sendDueSessionReminders(): int
+    {
+        if (! Schema::hasTable('consultation_sessions')) {
+            return 0;
+        }
+
+        $sessions = ConsultationSession::query()
+            ->with(['mentor', 'mentee'])
+            ->where('status', ConsultationSession::STATUS_UPCOMING)
+            ->whereBetween('scheduled_at', [now()->addMinutes(10), now()->addMinutes(20)])
+            ->get();
+
+        foreach ($sessions as $session) {
+            $this->sessionEvent($session, 'reminder');
+        }
+
+        return $sessions->count();
     }
 
     public function sessionEvent(ConsultationSession $session, string $event): void

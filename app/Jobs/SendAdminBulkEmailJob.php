@@ -48,7 +48,7 @@ class SendAdminBulkEmailJob
             } catch (\Throwable $e) {
                 Log::error('Admin bulk email failed.', [
                     'user_id' => $user->id,
-                    'error'   => $e->getMessage(),
+                    'error'   => DynamicMailer::friendlyError($e),
                 ]);
             }
         }
