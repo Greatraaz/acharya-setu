@@ -85,7 +85,7 @@
     <div class="p-6 grid grid-cols-2 gap-4">
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Education Stream <span class="text-red-400">*</span></label>
-            <select name="education_stream" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
+            <select name="education_stream" id="education-stream" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
                 <option value="">Select stream…</option>
                 @foreach($streams as $stream)
                 <option value="{{ $stream }}" {{ old('education_stream', $m->education_stream) === $stream ? 'selected' : '' }}>{{ $stream }}</option>
@@ -94,8 +94,20 @@
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Field of Study</label>
-            <input type="text" name="field" value="{{ old('field', $m->field) }}"
-                   class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
+            @php
+                $selectedField = old('field', $m->field);
+                $fieldOptions = app(\App\Services\MenteeOnboardingService::class)->fieldsForStream(
+                    old('education_stream', $m->education_stream),
+                    $selectedField
+                );
+            @endphp
+            <select name="field" id="education-field" data-current="{{ $selectedField }}"
+                    class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
+                <option value="">Select field…</option>
+                @foreach($fieldOptions as $fieldOption)
+                <option value="{{ $fieldOption }}" {{ $selectedField === $fieldOption ? 'selected' : '' }}>{{ $fieldOption }}</option>
+                @endforeach
+            </select>
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">College / University</label>
@@ -171,6 +183,7 @@
             </div>
         </div>
 
+        @if(false)
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Session Mode Preference</label>
             <div class="grid grid-cols-2 gap-2">
@@ -185,10 +198,41 @@
                 @endforeach
             </div>
         </div>
+        @endif
     </div>
 </div>
 
 <script>
+const STREAM_CATALOG = @json($streamCatalog ?? \App\Services\MenteeOnboardingService::streamCatalog());
+function fieldLabelsForStream(stream) {
+    return (STREAM_CATALOG[stream]?.fields || []).map(function (item) {
+        return Array.isArray(item) ? item[0] : item;
+    });
+}
+function refreshEducationFields(preserveCurrent) {
+    const streamSel = document.getElementById('education-stream');
+    const fieldSel = document.getElementById('education-field');
+    if (!streamSel || !fieldSel) return;
+    const current = preserveCurrent ? (fieldSel.dataset.current || fieldSel.value || '') : '';
+    const labels = fieldLabelsForStream(streamSel.value);
+    fieldSel.innerHTML = '<option value="">Select field…</option>';
+    labels.forEach(function (label) {
+        const option = document.createElement('option');
+        option.value = label;
+        option.textContent = label;
+        fieldSel.appendChild(option);
+    });
+    if (current && ![...fieldSel.options].some(function (opt) { return opt.value === current; })) {
+        fieldSel.add(new Option(current, current));
+    }
+    if (current) fieldSel.value = current;
+}
+document.getElementById('education-stream')?.addEventListener('change', function () {
+    const fieldSel = document.getElementById('education-field');
+    if (fieldSel) fieldSel.dataset.current = '';
+    refreshEducationFields(false);
+});
+
 function getChipValue(span) {
     return (span.dataset.chipValue || span.textContent.replace(/×/g, '')).trim();
 }

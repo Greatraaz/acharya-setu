@@ -193,6 +193,7 @@
                         <div class="text-sm text-gray-500 pb-2.5">= <span id="hourly-rate" class="font-semibold text-gray-800">₹{{ $mentor->rate_per_minute * 60 }}</span>/hour</div>
                     </div>
 
+                    @if(false)
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Session Modes</label>
                         <div class="grid grid-cols-2 gap-2">
@@ -207,6 +208,7 @@
                             @endforeach
                         </div>
                     </div>
+                    @endif
                 </div>
             </div>
         </div>

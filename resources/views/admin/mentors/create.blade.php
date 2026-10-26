@@ -208,6 +208,7 @@
                         </div>
                     </div>
 
+                    @if(false)
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Session Modes</label>
                         <div class="grid grid-cols-2 gap-2">
@@ -222,6 +223,7 @@
                             @endforeach
                         </div>
                     </div>
+                    @endif
                 </div>
             </div>
         </div>

@@ -108,7 +108,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Education stream</label>
-                        <select name="education_stream" class="form-input form-select">
+                        <select name="education_stream" id="education-stream" class="form-input form-select">
                             <option value="">Select stream…</option>
                             @foreach($streams ?? [] as $stream)
                             <option value="{{ $stream }}" @selected(old('education_stream', $user->education_stream) === $stream)>{{ $stream }}</option>
@@ -117,7 +117,19 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Field of study</label>
-                        <input type="text" name="field" class="form-input" maxlength="100" value="{{ old('field', $user->field) }}">
+                        @php
+                            $selectedField = old('field', $user->field);
+                            $fieldOptions = app(\App\Services\MenteeOnboardingService::class)->fieldsForStream(
+                                old('education_stream', $user->education_stream),
+                                $selectedField
+                            );
+                        @endphp
+                        <select name="field" id="education-field" class="form-input form-select" data-current="{{ $selectedField }}">
+                            <option value="">Select field…</option>
+                            @foreach($fieldOptions as $fieldOption)
+                            <option value="{{ $fieldOption }}" @selected($selectedField === $fieldOption)>{{ $fieldOption }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">College / University</label>
@@ -171,6 +183,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @if(false)
                     <div class="form-group form-group--wide">
                         <label class="form-label">Mentoring format</label>
                         <div class="account-mode-grid">
@@ -183,6 +196,7 @@
                             @endforeach
                         </div>
                     </div>
+                    @endif
                     @endif
                     </div>
 
@@ -235,6 +249,36 @@
     </div>
 </div>
 <script>
+const STREAM_CATALOG = @json($streamCatalog ?? []);
+function fieldLabelsForStream(stream) {
+    return (STREAM_CATALOG[stream]?.fields || []).map(function (item) {
+        return Array.isArray(item) ? item[0] : item;
+    });
+}
+function refreshEducationFields(preserveCurrent) {
+    const streamSel = document.getElementById('education-stream');
+    const fieldSel = document.getElementById('education-field');
+    if (!streamSel || !fieldSel) return;
+    const current = preserveCurrent ? (fieldSel.dataset.current || fieldSel.value || '') : '';
+    const labels = fieldLabelsForStream(streamSel.value);
+    fieldSel.innerHTML = '<option value="">Select field…</option>';
+    labels.forEach(function (label) {
+        const option = document.createElement('option');
+        option.value = label;
+        option.textContent = label;
+        fieldSel.appendChild(option);
+    });
+    if (current && ![...fieldSel.options].some(function (opt) { return opt.value === current; })) {
+        fieldSel.add(new Option(current, current));
+    }
+    if (current) fieldSel.value = current;
+}
+document.getElementById('education-stream')?.addEventListener('change', function () {
+    const fieldSel = document.getElementById('education-field');
+    if (fieldSel) fieldSel.dataset.current = '';
+    refreshEducationFields(false);
+});
+
 function accountChipValue(span) {
     return (span.dataset.chipValue || span.textContent.replace(/×/g, '')).trim();
 }

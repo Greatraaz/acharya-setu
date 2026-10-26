@@ -160,8 +160,9 @@ class AdminOnboardingController extends Controller
             ->get();
 
         $streams = $this->educationStreamOptions($onboarding);
+        $streamCatalog = MenteeOnboardingService::streamCatalog();
 
-        return view('admin.mentees.create', compact('mentors', 'streams'));
+        return view('admin.mentees.create', compact('mentors', 'streams', 'streamCatalog'));
     }
 
     public function storeMentee(Request $request, MenteeOnboardingService $onboarding)
@@ -238,11 +239,12 @@ class AdminOnboardingController extends Controller
             ->orderBy('name')
             ->get();
 
-        $streams = $this->educationStreamOptions($onboarding);
+        $streams = $this->educationStreamOptions($onboarding, $mentee);
+        $streamCatalog = MenteeOnboardingService::streamCatalog();
         $tracks = old('tracks', $onboarding->menteeTracks($mentee->id));
         $preferences = $onboarding->preferencesForForm($mentee->preferences ?? []);
 
-        return view('admin.mentees.edit', compact('mentee', 'mentors', 'streams', 'tracks', 'preferences'));
+        return view('admin.mentees.edit', compact('mentee', 'mentors', 'streams', 'streamCatalog', 'tracks', 'preferences'));
     }
 
     public function updateMentee(Request $request, User $mentee, MenteeOnboardingService $onboarding)
@@ -341,17 +343,8 @@ class AdminOnboardingController extends Controller
             ->all();
     }
 
-    private function educationStreamOptions(MenteeOnboardingService $onboarding): array
+    private function educationStreamOptions(MenteeOnboardingService $onboarding, ?User $mentee = null): array
     {
-        $catalog = $onboarding->catalogStreams();
-
-        if ($catalog->isNotEmpty()) {
-            return $catalog->all();
-        }
-
-        return [
-            'Technology', 'Business & Management', 'Design & Arts', 'Science & Research',
-            'Healthcare', 'Law', 'Finance', 'Marketing', 'Operations', 'Other',
-        ];
+        return $onboarding->onboardingStreamNames($mentee?->education_stream);
     }
 }

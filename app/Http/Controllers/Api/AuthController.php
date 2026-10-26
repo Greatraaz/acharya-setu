@@ -287,6 +287,8 @@ class AuthController extends Controller
                 'career_goals.*' => ['string', 'max:100'],
                 'preferences.preferred_language' => ['nullable', 'string', 'max:100'],
                 'preferences.mentoring_format' => ['nullable', 'string', 'max:50'],
+                'preferences.session_modes' => ['nullable', 'array'],
+                'preferences.session_modes.*' => ['in:video,audio,chat,in_person'],
                 'preferences.weekly_time_commitment' => ['nullable', 'string', 'max:100'],
                 'preferences.monthly_budget' => ['nullable', 'string', 'max:100'],
             ]);

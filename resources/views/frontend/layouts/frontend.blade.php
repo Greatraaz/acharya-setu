@@ -292,80 +292,47 @@
                         <!-- =========================================================================
                              MEGA MENU 3 — MENTORS (Layout: Meet Richa 3-Column Asymmetric)
                              ========================================================================= -->
-                        <li class="vj-nav-item">
-                            <a href="#" class="vj-nav-link">
+                        <li class="vj-nav-item {{ request()->routeIs('mentors.*') ? 'active' : '' }}">
+                            <a href="{{ route('mentors.search') }}" class="vj-nav-link">
                                 Mentors <i class="bi bi-chevron-down vj-nav-caret"></i>
                             </a>
                             <div class="vj-mega-menu">
                                 <div class="container-fluid px-0">
                                     <div class="row g-4 align-items-stretch">
-                                        <!-- Column 1: Stacked Engagement Formats -->
-                                        <div class="col-lg-4">
-                                            <div class="vj-mega-section-head">
-                                                <span class="vj-mega-eyebrow">ENGAGEMENT FORMATS</span>
-                                                <h6 class="vj-mega-heading">Mentorship Models</h6>
-                                            </div>
-                                            <a href="{{ url('1-on-1-video-sessions') }}" class="vj-stacked-card">
-                                                <div class="vj-mega-icon-chip chip-teal">
-                                                    <i class="bi bi-person-video3"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="vj-card-head">1-on-1 Video Sessions</div>
-                                                    <div class="vj-card-desc">Deep 45-min personalized strategy and mock reviews</div>
-                                                </div>
-                                            </a>
-                                            <a href="{{ url('goal-based-sprints') }}" class="vj-stacked-card">
-                                                <div class="vj-mega-icon-chip chip-rose">
-                                                    <i class="bi bi-rocket-takeoff"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="vj-card-head">Goal-Based Sprints</div>
-                                                    <div class="vj-card-desc">Multi-week structured guidance for career transitions</div>
-                                                </div>
-                                            </a>
-                                            <a href="{{ url('group-mentoring') }}" class="vj-stacked-card">
-                                                <div class="vj-mega-icon-chip chip-indigo">
-                                                    <i class="bi bi-people-fill"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="vj-card-head">Group Mentoring</div>
-                                                    <div class="vj-card-desc">Quick 15-min drop-in Q&A and priority query solving</div>
-                                                </div>
-                                            </a>
-                                        </div>
+                                        {{-- Engagement Formats / Mentorship Models hidden — session modes are unused --}}
 
-                                        <!-- Column 2: 2x2 Grid of Expertise Areas -->
-                                        <div class="col-lg-4">
+                                        <!-- Browse by Domain -->
+                                        <div class="col-lg-8">
                                             <div class="vj-mega-section-head">
                                                 <span class="vj-mega-eyebrow">TOP EXPERTISE</span>
                                                 <h6 class="vj-mega-heading">
                                                     <span>Browse by Domain</span>
-                                                    <a href="{{ url('all-mentors') }}" class="vj-mega-view-all">All Mentors <i class="bi bi-arrow-right"></i></a>
+                                                    <a href="{{ route('mentors.search') }}" class="vj-mega-view-all">All Mentors <i class="bi bi-arrow-right"></i></a>
                                                 </h6>
                                             </div>
-                                            <div class="vj-grid-2x2">
-                                                <a href="{{ url('tech-and-ai') }}" class="vj-grid-box-card">
+                                            <div class="vj-grid-2x2" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+                                                <a href="{{ \App\Support\MentorBrowseQuery::listingUrl(['domain' => 'engineering']) }}" class="vj-grid-box-card">
                                                     <div class="vj-mega-icon-chip chip-blue">
                                                         <i class="bi bi-code-slash"></i>
                                                     </div>
                                                     <span class="vj-grid-title">Tech & AI</span>
                                                     <span class="vj-grid-sub">Engineering & Data Science</span>
                                                 </a>
-                                                <a href="{{ url('product-and-design') }}" class="vj-grid-box-card">
+                                                <a href="{{ \App\Support\MentorBrowseQuery::listingUrl(['domain' => ['product', 'design']]) }}" class="vj-grid-box-card">
                                                     <div class="vj-mega-icon-chip chip-purple">
                                                         <i class="bi bi-kanban"></i>
                                                     </div>
                                                     <span class="vj-grid-title">Product & Design</span>
                                                     <span class="vj-grid-sub">UI/UX & Product Management</span>
                                                 </a>
-                                                <a href="{{ url('leadership-and-cxo') }}" class="vj-grid-box-card">
+                                                <a href="{{ \App\Support\MentorBrowseQuery::listingUrl(['domain' => 'leadership']) }}" class="vj-grid-box-card">
                                                     <div class="vj-mega-icon-chip chip-amber">
                                                         <i class="bi bi-briefcase-fill"></i>
                                                     </div>
                                                     <span class="vj-grid-title">Leadership & CXO</span>
                                                     <span class="vj-grid-sub">Executive Mentorship</span>
                                                 </a>
-                                                <a href="{{ url('finance-and-strategy') }}" class="vj-grid-box-card">
+                                                <a href="{{ \App\Support\MentorBrowseQuery::listingUrl(['domain' => 'finance']) }}" class="vj-grid-box-card">
                                                     <div class="vj-mega-icon-chip chip-green">
                                                         <i class="bi bi-pie-chart-fill"></i>
                                                     </div>
@@ -385,7 +352,7 @@
                                                     <h5 class="vj-spotlight-title">Share your journey. Shape future leaders.</h5>
                                                     <p class="vj-spotlight-desc">Experience becomes powerful when it becomes someone else's direction. Join our verified mentor community.</p>
                                                 </div>
-                                                <a href="{{ url('become-a-mentor') }}" class="vj-spotlight-btn">
+                                                <a href="{{ route('register') }}?role=mentor" class="vj-spotlight-btn">
                                                     Become a Mentor <i class="bi bi-arrow-right"></i>
                                                 </a>
                                             </div>

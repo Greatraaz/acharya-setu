@@ -540,58 +540,7 @@
              ════════════════════════════════════════════════ --}}
         @elseif($step == 2)
         @php
-            $streamCatalog = [
-                'Engineering' => [
-                    'icon' => '👷',
-                    'fields' => [
-                        ['Computer Science Engineering (CSE)', '💻'],
-                        ['Electrical Engineering (EE)', '⚡'],
-                        ['Mechanical Engineering (ME)', '⚙️'],
-                        ['Civil Engineering (CE)', '🏗️'],
-                        ['Chemical Engineering', '🧪'],
-                    ],
-                ],
-                'Commerce' => [
-                    'icon' => '🏢',
-                    'fields' => [
-                        ['Accounting', '📒'],
-                        ['Finance', '💰'],
-                        ['Marketing', '📈'],
-                        ['Business Management', '🗂️'],
-                        ['Economics', '📊'],
-                    ],
-                ],
-                'Arts' => [
-                    'icon' => '🎨',
-                    'fields' => [
-                        ['Psychology', '🧠'],
-                        ['Political Science', '🏛️'],
-                        ['Geography', '🌍'],
-                        ['History', '📜'],
-                        ['Sociology', '👥'],
-                    ],
-                ],
-                'Management' => [
-                    'icon' => '⚙️',
-                    'fields' => [
-                        ['Finance Management', '💵'],
-                        ['Marketing Management', '📉'],
-                        ['Operations Management', '🔄'],
-                        ['Business Analytics', '📊'],
-                        ['IT Management', '🖱️'],
-                    ],
-                ],
-                'Switch Career' => [
-                    'icon' => '🔀',
-                    'fields' => [
-                        ['Tech Transition', '💻'],
-                        ['Move to Management', '👔'],
-                        ['Entrepreneurship', '🚀'],
-                        ['Government / Civil Services', '🏛️'],
-                        ['Freelancing', '✍️'],
-                    ],
-                ],
-            ];
+            $streamCatalog = $streamCatalog ?? \App\Services\MenteeOnboardingService::streamCatalog();
             $selectedStream = old('education_stream', auth()->user()->education_stream);
             $selectedField  = old('field', auth()->user()->field);
         @endphp
@@ -774,15 +723,17 @@
                         @endforeach
                     </select>
                 </div>
+                @if(false)
                 <div class="form-group">
                     <label class="form-label">Mentoring Format *</label>
-                    <select name="mentoring_format" class="form-select" required>
+                    <select name="mentoring_format" class="form-select">
                         <option value="">Select…</option>
                         @foreach(['one_on_one'=>'1:1 sessions','group'=>'Group sessions','video'=>'Video calls','audio'=>'Audio only','hybrid'=>'Hybrid / in-person'] as $val=>$label)
                         <option value="{{ $val }}" @selected(old('mentoring_format', $preferences['mentoring_format'] ?? '') === $val)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
+                @endif
             </div>
 
             <div class="mentee-onboard__actions">

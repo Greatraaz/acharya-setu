@@ -13,6 +13,97 @@ class MenteeOnboardingService
 {
     public const TOTAL_STEPS = 4;
 
+    /**
+     * Canonical stream/domain catalog used on mentee onboarding.
+     * Account settings and admin mentee forms must use this same list.
+     *
+     * @return array<string, array{icon: string, fields: list<array{0: string, 1: string}>}>
+     */
+    public static function streamCatalog(): array
+    {
+        return [
+            'Engineering' => [
+                'icon' => '👷',
+                'fields' => [
+                    ['Computer Science Engineering (CSE)', '💻'],
+                    ['Electrical Engineering (EE)', '⚡'],
+                    ['Mechanical Engineering (ME)', '⚙️'],
+                    ['Civil Engineering (CE)', '🏗️'],
+                    ['Chemical Engineering', '🧪'],
+                ],
+            ],
+            'Commerce' => [
+                'icon' => '🏢',
+                'fields' => [
+                    ['Accounting', '📒'],
+                    ['Finance', '💰'],
+                    ['Marketing', '📈'],
+                    ['Business Management', '🗂️'],
+                    ['Economics', '📊'],
+                ],
+            ],
+            'Arts' => [
+                'icon' => '🎨',
+                'fields' => [
+                    ['Psychology', '🧠'],
+                    ['Political Science', '🏛️'],
+                    ['Geography', '🌍'],
+                    ['History', '📜'],
+                    ['Sociology', '👥'],
+                ],
+            ],
+            'Management' => [
+                'icon' => '⚙️',
+                'fields' => [
+                    ['Finance Management', '💵'],
+                    ['Marketing Management', '📉'],
+                    ['Operations Management', '🔄'],
+                    ['Business Analytics', '📊'],
+                    ['IT Management', '🖱️'],
+                ],
+            ],
+            'Switch Career' => [
+                'icon' => '🔀',
+                'fields' => [
+                    ['Tech Transition', '💻'],
+                    ['Move to Management', '👔'],
+                    ['Entrepreneurship', '🚀'],
+                    ['Government / Civil Services', '🏛️'],
+                    ['Freelancing', '✍️'],
+                ],
+            ],
+        ];
+    }
+
+    /** @return list<string> */
+    public function onboardingStreamNames(?string $current = null): array
+    {
+        $names = array_keys(self::streamCatalog());
+        $current = trim((string) $current);
+        if ($current !== '' && ! in_array($current, $names, true)) {
+            array_unshift($names, $current);
+        }
+
+        return $names;
+    }
+
+    /** @return list<string> */
+    public function fieldsForStream(?string $stream, ?string $current = null): array
+    {
+        $fields = collect(self::streamCatalog()[$stream]['fields'] ?? [])
+            ->map(fn ($item) => is_array($item) ? (string) $item[0] : (string) $item)
+            ->filter()
+            ->values()
+            ->all();
+
+        $current = trim((string) $current);
+        if ($current !== '' && ! in_array($current, $fields, true)) {
+            array_unshift($fields, $current);
+        }
+
+        return $fields;
+    }
+
     public function catalogStreams(): Collection
     {
         try {
@@ -254,9 +345,6 @@ class MenteeOnboardingService
         if (empty($user->preferences['preferred_language'] ?? null)) {
             $missing[] = 'preferred_language';
         }
-        if (empty($user->preferences['mentoring_format'] ?? null)) {
-            $missing[] = 'mentoring_format';
-        }
 
         $hasTracks = ! empty($user->career_goals);
 
@@ -351,7 +439,7 @@ class MenteeOnboardingService
             'weekly_time_commitment' => 'required|string|max:100',
             'monthly_budget'         => 'nullable|string|max:100',
             'preferred_language'     => 'required|string|max:100',
-            'session_modes'          => 'required|array|min:1',
+            'session_modes'          => 'nullable|array',
             'session_modes.*'        => 'in:video,audio,chat,in_person',
             'assigned_mentor_id'     => 'nullable|exists:users,id',
             'subscription_plan'      => 'nullable|in:free,basic,pro,enterprise',

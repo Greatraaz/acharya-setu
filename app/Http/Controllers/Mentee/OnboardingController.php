@@ -21,21 +21,12 @@ class OnboardingController extends Controller
         if ($user->onboarding_completed) {
             return redirect()->route('mentee.dashboard');
         }
-        $streams = collect();
-        try {
-            $streams = \DB::table('education_streams')
-                ->where('is_active', true)
-                ->whereNull('mentee_id')
-                ->orderBy('sort_order')
-                ->get();
-        } catch (\Throwable) {
-            $streams = collect();
-        }
-        $trackSuggestions = $this->onboarding->catalogStreams();
+        $streamCatalog = MenteeOnboardingService::streamCatalog();
+        $trackSuggestions = collect(array_keys($streamCatalog));
         $tracks = old('tracks', $this->onboarding->menteeTracks($user->id) ?: ($user->career_goals ?? []));
         $preferences = $user->preferences ?? [];
 
-        return view('frontend.mentee.steps', compact('step', 'streams', 'trackSuggestions', 'tracks', 'preferences'));
+        return view('frontend.mentee.steps', compact('step', 'streamCatalog', 'trackSuggestions', 'tracks', 'preferences'));
     }
 
     public function saveStep1(Request $request)
@@ -138,16 +129,18 @@ class OnboardingController extends Controller
             'weekly_time_commitment' => 'required|string',
             'monthly_budget'         => 'nullable|string',
             'preferred_language'     => 'required|string',
-            'mentoring_format'       => 'required|string',
+            'mentoring_format'       => 'nullable|string',
+            'session_modes'          => 'nullable|array',
+            'session_modes.*'        => 'in:video,audio,chat,in_person',
         ]);
 
         $user = auth()->user();
-        $preferences = array_merge($user->preferences ?? [], [
+        $preferences = array_merge($user->preferences ?? [], array_filter([
             'weekly_time_commitment' => $data['weekly_time_commitment'],
             'monthly_budget'         => $data['monthly_budget'] ?? null,
             'preferred_language'     => $data['preferred_language'],
-            'mentoring_format'       => $data['mentoring_format'],
-        ]);
+            'mentoring_format'       => $data['mentoring_format'] ?? null,
+        ], fn ($value) => $value !== null && $value !== ''));
 
         $user->update([
             'preferences'     => $preferences,

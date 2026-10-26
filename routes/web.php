@@ -549,26 +549,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/account', function () {
         $user = auth()->user();
         $streams = [];
+        $streamCatalog = [];
         $tracks = [];
         $preferences = is_array($user->preferences) ? $user->preferences : [];
 
         if ($user->role === 'mentee') {
             $onboarding = app(\App\Services\MenteeOnboardingService::class);
-            $catalog = $onboarding->catalogStreams();
-            $streams = $catalog->isNotEmpty()
-                ? $catalog->all()
-                : [
-                    'Technology', 'Business & Management', 'Design & Arts', 'Science & Research',
-                    'Healthcare', 'Law', 'Finance', 'Marketing', 'Operations', 'Other',
-                ];
-            if ($user->education_stream && ! in_array($user->education_stream, $streams, true)) {
-                array_unshift($streams, $user->education_stream);
-            }
+            $streamCatalog = \App\Services\MenteeOnboardingService::streamCatalog();
+            $streams = $onboarding->onboardingStreamNames($user->education_stream);
             $preferences = $onboarding->preferencesForForm($preferences);
             $tracks = $onboarding->menteeTracks($user->id);
         }
 
-        return view('account.settings', compact('user', 'streams', 'tracks', 'preferences'));
+        return view('account.settings', compact('user', 'streams', 'streamCatalog', 'tracks', 'preferences'));
     })->name('account');
     Route::put( '/account',         [LoginController::class, 'updateAccount'])->name('account.update');
     Route::post('/account/avatar',  [LoginController::class, 'updateAvatar']) ->name('account.avatar');

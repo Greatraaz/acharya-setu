@@ -197,23 +197,23 @@
         $navGroups = [
             'General' => [
                 ['app','App Settings','M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z'],
-                ['appearance','Appearance','M8 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM5.5 7a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z'],
+                // ['appearance','Appearance','M8 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm4 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM5.5 7a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z'],
                 ['notifications','Notifications','M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917z M14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z'],
                 ['email','Email / SMTP','M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2zm13 2.383-4.708 2.825L15 11.105V5.383zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741zM1 11.105l4.708-2.897L1 5.383v5.722z'],
-                ['storage','Storage','M1 2a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2zm0 4.5a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1V7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-.5zm0 4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-.5z'],
+                // ['storage','Storage','M1 2a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2zm0 4.5a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1V7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-.5zm0 4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1V11a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-.5z'],
             ],
             'Payments' => [
                 ['payment','Payment Gateways','M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1H0V4zm0 3h16v5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V7zm3 2a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1H3zm2.5 0a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5z'],
                 ['career-addons','Career Add-ons','M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zM4 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2A1.5 1.5 0 0 1 9.5 3V1H4z'],
             ],
-            'Messaging' => [
-                ['sms','SMS Gateways','M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2.414a1 1 0 0 0-.707.293L.854 13.146A.5.5 0 0 1 0 12.793V2z'],
-            ],
+            // 'Messaging' => [
+            //     ['sms','SMS Gateways','M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2.414a1 1 0 0 0-.707.293L.854 13.146A.5.5 0 0 1 0 12.793V2z'],
+            // ],
             'Video Calls' => [
-                ['videocall','Video Call','M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2V5z'],
+                // ['videocall','Video Call','M0 5a2 2 0 0 1 2-2h7.5a2 2 0 0 1 1.983 1.738l3.11-1.382A1 1 0 0 1 16 4.269v7.462a1 1 0 0 1-1.406.913l-3.111-1.382A2 2 0 0 1 9.5 13H2a2 2 0 0 1-2-2V5z'],
                 ['agora','Agora','M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z'],
-                ['zoom','Zoom','M1.5 1h13A1.5 1.5 0 0 1 16 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 13.5v-11A1.5 1.5 0 0 1 1.5 1zM1 2.5v11a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-13a.5.5 0 0 0-.5.5z'],
-                ['google','Google Meet','M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.792 4.792 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.702 3.702 0 0 0 1.599-2.431H8v-3.08h7.545z'],
+                // ['zoom','Zoom','M1.5 1h13A1.5 1.5 0 0 1 16 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 13.5v-11A1.5 1.5 0 0 1 1.5 1zM1 2.5v11a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-13a.5.5 0 0 0-.5.5z'],
+                // ['google','Google Meet','M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.792 4.792 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.702 3.702 0 0 0 1.599-2.431H8v-3.08h7.545z'],
             ],
         ];
         @endphp
@@ -322,6 +322,7 @@
                     </div>
                 </div>
 
+                {{-- Temporarily hidden from Settings UI
                 <div class="section-card">
                     <h3>Localization</h3>
                     <p class="section-desc">Set your timezone, language, and date preferences.</p>
@@ -354,7 +355,9 @@
                         </div>
                     </div>
                 </div>
+                --}}
 
+                {{-- Temporarily hidden from Settings UI
                 <div class="section-card">
                     <h3>Features & Access</h3>
                     <p class="section-desc">Enable or disable core application features.</p>
@@ -377,7 +380,6 @@
                     <div class="divider"></div>
                     @endforeach
 
-                    {{-- Maintenance Mode --}}
                     <div class="setting-row">
                         <div>
                             <div class="setting-row-label flex items-center gap-2">
@@ -402,6 +404,7 @@
                         </div>
                     </div>
                 </div>
+                --}}
 
                 <div class="section-card">
                     <h3>Logo & Favicon</h3>
@@ -430,7 +433,7 @@
             </form>
         </div>
 
-        {{-- ===== APPEARANCE ===== --}}
+        {{-- ===== APPEARANCE (hidden from admin UI for now) =====
         <div id="tab-appearance" class="tab-section">
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
@@ -469,6 +472,7 @@
                 </div>
             </form>
         </div>
+        --}}
 
         {{-- ===== NOTIFICATIONS ===== --}}
         <div id="tab-notifications" class="tab-section">
@@ -517,7 +521,9 @@
                 <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div><h2 class="text-lg font-semibold text-gray-800">Email / SMTP Settings</h2><p class="text-sm text-gray-500">Configure outgoing email server settings.</p></div>
                     <div class="flex gap-2">
+                        @if(false)
                         <a href="{{ route('admin.settings.test-email') }}" class="save-btn secondary">Test Connection</a>
+                        @endif
                         <button type="submit" class="save-btn">Save Changes</button>
                     </div>
                 </div>
@@ -553,7 +559,7 @@
             </form>
         </div>
 
-        {{-- ===== STORAGE ===== --}}
+        {{-- ===== STORAGE (hidden from admin UI for now; always local) =====
         <div id="tab-storage" class="tab-section">
             <form action="{{ route('admin.settings.update') }}" method="POST">
                 @csrf
@@ -592,6 +598,7 @@
                 </div>
             </form>
         </div>
+        --}}
 
         {{-- ===== CAREER ADD-ON PRICES ===== --}}
         <div id="tab-career-addons" class="tab-section">
@@ -651,11 +658,11 @@
                 <div class="gateway-tabs flex gap-2 mb-5 flex-wrap">
                     @foreach([
                         ['razorpay','Razorpay','#2563eb'],
-                        ['stripe','Stripe','#635bff'],
-                        ['paypal','PayPal','#003087'],
-                        ['paytm','Paytm','#00b9f1'],
-                        ['phonepe','PhonePe','#5f259f'],
-                        ['cashfree','Cashfree','#19a363'],
+                        // ['stripe','Stripe','#635bff'],
+                        // ['paypal','PayPal','#003087'],
+                        // ['paytm','Paytm','#00b9f1'],
+                        // ['phonepe','PhonePe','#5f259f'],
+                        // ['cashfree','Cashfree','#19a363'],
                     ] as [$gw, $label, $color])
                     <button type="button" onclick="showGateway('{{ $gw }}')" id="gwtab-{{ $gw }}" class="gateway-tab-btn {{ $gw === 'razorpay' ? 'active' : '' }}">
                         {{ $label }}
@@ -715,6 +722,8 @@
                     </div>
                 </div>
 
+                {{-- Other gateways hidden from admin UI for now --}}
+                @if(false)
                 {{-- Stripe --}}
                 <div id="gw-stripe" class="gateway-section hidden">
                     <div class="section-card">
@@ -914,6 +923,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
                 {{-- Currency Settings --}}
                 <div class="section-card">
@@ -944,6 +954,7 @@
             </form>
         </div>
 
+        @if(false)
         {{-- ===== SMS GATEWAYS ===== --}}
         <div id="tab-sms" class="tab-section">
             <form action="{{ route('admin.settings.update') }}" method="POST">
@@ -1130,7 +1141,9 @@
 
             </form>
         </div>
+        @endif
 
+        @if(false)
         {{-- ===== VIDEO CALL GENERAL ===== --}}
         <div id="tab-videocall" class="tab-section">
             <form action="{{ route('admin.settings.update') }}" method="POST">
@@ -1192,6 +1205,7 @@
                 </div>
             </form>
         </div>
+        @endif
 
         {{-- ===== AGORA ===== --}}
         <div id="tab-agora" class="tab-section">
@@ -1201,7 +1215,9 @@
                 <div class="settings-tab-header flex items-center justify-between mb-6">
                     <div><h2 class="text-lg font-semibold text-gray-800">Agora Configuration</h2><p class="text-sm text-gray-500">Real-time Video & Voice SDK</p></div>
                     <div class="flex gap-2">
+                        @if(false)
                         <a href="{{ route('admin.settings.test-agora') }}" class="save-btn success">Test Connection</a>
+                        @endif
                         <button type="submit" class="save-btn">Save Changes</button>
                     </div>
                 </div>
@@ -1220,6 +1236,7 @@
             </form>
         </div>
 
+        @if(false)
         {{-- ===== ZOOM ===== --}}
         <div id="tab-zoom" class="tab-section">
             <form action="{{ route('admin.settings.update') }}" method="POST">
@@ -1248,7 +1265,9 @@
                 </div>
             </form>
         </div>
+        @endif
 
+        @if(false)
         {{-- ===== GOOGLE MEET ===== --}}
         <div id="tab-google" class="tab-section">
             <form action="{{ route('admin.settings.update') }}" method="POST">
@@ -1298,6 +1317,7 @@
                 </div>
             </form>
         </div>
+        @endif
 
     </main>
 </div>

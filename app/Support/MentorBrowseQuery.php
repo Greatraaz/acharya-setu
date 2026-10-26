@@ -78,4 +78,135 @@ class MentorBrowseQuery
             default    => $query->orderByDesc('rating')->orderByDesc('total_sessions'),
         };
     }
+
+    public const MULTI_FILTERS = ['domain', 'session_type', 'format', 'exp', 'availability'];
+
+    /** @return list<array{0:string,1:string}> */
+    public static function domainOptions(): array
+    {
+        return [
+            ['engineering', 'Tech & AI'],
+            ['product', 'Product Management'],
+            ['design', 'Design & UX'],
+            ['leadership', 'Leadership & CXO'],
+            ['finance', 'Finance & Strategy'],
+            ['marketing', 'Marketing'],
+            ['law', 'Law'],
+            ['medicine', 'Medicine'],
+            ['arts', 'Arts & Humanities'],
+        ];
+    }
+
+    /** @return list<array{0:string,1:string}> */
+    public static function formatOptions(): array
+    {
+        return [
+            ['one_on_one', '1-on-1 Video Sessions'],
+            ['sprint', 'Goal-Based Sprints'],
+            ['group', 'Group Mentoring'],
+        ];
+    }
+
+    public static function listingUrl(array $filters = []): string
+    {
+        $parts = [];
+        foreach ($filters as $key => $value) {
+            $items = array_values(array_filter(
+                (array) $value,
+                fn ($item) => $item !== null && $item !== ''
+            ));
+            $multi = in_array($key, self::MULTI_FILTERS, true);
+            foreach ($items as $item) {
+                $name = $multi ? $key.'[]' : $key;
+                $parts[] = rawurlencode($name).'='.rawurlencode((string) $item);
+            }
+        }
+
+        $base = route('mentors.search');
+
+        return $parts === [] ? $base : $base.'?'.implode('&', $parts);
+    }
+
+    public static function listingTitle(Request $request): string
+    {
+        $formats = array_values(array_filter((array) $request->input('format', [])));
+        $domains = array_values(array_filter((array) $request->input('domain', [])));
+
+        $labels = [];
+        foreach ($formats as $format) {
+            $labels[] = match ((string) $format) {
+                'one_on_one' => '1-on-1 Video Sessions',
+                'sprint' => 'Goal-Based Sprints',
+                'group' => 'Group Mentoring',
+                default => null,
+            };
+        }
+
+        $domainSet = array_map('strtolower', $domains);
+        if (in_array('product', $domainSet, true) && in_array('design', $domainSet, true)) {
+            $labels[] = 'Product & Design';
+            $domainSet = array_values(array_diff($domainSet, ['product', 'design']));
+        }
+
+        foreach ($domainSet as $domain) {
+            $labels[] = match ($domain) {
+                'engineering', 'tech-ai' => 'Tech & AI',
+                'product' => 'Product Management',
+                'design' => 'Design & UX',
+                'leadership', 'leadership-cxo', 'cxo' => 'Leadership & CXO',
+                'finance', 'finance-strategy' => 'Finance & Strategy',
+                'marketing' => 'Marketing',
+                'law' => 'Law',
+                'medicine' => 'Medicine',
+                'arts' => 'Arts & Humanities',
+                default => null,
+            };
+        }
+
+        $labels = array_values(array_unique(array_filter($labels)));
+
+        return $labels === [] ? 'Find Your Perfect Mentor' : implode(' · ', $labels);
+    }
+
+    /** @return list<string> */
+    public static function domainKeywords(string $domain): array
+    {
+        return match (strtolower(trim($domain))) {
+            'engineering', 'tech-ai', 'tech & ai' => [
+                'engineering', 'software', 'tech', 'artificial intelligence',
+                'machine learning', 'devops', 'cyber', 'data science', 'developer',
+            ],
+            'product' => ['product', 'product management'],
+            'design' => ['design', 'ux', 'ui', 'product design'],
+            'product-design', 'product & design' => [
+                'product', 'product management', 'design', 'ux', 'ui',
+            ],
+            'leadership', 'leadership-cxo', 'cxo' => [
+                'leadership', 'cxo', 'executive', 'ceo', 'cto', 'cfo', 'coo',
+                'director', 'founder', 'management',
+            ],
+            'finance', 'finance-strategy' => [
+                'finance', 'mba', 'investment', 'trading', 'strategy',
+                'consulting', 'fintech', 'consultant',
+            ],
+            'marketing' => ['marketing', 'brand', 'content', 'media'],
+            'law' => ['law'],
+            'medicine' => ['medicine', 'medical'],
+            'arts' => ['arts', 'humanities', 'psychology', 'civil service', 'upsc'],
+            default => [$domain],
+        };
+    }
+
+    /** @return list<string> */
+    public static function formatKeywords(string $format): array
+    {
+        return match ($format) {
+            'sprint' => [
+                'sprint', 'goal-based', 'goal setting', 'career transition',
+                'multi-week', 'accountability',
+            ],
+            'group' => ['group mentoring', 'group session', 'group mentor', 'cohort'],
+            default => [],
+        };
+    }
 }

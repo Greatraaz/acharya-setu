@@ -173,7 +173,7 @@ class MentorListingController extends Controller
         if ($domains) {
             $query->where(function ($q2) use ($domains) {
                 foreach ($domains as $domain) {
-                    foreach ($this->domainKeywords((string) $domain) as $keyword) {
+                    foreach (MentorBrowseQuery::domainKeywords((string) $domain) as $keyword) {
                         $q2->orWhere('field', 'like', "%{$keyword}%")
                            ->orWhere('designation', 'like', "%{$keyword}%")
                            ->orWhere('expertise', 'like', "%{$keyword}%");
@@ -216,6 +216,7 @@ class MentorListingController extends Controller
         }
 
         $this->applySessionTypeFilter($query, $request);
+        $this->applyFormatFilter($query, $request);
         $this->applyAvailabilityFilter($query, $request);
 
         $duration = MentorBrowseQuery::durationMinutes($request);
@@ -339,19 +340,62 @@ class MentorListingController extends Controller
         });
     }
 
-    /** @return list<string> */
-    private function domainKeywords(string $domain): array
+    private function applyFormatFilter($query, Request $request): void
     {
-        return match (strtolower(trim($domain))) {
-            'engineering' => ['engineering', 'software', 'tech', 'devops', 'cyber', 'data science', 'developer'],
-            'product'     => ['product'],
-            'design'      => ['design', 'ux', 'ui'],
-            'finance'     => ['finance', 'mba', 'investment', 'trading'],
-            'marketing'   => ['marketing', 'brand', 'content', 'media'],
-            'law'         => ['law'],
-            'medicine'    => ['medicine', 'medical'],
-            'arts'        => ['arts', 'humanities', 'psychology', 'civil service', 'upsc'],
-            default       => [$domain],
-        };
+        $formats = array_values(array_intersect(
+            array_filter((array) $request->input('format', [])),
+            ['one_on_one', 'sprint', 'group']
+        ));
+        if ($formats === []) {
+            return;
+        }
+
+        $query->where(function ($outer) use ($formats) {
+            foreach ($formats as $format) {
+                $outer->orWhere(function ($q) use ($format) {
+                    $this->whereMentorshipFormat($q, $format);
+                });
+            }
+        });
+    }
+
+    private function whereMentorshipFormat($query, string $format): void
+    {
+        if ($format === 'one_on_one') {
+            $query->where(function ($q) {
+                $q->whereRaw("JSON_CONTAINS(COALESCE(preferences, JSON_OBJECT()), '\"video\"', '$.session_modes')")
+                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.mentoring_format')) IN ('video', 'hybrid', 'one_on_one')")
+                    ->orWhere(function ($unset) {
+                        $unset->whereRaw("JSON_EXTRACT(preferences, '$.mentoring_format') IS NULL")
+                            ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.mentoring_format')) IN ('null', '')");
+                    });
+            })->whereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.mentoring_format')), '') != 'group'");
+
+            return;
+        }
+
+        if ($format === 'group') {
+            $query->where(function ($q) {
+                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(preferences, '$.mentoring_format')) = 'group'");
+                foreach (MentorBrowseQuery::formatKeywords('group') as $keyword) {
+                    $q->orWhere('bio', 'like', "%{$keyword}%")
+                        ->orWhere('field', 'like', "%{$keyword}%")
+                        ->orWhere('expertise', 'like', "%{$keyword}%")
+                        ->orWhere('strengths', 'like', "%{$keyword}%");
+                }
+            });
+
+            return;
+        }
+
+        $query->where(function ($q) {
+            foreach (MentorBrowseQuery::formatKeywords('sprint') as $keyword) {
+                $q->orWhere('bio', 'like', "%{$keyword}%")
+                    ->orWhere('field', 'like', "%{$keyword}%")
+                    ->orWhere('designation', 'like', "%{$keyword}%")
+                    ->orWhere('expertise', 'like', "%{$keyword}%")
+                    ->orWhere('strengths', 'like', "%{$keyword}%");
+            }
+        });
     }
 }

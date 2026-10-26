@@ -20,19 +20,21 @@ class OnboardingController extends Controller
     {
         $user = $request->user();
 
-        $dbStreams = collect();
-        try {
-            $dbStreams = DB::table('education_streams')
-                ->where('is_active', true)
-                ->whereNull('mentee_id')
-                ->orderBy('sort_order')
-                ->get(['id', 'name', 'icon', 'sort_order']);
-        } catch (\Throwable) {}
+        $streams = collect(MenteeOnboardingService::streamCatalog())
+            ->map(fn (array $meta, string $name) => [
+                'name'   => $name,
+                'icon'   => $meta['icon'] ?? null,
+                'fields' => collect($meta['fields'] ?? [])->map(fn ($item) => [
+                    'name' => is_array($item) ? ($item[0] ?? '') : $item,
+                    'icon' => is_array($item) ? ($item[1] ?? null) : null,
+                ])->values(),
+            ])
+            ->values();
 
         return response()->json([
             'status'               => true,
             'statuscode'           => 200,
-            'streams'              => $dbStreams,
+            'streams'              => $streams,
             'current_step'         => $user->onboarding_step ?? 0,
             'total_steps'          => 4,
             'onboarding_completed' => (bool) $user->onboarding_completed,
@@ -274,15 +276,17 @@ class OnboardingController extends Controller
             'weekly_time_commitment' => 'required|string',
             'monthly_budget'         => 'nullable|string',
             'preferred_language'     => 'required|string',
-            'mentoring_format'       => 'required|string',
+            'mentoring_format'       => 'nullable|string',
+            'session_modes'          => 'nullable|array',
+            'session_modes.*'        => 'in:video,audio,chat,in_person',
         ]);
 
-        $preferences = array_merge($user->preferences ?? [], [
+        $preferences = array_merge($user->preferences ?? [], array_filter([
             'weekly_time_commitment' => $data['weekly_time_commitment'],
             'monthly_budget'         => $data['monthly_budget'] ?? null,
             'preferred_language'     => $data['preferred_language'],
-            'mentoring_format'       => $data['mentoring_format'],
-        ]);
+            'mentoring_format'       => $data['mentoring_format'] ?? null,
+        ], fn ($value) => $value !== null && $value !== ''));
 
         $user->update([
             'preferences'     => $preferences,

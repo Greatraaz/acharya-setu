@@ -130,6 +130,7 @@ class LoginController extends Controller
                 'monthly_budget' => 'nullable|string|max:100',
                 'session_modes' => 'nullable|array',
                 'session_modes.*' => 'in:video,audio,chat,in_person',
+                'mentoring_format' => 'nullable|string|max:50',
             ]);
         }
 

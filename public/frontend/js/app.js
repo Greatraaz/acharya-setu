@@ -1238,6 +1238,22 @@
            });
        }
 
+       const multiFilters = ["domain", "exp", "session_type", "availability", "format"];
+
+       function paramName(key) {
+           return multiFilters.includes(key) ? key + "[]" : key;
+       }
+
+       function paramValues(params, key) {
+           const values = [];
+           params.forEach((value, name) => {
+               if (name === key || name === key + "[]" || name.startsWith(key + "[")) {
+                   values.push(value);
+               }
+           });
+           return values;
+       }
+
        function buildQuery(page) {
            const params = new URLSearchParams();
            const q = document.querySelector("#mentor-search-input")?.value?.trim();
@@ -1256,7 +1272,7 @@
                }
    
                if ((el.type === "checkbox" || el.type === "radio") && el.checked && el.value) {
-                   params.append(key, el.value);
+                   params.append(paramName(key), el.value);
                }
            });
    
@@ -1279,14 +1295,15 @@
            if (sortSel && params.get("sort")) sortSel.value = params.get("sort");
    
            const selected = {
-               domain: params.getAll("domain"),
-               rate_range: params.getAll("rate_range"),
-               min_rating: params.getAll("min_rating"),
-               exp: params.getAll("exp").concat(params.getAll("experience")),
-               rate_max: params.getAll("rate_max"),
-               session_type: params.getAll("session_type"),
-               availability: params.getAll("availability"),
-               duration: params.getAll("duration"),
+               domain: paramValues(params, "domain"),
+               rate_range: paramValues(params, "rate_range"),
+               min_rating: paramValues(params, "min_rating"),
+               exp: paramValues(params, "exp").concat(paramValues(params, "experience")),
+               rate_max: paramValues(params, "rate_max"),
+               session_type: paramValues(params, "session_type"),
+               availability: paramValues(params, "availability"),
+               duration: paramValues(params, "duration"),
+               format: paramValues(params, "format"),
            };
    
            document.querySelectorAll("[data-filter]").forEach((el) => {

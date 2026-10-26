@@ -12,8 +12,8 @@
     {{-- Search Header --}}
     <div style="background:var(--bg-2);border-bottom:1px solid var(--border);padding:32px 0;">
         <div class="container">
-            <h1 style="font-size:28px;font-weight:800;margin-bottom:8px;">Find Your Perfect Mentor</h1>
-            <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;">Browse 2,400+ verified mentors across every domain</p>
+            <h1 style="font-size:28px;font-weight:800;margin-bottom:8px;">{{ \App\Support\MentorBrowseQuery::listingTitle(request()) }}</h1>
+            <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;">Browse verified mentors and refine by domain, format, and availability</p>
 
             {{-- Search bar --}}
             <div class="search-hero" style="margin:0;max-width:100%;">
@@ -67,16 +67,7 @@
                 {{-- Domain --}}
                 <div class="filter-section">
                     <div class="filter-section-title">Domain</div>
-                    @foreach([
-                        ['engineering','Engineering & Tech'],
-                        ['product','Product Management'],
-                        ['design','Design & UX'],
-                        ['finance','Finance & MBA'],
-                        ['marketing','Marketing'],
-                        ['law','Law'],
-                        ['medicine','Medicine'],
-                        ['arts','Arts & Humanities'],
-                    ] as [$val, $label])
+                    @foreach(\App\Support\MentorBrowseQuery::domainOptions() as [$val, $label])
                     <label class="filter-option">
                         <input type="checkbox" data-filter="domain" value="{{ $val }}" @checked(in_array($val, (array) request('domain', []), true))>
                         {{ $label }}
@@ -121,14 +112,7 @@
                     @endforeach
                 </div>
 
-                {{-- Session type --}}
-                <div class="filter-section">
-                    <div class="filter-section-title">Session Type</div>
-                    @php $sessionSelected = (array) request('session_type', []); @endphp
-                    <label class="filter-option"><input type="checkbox" data-filter="session_type" value="video" @checked(in_array('video', $sessionSelected, true))> 🎥 Video Call</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="session_type" value="audio" @checked(in_array('audio', $sessionSelected, true))> 🎙️ Audio Only</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="session_type" value="chat" @checked(in_array('chat', $sessionSelected, true))> 💬 Chat</label>
-                </div>
+                {{-- Mentorship model / session type hidden — session modes are unused --}}
 
                 {{-- Availability --}}
                 <div class="filter-section">
@@ -164,7 +148,7 @@
                 {{-- MENTOR GRID --}}
                 <div id="mentors-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;">
                     {{-- Initial load from server --}}
-                    @foreach($mentors ?? [] as $mentor)
+                    @forelse($mentors ?? [] as $mentor)
                     <div class="mentor-card">
                         <div class="mentor-card-head">
                             <div class="mentor-avatar-lg">
@@ -191,7 +175,13 @@
                             <button class="btn btn-primary btn-sm" onclick="openBookingModal({{ $mentor->id }},'{{ addslashes($mentor->name) }}',{{ $mentor->rate_per_minute }})">Book Session</button>
                         </div>
                     </div>
-                    @endforeach
+                    @empty
+                    <div class="empty-state" style="grid-column:1/-1">
+                        <div class="empty-state-icon">🔍</div>
+                        <h3>No mentors found</h3>
+                        <p>Try adjusting your filters or search term.</p>
+                    </div>
+                    @endforelse
                 </div>
 
                 {{-- Pagination --}}
