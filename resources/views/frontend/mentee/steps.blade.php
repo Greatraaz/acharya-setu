@@ -6,7 +6,7 @@
     .mentee-onboard {
         min-height: 100vh;
         min-height: 100dvh;
-        padding: calc(var(--nav-h) + 40px) 16px 60px;
+        padding: 40px 16px 60px;
         background: var(--bg);
         box-sizing: border-box;
     }
@@ -351,7 +351,7 @@
     }
     @media (max-width: 640px) {
         .mentee-onboard {
-            padding: calc(var(--nav-h) + 20px) 14px 40px;
+            padding: 20px 14px 40px;
         }
         .mentee-onboard__hero {
             margin-bottom: 20px;

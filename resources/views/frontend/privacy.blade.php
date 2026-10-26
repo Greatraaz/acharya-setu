@@ -3,7 +3,7 @@
 @section('title', 'Privacy Policy — Vedrix')
 
 @section('content')
-<div style="padding-top:var(--nav-h);">
+<div>
 <section style="padding:80px 0;">
 <div class="container-sm">
     <h1 style="font-size:36px;font-weight:800;margin-bottom:6px;">Privacy Policy</h1>

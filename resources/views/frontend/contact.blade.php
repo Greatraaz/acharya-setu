@@ -3,7 +3,7 @@
 @section('meta_description', 'Get in touch with the Vedrix team. We respond within 24 hours.')
 
 @section('content')
-<div style="padding-top:var(--nav-h);">
+<div>
 
     {{-- ── HERO ──────────────────────────────────────────── --}}
     <section style="padding:64px 0 48px; background:var(--bg-2); border-bottom:1px solid var(--border);">

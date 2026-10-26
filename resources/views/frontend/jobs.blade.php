@@ -2,7 +2,7 @@
 @section('title', 'Jobs — Vedrix')
 
 @section('content')
-<div class="container" style="padding:calc(var(--nav-h) + 32px) 20px 60px;max-width:900px;margin:0 auto;">
+<div class="container" style="padding:32px 20px 60px;max-width:900px;margin:0 auto;">
     <h1 style="font-size:28px;font-weight:800;margin-bottom:8px;">Job Listings</h1>
     <p style="color:var(--text-2);margin-bottom:24px;">Open roles from the Vedrix community.</p>
 

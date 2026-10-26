@@ -4,7 +4,7 @@
 @push('styles')
 <style>
 .call-room {
-    padding-top: var(--nav-h);
+    padding-top: 0;
     min-height: 100vh;
     width: 100%;
     max-width: 100vw;

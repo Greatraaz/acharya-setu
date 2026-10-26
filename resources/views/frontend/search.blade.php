@@ -7,7 +7,7 @@
         @include('frontend.mentee.partials.bottom-nav')
     @endif
 @endauth
-<div style="padding-top:var(--nav-h);">
+<div>
 
     {{-- Search Header --}}
     <div style="background:var(--bg-2);border-bottom:1px solid var(--border);padding:32px 0;">

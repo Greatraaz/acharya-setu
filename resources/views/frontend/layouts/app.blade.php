@@ -1,5 +1,15 @@
+@php
+    $showAppTheme = auth()->check() && request()->routeIs(
+        'mentor.*',
+        'mentee.*',
+        'account*',
+        'notifications.*',
+        'sessions.call*',
+        'mock-interviews.call*'
+    );
+@endphp
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ auth()->user()?->dark_mode ?? session('theme', 'dark') }}">
+<html lang="en" data-theme="{{ $showAppTheme ? 'dark' : 'light' }}" data-app-theme="{{ $showAppTheme ? '1' : '0' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,27 +21,69 @@
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v=202608041559">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
     <meta name="theme-color" content="#f59e0b">
+    <script>
+        (function () {
+            var root = document.documentElement;
+            if (root.getAttribute('data-app-theme') !== '1') {
+                root.setAttribute('data-theme', 'light');
+                return;
+            }
+            try {
+                var t = localStorage.getItem('as_theme');
+                if (t) root.setAttribute('data-theme', t);
+            } catch (e) {}
+        })();
+    </script>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Vedrix">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('frontend/css/vj.css') }}?v={{ filemtime(public_path('frontend/css/vj.css')) }}">
     <link rel="stylesheet" href="{{ asset('frontend/css/app.css') }}?v={{ filemtime(public_path('frontend/css/app.css')) }}">
-    {{-- Critical: only one theme logo visible (also works if app.css is cached/old on prod) --}}
     <style>
-        .navbar-brand .logo-for-light,
-        .footer-brand .logo-for-light { display: none !important; }
-        .navbar-brand .logo-for-dark,
-        .footer-brand .logo-for-dark { display: block !important; height: 48px; width: auto; max-width: 200px; object-fit: contain; }
-        .footer-brand .logo-for-dark { height: 52px; max-width: 220px; margin-bottom: 16px; }
-        html[data-theme="light"] .navbar-brand .logo-for-light,
-        html[data-theme="light"] .footer-brand .logo-for-light { display: block !important; height: 48px; width: auto; max-width: 200px; object-fit: contain; }
-        html[data-theme="light"] .footer-brand .logo-for-light { height: 52px; max-width: 220px; margin-bottom: 16px; }
-        html[data-theme="light"] .navbar-brand .logo-for-dark,
-        html[data-theme="light"] .footer-brand .logo-for-dark { display: none !important; }
+        html, body.vj-site-app { margin: 0 !important; padding: 0 !important; }
+        body.vj-site-app {
+            --nav-h: 70px;
+            --vj-header-h: 70px;
+        }
+        body.vj-site-app > .vj-header {
+            position: sticky;
+            top: 0;
+            margin: 0;
+            z-index: 1040;
+        }
+        .vj-site-app .dash-layout { padding-top: 0 !important; margin-top: 0; min-height: calc(100vh - var(--vj-header-h)); }
+        .vj-site-app .sidebar {
+            top: var(--vj-header-h);
+            height: calc(100vh - var(--vj-header-h));
+            bottom: auto;
+        }
+        .vj-site-app .auth-wrap { padding-top: 0 !important; min-height: calc(100vh - var(--vj-header-h)); }
+        .vj-site-app .modal-overlay:not(.open) {
+            display: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+        .vj-site-app:has(.dash-layout) .vj-footer {
+            margin-left: 240px;
+            width: calc(100% - 240px);
+        }
+        @media (max-width: 1199px) {
+            .vj-site-app:has(.dash-layout) .vj-footer {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
     </style>
     @stack('styles')
 
-    {{-- Flash data for JS toast --}}
     @if(session('success') || session('error') || session('info') || session('warning'))
     <div data-flash='@json([
         "type"    => session("success") ? "success" : (session("error") ? "error" : (session("warning") ? "warning" : "info")),
@@ -39,174 +91,10 @@
     ])' style="display:none;"></div>
     @endif
 </head>
-<body>
+<body class="vj-site vj-site-app">@include('frontend.partials.site-header', ['showAppTheme' => $showAppTheme])
 
-{{-- ═══════════════════════════════════════════════════════ NAVBAR --}}
-<nav class="navbar">
-    <div class="navbar-inner">
-        {{-- Brand --}}
-        <a href="{{ route('home') }}" class="navbar-brand">
-            <img class="logo-for-dark" src="{{ asset('frontend/images/logo-dark.png') }}" alt="Vedrix">
-            <img class="logo-for-light" src="{{ asset('frontend/images/logo-light.png') }}" alt="Vedrix">
-        </a>
-
-        {{-- Desktop Nav --}}
-        <ul class="navbar-nav">
-            <li><a href="{{ route('home') }}" @class(['active' => request()->routeIs('home')])>Home</a></li>
-            <li><a href="{{ route('mentors.search') }}" @class(['active' => request()->routeIs('mentors.*')])>Find Mentors</a></li>
-            <li><a href="{{ route('about') }}" @class(['active' => request()->routeIs('about')])>About</a></li>
-            <li class="nav-item-has-dropdown {{ request()->routeIs('insights.*') ? 'is-open-active' : '' }}">
-                <button type="button" class="nav-dropdown-trigger @if(request()->routeIs('insights.*')) active @endif" aria-expanded="false" aria-haspopup="true">
-                    Insights <span class="nav-caret">▾</span>
-                </button>
-                <div class="insights-dropdown" role="menu">
-                    <div class="insights-dropdown-grid">
-                        @foreach(\App\Support\InsightsMenu::columns() as $column)
-                            <div class="insights-dropdown-col">
-                                @foreach($column as $item)
-                                    <a href="{{ \App\Support\InsightsMenu::href($item) }}"
-                                       class="insights-dropdown-link {{ in_array($item['key'] ?? '', ['blogs', 'white-papers', 'case-studies', 'testimonials', 'webinars', 'events', 'podcasts', 'videos', 'download-centre'], true) && request()->routeIs('insights.'.($item['key']).'.*') ? 'active' : '' }}"
-                                       role="menuitem">
-                                        <span class="insights-dropdown-ico">{{ $item['icon'] }}</span>
-                                        <span>{{ $item['label'] }}</span>
-                                    </a>
-                                @endforeach
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            </li>
-            <li><a href="{{ route('contact') }}" @class(['active' => request()->routeIs('contact')])>Contact</a></li>
-        </ul>
-
-        {{-- Right side --}}
-        <div class="navbar-right">
-            @auth
-                @if(in_array(auth()->user()->role, ['mentor', 'mentee'], true))
-                    <div class="notif-bell" id="notifBell" data-feed-url="{{ route('notifications.feed') }}" data-read-all-url="{{ route('notifications.read-all') }}" data-read-url="{{ url('/notifications') }}" data-user-id="{{ auth()->id() }}">
-                        <button type="button" class="notif-bell__btn" id="notifBellBtn" aria-label="Notifications" aria-expanded="false">
-                            <span class="notif-bell__icon" aria-hidden="true">🔔</span>
-                            <span class="notif-bell__badge" id="notifBadge" hidden>0</span>
-                        </button>
-                        <div class="notif-panel" id="notifPanel" hidden>
-                            <div class="notif-panel__head">
-                                <div class="notif-panel__title">Notifications</div>
-                                <button type="button" class="notif-panel__mark" id="notifMarkAll">Mark all read</button>
-                            </div>
-                            <div class="notif-panel__list" id="notifList">
-                                <div class="notif-panel__empty">No notifications yet.</div>
-                            </div>
-                        </div>
-                    </div>
-                @endif
-            @endauth
-
-            {{-- Theme toggle --}}
-            <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">☀️</button>
-
-            @auth
-                @php $user = auth()->user(); @endphp
-                <div class="user-menu">
-                    <div class="user-trigger">
-                        <div class="user-avatar">
-                            @if($user->avatar_url)
-                                <img src="{{ $user->avatar_url }}" alt="{{ $user->name }}">
-                            @else
-                                {{ strtoupper(substr($user->name, 0, 1)) }}
-                            @endif
-                        </div>
-                        <div>
-                            <div class="user-name">{{ $user->name }}</div>
-                            <div class="user-role">{{ ucfirst($user->role) }}</div>
-                        </div>
-                        <span style="font-size:10px; color:var(--text-3); margin-left:4px;">▾</span>
-                    </div>
-                    <div class="user-dropdown">
-                        @if($user->role === 'mentor')
-                            <a class="dropdown-item" href="{{ route('mentor.dashboard') }}">📊 Dashboard</a>
-                            <a class="dropdown-item" href="{{ route('mentor.sessions') }}">📅 My Sessions</a>
-                            <a class="dropdown-item" href="{{ route('mentor.profile.edit') }}">✏️ Edit Profile</a>
-                            <a class="dropdown-item" href="{{ route('account') }}">👤 Account Settings</a>
-                            <a class="dropdown-item" href="{{ route('mentor.wallet') }}">💰 Wallet</a>
-                        @elseif($user->role === 'mentee')
-                            <a class="dropdown-item" href="{{ route('mentee.dashboard') }}">📊 Dashboard</a>
-                            <a class="dropdown-item" href="{{ route('mentee.sessions') }}">📅 My Sessions</a>
-                            <a class="dropdown-item" href="{{ route('mentee.journey.index') }}">🗺️ My Journey</a>
-                            <a class="dropdown-item" href="{{ route('account') }}">👤 Profile Settings</a>
-                            <a class="dropdown-item" href="{{ route('mentee.wallet') }}">💰 Wallet</a>
-                        @elseif($user->role === 'admin')
-                            <a class="dropdown-item" href="{{ route('admin.dashboard') }}">⚙️ Admin Panel</a>
-                        @endif
-                        <div class="dropdown-divider"></div>
-                        <form action="{{ route('logout') }}" method="POST">
-                            @csrf
-                            <button type="submit" class="dropdown-item danger w-full" style="text-align:left;">🚪 Sign Out</button>
-                        </form>
-                    </div>
-                </div>
-            @else
-                <a href="{{ route('login') }}" class="btn btn-outline btn-sm">Sign In</a>
-                <a href="{{ route('register') }}" class="btn btn-primary btn-sm">Get Started</a>
-            @endauth
-
-            {{-- Hamburger --}}
-            <button class="hamburger" id="hamburger" aria-label="Menu">
-                <span></span><span></span><span></span>
-            </button>
-        </div>
-    </div>
-</nav>
-
-{{-- Mobile Menu --}}
-<div class="mobile-menu" id="mobileMenu">
-    <div class="mobile-menu-inner">
-        <a href="{{ route('home') }}" class="mobile-nav-item @if(request()->routeIs('home')) active @endif">🏠 Home</a>
-        <a href="{{ route('mentors.search') }}" class="mobile-nav-item @if(request()->routeIs('mentors.*')) active @endif">🔍 Find Mentors</a>
-        <a href="{{ route('about') }}" class="mobile-nav-item">ℹ️ About</a>
-        <div class="mobile-nav-group">
-            <button type="button" class="mobile-nav-item mobile-nav-toggle" data-mobile-insights-toggle>
-                💡 Insights <span style="margin-left:auto;">▾</span>
-            </button>
-            <div class="mobile-insights-panel" id="mobileInsightsPanel" hidden>
-                @foreach(\App\Support\InsightsMenu::items() as $item)
-                    <a href="{{ \App\Support\InsightsMenu::href($item) }}" class="mobile-nav-item mobile-nav-sub">
-                        {{ $item['icon'] }} {{ $item['label'] }}
-                    </a>
-                @endforeach
-            </div>
-        </div>
-        <a href="{{ route('contact') }}" class="mobile-nav-item">✉️ Contact</a>
-        <div class="divider"></div>
-        @auth
-            @if(auth()->user()->role === 'mentor')
-                <a href="{{ route('mentor.dashboard') }}" class="mobile-nav-item">📊 Dashboard</a>
-                <a href="{{ route('mentor.sessions') }}" class="mobile-nav-item">📅 Sessions</a>
-                <a href="{{ route('mentor.community') }}" class="mobile-nav-item">💬 Community</a>
-                <a href="{{ route('mentor.wallet') }}" class="mobile-nav-item">💰 Wallet</a>
-            @elseif(auth()->user()->role === 'mentee')
-                <a href="{{ route('mentee.dashboard') }}" class="mobile-nav-item">📊 Dashboard</a>
-                <a href="{{ route('mentee.sessions') }}" class="mobile-nav-item">📅 Sessions</a>
-                <a href="{{ route('mentee.journey.index') }}" class="mobile-nav-item">🗺️ My Journey</a>
-                <a href="{{ route('mentee.community.index') }}" class="mobile-nav-item">💬 Community</a>
-                <a href="{{ route('mentee.wallet') }}" class="mobile-nav-item">💰 Wallet</a>
-            @elseif(auth()->user()->role === 'admin')
-                <a href="{{ route('admin.dashboard') }}" class="mobile-nav-item">⚙️ Admin Panel</a>
-            @endif
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button class="mobile-nav-item w-full" style="background:none;cursor:pointer;text-align:left;">🚪 Sign Out</button>
-            </form>
-        @else
-            <a href="{{ route('login') }}" class="mobile-nav-item">Sign In</a>
-            <a href="{{ route('register') }}" class="mobile-nav-item">Get Started →</a>
-        @endauth
-    </div>
-</div>
-
-{{-- Page Content --}}
 @yield('content')
 
-{{-- Confirm Modal (global) --}}
 <div id="confirm-modal" class="modal-overlay">
     <div class="modal" style="max-width:380px">
         <div class="modal-header">
@@ -223,55 +111,8 @@
     </div>
 </div>
 
-{{-- ═══════════════════════════════════════════════════════ FOOTER --}}
-<footer class="footer">
-    <div class="container">
-        <div class="footer-grid">
-            <div class="footer-brand">
-                <img class="logo-for-dark" src="{{ asset('frontend/images/logo-dark.png') }}" alt="Vedrix">
-                <img class="logo-for-light" src="{{ asset('frontend/images/logo-light.png') }}" alt="Vedrix">
-                <p>Learning beyond the classroom. Connect with world-class mentors and accelerate your career — one session at a time.</p>
-                <div class="footer-social">
-                    <a href="#" class="social-btn">𝕏</a>
-                    <a href="#" class="social-btn">in</a>
-                    <a href="#" class="social-btn">📷</a>
-                    <a href="#" class="social-btn">▶️</a>
-                </div>
-            </div>
-            <div class="footer-col">
-                <h4>Platform</h4>
-                <ul>
-                    <li><a href="{{ route('mentors.search') }}">Find Mentors</a></li>
-                    <li><a href="{{ route('register') }}?role=mentor">Become a Mentor</a></li>
-                    <li><a href="{{ route('about') }}">How It Works</a></li>
-                    <li><a href="#">Pricing</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h4>Company</h4>
-                <ul>
-                    <li><a href="{{ route('about') }}">About Us</a></li>
-                    <li><a href="{{ route('contact') }}">Contact</a></li>
-                    <li><a href="#">Careers</a></li>
-                    <li><a href="{{ route('insights.blogs.index') }}">Blog</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h4>Legal</h4>
-                <ul>
-                    <li><a href="{{ route('privacy') }}">Privacy Policy</a></li>
-                    <li><a href="{{ route('terms') }}">Terms & Conditions</a></li>
-                    <li><a href="#">Refund Policy</a></li>
-                    <li><a href="#">Cookie Policy</a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <p>© {{ date('Y') }} Vedrix. All rights reserved. Made in India 🇮🇳</p>
-            <p>hello@vedrix.com</p>
-        </div>
-    </div>
-</footer>
+@include('frontend.partials.site-footer')
+@include('frontend.partials.site-chrome-scripts')
 
 <script src="{{ asset('frontend/js/app.js') }}?v={{ filemtime(public_path('frontend/js/app.js')) }}"></script>
 @auth

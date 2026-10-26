@@ -9,7 +9,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: calc(var(--nav-h) + 40px) 16px 40px;
+        padding: 40px 16px;
         box-sizing: border-box;
     }
     .register-page__inner {
@@ -71,7 +71,7 @@
     @media (max-width: 640px) {
         .register-page {
             align-items: flex-start;
-            padding: calc(var(--nav-h) + 20px) 14px 28px;
+            padding: 20px 14px 28px;
         }
         .register-page__hero {
             margin-bottom: 20px;

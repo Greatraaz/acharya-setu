@@ -2,7 +2,7 @@
 @extends('frontend.layouts.app')
 @section('title','Application Under Review — Vedrix')
 @section('content')
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(var(--nav-h)+40px) 16px 60px;">
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px 60px;">
 <div style="max-width:520px;width:100%;text-align:center;">
     <div style="font-size:72px;margin-bottom:20px;">⏳</div>
     <h1 style="font-size:28px;font-weight:800;margin-bottom:12px;">Application Under Review</h1>

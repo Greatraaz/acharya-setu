@@ -1,7 +1,7 @@
 @extends('frontend.layouts.app')
 @section('title', 'Forgot Password — Vedrix')
 @section('content')
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(var(--nav-h)+20px) 16px 40px;">
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 16px;">
 <div style="width:100%;max-width:400px;">
     <div class="text-center" style="margin-bottom:32px;">
         <img src="{{ asset('images/logo.png') }}" alt="Vedrix" style="height:48px;width:auto;max-width:180px;object-fit:contain;margin:0 auto 12px;">

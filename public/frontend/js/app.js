@@ -253,10 +253,25 @@
    window.hideLoader = () => getLoader().classList.remove("show");
    
    /* ── Dark / Light Theme ──────────────────────────────────── */
+   function syncHeaderLogos(theme) {
+       document.querySelectorAll(".vj-brand .logo-for-light").forEach(function (img) {
+           img.hidden = theme === "dark";
+       });
+       document.querySelectorAll(".vj-brand .logo-for-dark").forEach(function (img) {
+           img.hidden = theme !== "dark";
+       });
+   }
+
    (function initTheme() {
+       if (document.documentElement.getAttribute("data-app-theme") !== "1") {
+           document.documentElement.setAttribute("data-theme", "light");
+           syncHeaderLogos("light");
+           return;
+       }
        const stored = localStorage.getItem("as_theme") || "dark";
        document.documentElement.setAttribute("data-theme", stored);
        updateThemeIcons(stored);
+       syncHeaderLogos(stored);
    })();
    
    function updateThemeIcons(theme) {
@@ -272,6 +287,7 @@
        document.documentElement.setAttribute("data-theme", next);
        localStorage.setItem("as_theme", next);
        updateThemeIcons(next);
+       syncHeaderLogos(next);
    };
    
    /* ── Modal System ────────────────────────────────────────── */
@@ -384,8 +400,9 @@
            }
        }
    
-       // User dropdown
+       // User dropdown (header menus are bound in site-chrome-scripts)
        document.querySelectorAll(".user-trigger").forEach((trigger) => {
+           if (trigger.closest(".vj-header")) return;
            trigger.addEventListener("click", (e) => {
                e.stopPropagation();
                const dd = trigger.nextElementSibling;
@@ -410,12 +427,14 @@
            });
        });
 
-       document.addEventListener("click", () => {
+       document.addEventListener("click", (e) => {
            document.querySelectorAll(".nav-item-has-dropdown").forEach((el) => {
                el.classList.remove("is-open");
                el.querySelector(".nav-dropdown-trigger")?.setAttribute("aria-expanded", "false");
            });
-           document.querySelectorAll(".user-dropdown").forEach((dd) => dd.classList.remove("open"));
+           if (!e.target.closest(".user-menu")) {
+               document.querySelectorAll(".user-dropdown").forEach((dd) => dd.classList.remove("open"));
+           }
        });
 
        document.querySelectorAll("[data-mobile-insights-toggle]").forEach((btn) => {

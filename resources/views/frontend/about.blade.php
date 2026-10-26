@@ -2,7 +2,7 @@
 @section('title', 'About Vedrix')
 
 @section('content')
-<div style="padding-top:var(--nav-h);">
+<div>
 
     {{-- Hero --}}
     <section style="padding:80px 0;background:var(--bg-2);border-bottom:1px solid var(--border);">

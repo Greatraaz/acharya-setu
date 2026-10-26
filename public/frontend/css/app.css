@@ -355,13 +355,39 @@
    }
    
    .btn-primary {
+       --bs-btn-color: #000;
+       --bs-btn-bg: var(--brand);
+       --bs-btn-border-color: var(--brand);
+       --bs-btn-hover-color: #000;
+       --bs-btn-hover-bg: var(--brand-light);
+       --bs-btn-hover-border-color: var(--brand-light);
+       --bs-btn-active-color: #000;
+       --bs-btn-active-bg: var(--brand-dark);
+       --bs-btn-active-border-color: var(--brand-dark);
+       --bs-btn-disabled-color: #000;
+       --bs-btn-disabled-bg: var(--brand);
+       --bs-btn-disabled-border-color: var(--brand);
        background: var(--brand);
+       background-color: var(--brand);
+       border-color: var(--brand);
        color: #000;
    }
    .btn-primary:hover {
        background: var(--brand-light);
+       background-color: var(--brand-light);
+       border-color: var(--brand-light);
+       color: #000;
        transform: translateY(-1px);
        box-shadow: var(--brand-glow);
+   }
+   .btn-primary:disabled,
+   .btn-primary.disabled,
+   .btn.btn-primary:disabled {
+       background: var(--brand) !important;
+       background-color: var(--brand) !important;
+       border-color: var(--brand) !important;
+       color: #000 !important;
+       opacity: 0.85;
    }
    
    .btn-outline {
@@ -1481,8 +1507,8 @@
        inset: 0;
        z-index: 2000;
        background: var(--overlay);
-       backdrop-filter: blur(4px);
-       display: flex;
+       backdrop-filter: none;
+       display: none;
        align-items: center;
        justify-content: center;
        padding: 20px;
@@ -1491,8 +1517,18 @@
        transition: opacity var(--trans);
    }
    .modal-overlay.open {
+       display: flex;
        opacity: 1;
        pointer-events: all;
+       backdrop-filter: blur(4px);
+   }
+   .modal-overlay .modal {
+       position: relative;
+       top: auto;
+       left: auto;
+       z-index: auto;
+       display: block;
+       height: auto;
    }
    .modal {
        background: var(--card-bg);
@@ -1695,7 +1731,7 @@
    .dash-layout {
        display: block;
        min-height: 100vh;
-       padding-top: var(--nav-h);
+       padding-top: 0;
    }
    .sidebar {
        position: fixed;
@@ -3004,7 +3040,7 @@
        min-height: 100vh;
        display: grid;
        grid-template-columns: 1fr 1fr;
-       padding-top: var(--nav-h);
+       padding-top: 0;
    }
    .auth-left {
        background: var(--bg-2);
@@ -5972,7 +6008,7 @@
    .mobile-nav-sub { padding-left: 28px !important; font-size: 13px; opacity: 0.92; }
 
    /* ── Insights / Blogs pages ───────────────────────────────── */
-   .insights-page { padding-top: var(--nav-h); }
+   .insights-page { padding-top: 0; }
    .insights-page .container {
        width: auto;
        max-width: none;

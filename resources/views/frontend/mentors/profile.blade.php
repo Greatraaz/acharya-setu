@@ -7,7 +7,7 @@
         @include('frontend.mentee.partials.bottom-nav')
     @endif
 @endauth
-<div style="padding-top:var(--nav-h);" data-mentor-id="{{ $mentor->id ?? 1 }}">
+<div data-mentor-id="{{ $mentor->id ?? 1 }}">
 
     {{-- Profile Hero --}}
     <div class="profile-hero">
