@@ -6,13 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\Blog;
 use App\Models\CaseStudy;
 use App\Models\DownloadCentre;
+use App\Models\GatedInsightDownload;
+use App\Models\GatedInsightItem;
 use App\Models\InsightEvent;
 use App\Models\InsightEventRegistration;
 use App\Models\InsightVideo;
+use App\Models\LearnerSuccessStory;
+use App\Models\MentorshipGuide;
 use App\Models\Podcast;
 use App\Models\Testimonial;
 use App\Models\WhitePaper;
 use App\Services\PublicFileStorage;
+use App\Support\GatedInsightKind;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +50,16 @@ class InsightController extends Controller
             'videos' => InsightVideo::where('status', InsightVideo::STATUS_ACTIVE)->count(),
             'downloads' => DownloadCentre::where('status', DownloadCentre::STATUS_ACTIVE)->count(),
             'testimonials' => Testimonial::where('status', Testimonial::STATUS_ACTIVE)->count(),
+            'learner_success_stories' => LearnerSuccessStory::where('status', LearnerSuccessStory::STATUS_ACTIVE)->count(),
+            'mentorship_guides' => MentorshipGuide::where('status', MentorshipGuide::STATUS_ACTIVE)->count(),
+            'career_guides' => GatedInsightItem::query()
+                ->ofType(GatedInsightKind::CAREER_GUIDE)
+                ->where('status', GatedInsightItem::STATUS_ACTIVE)
+                ->count(),
+            'industry_reports' => GatedInsightItem::query()
+                ->ofType(GatedInsightKind::INDUSTRY_REPORT)
+                ->where('status', GatedInsightItem::STATUS_ACTIVE)
+                ->count(),
         ];
 
         return view('frontend.insights.exploreAllInsights', compact('blogs', 'stats'));
@@ -344,7 +359,7 @@ class InsightController extends Controller
     {
         $search = trim((string) $request->input('search', $request->input('q', '')));
 
-        $testimonials = Testimonial::query()
+        $stories = LearnerSuccessStory::query()
             ->active()
             ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
                 $inner->where('name', 'like', '%'.$search.'%')
@@ -355,7 +370,7 @@ class InsightController extends Controller
             ->paginate(9)
             ->withQueryString();
 
-        return view('frontend.insights.learnerSuccessStories', compact('testimonials', 'search'));
+        return view('frontend.insights.learnerSuccessStories', compact('stories', 'search'));
     }
 
     // =========================================================================
@@ -364,37 +379,93 @@ class InsightController extends Controller
 
     public function careerGuides(Request $request): View
     {
-        $blogs = Blog::query()
-            ->where('status', Blog::STATUS_ACTIVE)
-            ->latest('blog_date')
-            ->latest('id')
-            ->paginate(9)
-            ->withQueryString();
-
-        return view('frontend.insights.careerGuides', compact('blogs'));
+        return $this->gatedInsightIndex($request, GatedInsightKind::CAREER_GUIDE);
     }
 
     public function mentorshipGuides(Request $request): View
     {
-        $blogs = Blog::query()
-            ->where('status', Blog::STATUS_ACTIVE)
-            ->latest('blog_date')
+        $guides = MentorshipGuide::query()
+            ->where('status', MentorshipGuide::STATUS_ACTIVE)
             ->latest('id')
             ->paginate(9)
             ->withQueryString();
 
-        return view('frontend.insights.mentorshipGuides', compact('blogs'));
+        return view('frontend.insights.mentorshipGuides', compact('guides'));
+    }
+
+    public function mentorshipGuideSingle(string $slug): View
+    {
+        $guide = MentorshipGuide::query()
+            ->where('slug', $slug)
+            ->where('status', MentorshipGuide::STATUS_ACTIVE)
+            ->firstOrFail();
+
+        $recent = MentorshipGuide::query()
+            ->where('status', MentorshipGuide::STATUS_ACTIVE)
+            ->where('id', '!=', $guide->id)
+            ->latest('id')
+            ->limit(5)
+            ->get();
+
+        return view('frontend.insights.mentorshipGuideSingle', compact('guide', 'recent'));
     }
 
     public function industryReports(Request $request): View
     {
-        $whitePapers = WhitePaper::query()
-            ->where('status', WhitePaper::STATUS_ACTIVE)
-            ->latest('id')
-            ->paginate(9)
-            ->withQueryString();
+        return $this->gatedInsightIndex($request, GatedInsightKind::INDUSTRY_REPORT);
+    }
 
-        return view('frontend.insights.industryReports', compact('whitePapers'));
+    public function gatedInsightSingle(string $slug): View
+    {
+        $meta = $this->gatedMeta();
+        $item = GatedInsightItem::query()
+            ->ofType($meta['type'])
+            ->where('slug', $slug)
+            ->where('status', GatedInsightItem::STATUS_ACTIVE)
+            ->firstOrFail();
+
+        $recent = GatedInsightItem::query()
+            ->ofType($meta['type'])
+            ->where('status', GatedInsightItem::STATUS_ACTIVE)
+            ->where('id', '!=', $item->id)
+            ->latest('id')
+            ->limit(5)
+            ->get();
+
+        return view('frontend.insights.gatedDocumentSingle', compact('meta', 'item', 'recent'));
+    }
+
+    public function gatedInsightDownload(Request $request, string $slug): SymfonyResponse
+    {
+        $meta = $this->gatedMeta();
+        abort_unless(! empty($meta['gated']), 404);
+
+        $item = GatedInsightItem::query()
+            ->ofType($meta['type'])
+            ->where('slug', $slug)
+            ->where('status', GatedInsightItem::STATUS_ACTIVE)
+            ->firstOrFail();
+
+        $data = $request->validate([
+            'full_name' => 'required|string|max:120',
+            'email' => 'required|email|max:190',
+            'phone' => 'required|string|max:40',
+            'organization' => 'nullable|string|max:190',
+            'role' => 'nullable|string|max:80',
+        ]);
+
+        GatedInsightDownload::create([
+            'gated_insight_item_id' => $item->id,
+            'user_id' => auth()->id(),
+            'full_name' => $data['full_name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'],
+            'organization' => $data['organization'] ?? null,
+            'role' => $data['role'] ?? null,
+            'ip_address' => $request->ip(),
+        ]);
+
+        return $this->streamGatedInsightPdf($item, $meta);
     }
 
     public function curatedEssaysAndMedia(Request $request): View
@@ -502,6 +573,88 @@ class InsightController extends Controller
             ->header('Content-Disposition', 'inline; filename="'.$paper->downloadFilename().'"');
     }
 
+    private function gatedInsightIndex(Request $request, string $type): View
+    {
+        $meta = GatedInsightKind::meta($type);
+        $items = GatedInsightItem::query()
+            ->ofType($type)
+            ->where('status', GatedInsightItem::STATUS_ACTIVE)
+            ->latest('id')
+            ->paginate(9)
+            ->withQueryString();
+
+        return view('frontend.insights.gatedDocuments', compact('meta', 'items'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function gatedMeta(): array
+    {
+        return GatedInsightKind::meta(GatedInsightKind::fromRouteName(request()->route()?->getName()));
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    private function streamGatedInsightPdf(GatedInsightItem $item, array $meta): SymfonyResponse
+    {
+        $coverDataUri = $this->localImageDataUri($item->image);
+        $coverSize = $this->fittedCoverSize($item->image);
+        $description = $this->prepareDescriptionHtml((string) $item->description);
+
+        try {
+            if (! class_exists(Pdf::class)) {
+                return $this->gatedInsightHtmlFallback($item, $meta, $coverDataUri, $description, $coverSize);
+            }
+
+            $pdf = Pdf::loadView('frontend.insights.gatedDocumentDownloadPdf', [
+                'item' => $item,
+                'meta' => $meta,
+                'coverDataUri' => $coverDataUri,
+                'coverWidth' => $coverSize['width'],
+                'coverHeight' => $coverSize['height'],
+                'descriptionHtml' => $description,
+            ])
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled' => true,
+                    'defaultFont' => 'DejaVu Sans',
+                ]);
+
+            return $pdf->download($item->downloadFilename());
+        } catch (Throwable $e) {
+            report($e);
+
+            return $this->gatedInsightHtmlFallback($item, $meta, $coverDataUri, $description, $coverSize);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $meta
+     * @param  array{width?:int,height?:int}  $coverSize
+     */
+    private function gatedInsightHtmlFallback(
+        GatedInsightItem $item,
+        array $meta,
+        ?string $coverDataUri,
+        string $descriptionHtml,
+        array $coverSize = []
+    ): Response {
+        return response()
+            ->view('frontend.insights.gatedDocumentDownloadPdf', [
+                'item' => $item,
+                'meta' => $meta,
+                'coverDataUri' => $coverDataUri,
+                'coverWidth' => $coverSize['width'] ?? 520,
+                'coverHeight' => $coverSize['height'] ?? 220,
+                'descriptionHtml' => $descriptionHtml,
+            ])
+            ->header('Content-Type', 'text/html; charset=UTF-8')
+            ->header('Content-Disposition', 'inline; filename="'.$item->downloadFilename().'"');
+    }
+
     private function prepareDescriptionHtml(string $html): string
     {
         if ($html === '') {
@@ -542,6 +695,34 @@ class InsightController extends Controller
         $relative = PublicFileStorage::pathFromUrl($src) ?? ltrim($src, '/');
 
         return $this->localImageDataUri($relative);
+    }
+
+    /**
+     * @return array{width:int,height:int}
+     */
+    private function fittedCoverSize(?string $path, int $maxWidth = 520, int $maxHeight = 240): array
+    {
+        $relative = PublicFileStorage::pathFromUrl($path) ?? ltrim((string) $path, '/');
+        $abs = storage_path('app/public/'.ltrim($relative, '/'));
+
+        if ($relative === '' || ! is_file($abs)) {
+            return ['width' => $maxWidth, 'height' => $maxHeight];
+        }
+
+        $info = @getimagesize($abs);
+        $width = (int) ($info[0] ?? 0);
+        $height = (int) ($info[1] ?? 0);
+
+        if ($width < 1 || $height < 1) {
+            return ['width' => $maxWidth, 'height' => $maxHeight];
+        }
+
+        $scale = min($maxWidth / $width, $maxHeight / $height, 1);
+
+        return [
+            'width' => (int) max(1, round($width * $scale)),
+            'height' => (int) max(1, round($height * $scale)),
+        ];
     }
 
     private function localImageDataUri(?string $path): ?string

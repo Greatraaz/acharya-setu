@@ -38,7 +38,7 @@
                 </p>
             </div>
 
-            @if($testimonials->isEmpty())
+            @if($stories->isEmpty())
                 <div class="blog-empty">
                     <div class="blog-empty__icon"><i class="bi bi-stars"></i></div>
                     <h3>No stories yet</h3>
@@ -46,14 +46,9 @@
                 </div>
             @else
                 <div class="testimonials-grid">
-                    @foreach($testimonials as $item)
+                    @foreach($stories as $item)
                         <article class="testimonial-card">
                             <div class="testimonial-card__quote" aria-hidden="true">“</div>
-                            <div class="testimonial-card__stars" aria-label="5 out of 5 stars">
-                                @for($i = 0; $i < 5; $i++)
-                                    <span><i class="bi bi-star-fill text-warning"></i></span>
-                                @endfor
-                            </div>
                             <div class="testimonial-card__message prose-blog">
                                 {!! $item->message !!}
                             </div>
@@ -76,7 +71,7 @@
                     @endforeach
                 </div>
 
-                @include('frontend.partials.pagination', ['paginator' => $testimonials])
+                @include('frontend.partials.pagination', ['paginator' => $stories])
             @endif
         </div>
     </section>

@@ -468,19 +468,19 @@
                                                 <span class="vj-mega-eyebrow">EXPLORE</span>
                                                 <h6 class="vj-mega-heading">Themes & Topics</h6>
                                             </div>
-                                            <a href="{{ url('career-guides') }}" class="vj-mag-list-item">
+                                            <a href="{{ route('insights.career-guides') }}" class="vj-mag-list-item">
                                                 <i class="bi bi-compass text-warning"></i>
                                                 <span>Career Guides</span>
                                             </a>
-                                            <a href="{{ url('mentorship-guides') }}" class="vj-mag-list-item">
+                                            <a href="{{ route('insights.mentorship-guides') }}" class="vj-mag-list-item">
                                                 <i class="bi bi-lightbulb text-danger"></i>
                                                 <span>Mentorship Guides</span>
                                             </a>
-                                            <a href="{{ url('industry-reports') }}" class="vj-mag-list-item">
+                                            <a href="{{ route('insights.industry-reports') }}" class="vj-mag-list-item">
                                                 <i class="bi bi-file-earmark-bar-graph text-primary"></i>
                                                 <span>Industry Reports</span>
                                             </a>
-                                            <a href="{{ url('learner-success-stories') }}" class="vj-mag-list-item">
+                                            <a href="{{ route('insights.learner-success-stories') }}" class="vj-mag-list-item">
                                                 <i class="bi bi-stars text-success"></i>
                                                 <span>Learner Success Stories</span>
                                             </a>

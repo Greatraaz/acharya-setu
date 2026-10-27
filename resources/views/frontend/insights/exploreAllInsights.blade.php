@@ -102,6 +102,66 @@
                     </a>
                 </div>
 
+                {{-- Mentorship Guides --}}
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ route('insights.mentorship-guides') }}" class="insights-hub-card h-100">
+                        <div class="insights-hub-card__top">
+                            <div class="insights-hub-card__icon insights-hub-card__icon--gold">
+                                <i class="bi bi-lightbulb"></i>
+                            </div>
+                            @if(isset($stats['mentorship_guides']) && $stats['mentorship_guides'] > 0)
+                                <span class="insights-hub-card__count">{{ $stats['mentorship_guides'] }} Guides</span>
+                            @endif
+                        </div>
+                        <h3 class="insights-hub-card__title">Mentorship Guides</h3>
+                        <p class="insights-hub-card__desc">Frameworks, templates, and playbooks for better 1-on-1 mentorship sessions.</p>
+                        <div class="insights-hub-card__cta">
+                            <span>Browse Guides</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </div>
+                    </a>
+                </div>
+
+                {{-- Career Guides --}}
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ route('insights.career-guides') }}" class="insights-hub-card h-100">
+                        <div class="insights-hub-card__top">
+                            <div class="insights-hub-card__icon insights-hub-card__icon--amber">
+                                <i class="bi bi-compass"></i>
+                            </div>
+                            @if(isset($stats['career_guides']) && $stats['career_guides'] > 0)
+                                <span class="insights-hub-card__count">{{ $stats['career_guides'] }} Guides</span>
+                            @endif
+                        </div>
+                        <h3 class="insights-hub-card__title">Career Guides</h3>
+                        <p class="insights-hub-card__desc">Role-transition playbooks and interview roadmaps from industry mentors.</p>
+                        <div class="insights-hub-card__cta">
+                            <span>Browse Career Guides</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </div>
+                    </a>
+                </div>
+
+                {{-- Industry Reports --}}
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ route('insights.industry-reports') }}" class="insights-hub-card h-100">
+                        <div class="insights-hub-card__top">
+                            <div class="insights-hub-card__icon insights-hub-card__icon--blue">
+                                <i class="bi bi-bar-chart-line"></i>
+                            </div>
+                            @if(isset($stats['industry_reports']) && $stats['industry_reports'] > 0)
+                                <span class="insights-hub-card__count">{{ $stats['industry_reports'] }} Reports</span>
+                            @endif
+                        </div>
+                        <h3 class="insights-hub-card__title">Industry Reports</h3>
+                        <p class="insights-hub-card__desc">Hiring trends, salary benchmarks, and market research you can download after a short form.</p>
+                        <div class="insights-hub-card__cta">
+                            <span>Browse Reports</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </div>
+                    </a>
+                </div>
+
                 {{-- 4. Podcasts --}}
                 <div class="col-lg-3 col-md-6">
                     <a href="{{ route('insights.podcasts.index') }}" class="insights-hub-card h-100">
@@ -177,6 +237,26 @@
                         <p class="insights-hub-card__desc">Free worksheets, career templates, roadmaps, and ready frameworks.</p>
                         <div class="insights-hub-card__cta">
                             <span>Get Free Downloads</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </div>
+                    </a>
+                </div>
+
+                {{-- Learner Success Stories --}}
+                <div class="col-lg-3 col-md-6">
+                    <a href="{{ route('insights.learner-success-stories') }}" class="insights-hub-card h-100">
+                        <div class="insights-hub-card__top">
+                            <div class="insights-hub-card__icon insights-hub-card__icon--green">
+                                <i class="bi bi-stars"></i>
+                            </div>
+                            @if(isset($stats['learner_success_stories']) && $stats['learner_success_stories'] > 0)
+                                <span class="insights-hub-card__count">{{ $stats['learner_success_stories'] }} Stories</span>
+                            @endif
+                        </div>
+                        <h3 class="insights-hub-card__title">Learner Success Stories</h3>
+                        <p class="insights-hub-card__desc">Career journeys and transformations from Vedrix mentees.</p>
+                        <div class="insights-hub-card__cta">
+                            <span>Read Stories</span>
                             <i class="bi bi-arrow-right"></i>
                         </div>
                     </a>

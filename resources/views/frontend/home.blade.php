@@ -1823,7 +1823,7 @@
                                         <h5 class="vj-font-heading text-white mb-2">Breaking into Product Management</h5>
                                         <p class="text-light small mb-3">Comprehensive breakdown of case interviews, execution frameworks, and key reading lists.</p>
                                     </div>
-                                    <a href="{{ route('insights.blogs.index') }}" class="vj-btn-text-mustard mt-auto">Open Guide →</a>
+                                    <a href="{{ route('insights.career-guides') }}" class="vj-btn-text-mustard mt-auto">Open Guide →</a>
                                 </div>
                             </div>
                         </div>
@@ -1837,7 +1837,7 @@
                                         <h5 class="vj-font-heading text-white mb-2">First 90 Days in a Tech Consulting Role</h5>
                                         <p class="text-light small mb-3">How to manage client expectations, structure analytical findings, and build credibility.</p>
                                     </div>
-                                    <a href="{{ route('insights.blogs.index') }}" class="vj-btn-text-mustard mt-auto">Open Guide →</a>
+                                    <a href="{{ route('insights.career-guides') }}" class="vj-btn-text-mustard mt-auto">Open Guide →</a>
                                 </div>
                             </div>
                         </div>
@@ -1851,7 +1851,7 @@
                                         <h5 class="vj-font-heading text-white mb-2">System Design Interview Handbook</h5>
                                         <p class="text-light small mb-3">Core architectures, caching patterns, database sharding, and interview pacing rules.</p>
                                     </div>
-                                    <a href="{{ route('insights.blogs.index') }}" class="vj-btn-text-mustard mt-auto">Open Guide →</a>
+                                    <a href="{{ route('insights.career-guides') }}" class="vj-btn-text-mustard mt-auto">Open Guide →</a>
                                 </div>
                             </div>
                         </div>
@@ -1870,7 +1870,7 @@
                                         <h4 class="text-white mb-2 font-weight-bold">Employability Outlook 2026: The Skill-Context Gap</h4>
                                         <p class="text-light small mb-3">Analysis of 1,200+ graduate hiring assessments evaluating why standard degrees fall short in modern roles.</p>
                                     </div>
-                                    <a href="{{ route('insights.white-papers.index') }}" class="vj-btn-text-mustard">Download Whitepaper →</a>
+                                    <a href="{{ route('insights.industry-reports') }}" class="vj-btn-text-mustard">Download Report →</a>
                                 </div>
                             </div>
                         </div>
@@ -1883,7 +1883,7 @@
                                         <h4 class="text-white mb-2 font-weight-bold">The Mentorship Multiplier in Early-Career Retention</h4>
                                         <p class="text-light small mb-3">How structured internal and external mentoring accelerates promotion velocity by 2.4x.</p>
                                     </div>
-                                    <a href="{{ route('insights.white-papers.index') }}" class="vj-btn-text-mustard">Download Whitepaper →</a>
+                                    <a href="{{ route('insights.industry-reports') }}" class="vj-btn-text-mustard">Download Report →</a>
                                 </div>
                             </div>
                         </div>

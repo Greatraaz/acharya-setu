@@ -5,12 +5,16 @@ namespace Database\Seeders;
 use App\Models\Blog;
 use App\Models\CaseStudy;
 use App\Models\DownloadCentre;
+use App\Models\GatedInsightItem;
 use App\Models\InsightEvent;
 use App\Models\InsightVideo;
+use App\Models\LearnerSuccessStory;
+use App\Models\MentorshipGuide;
 use App\Models\Podcast;
 use App\Models\Testimonial;
 use App\Models\User;
 use App\Models\WhitePaper;
+use App\Support\GatedInsightKind;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -27,6 +31,10 @@ class UtilitiesContentSeeder extends Seeder
         $this->seedWhitePapers($adminId);
         $this->seedCaseStudies($adminId);
         $this->seedTestimonials($adminId);
+        $this->seedLearnerSuccessStories($adminId);
+        $this->seedMentorshipGuides($adminId);
+        $this->seedCareerGuides($adminId);
+        $this->seedIndustryReports($adminId);
         $this->seedPodcasts($adminId);
         $this->seedVideos($adminId);
         $this->seedDownloads($adminId);
@@ -210,6 +218,128 @@ SVG);
                     'image' => $this->cover(),
                     'message' => $item['message'],
                     'status' => 'active',
+                    'created_by' => $adminId,
+                ]
+            );
+        }
+    }
+
+    private function seedLearnerSuccessStories(?int $adminId): void
+    {
+        $items = [
+            [
+                'name' => 'Ananya Sharma',
+                'designation' => 'Mentee · Software Engineer at a product startup',
+                'message' => '<p>I joined Vedrix as a confused final-year student. Weekly mentor reviews, mock interviews, and a clear 12-week curriculum helped me land my first product-engineering role.</p><p>The biggest shift was accountability — I always knew what to finish before the next session.</p>',
+            ],
+            [
+                'name' => 'Rohit Mehta',
+                'designation' => 'Mentee · Career switch into Data Analytics',
+                'message' => '<p>Switching from operations to analytics felt overwhelming until my Vedrix mentor broke it into portfolio projects, SQL drills, and interview stories.</p><p>Within a few months I had a sharper resume, two callbacks, and a role I actually wanted.</p>',
+            ],
+            [
+                'name' => 'Priya Nair',
+                'designation' => 'Mentee · Product Associate',
+                'message' => '<p>Vedrix gave me structure I never got from random YouTube advice. Case-interview practice, mentor feedback, and a tracked journey made product roles feel achievable.</p><p>I still reuse the session notes from my first 90 days.</p>',
+            ],
+        ];
+
+        foreach ($items as $item) {
+            LearnerSuccessStory::query()->updateOrCreate(
+                ['name' => $item['name'], 'designation' => $item['designation']],
+                [
+                    'image' => $this->cover(),
+                    'message' => $item['message'],
+                    'status' => LearnerSuccessStory::STATUS_ACTIVE,
+                    'created_by' => $adminId,
+                ]
+            );
+        }
+    }
+
+    private function seedMentorshipGuides(?int $adminId): void
+    {
+        $items = [
+            [
+                'title' => 'How to Get the Most from Every 1-on-1 Mentorship Session',
+                'description' => '<p>Come in with a goal, leave with a next action. This guide shows mentees how to prepare agendas, share progress early, and ask questions that unlock better advice.</p><ul><li>Set one outcome for the session</li><li>Send a 5-line update 24 hours before</li><li>Capture decisions and homework before you log off</li></ul><p>Use this playbook for the first month of any Vedrix mentorship.</p>',
+            ],
+            [
+                'title' => 'A Mentor’s Framework for Giving Useful Feedback',
+                'description' => '<p>Great mentors are specific, timely, and kind. Learn a simple loop: observe, name the gap, suggest the next practice, and review it next week.</p><p>Includes conversation starters for career, skills, and interview feedback without overwhelming the mentee.</p>',
+            ],
+            [
+                'title' => 'Goal Setting for a 12-Week Mentorship Journey',
+                'description' => '<p>Turn a vague “get better at interviews” into weekly checkpoints. This guide helps mentors and mentees pick 3 outcomes, map tasks, and review progress every fortnight.</p><p>Works for students, working professionals, and career switchers on Vedrix.</p>',
+            ],
+        ];
+
+        foreach ($items as $item) {
+            MentorshipGuide::query()->updateOrCreate(
+                ['slug' => Str::slug($item['title'])],
+                [
+                    'title' => $item['title'],
+                    'status' => MentorshipGuide::STATUS_ACTIVE,
+                    'image' => $this->cover(),
+                    'description' => $item['description'],
+                    'created_by' => $adminId,
+                ]
+            );
+        }
+    }
+
+    private function seedCareerGuides(?int $adminId): void
+    {
+        $this->seedGatedItems($adminId, GatedInsightKind::CAREER_GUIDE, [
+            [
+                'title' => 'Breaking into Product Management',
+                'description' => '<p>A practical roadmap for students and engineers moving into product: case interviews, execution stories, and a reading list that actually gets used.</p><p>Covers how to talk about impact, structure a product sense answer, and build a 90-day learning plan with a Vedrix mentor.</p>',
+            ],
+            [
+                'title' => 'First 90 Days in a Tech Consulting Role',
+                'description' => '<p>How to manage client expectations, structure findings, and build credibility fast. Use this guide in your first quarter with a mentor reviewing weekly checkpoints.</p><ul><li>Week 1–2: map stakeholders</li><li>Week 3–6: own a workstream</li><li>Week 7–12: present with confidence</li></ul>',
+            ],
+            [
+                'title' => 'System Design Interview Handbook for Early Careers',
+                'description' => '<p>Core architectures, caching, databases, and interview pacing — without the noise. Pair each chapter with a mock session on Vedrix.</p><p>Includes a simple template for clarifying requirements, sketching trade-offs, and wrapping up on time.</p>',
+            ],
+        ]);
+    }
+
+    private function seedIndustryReports(?int $adminId): void
+    {
+        $this->seedGatedItems($adminId, GatedInsightKind::INDUSTRY_REPORT, [
+            [
+                'title' => 'Employability Outlook 2026: The Skill-Context Gap',
+                'description' => '<p>Why degrees alone are not enough in modern hiring, and which contextual skills mentors should coach for interviews and internships.</p><p>This sample report summarises hiring signals across engineering, product, and analytics roles for Vedrix learners.</p>',
+            ],
+            [
+                'title' => 'The Mentorship Multiplier in Early-Career Retention',
+                'description' => '<p>How structured internal and external mentoring improves promotion velocity and reduces early attrition.</p><p>Use the findings with placement cells, campus partners, and mentees planning their first two years at work.</p>',
+            ],
+            [
+                'title' => 'Tech Hiring Benchmarks: Skills, Salaries & Role Mix',
+                'description' => '<p>A snapshot of in-demand skills, typical early-career salary bands, and where mentees should focus practice time this year.</p><p>Designed as a downloadable briefing you can share with mentors, colleges, and career teams.</p>',
+            ],
+        ]);
+    }
+
+    /**
+     * @param  list<array{title:string,description:string}>  $items
+     */
+    private function seedGatedItems(?int $adminId, string $type, array $items): void
+    {
+        foreach ($items as $item) {
+            GatedInsightItem::query()->updateOrCreate(
+                [
+                    'type' => $type,
+                    'slug' => Str::slug($item['title']),
+                ],
+                [
+                    'title' => $item['title'],
+                    'status' => GatedInsightItem::STATUS_ACTIVE,
+                    'image' => $this->cover(),
+                    'description' => $item['description'],
                     'created_by' => $adminId,
                 ]
             );

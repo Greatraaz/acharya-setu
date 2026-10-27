@@ -74,7 +74,10 @@
                 <div class="col-lg-3 col-md-6 col-6">
                     <h4>Insights</h4>
                     <ul class="mb-4">
-                        <li><a href="{{ route('insights.blogs.index') }}">Articles & Career Guides</a></li>
+                        <li><a href="{{ route('insights.career-guides') }}">Career Guides</a></li>
+                        <li><a href="{{ route('insights.mentorship-guides') }}">Mentorship Guides</a></li>
+                        <li><a href="{{ route('insights.industry-reports') }}">Industry Reports</a></li>
+                        <li><a href="{{ route('insights.blogs.index') }}">Articles & Blogs</a></li>
                         <li><a href="{{ route('insights.white-papers.index') }}">Research & Reports</a></li>
                         <li><a href="{{ route('insights.webinars.index') }}">Webinars & Events</a></li>
                         <li><a href="{{ route('insights.podcasts.index') }}">Podcasts & Videos</a></li>

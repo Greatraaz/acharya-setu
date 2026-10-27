@@ -68,13 +68,7 @@ class Blog extends Model
 
     public function excerpt(int $words = 28): string
     {
-        $text = trim(preg_replace('/\s+/', ' ', strip_tags((string) $this->description)) ?? '');
-
-        if ($text === '') {
-            return '';
-        }
-
-        return \Illuminate\Support\Str::words($text, $words, '…');
+        return html_excerpt($this->description, $words);
     }
 
     public function readTimeMinutes(): int

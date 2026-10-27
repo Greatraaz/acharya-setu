@@ -15,7 +15,11 @@ class InsightsMenu
             ['key' => 'blogs', 'label' => 'Blogs', 'icon' => '📰', 'route' => 'insights.blogs.index'],
             ['key' => 'white-papers', 'label' => 'White Papers', 'icon' => '📄', 'route' => 'insights.white-papers.index'],
             ['key' => 'case-studies', 'label' => 'Case Studies', 'icon' => '📁', 'route' => 'insights.case-studies.index'],
+            ['key' => 'mentorship-guides', 'label' => 'Mentorship Guides', 'icon' => '📘', 'route' => 'insights.mentorship-guides'],
+            ['key' => 'career-guides', 'label' => 'Career Guides', 'icon' => '🧭', 'route' => 'insights.career-guides'],
+            ['key' => 'industry-reports', 'label' => 'Industry Reports', 'icon' => '📊', 'route' => 'insights.industry-reports'],
             ['key' => 'testimonials', 'label' => 'Testimonials', 'icon' => '⭐', 'route' => 'insights.testimonials.index'],
+            ['key' => 'learner-success-stories', 'label' => 'Learner Success Stories', 'icon' => '🌟', 'route' => 'insights.learner-success-stories'],
             ['key' => 'webinars', 'label' => 'Webinars', 'icon' => '🎥', 'route' => 'insights.webinars.index'],
             ['key' => 'events', 'label' => 'Events', 'icon' => '📅', 'route' => 'insights.events.index'],
             ['key' => 'podcasts', 'label' => 'Podcasts', 'icon' => '🎙️', 'route' => 'insights.podcasts.index'],
@@ -32,9 +36,9 @@ class InsightsMenu
         $items = self::items();
 
         return [
-            array_slice($items, 0, 3),
-            array_slice($items, 3, 3),
-            array_slice($items, 6, 3),
+            array_slice($items, 0, 4),
+            array_slice($items, 4, 4),
+            array_slice($items, 8, 5),
         ];
     }
 
@@ -52,7 +56,11 @@ class InsightsMenu
             'blogs' => url('/insights/blogs'),
             'white-papers' => url('/insights/white-papers'),
             'case-studies' => url('/insights/case-studies'),
+            'mentorship-guides' => url('/insights/mentorship-guides'),
+            'career-guides' => url('/insights/career-guides'),
+            'industry-reports' => url('/insights/industry-reports'),
             'testimonials' => url('/insights/testimonials'),
+            'learner-success-stories' => url('/insights/learner-success-stories'),
             'webinars' => url('/insights/webinars'),
             'events' => url('/insights/events'),
             'podcasts' => url('/insights/podcasts'),

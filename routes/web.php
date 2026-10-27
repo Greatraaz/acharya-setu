@@ -94,10 +94,13 @@ use App\Http\Controllers\Admin\MentorVideoController as AdminMentorVideoControll
 use App\Http\Controllers\Admin\WhitePaperController;
 use App\Http\Controllers\Admin\CaseStudyController;
 use App\Http\Controllers\Admin\TestimonialController;
+use App\Http\Controllers\Admin\LearnerSuccessStoryController;
 use App\Http\Controllers\Admin\PodcastController;
 use App\Http\Controllers\Admin\InsightVideoController;
 use App\Http\Controllers\Admin\InsightEventController;
 use App\Http\Controllers\Admin\DownloadCentreController;
+use App\Http\Controllers\Admin\MentorshipGuideController;
+use App\Http\Controllers\Admin\GatedInsightController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\BulkEmailController;
@@ -171,14 +174,22 @@ Route::prefix('insights')->name('insights.')->group(function () {
     Route::get('/events/{slug}', [InsightController::class, 'eventSingle'])->name('events.show')->where('slug', '[A-Za-z0-9\-]+');
     Route::post('/events/{slug}/register', [InsightController::class, 'eventRegister'])->name('events.register')->where('slug', '[A-Za-z0-9\-]+');
     Route::get('/career-guides', [InsightController::class, 'careerGuides'])->name('career-guides');
+    Route::get('/career-guides/{slug}', [InsightController::class, 'gatedInsightSingle'])->name('career-guides.show')->where('slug', '[A-Za-z0-9\-]+');
     Route::get('/mentorship-guides', [InsightController::class, 'mentorshipGuides'])->name('mentorship-guides');
+    Route::get('/mentorship-guides/{slug}', [InsightController::class, 'mentorshipGuideSingle'])->name('mentorship-guides.show')->where('slug', '[A-Za-z0-9\-]+');
     Route::get('/industry-reports', [InsightController::class, 'industryReports'])->name('industry-reports');
+    Route::get('/industry-reports/{slug}', [InsightController::class, 'gatedInsightSingle'])->name('industry-reports.show')->where('slug', '[A-Za-z0-9\-]+');
+    Route::post('/industry-reports/{slug}/download', [InsightController::class, 'gatedInsightDownload'])->name('industry-reports.download')->where('slug', '[A-Za-z0-9\-]+');
     Route::get('/curated-essays-and-media', [InsightController::class, 'curatedEssaysAndMedia'])->name('curated-essays-and-media');
 });
 
 Route::get('/career-guides', [InsightController::class, 'careerGuides'])->name('career-guides');
+Route::get('/career-guides/{slug}', [InsightController::class, 'gatedInsightSingle'])->name('career-guides.public.show')->where('slug', '[A-Za-z0-9\-]+');
 Route::get('/mentorship-guides', [InsightController::class, 'mentorshipGuides'])->name('mentorship-guides');
+Route::get('/mentorship-guides/{slug}', [InsightController::class, 'mentorshipGuideSingle'])->name('mentorship-guides.public.show')->where('slug', '[A-Za-z0-9\-]+');
 Route::get('/industry-reports', [InsightController::class, 'industryReports'])->name('industry-reports');
+Route::get('/industry-reports/{slug}', [InsightController::class, 'gatedInsightSingle'])->name('industry-reports.public.show')->where('slug', '[A-Za-z0-9\-]+');
+Route::post('/industry-reports/{slug}/download', [InsightController::class, 'gatedInsightDownload'])->name('industry-reports.public.download')->where('slug', '[A-Za-z0-9\-]+');
 Route::get('/learner-success-stories', [InsightController::class, 'learnerSuccessStories'])->name('learner-success-stories');
 Route::get('/curated-essays-and-media', [InsightController::class, 'curatedEssaysAndMedia'])->name('curated-essays-and-media');
 Route::get('/explore-all-insights', [InsightController::class, 'exploreAll'])->name('explore-all-insights');
@@ -719,10 +730,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     Route::resource('white-papers', WhitePaperController::class)->except(['show']);
     Route::resource('case-studies', CaseStudyController::class)->except(['show']);
     Route::resource('testimonials', TestimonialController::class)->except(['show']);
+    Route::resource('learner-success-stories', LearnerSuccessStoryController::class)->except(['show']);
     Route::resource('podcasts', PodcastController::class)->except(['show']);
     Route::resource('videos', InsightVideoController::class)->except(['show']);
     Route::resource('events-webinars', InsightEventController::class)->except(['show']);
     Route::resource('download-centres', DownloadCentreController::class)->except(['show']);
+    Route::resource('mentorship-guides', MentorshipGuideController::class)->except(['show']);
+    Route::resource('career-guides', GatedInsightController::class)->except(['show'])->parameters(['career-guides' => 'item']);
+    Route::get('industry-reports/downloads', [GatedInsightController::class, 'downloads'])->name('industry-reports.downloads');
+    Route::resource('industry-reports', GatedInsightController::class)->except(['show'])->parameters(['industry-reports' => 'item']);
 
     // ── Transactions (global ledger + invoices) ───────────────
     Route::prefix('transactions')->name('transactions.')->group(function () {
