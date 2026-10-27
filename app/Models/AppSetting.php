@@ -297,6 +297,37 @@ class AppSetting extends Model
         return (string) (static::decryptIfNeeded($raw) ?: '');
     }
 
+    /**
+     * Firebase service-account JSON for FCM HTTP v1.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function fcmServiceAccount(): ?array
+    {
+        $s = static::allCached();
+        $raw = static::firstNonEmpty([
+            $s['fcm_service_account'] ?? null,
+            config('services.fcm.service_account'),
+            env('FCM_SERVICE_ACCOUNT'),
+            env('GOOGLE_APPLICATION_CREDENTIALS'),
+        ]);
+        $raw = (string) (static::decryptIfNeeded($raw) ?: '');
+        if ($raw === '') {
+            return null;
+        }
+
+        if (is_file($raw) && is_readable($raw)) {
+            $raw = (string) file_get_contents($raw);
+        }
+
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded) || empty($decoded['client_email']) || empty($decoded['private_key']) || empty($decoded['project_id'])) {
+            return null;
+        }
+
+        return $decoded;
+    }
+
     /** Career + mock interview paid add-on prices. */
     public static function careerAddons(): array
     {

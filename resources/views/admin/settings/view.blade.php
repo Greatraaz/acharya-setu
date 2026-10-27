@@ -506,9 +506,10 @@
                 </div>
                 <div class="section-card">
                     <h3>Device push (Firebase)</h3>
-                    <p class="section-desc">Optional. Paste a Firebase Cloud Messaging server key to push to Android/iOS/web apps that register a device token. In-app notifications still work without this.</p>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">FCM server key</label>
-                    <input type="password" name="fcm_server_key" class="form-input" placeholder="{{ config_val('fcm_server_key') ? 'Saved — leave blank to keep' : 'AAAA…' }}" autocomplete="off">
+                    <p class="section-desc">Use a Firebase <strong>service account JSON</strong> from Project settings → Service accounts → Generate new private key. The old AAAA server key is deprecated. In-app notifications still work without this.</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">FCM service account JSON</label>
+                    <textarea name="fcm_service_account" class="form-input font-mono text-xs" rows="8" placeholder="{{ config_val('fcm_service_account') ? 'Saved — leave blank to keep' : '{ &quot;type&quot;: &quot;service_account&quot;, &quot;project_id&quot;: &quot;vedrix-…&quot;, … }' }}" autocomplete="off"></textarea>
+                    <p class="text-xs text-gray-400 mt-2">Do not paste the web <code>apiKey</code> (AIza…). Paste the downloaded JSON file contents.</p>
                 </div>
             </form>
         </div>

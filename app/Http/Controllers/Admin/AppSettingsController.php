@@ -35,6 +35,7 @@ class AppSettingsController extends Controller
         'google_client_secret',
         'aws_secret',
         'fcm_server_key',
+        'fcm_service_account',
     ];
 
     /**

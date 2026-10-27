@@ -65,6 +65,7 @@ return [
 
     'fcm' => [
         'server_key' => env('FCM_SERVER_KEY'),
+        'service_account' => env('FCM_SERVICE_ACCOUNT'),
     ],
 
 ];
