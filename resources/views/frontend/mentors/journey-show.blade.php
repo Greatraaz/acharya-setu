@@ -32,59 +32,6 @@
         gap: 16px;
     }
     .mentor-progress-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-    .mentor-review-card { border: 1px solid rgba(245, 158, 11, .35); background: color-mix(in srgb, var(--brand) 6%, var(--bg-2)); margin-bottom: 12px; }
-    .mentor-review-card__head {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        flex-wrap: wrap;
-        align-items: flex-start;
-        margin-bottom: 12px;
-    }
-    .mentor-review-badge {
-        display: inline-flex;
-        align-items: center;
-        align-self: flex-start;
-        flex-shrink: 0;
-        padding: 4px 10px;
-        border-radius: 999px;
-        font-size: 11px;
-        font-weight: 700;
-        line-height: 1.2;
-        white-space: nowrap;
-        height: auto;
-        width: auto;
-        background: var(--warning-muted, rgba(245, 158, 11, .16));
-        color: var(--warning, #f59e0b);
-        border: 1px solid rgba(245, 158, 11, .35);
-    }
-    .mentor-review-card__eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 4px; }
-    .mentor-review-card__title { font-size: 14px; font-weight: 700; }
-    .mentor-review-card__meta { font-size: 13px; color: var(--text-2); margin-top: 4px; }
-    .mentor-review-card__body {
-        padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-        margin-bottom: 12px; font-size: 13px; color: var(--text-2); white-space: pre-wrap; background: var(--bg);
-    }
-    .mentor-review-card__hint { font-size: 13px; color: var(--text-2); margin: 0 0 12px; }
-    .mentor-review-card__form { display: grid; gap: 10px; }
-    .mentor-review-card__actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .mentor-mcq-options { display: grid; gap: 8px; margin: 12px 0; }
-    .mentor-mcq-option {
-        padding: 10px 12px;
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--border);
-        font-size: 13px;
-        color: var(--text-2);
-        background: var(--bg);
-        display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-    }
-    .mentor-mcq-option.is-selected { border-color: var(--brand); color: var(--text); background: var(--brand-muted); }
-    .mentor-mcq-option.is-correct { border-color: var(--success); }
-    .mentor-mcq-tag {
-        font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
-        padding: 2px 6px; border-radius: 999px; background: var(--bg-3); color: var(--text-2);
-    }
-    .mentor-mcq-tag--ok { background: color-mix(in srgb, var(--success) 18%, transparent); color: var(--success); }
     .mentor-week-block { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; background: var(--bg); }
     .mentor-week-block:last-child { margin-bottom: 0; }
     .mentor-item-row {

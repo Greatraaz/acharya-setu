@@ -28,16 +28,22 @@
         </div>
     </div>
 
-    <form method="GET" class="admin-filter-form bg-white border border-gray-200 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
-        <input type="text" name="q" value="{{ request('q') }}" placeholder="Search mentee / subscription"
-               class="md:col-span-2 border border-gray-200 rounded-xl px-3 py-2 text-sm">
-        <select name="status" class="border border-gray-200 rounded-xl px-3 py-2 text-sm">
-            <option value="pending" @selected(request('status', 'pending') === 'pending')>Pending</option>
-            <option value="approved" @selected(request('status') === 'approved')>Approved</option>
-            <option value="rejected" @selected(request('status') === 'rejected')>Rejected</option>
-            <option value="all" @selected(request('status') === 'all')>All</option>
-        </select>
-        <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl px-4 py-2">Filter</button>
+    <form method="GET" class="admin-filter-form bg-white border border-gray-200 rounded-2xl p-4">
+        <div class="admin-filter-search">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Search mentee / subscription"
+                   class="w-full border border-gray-200 rounded-xl px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+        </div>
+        <div>
+            <select name="status" class="w-full border border-gray-200 rounded-xl px-3 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                <option value="pending" @selected(request('status', 'pending') === 'pending')>Pending</option>
+                <option value="approved" @selected(request('status') === 'approved')>Approved</option>
+                <option value="rejected" @selected(request('status') === 'rejected')>Rejected</option>
+                <option value="all" @selected(request('status') === 'all')>All</option>
+            </select>
+        </div>
+        <div class="admin-filter-actions">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl px-4">Filter</button>
+        </div>
     </form>
 
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">

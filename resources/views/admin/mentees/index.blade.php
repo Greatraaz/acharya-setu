@@ -18,7 +18,18 @@ $stats = [
     {{-- Header --}}
     <div class="flex items-center justify-between">
         <p class="text-sm text-gray-500">Manage all registered mentees, assignments, and account status.</p>
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap">
+            @php $menteeExportQuery = array_merge(request()->except(['page', 'format']), ['format' => 'csv']); @endphp
+            <a href="{{ route('admin.mentees.export', $menteeExportQuery) }}"
+               class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2 rounded-xl transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Export CSV
+            </a>
+            <a href="{{ route('admin.mentees.export', array_merge($menteeExportQuery, ['format' => 'excel'])) }}"
+               class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2 rounded-xl transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Export Excel
+            </a>
             <a href="{{ route('admin.mentees.create') }}"
                 class="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition-colors">
                 + Add Mentee

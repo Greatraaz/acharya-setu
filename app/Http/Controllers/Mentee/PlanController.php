@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Mentee;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\Plan;
+use App\Models\PlanInvoice;
 use App\Models\UserSubscription;
 use App\Services\PlanBenefitConsumptionService;
 use App\Services\PlanCheckoutService;
@@ -48,16 +49,28 @@ class PlanController extends Controller
 
         $search = trim((string) $request->input('search', $request->input('q', '')));
 
-        $history = UserSubscription::with(['plan', 'invoice'])
+        $history = PlanInvoice::with(['subscription:id,subscription_id,status,payment_status', 'plan:id,name'])
+            ->where('user_id', $user->id)
+            ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
+                $inner->where('plan_name', 'like', '%'.$search.'%')
+                    ->orWhere('invoice_number', 'like', '%'.$search.'%')
+                    ->orWhereHas('subscription', fn ($s) => $s->where('subscription_id', 'like', '%'.$search.'%'));
+            }))
+            ->latest('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        $currentInvoiceId = $current
+            ? PlanInvoice::query()->where('user_subscription_id', $current->id)->max('id')
+            : null;
+
+        $uninvoiced = $search !== '' ? collect() : UserSubscription::with('plan:id,name')
             ->where('user_id', $user->id)
             ->where('status', '!=', 'pending')
-            ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
-                $inner->where('subscription_id', 'like', '%'.$search.'%')
-                    ->orWhereHas('plan', fn ($p) => $p->where('name', 'like', '%'.$search.'%'));
-            }))
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
+            ->where('payment_status', 'paid')
+            ->whereDoesntHave('invoices')
+            ->latest('id')
+            ->get();
 
         return view('frontend.mentee.plans', compact(
             'plans',
@@ -68,7 +81,9 @@ class PlanController extends Controller
             'history',
             'search',
             'benefitBalance',
-            'cancellation'
+            'cancellation',
+            'currentInvoiceId',
+            'uninvoiced'
         ));
     }
 

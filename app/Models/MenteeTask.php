@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MenteeTask extends Model
 {
@@ -90,6 +92,12 @@ class MenteeTask extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function progress(): HasOne
+    {
+        return $this->hasOne(StudentCurriculumProgress::class, 'item_id')
+            ->where('item_type', self::ITEM_TYPE);
+    }
+
     public function getAttachmentsAttribute($value): array
     {
         $attachments = is_array($value) ? $value : (json_decode((string) $value, true) ?: []);
@@ -146,7 +154,11 @@ class MenteeTask extends Model
 
     public function uiStatus(?StudentCurriculumProgress $progress = null): string
     {
-        $progress ??= $this->getProgressForUser();
+        if ($progress === null) {
+            $progress = $this->relationLoaded('progress')
+                ? $this->progress
+                : $this->getProgressForUser();
+        }
 
         if (! $progress) {
             return 'pending';
@@ -165,6 +177,48 @@ class MenteeTask extends Model
         }
 
         return 'in_progress';
+    }
+
+    public function scopeForUiStatus(Builder $query, string $status): Builder
+    {
+        $progressExists = function ($q, ?callable $extra = null): void {
+            $q->selectRaw('1')
+                ->from('student_curriculum_progress as p')
+                ->whereColumn('p.item_id', 'mentee_tasks.id')
+                ->where('p.item_type', self::ITEM_TYPE)
+                ->whereColumn('p.user_id', 'mentee_tasks.mentee_id');
+
+            if ($extra) {
+                $extra($q);
+            }
+        };
+
+        return match ($status) {
+            'todo' => $query->whereNotExists(fn ($q) => $progressExists($q, function ($q) {
+                $q->where(function ($s) {
+                    $s->where('p.is_completed', true)->orWhere('p.submission_status', 'approved');
+                });
+            })),
+            'pending' => $query->whereNotExists(fn ($q) => $progressExists($q)),
+            'awaiting_review' => $query->whereExists(fn ($q) => $progressExists($q, function ($q) {
+                $q->where('p.submission_status', 'submitted')
+                    ->where(function ($s) {
+                        $s->where('p.is_completed', false)->orWhereNull('p.is_completed');
+                    });
+            })),
+            'completed' => $query->whereExists(fn ($q) => $progressExists($q, function ($q) {
+                $q->where(function ($s) {
+                    $s->where('p.is_completed', true)->orWhere('p.submission_status', 'approved');
+                });
+            })),
+            'rejected' => $query->whereExists(fn ($q) => $progressExists($q, function ($q) {
+                $q->where('p.submission_status', 'rejected')
+                    ->where(function ($s) {
+                        $s->where('p.is_completed', false)->orWhereNull('p.is_completed');
+                    });
+            })),
+            default => $query,
+        };
     }
 
     public function toPublicArray(?StudentCurriculumProgress $progress = null): array

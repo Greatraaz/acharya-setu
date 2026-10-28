@@ -146,4 +146,44 @@ class MentorRequestService
 
         return $fresh;
     }
+
+    /**
+     * Assigned mentees should appear under Accepted even if no request row was stored
+     * (admin assignment, matcher, or a request that never flipped to accepted).
+     */
+    public function ensureAcceptedForAssignedMentees(User $mentor): void
+    {
+        $assignedIds = User::query()
+            ->where('role', 'mentee')
+            ->where('assigned_mentor_id', $mentor->id)
+            ->pluck('id');
+
+        if ($assignedIds->isEmpty()) {
+            return;
+        }
+
+        MentorRequest::query()
+            ->where('mentor_id', $mentor->id)
+            ->whereIn('mentee_id', $assignedIds)
+            ->where('status', MentorRequest::STATUS_PENDING)
+            ->update([
+                'status'       => MentorRequest::STATUS_ACCEPTED,
+                'responded_at' => now(),
+            ]);
+
+        $alreadyAccepted = MentorRequest::query()
+            ->where('mentor_id', $mentor->id)
+            ->whereIn('mentee_id', $assignedIds)
+            ->where('status', MentorRequest::STATUS_ACCEPTED)
+            ->pluck('mentee_id');
+
+        foreach ($assignedIds->diff($alreadyAccepted) as $menteeId) {
+            MentorRequest::create([
+                'mentee_id'    => (int) $menteeId,
+                'mentor_id'    => (int) $mentor->id,
+                'status'       => MentorRequest::STATUS_ACCEPTED,
+                'responded_at' => now(),
+            ]);
+        }
+    }
 }

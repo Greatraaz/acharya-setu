@@ -275,8 +275,12 @@ class User extends Authenticatable
         $assignedIds = static::query()->where('assigned_mentor_id', $mentorId)->where('role', 'mentee')->pluck('id');
         $enrolledIds = MenteeEnrollment::where('mentor_id', $mentorId)->pluck('mentee_id');
         $trackIds = EducationStream::where('mentor_id', $mentorId)->pluck('mentee_id');
+        $acceptedIds = MentorRequest::where('mentor_id', $mentorId)
+            ->where('status', MentorRequest::STATUS_ACCEPTED)
+            ->pluck('mentee_id');
 
-        return $sessionIds->merge($assignedIds)->merge($enrolledIds)->merge($trackIds)
+        return $sessionIds->merge($assignedIds)->merge($enrolledIds)->merge($trackIds)->merge($acceptedIds)
+            ->map(fn ($id) => (int) $id)
             ->unique()
             ->filter()
             ->values();
@@ -291,11 +295,16 @@ class User extends Authenticatable
         $assignedId = static::query()->where('id', $menteeId)->where('role', 'mentee')->value('assigned_mentor_id');
         $enrolledIds = MenteeEnrollment::where('mentee_id', $menteeId)->pluck('mentor_id');
         $trackIds = EducationStream::where('mentee_id', $menteeId)->pluck('mentor_id');
+        $acceptedIds = MentorRequest::where('mentee_id', $menteeId)
+            ->where('status', MentorRequest::STATUS_ACCEPTED)
+            ->pluck('mentor_id');
 
         return $sessionIds
             ->merge($enrolledIds)
             ->merge($trackIds)
-            ->when($assignedId, fn ($c) => $c->push($assignedId))
+            ->merge($acceptedIds)
+            ->when($assignedId, fn ($c) => $c->push((int) $assignedId))
+            ->map(fn ($id) => (int) $id)
             ->unique()
             ->filter()
             ->values();

@@ -33,7 +33,7 @@
                 ['admin.subscription-cancels.index', '↩️', 'Plan Cancellations'],
             ],
             'Learning' => [
-                ['admin.curriculum.catalog',         '📚', 'Curriculum Streams'],
+                // ['admin.curriculum.catalog',         '📚', 'Curriculum Streams'],
                 ['admin.curriculum.streams',         '🗺️', '6-Month Journey Manager'],
                 ['admin.mentee-tasks.index',         '✅', 'Mentee Tasks'],
                 ['admin.quizzes.index',              '🎯', 'Quizzes & MCQs'],

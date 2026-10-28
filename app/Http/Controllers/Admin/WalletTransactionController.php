@@ -10,6 +10,7 @@ use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WalletTransactionController extends Controller
 {
@@ -22,6 +23,42 @@ class WalletTransactionController extends Controller
         );
 
         return view('admin.wallet.index', compact('transactions'));
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $filters = $request->only(['type', 'search', 'from_date', 'to_date']);
+        $headers = [
+            'ID', 'Date', 'User', 'Email', 'Role', 'Type', 'Reference',
+            'Description', 'Amount', 'Balance Before', 'Balance After',
+            'Performed By', 'Status',
+        ];
+
+        return $this->streamFilteredExport($request, 'wallet-transactions', $headers, function ($out, $isExcel) use ($filters) {
+            $this->walletService->filteredQuery($filters)
+                ->with(['user:id,name,email,role', 'performedByAdmin:id,name'])
+                ->reorder()
+                ->chunkById(200, function ($rows) use ($out, $isExcel) {
+                    foreach ($rows as $txn) {
+                        $signedAmount = ($txn->is_debit ? '-' : '').number_format((float) $txn->amount, 2, '.', '');
+                        $this->writeExportRow($out, [
+                            $txn->id,
+                            optional($txn->created_at)->format('Y-m-d H:i:s'),
+                            $txn->user?->name ?: '',
+                            $txn->user?->email ?: '',
+                            $txn->user?->role ? ucfirst($txn->user->role) : '',
+                            $txn->type_label,
+                            $txn->reference ?: '',
+                            $txn->description ?: '',
+                            $signedAmount,
+                            number_format((float) $txn->balance_before, 2, '.', ''),
+                            number_format((float) $txn->balance_after, 2, '.', ''),
+                            $txn->performedByAdmin?->name ?? 'System',
+                            ucfirst((string) $txn->status),
+                        ], $isExcel);
+                    }
+                });
+        });
     }
 
     public function showUser(User $user)
@@ -260,5 +297,58 @@ class WalletTransactionController extends Controller
         }
 
         return $query->firstOrFail();
+    }
+
+    /**
+     * @param  callable(resource, bool): void  $writeRows
+     */
+    private function streamFilteredExport(Request $request, string $basename, array $headers, callable $writeRows): StreamedResponse
+    {
+        $isExcel = $request->input('format') === 'excel';
+        $filename = $basename.'-'.now()->format('Ymd-His').($isExcel ? '.xls' : '.csv');
+        $contentType = $isExcel
+            ? 'application/vnd.ms-excel; charset=UTF-8'
+            : 'text/csv; charset=UTF-8';
+
+        return response()->streamDownload(function () use ($headers, $writeRows, $isExcel) {
+            $out = fopen('php://output', 'w');
+
+            if ($isExcel) {
+                fwrite($out, '<?xml version="1.0" encoding="UTF-8"?>'."\n");
+                fwrite($out, '<?mso-application progid="Excel.Sheet"?>'."\n");
+                fwrite($out, '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Export"><Table>'."\n");
+                $this->writeExportRow($out, $headers, true);
+                $writeRows($out, true);
+                fwrite($out, '</Table></Worksheet></Workbook>');
+            } else {
+                fwrite($out, "\xEF\xBB\xBF");
+                fputcsv($out, $headers);
+                $writeRows($out, false);
+            }
+
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => $contentType,
+        ]);
+    }
+
+    /**
+     * @param  resource  $out
+     * @param  list<mixed>  $values
+     */
+    private function writeExportRow($out, array $values, bool $isExcel): void
+    {
+        if (! $isExcel) {
+            fputcsv($out, $values);
+
+            return;
+        }
+
+        fwrite($out, '<Row>');
+        foreach ($values as $value) {
+            $text = htmlspecialchars((string) $value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+            fwrite($out, '<Cell><Data ss:Type="String">'.$text.'</Data></Cell>');
+        }
+        fwrite($out, "</Row>\n");
     }
 }

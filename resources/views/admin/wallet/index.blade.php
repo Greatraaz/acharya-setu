@@ -10,6 +10,17 @@
             <p class="text-sm text-gray-500 mt-0.5">Adjust balances and transfer funds. For the full ledger see <a href="{{ route('admin.transactions.index') }}" class="text-indigo-600 hover:underline">Transactions</a>.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+            @php $walletExportQuery = array_merge(request()->except(['page', 'format']), ['format' => 'csv']); @endphp
+            <a href="{{ route('admin.wallet.export', $walletExportQuery) }}"
+               class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Export CSV
+            </a>
+            <a href="{{ route('admin.wallet.export', array_merge($walletExportQuery, ['format' => 'excel'])) }}"
+               class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Export Excel
+            </a>
             <a href="{{ route('admin.wallet.add-fund') }}"
                class="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
                 <iconify-icon icon="fa-solid:plus-circle"></iconify-icon> Add Fund

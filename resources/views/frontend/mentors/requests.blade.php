@@ -20,17 +20,21 @@
 
         @php
             $activeStatus = $status ?? request('status', 'pending');
-            $tabParams = fn (string $key) => array_filter([
-                'status' => $key === 'all' ? null : $key,
-                'search' => ($search ?? request('search')) ?: null,
-            ]);
+            $tabParams = function (string $key) use ($search) {
+                $params = ['status' => $key];
+                $term = trim((string) ($search ?? ''));
+                if ($term !== '') {
+                    $params['search'] = $term;
+                }
+                return $params;
+            };
         @endphp
 
         <form method="GET" action="{{ route('mentor.requests') }}" class="session-toolbar mentor-requests-toolbar">
             <div class="session-filter-tabs">
                 @foreach([
                     'pending' => 'Pending ('.((int) ($counts[\App\Models\MentorRequest::STATUS_PENDING] ?? 0)).')',
-                    'accepted' => 'Accepted',
+                    'accepted' => 'Accepted ('.((int) ($counts[\App\Models\MentorRequest::STATUS_ACCEPTED] ?? 0)).')',
                     'rejected' => 'Declined',
                     'all' => 'All',
                 ] as $key => $label)
@@ -42,9 +46,7 @@
             </div>
 
             <div class="mentor-requests-toolbar__search">
-                @if($activeStatus !== 'all')
-                    <input type="hidden" name="status" value="{{ $activeStatus }}">
-                @endif
+                <input type="hidden" name="status" value="{{ $activeStatus }}">
                 <div class="session-search-field mentor-requests-toolbar__field">
                     <span class="session-search-icon" aria-hidden="true">🔍</span>
                     <input type="search" name="search" class="form-input" value="{{ $search ?? request('search') }}"
@@ -52,7 +54,7 @@
                 </div>
                 <button type="submit" class="btn btn-outline mentor-requests-toolbar__submit">Search</button>
                 @if(request()->filled('search'))
-                    <a href="{{ route('mentor.requests', array_filter(['status' => $activeStatus === 'all' ? null : $activeStatus])) }}" class="btn btn-ghost mentor-requests-toolbar__clear">Clear</a>
+                    <a href="{{ route('mentor.requests', ['status' => $activeStatus]) }}" class="btn btn-ghost mentor-requests-toolbar__clear">Clear</a>
                 @endif
             </div>
         </form>
@@ -68,8 +70,11 @@
                     @endif
                 </div>
                 <div style="flex:1;min-width:180px;">
-                    <div style="font-weight:700;">{{ $req->mentee?->name }}</div>
-                    <div style="font-size:12px;color:var(--text-2);margin-top:2px;">
+                    <div style="font-weight:700;color:var(--text);">{{ $req->mentee?->name ?? 'Mentee' }}</div>
+                    @if($req->mentee?->email)
+                        <div style="font-size:13px;color:var(--text-2);margin-top:2px;">{{ $req->mentee->email }}</div>
+                    @endif
+                    <div style="font-size:12px;color:var(--text-3);margin-top:2px;">
                         {{ $req->mentee?->college ?? $req->mentee?->field ?? 'Mentee' }}
                         · Requested {{ $req->created_at?->diffForHumans() }}
                         @if($req->status !== \App\Models\MentorRequest::STATUS_PENDING && $req->responded_at)
@@ -92,7 +97,13 @@
                     </form>
                 </div>
                 @else
-                <span class="badge {{ $req->status === 'accepted' ? 'badge-success' : 'badge-muted' }}">{{ ucfirst($req->status) }}</span>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span class="badge {{ $req->status === 'accepted' ? 'badge-success' : 'badge-muted' }}">{{ ucfirst($req->status) }}</span>
+                    @if($req->status === \App\Models\MentorRequest::STATUS_ACCEPTED && $req->mentee)
+                        <a href="{{ route('mentor.journey.show', $req->mentee->id) }}" class="btn btn-outline btn-sm">Journey</a>
+                        <a href="{{ route('mentor.mentees.show', $req->mentee->id) }}" class="btn btn-primary btn-sm">View</a>
+                    @endif
+                </div>
                 @endif
             </div>
             @empty

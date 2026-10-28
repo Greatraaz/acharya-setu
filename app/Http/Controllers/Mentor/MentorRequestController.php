@@ -17,21 +17,31 @@ class MentorRequestController extends Controller
     public function index(Request $request)
     {
         $status = $request->input('status', 'pending');
-        $search = trim((string) $request->input('search', $request->input('q', '')));
+        if (! in_array($status, [
+            MentorRequest::STATUS_PENDING,
+            MentorRequest::STATUS_ACCEPTED,
+            MentorRequest::STATUS_REJECTED,
+            'all',
+        ], true)) {
+            $status = MentorRequest::STATUS_PENDING;
+        }
 
-        $query = MentorRequest::where('mentor_id', auth()->id())
-            ->with('mentee')
-            ->when($status !== 'all' && in_array($status, [
-                MentorRequest::STATUS_PENDING,
-                MentorRequest::STATUS_ACCEPTED,
-                MentorRequest::STATUS_REJECTED,
-            ], true), fn ($q) => $q->where('status', $status))
+        $search = trim((string) $request->input('search', $request->input('q', '')));
+        $mentor = auth()->user();
+        $this->requests->ensureAcceptedForAssignedMentees($mentor);
+
+        $query = MentorRequest::where('mentor_id', $mentor->id)
+            ->with(['mentee' => fn ($q) => $q->withTrashed()])
+            ->when($status !== 'all', fn ($q) => $q->where('status', $status))
             ->when($search !== '', fn ($q) => $q->whereHas('mentee', function ($m) use ($search) {
-                $m->where('name', 'like', '%'.$search.'%')
-                    ->orWhere('email', 'like', '%'.$search.'%')
-                    ->orWhere('college', 'like', '%'.$search.'%');
+                $m->withTrashed()
+                    ->where(function ($inner) use ($search) {
+                        $inner->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('email', 'like', '%'.$search.'%')
+                            ->orWhere('college', 'like', '%'.$search.'%');
+                    });
             }))
-            ->latest($status === MentorRequest::STATUS_PENDING ? 'created_at' : 'responded_at');
+            ->latest('created_at');
 
         $requests = $query->paginate(15)->withQueryString();
 

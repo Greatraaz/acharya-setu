@@ -13,6 +13,7 @@ class MentorRequestController extends Controller
     public function index(Request $request): JsonResponse
     {
         $status = $request->query('status', MentorRequest::STATUS_PENDING);
+        app(\App\Services\MentorRequestService::class)->ensureAcceptedForAssignedMentees($request->user());
 
         $requests = MentorRequest::where('mentor_id', $request->user()->id)
             ->when($status !== 'all', fn ($q) => $q->where('status', $status))

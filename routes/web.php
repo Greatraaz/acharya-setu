@@ -632,6 +632,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         Route::get('/approvals',                 [MentorApprovalController::class, 'index'])        ->name('approvals');
         Route::get('/pending-changes',           [MentorApprovalController::class, 'pendingChanges'])->name('pending-changes');
         Route::get('/deleted',                   [UserController::class, 'mentorTrashed'])          ->name('trashed');
+        Route::get('/export',                    [UserController::class, 'mentorExport'])           ->name('export');
         Route::get('/{mentor}',                  [MentorApprovalController::class, 'show'])         ->name('review');
         Route::post('/{mentor}/approve',         [MentorApprovalController::class, 'approve'])      ->name('approve');
         Route::post('/{mentor}/reject',          [MentorApprovalController::class, 'reject'])       ->name('reject');
@@ -657,6 +658,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     // ── Mentee List ───────────────────────────────────────────
     Route::prefix('mentees')->name('mentees.')->group(function () {
         Route::get('/',                        [UserController::class, 'menteeIndex'])        ->name('index');
+        Route::get('/export',                  [UserController::class, 'menteeExport'])       ->name('export');
         Route::get('/deleted',                 [UserController::class, 'menteeTrashed'])      ->name('trashed');
         Route::get('/{mentee}/journey',        [UserController::class, 'menteeJourney'])      ->name('journey');
         Route::get('/{mentee}',                [UserController::class, 'menteeShow'])         ->name('show');
@@ -712,6 +714,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
 
     Route::get('/mentee-tasks', [AdminMenteeTaskController::class, 'index'])->name('mentee-tasks.index');
     Route::get('/mentee-tasks/create', [AdminMenteeTaskController::class, 'create'])->name('mentee-tasks.create');
+    Route::get('/mentee-tasks/linked-mentors', [AdminMenteeTaskController::class, 'linkedMentors'])->name('mentee-tasks.linked-mentors');
     Route::post('/mentee-tasks', [AdminMenteeTaskController::class, 'store'])->name('mentee-tasks.store');
     Route::get('/mentee-tasks/{menteeTask}', [AdminMenteeTaskController::class, 'show'])->name('mentee-tasks.show')->whereNumber('menteeTask');
     Route::get('/mentee-tasks/{menteeTask}/edit', [AdminMenteeTaskController::class, 'edit'])->name('mentee-tasks.edit')->whereNumber('menteeTask');
@@ -750,6 +753,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     // ── Wallet ────────────────────────────────────────────────
     Route::prefix('wallet')->name('wallet.')->group(function () {
         Route::get('/',                        [WalletTransactionController::class, 'index'])    ->name('index');
+        Route::get('/export',                  [WalletTransactionController::class, 'export'])   ->name('export');
         Route::get('/add-fund',                [WalletTransactionController::class, 'addFund'])  ->name('add-fund');
         Route::post('/add-fund',               [WalletTransactionController::class, 'storeAddFund'])->name('add-fund.store');
         Route::get('/users',                   [WalletTransactionController::class, 'users'])    ->name('users');

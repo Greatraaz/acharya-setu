@@ -207,6 +207,18 @@ span[class*="rounded-full"] {
         line-height: 40px !important;
         box-sizing: border-box;
     }
+    form.admin-filter-form > input:not([type="hidden"]),
+    form.admin-filter-form > select {
+        flex: 1 1 9.5rem !important;
+        width: auto !important;
+        min-width: 9.5rem !important;
+        max-width: none !important;
+    }
+    form.admin-filter-form > input[type="text"],
+    form.admin-filter-form > input[type="search"] {
+        flex: 1.35 1 12rem !important;
+        min-width: 12rem !important;
+    }
     form.admin-filter-form select {
         padding-right: 2rem !important;
         background-color: #fff;

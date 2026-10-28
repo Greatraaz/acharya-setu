@@ -15,24 +15,32 @@
     <div class="bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3 rounded-xl">{{ session('error') }}</div>
     @endif
 
-    <form method="GET" class="admin-filter-form bg-white border border-gray-200 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-5 gap-3">
-        <input type="text" name="q" value="{{ request('q') }}" placeholder="Search mentee / email / payment"
-               class="md:col-span-2 border border-gray-200 rounded-xl px-3 py-2 text-sm">
-        <select name="plan_id" class="border border-gray-200 rounded-xl px-3 py-2 text-sm">
-            <option value="">All plans</option>
-            @foreach($plans as $plan)
-                <option value="{{ $plan->id }}" @selected((string) request('plan_id') === (string) $plan->id)>
-                    {{ $plan->name ?? $plan->plan_name }}
-                </option>
-            @endforeach
-        </select>
-        <select name="status" class="border border-gray-200 rounded-xl px-3 py-2 text-sm">
-            <option value="">All statuses</option>
-            @foreach(['active','pending','expired','cancelled'] as $st)
-                <option value="{{ $st }}" @selected(request('status') === $st)>{{ ucfirst($st) }}</option>
-            @endforeach
-        </select>
-        <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl px-4 py-2">Filter</button>
+    <form method="GET" class="admin-filter-form bg-white border border-gray-200 rounded-2xl p-4">
+        <div class="admin-filter-search">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Search mentee / email / payment"
+                   class="w-full border border-gray-200 rounded-xl px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+        </div>
+        <div>
+            <select name="plan_id" class="w-full border border-gray-200 rounded-xl px-3 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                <option value="">All plans</option>
+                @foreach($plans as $plan)
+                    <option value="{{ $plan->id }}" @selected((string) request('plan_id') === (string) $plan->id)>
+                        {{ $plan->name ?? $plan->plan_name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div>
+            <select name="status" class="w-full border border-gray-200 rounded-xl px-3 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                <option value="">All statuses</option>
+                @foreach(['active','pending','expired','cancelled'] as $st)
+                    <option value="{{ $st }}" @selected(request('status') === $st)>{{ ucfirst($st) }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="admin-filter-actions">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl px-4">Filter</button>
+        </div>
     </form>
 
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">

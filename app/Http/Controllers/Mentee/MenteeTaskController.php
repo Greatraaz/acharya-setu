@@ -15,16 +15,34 @@ class MenteeTaskController extends Controller
     {
     }
 
-    public function index()
+    public function index(Request $request)
     {
+        $search = trim((string) $request->input('search', ''));
+        $status = trim((string) $request->input('status', 'all'));
+
+        if (! in_array($status, ['all', 'todo', 'completed'], true)) {
+            $status = 'all';
+        }
+
         $items = MenteeTask::query()
-            ->with('mentor:id,name,avatar_url')
+            ->with([
+                'mentor:id,name,avatar_url',
+                'progress' => fn ($q) => $q->where('user_id', auth()->id()),
+            ])
             ->where('mentee_id', auth()->id())
             ->where('is_active', true)
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('title', 'like', '%'.$search.'%')
+                        ->orWhereHas('mentor', fn ($m) => $m->where('name', 'like', '%'.$search.'%'));
+                });
+            })
+            ->when($status !== 'all', fn ($q) => $q->forUiStatus($status))
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('frontend.mentee.tasks.index', compact('items'));
+        return view('frontend.mentee.tasks.index', compact('items', 'search', 'status'));
     }
 
     public function show(MenteeTask $task)

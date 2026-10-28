@@ -698,9 +698,11 @@
 
                 <!-- Right-side actions -->
                 <div class="vj-nav-actions">
+                    @if(!auth()->check() || auth()->user()->role !== 'mentor')
                     <a href="{{ route('mentors.search') }}" class="vj-btn vj-btn-primary d-none d-md-inline-flex">
                         <i class="bi bi-search"></i> Find a Mentor
                     </a>
+                    @endif
 
                     @auth
                         @if(in_array(auth()->user()->role, ['mentor', 'mentee'], true))
@@ -789,7 +791,9 @@
         </div>
         <div class="offcanvas-body p-4">
             <div class="d-grid gap-2 mb-4">
+                @if(!auth()->check() || auth()->user()->role !== 'mentor')
                 <a href="{{ route('mentors.search') }}" class="vj-btn vj-btn-primary justify-content-center">Find a Mentor</a>
+                @endif
                 @auth
                     @if(auth()->user()->role === 'mentor')
                         <a href="{{ route('mentor.dashboard') }}" class="vj-btn vj-btn-outline-mustard justify-content-center">Dashboard</a>

@@ -8,46 +8,51 @@ use App\Services\MenteeOnboardingService;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\EducationStream;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UserController extends Controller
 {
     public function menteeIndex(Request $request)
     {
-        $activeSubscription = fn ($q) => $q
-            ->where('status', 'active')
-            ->where('payment_status', 'paid')
-            ->where('expires_at', '>', now());
-
-        $mentees = User::where('role', 'mentee')
-            ->withTrashed()
-            ->with([
-                'assignedMentor',
-                'subscriptions' => fn ($q) => $activeSubscription($q)
-                    ->with('plan:id,name')
-                    ->latest('starts_at'),
-            ])
-            ->when($request->search, fn($q) =>
-                $q->where(fn($q) => $q
-                    ->where('name', 'like', "%{$request->search}%")
-                    ->orWhere('email', 'like', "%{$request->search}%")
-                    ->orWhere('college', 'like', "%{$request->search}%")
-                )
-            )
-            ->when($request->status === 'active',   fn($q) => $q->where('is_active', true))
-            ->when($request->status === 'inactive', fn($q) => $q->where('is_active', false))
-            ->when($request->onboarded !== null && $request->onboarded !== '',
-                fn($q) => $q->where('onboarding_completed', (bool) $request->onboarded)
-            )
-            ->when($request->assigned === 'yes', fn($q) => $q->whereNotNull('assigned_mentor_id'))
-            ->when($request->assigned === 'no',  fn($q) => $q->whereNull('assigned_mentor_id'))
-            ->when($request->subscribed === 'yes', fn($q) => $q->whereHas('subscriptions', $activeSubscription))
-            ->when($request->subscribed === 'no',  fn($q) => $q->whereDoesntHave('subscriptions', $activeSubscription))
-            ->whereNull('deleted_at')      // exclude soft-deleted from main list
-            ->latest()
+        $mentees = $this->menteeListingQuery($request)
             ->paginate(20)
             ->withQueryString();
- 
+
         return view('admin.mentees.index', compact('mentees'));
+    }
+
+    public function menteeExport(Request $request): StreamedResponse
+    {
+        $headers = [
+            'Name', 'Email', 'Phone', 'College', 'Field', 'Year',
+            'Assigned Mentor', 'Plan', 'Onboarding', 'Status', 'Joined',
+        ];
+
+        return $this->streamFilteredExport($request, 'mentees', $headers, function ($out, $isExcel) use ($request) {
+            $this->menteeListingQuery($request)
+                ->reorder()
+                ->chunkById(200, function ($rows) use ($out, $isExcel) {
+                    foreach ($rows as $mentee) {
+                        $plan = $mentee->subscriptions->first();
+                        $values = [
+                            $mentee->name,
+                            $mentee->email,
+                            $mentee->phone ?: '',
+                            $mentee->college ?: '',
+                            $mentee->field ?: '',
+                            $mentee->year ?: '',
+                            $mentee->assignedMentor?->name ?: 'Unassigned',
+                            $plan?->plan?->name ?? 'Free',
+                            $mentee->onboarding_completed
+                                ? 'Complete'
+                                : 'Step '.$mentee->onboarding_step.'/4',
+                            $mentee->is_active ? 'Active' : 'Inactive',
+                            optional($mentee->created_at)->format('Y-m-d H:i'),
+                        ];
+                        $this->writeExportRow($out, $values, $isExcel);
+                    }
+                });
+        });
     }
  
     public function menteeShow(User $mentee, MenteeOnboardingService $onboarding)
@@ -154,25 +159,51 @@ class UserController extends Controller
  
     public function mentorIndex(Request $request)
     {
-        $mentors = User::where('role', 'mentor')
+        $mentors = $this->mentorListingQuery($request)
             ->with('assignedMentees')
-            ->when($request->search, fn($q) =>
-                $q->where(fn($q) => $q
-                    ->where('name', 'like', "%{$request->search}%")
-                    ->orWhere('email', 'like', "%{$request->search}%")
-                    ->orWhere('company', 'like', "%{$request->search}%")
-                    ->orWhere('designation', 'like', "%{$request->search}%")
-                )
-            )
-            ->when($request->mentor_status, fn($q) => $q->where('mentor_status', $request->mentor_status))
-            ->when($request->field, fn($q) => $q->where('field', 'like', "%{$request->field}%"))
-            ->when($request->pending_changes === '1', fn($q) => $q->where('has_pending_changes', true))
-            ->whereNull('deleted_at')
-            ->latest()
             ->paginate(20)
             ->withQueryString();
- 
+
         return view('admin.mentors.index', compact('mentors'));
+    }
+
+    public function mentorExport(Request $request): StreamedResponse
+    {
+        $headers = [
+            'Name', 'Email', 'Phone', 'Designation', 'Company', 'Field',
+            'Experience (years)', 'Rate/min', 'Hourly Rate', 'Mentees',
+            'Rating', 'Sessions', 'Mentor Status', 'Account', 'Pending Changes', 'Joined',
+        ];
+
+        return $this->streamFilteredExport($request, 'mentors', $headers, function ($out, $isExcel) use ($request) {
+            $this->mentorListingQuery($request)
+                ->withCount('assignedMentees')
+                ->reorder()
+                ->chunkById(200, function ($rows) use ($out, $isExcel) {
+                    foreach ($rows as $mentor) {
+                        $rate = (float) $mentor->rate_per_minute;
+                        $values = [
+                            $mentor->name,
+                            $mentor->email,
+                            $mentor->phone ?: '',
+                            $mentor->designation ?: '',
+                            $mentor->company ?: '',
+                            $mentor->field ?: '',
+                            $mentor->experience_years ?? 0,
+                            $rate > 0 ? $rate : 'Free',
+                            $rate > 0 ? round($rate * 60, 2) : 'Free',
+                            $mentor->assigned_mentees_count ?? 0,
+                            $mentor->rating > 0 ? number_format((float) $mentor->rating, 1) : '',
+                            $mentor->total_sessions ?? 0,
+                            ucfirst((string) $mentor->mentor_status),
+                            $mentor->is_active ? 'Active' : 'Inactive',
+                            $mentor->has_pending_changes ? 'Yes' : 'No',
+                            optional($mentor->created_at)->format('Y-m-d H:i'),
+                        ];
+                        $this->writeExportRow($out, $values, $isExcel);
+                    }
+                });
+        });
     }
  
     public function mentorToggleStatus(User $mentor)
@@ -202,5 +233,112 @@ class UserController extends Controller
             ->withQueryString();
  
         return view('admin.users.trashed', ['users' => $users, 'type' => 'mentor']);
+    }
+
+    private function mentorListingQuery(Request $request)
+    {
+        $search = trim((string) $request->input('search', ''));
+
+        return User::query()
+            ->where('role', 'mentor')
+            ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
+                $inner->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('company', 'like', "%{$search}%")
+                    ->orWhere('designation', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            }))
+            ->when($request->filled('mentor_status'), fn ($q) => $q->where('mentor_status', $request->mentor_status))
+            ->when($request->filled('field'), fn ($q) => $q->where('field', 'like', '%'.$request->field.'%'))
+            ->when($request->pending_changes === '1', fn ($q) => $q->where('has_pending_changes', true))
+            ->whereNull('deleted_at')
+            ->latest();
+    }
+
+    private function menteeListingQuery(Request $request)
+    {
+        $search = trim((string) $request->input('search', ''));
+        $activeSubscription = fn ($q) => $q
+            ->where('status', 'active')
+            ->where('payment_status', 'paid')
+            ->where('expires_at', '>', now());
+
+        return User::query()
+            ->where('role', 'mentee')
+            ->with([
+                'assignedMentor:id,name',
+                'subscriptions' => fn ($q) => $activeSubscription($q)
+                    ->with('plan:id,name')
+                    ->latest('starts_at'),
+            ])
+            ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
+                $inner->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('college', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            }))
+            ->when($request->status === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($request->status === 'inactive', fn ($q) => $q->where('is_active', false))
+            ->when($request->onboarded === '1', fn ($q) => $q->where('onboarding_completed', true))
+            ->when($request->onboarded === '0', fn ($q) => $q->where('onboarding_completed', false))
+            ->when($request->assigned === 'yes', fn ($q) => $q->whereNotNull('assigned_mentor_id'))
+            ->when($request->assigned === 'no', fn ($q) => $q->whereNull('assigned_mentor_id'))
+            ->when($request->subscribed === 'yes', fn ($q) => $q->whereHas('subscriptions', $activeSubscription))
+            ->when($request->subscribed === 'no', fn ($q) => $q->whereDoesntHave('subscriptions', $activeSubscription))
+            ->whereNull('deleted_at')
+            ->latest();
+    }
+
+    /**
+     * @param  callable(resource, bool): void  $writeRows
+     */
+    private function streamFilteredExport(Request $request, string $basename, array $headers, callable $writeRows): StreamedResponse
+    {
+        $isExcel = $request->input('format') === 'excel';
+        $filename = $basename.'-'.now()->format('Ymd-His').($isExcel ? '.xls' : '.csv');
+        $contentType = $isExcel
+            ? 'application/vnd.ms-excel; charset=UTF-8'
+            : 'text/csv; charset=UTF-8';
+
+        return response()->streamDownload(function () use ($headers, $writeRows, $isExcel) {
+            $out = fopen('php://output', 'w');
+
+            if ($isExcel) {
+                fwrite($out, '<?xml version="1.0" encoding="UTF-8"?>'."\n");
+                fwrite($out, '<?mso-application progid="Excel.Sheet"?>'."\n");
+                fwrite($out, '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Export"><Table>'."\n");
+                $this->writeExportRow($out, $headers, true);
+                $writeRows($out, true);
+                fwrite($out, '</Table></Worksheet></Workbook>');
+            } else {
+                fwrite($out, "\xEF\xBB\xBF");
+                fputcsv($out, $headers);
+                $writeRows($out, false);
+            }
+
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => $contentType,
+        ]);
+    }
+
+    /**
+     * @param  resource  $out
+     * @param  list<mixed>  $values
+     */
+    private function writeExportRow($out, array $values, bool $isExcel): void
+    {
+        if (! $isExcel) {
+            fputcsv($out, $values);
+
+            return;
+        }
+
+        fwrite($out, '<Row>');
+        foreach ($values as $value) {
+            $text = htmlspecialchars((string) $value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+            fwrite($out, '<Cell><Data ss:Type="String">'.$text.'</Data></Cell>');
+        }
+        fwrite($out, "</Row>\n");
     }
 }

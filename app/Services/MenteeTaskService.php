@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\EducationStream;
-use App\Models\MenteeEnrollment;
 use App\Models\MenteeTask;
 use App\Models\StudentCurriculumProgress;
 use App\Models\User;
@@ -286,11 +284,7 @@ class MenteeTaskService
 
     public function assertMentorLinkedToMentee(int $mentorId, int $menteeId): void
     {
-        $linked = MenteeEnrollment::where('mentor_id', $mentorId)->where('mentee_id', $menteeId)->exists()
-            || User::where('id', $menteeId)->where('role', 'mentee')->where('assigned_mentor_id', $mentorId)->exists()
-            || EducationStream::where('mentor_id', $mentorId)->where('mentee_id', $menteeId)->exists();
-
-        if (! $linked) {
+        if (! User::mentorIdsLinkedToMentee($menteeId)->contains($mentorId)) {
             throw new InvalidArgumentException('Selected mentor is not linked to this mentee.');
         }
     }

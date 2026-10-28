@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\MentorVideo;
+use App\Models\MentorVideoFile;
 use App\Models\User;
 use App\Services\MentorVideoService;
 use Illuminate\Http\Request;
@@ -22,7 +24,14 @@ class MentorVideoController extends Controller
 
         $mentors = User::mentors()->orderBy('name')->get(['id', 'name', 'email']);
 
-        return view('admin.mentor-videos.index', compact('collections', 'mentors'));
+        $stats = [
+            'total'    => MentorVideo::query()->count(),
+            'active'   => MentorVideo::query()->where('is_active', true)->count(),
+            'inactive' => MentorVideo::query()->where('is_active', false)->count(),
+            'files'    => MentorVideoFile::query()->count(),
+        ];
+
+        return view('admin.mentor-videos.index', compact('collections', 'mentors', 'stats'));
     }
 
     public function create()
