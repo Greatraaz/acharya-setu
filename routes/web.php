@@ -63,6 +63,7 @@ use App\Http\Controllers\Admin\AppSettingsController;
 use App\Http\Controllers\Admin\WalletTransactionController;
 use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\WithdrawalRequestController;
+use App\Http\Controllers\Admin\MentorEarningController;
 use App\Http\Controllers\Admin\VideoCallLogController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\PlanController;
@@ -765,6 +766,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         Route::get('/customer/{user}',         [WalletTransactionController::class, 'showUser'])->name('customer.show');
         Route::post('/adjust/{type}/{id}',     [WalletTransactionController::class, 'adjust'])  ->name('adjust');
         Route::post('/transfer',               [WalletTransactionController::class, 'transfer'])->name('transfer');
+    });
+
+    // ── Mentor earnings / payouts ─────────────────────────────
+    Route::prefix('earnings')->name('earnings.')->group(function () {
+        Route::get('/',              [MentorEarningController::class, 'index'])->name('index');
+        Route::get('/{mentor}',      [MentorEarningController::class, 'show'])->name('show');
+        Route::post('/{mentor}/pay', [MentorEarningController::class, 'pay'])->name('pay');
     });
 
     // ── Withdrawals ───────────────────────────────────────────

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\WithdrawalRequest;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -85,6 +86,15 @@ class WithdrawalRequestController extends Controller
                     'processed_at'          => now(),
                     'wallet_transaction_id' => $txn->id,
                 ]);
+
+                app(NotificationService::class)->send(
+                    $user,
+                    'withdrawal_paid',
+                    'Payout sent',
+                    '₹'.number_format((float) $withdrawal->amount, 2).' has been paid to your account.',
+                    ['withdrawal_request_id' => $withdrawal->id, 'amount' => (float) $withdrawal->amount],
+                    app(NotificationService::class)->roleUrl($user, 'wallet')
+                );
             });
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());

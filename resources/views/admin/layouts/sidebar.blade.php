@@ -26,6 +26,7 @@
                 ['admin.wallet.index',        '💰', 'Wallet'],
                 ['admin.wallet.add-fund',     '➕', 'Add Fund'],
                 ['admin.transactions.index',  '🧾', 'Transactions'],
+                ['admin.earnings.index',      '💵', 'Mentor Earnings'],
                 ['admin.withdrawals.index',   '🏦', 'Withdrawals'],
                 ['admin.offers.index',        '🎁', 'Offers'],
                 ['admin.plans.index',         '⭐', 'Premium Plans'],
@@ -138,7 +139,8 @@
                     @php
                         try {
                             $href = route($route);
-                            $isActive = str_starts_with($current, $route);
+                            $isActive = str_starts_with($current, $route)
+                                || ($route === 'admin.earnings.index' && str_starts_with((string) $current, 'admin.earnings.'));
                         } catch (\Exception $e) {
                             $href = '#';
                             $isActive = false;

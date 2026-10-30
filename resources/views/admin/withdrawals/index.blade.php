@@ -8,6 +8,11 @@
             <h6 class="text-lg font-semibold text-gray-800">Withdrawal Requests</h6>
             <p class="text-sm text-gray-500 mt-0.5">Review mentor payout requests and mark them paid or rejected</p>
         </div>
+        <div class="flex flex-wrap items-center gap-3">
+        <a href="{{ route('admin.earnings.index') }}"
+           class="inline-flex items-center gap-1.5 text-sm font-medium text-orange-700 bg-orange-50 border border-orange-200 hover:bg-orange-100 px-3 py-2 rounded-xl">
+            Mentor earnings →
+        </a>
         <nav class="flex items-center gap-2 text-sm">
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors">
                 <iconify-icon icon="solar:home-smile-angle-outline" class="text-base"></iconify-icon>
@@ -16,6 +21,7 @@
             <span class="text-gray-300">/</span>
             <span class="text-gray-700 font-medium">Withdrawals</span>
         </nav>
+        </div>
     </div>
 
     @if(session('success'))

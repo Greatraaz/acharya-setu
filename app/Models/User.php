@@ -358,6 +358,11 @@ class User extends Authenticatable
             ->latest();
     }
  
+    public function withdrawalRequests(): HasMany
+    {
+        return $this->hasMany(WithdrawalRequest::class);
+    }
+
     public function mentorSessions(): HasMany
     {
         return $this->hasMany(ConsultationSession::class, 'mentor_id');
