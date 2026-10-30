@@ -27,21 +27,19 @@ class DashboardController extends Controller
 
         $upcomingSessions = ConsultationSession::where('mentee_id', $menteeId)
             ->with('mentor')
-            ->where('status', 'upcoming')
-            ->where('scheduled_at', '>', $now)
+            ->upcoming()
             ->orderBy('scheduled_at')
             ->limit(3)
             ->get();
 
         $upcomingCount = ConsultationSession::where('mentee_id', $menteeId)
-            ->where('status', 'upcoming')
-            ->where('scheduled_at', '>', $now)
+            ->upcoming()
             ->count();
 
         $sessionsNext24h = ConsultationSession::where('mentee_id', $menteeId)
             ->with('mentor')
-            ->where('status', 'upcoming')
-            ->whereBetween('scheduled_at', [$now, $now->copy()->addDay()])
+            ->upcoming()
+            ->where('scheduled_at', '<=', $now->copy()->addDay())
             ->orderBy('scheduled_at')
             ->get();
 
@@ -75,6 +73,7 @@ class DashboardController extends Controller
         $canViewProgress = $mentee->canAccessProgressReport();
         $planAllowance = $mentee->planSessionAllowance();
         $benefitBalance = app(PlanBenefitConsumptionService::class)->forUser($mentee);
+        $mentee->loadMissing(['assignedMentor:id,name,slug,avatar_url,designation,company,rating,rate_per_minute']);
         $assignedMentor = $mentee->assignedMentor;
 
         $pendingMentorRequests = MentorRequest::where('mentee_id', $menteeId)

@@ -97,14 +97,19 @@ class NotificationService
 
         $mentorName = $session->mentor?->name ?? 'your mentor';
         $menteeName = $session->mentee?->name ?? 'your mentee';
+        $joinNow = $event === 'booked' && $session->canJoinCall();
 
         $copy = match ($event) {
             'booked' => [
                 'type'        => 'session_booked',
-                'menteeTitle' => 'Session booked',
-                'menteeBody'  => "Your session with {$mentorName} is scheduled for {$when}.",
-                'mentorTitle' => 'New session booked',
-                'mentorBody'  => "{$menteeName} booked a session with you for {$when}.",
+                'menteeTitle' => $joinNow ? 'Session ready to join' : 'Session booked',
+                'menteeBody'  => $joinNow
+                    ? "Your session with {$mentorName} is ready. You can join now."
+                    : "Your session with {$mentorName} is scheduled for {$when}.",
+                'mentorTitle' => $joinNow ? 'Session ready to join' : 'New session booked',
+                'mentorBody'  => $joinNow
+                    ? "Your session with {$menteeName} is ready. You can join now."
+                    : "{$menteeName} booked a session with you for {$when}.",
             ],
             'cancelled' => [
                 'type'        => 'session_cancelled',

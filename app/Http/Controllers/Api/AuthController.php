@@ -14,6 +14,7 @@ use App\Support\SensitiveLog;
 use App\Support\LoginThrottle;
 use App\Support\PasswordReset as PasswordResetGuard;
 use App\Support\ProfileUpdate;
+use App\Support\RichText;
 use App\Support\RegistrationData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -296,7 +297,7 @@ class AuthController extends Controller
 
         if ($user->role === 'mentor') {
             $rules = array_merge($rules, [
-                'bio' => ['sometimes', 'string', 'min:80', 'max:2000'],
+                'bio' => array_merge(['sometimes'], RichText::rules(80)),
                 'field' => ['nullable', 'string', 'max:100'],
                 'company' => ['nullable', 'string', 'max:100'],
                 'designation' => ['sometimes', 'string', 'max:100'],

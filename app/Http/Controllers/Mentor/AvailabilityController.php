@@ -33,8 +33,7 @@ class AvailabilityController extends Controller
             ->values();
 
         $pendingCount = ConsultationSession::where('mentor_id', $user->id)
-            ->where('status', 'upcoming')
-            ->where('scheduled_at', '>', now())
+            ->upcoming()
             ->count();
 
         return view('frontend.mentors.availability', compact(

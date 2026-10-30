@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api\Mentor;
 use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
 use App\Support\IndianPhone;
+use App\Support\MentorIndustry;
+use App\Support\RichText;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class OnboardingController extends Controller
 {
@@ -23,6 +26,8 @@ class OnboardingController extends Controller
         try {
             $streams = DB::table('education_streams')
                 ->where('is_active', true)
+                ->whereNull('mentee_id')
+                ->where('is_template', false)
                 ->orderBy('sort_order')
                 ->get(['id', 'name', 'sort_order']);
         } catch (\Throwable $e) {
@@ -43,6 +48,7 @@ class OnboardingController extends Controller
             'status'                => $status,
             'statuscode'            => $statusCode,
             'streams'               => $streams,
+            'industries'            => MentorIndustry::all(),
             'current_step'          => $user->onboarding_step ?? 0,
             'onboarding_completed'  => (bool) $user->onboarding_completed,
             'mentor_status'         => $user->mentor_status,
@@ -72,7 +78,7 @@ class OnboardingController extends Controller
             'gender'   => 'nullable|in:male,female,other',
             'phone'    => IndianPhone::rules(),
             'linkedin' => 'nullable|url',
-            'bio'      => 'required|string|min:50|max:2000',
+            'bio'      => RichText::rules(50),
             'avatar'   => 'nullable|file|image|mimes:jpeg,png,webp|max:2048',
         ]);
 
@@ -123,7 +129,10 @@ class OnboardingController extends Controller
             'company'          => 'required|string|max:100',
             'experience_years' => 'required|integer|min:0|max:50',
             'rate_per_minute'  => 'required|numeric|min:1|max:1000',
-            'field'            => 'required|string',
+            'field'            => ['required', 'string', Rule::in(array_values(array_unique(array_filter([
+                ...MentorIndustry::all(),
+                $user->field,
+            ]))))],
             'education_stream' => 'nullable|string',
         ]);
 
@@ -249,7 +258,7 @@ class OnboardingController extends Controller
 
         $missingFields = [];
 
-        if (empty($user->bio))         $missingFields[] = 'bio';
+        if (RichText::plain($user->bio) === '') $missingFields[] = 'bio';
         if (empty($user->designation)) $missingFields[] = 'designation';
         if (empty($user->expertise))   $missingFields[] = 'expertise';
         if ((float) $user->rate_per_minute < 1) $missingFields[] = 'rate_per_minute';
@@ -311,6 +320,8 @@ class OnboardingController extends Controller
                         'phone'      => $user->phone,
                         'linkedin'   => $user->linkedin,
                         'bio'        => $user->bio,
+                        'bio_text'   => $user->bio_text,
+                        'bio_format' => 'html',
                         'avatar_url' => $user->avatar_url,
                     ],
                 ],

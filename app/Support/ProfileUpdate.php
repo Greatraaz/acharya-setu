@@ -29,6 +29,10 @@ final class ProfileUpdate
      */
     public static function save(User $user, array $data): array
     {
+        if (array_key_exists('bio', $data) && is_string($data['bio'])) {
+            $data['bio'] = RichText::sanitize($data['bio']);
+        }
+
         if (array_key_exists('phone', $data)) {
             $data['phone'] = IndianPhone::normalize($data['phone']);
             self::assertPhoneAvailable($user, $data['phone']);

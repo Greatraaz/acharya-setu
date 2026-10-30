@@ -18,6 +18,13 @@
 ::-webkit-scrollbar-thumb:hover{ background:#94a3b8; }
 *{ scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
 
+.rich-text p { margin: 0 0 0.6em; }
+.rich-text p:last-child { margin-bottom: 0; }
+.rich-text ul, .rich-text ol { margin: 0 0 0.6em; padding-left: 1.2em; }
+.rich-text a { color: #4f46e5; }
+.rich-text h2, .rich-text h3 { margin: 0.7em 0 0.35em; font-weight: 700; color: #1e293b; }
+.tox-tinymce { border-radius: 12px !important; border-color: #e5e7eb !important; }
+
 /* All admin buttons: 8px radius (below 12px) */
 button,
 input[type="submit"],

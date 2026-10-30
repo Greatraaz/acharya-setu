@@ -403,6 +403,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'active'])->group(function () {
 
         // ── Mentor Curriculum (Track → Month → Week → Task) ─────────────
         Route::prefix('curriculum')->name('curriculum.')->group(function () {
+            Route::get('templates',                 [MentorCurriculum::class, 'templates']);
+            Route::get('templates/sample',          [MentorCurriculum::class, 'downloadTemplateSample']);
+            Route::post('templates/import',         [MentorCurriculum::class, 'importTemplates']);
+            Route::get('templates/{template}',      [MentorCurriculum::class, 'showTemplate'])->whereNumber('template');
+            Route::post('templates/{template}/assign', [MentorCurriculum::class, 'assignTemplate'])->whereNumber('template');
             Route::get('tracks',                    [MentorCurriculum::class, 'tracks']);
             Route::post('tracks',                     [MentorCurriculum::class, 'storeTrack']);
             Route::patch('tracks/{track}',            [MentorCurriculum::class, 'updateTrack'])->whereNumber('track');

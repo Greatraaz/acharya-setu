@@ -1,13 +1,17 @@
 @extends('admin.layouts.app')
 @section('title','Months — ' . $stream->name)
-@section('heading','6-Month Journey')
+@section('heading', $stream->is_template ? 'Starter template' : '6-Month Journey')
 @section('content')
 
 <div class="space-y-6">
 
     {{-- Breadcrumb --}}
     <div class="flex items-center gap-2 text-sm text-gray-500">
+        @if($stream->is_template)
+        <a href="{{ route('admin.curriculum.templates') }}" class="hover:text-violet-600 transition-colors">Templates</a>
+        @else
         <a href="{{ route('admin.curriculum.streams') }}" class="hover:text-violet-600 transition-colors">Streams</a>
+        @endif
         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
         <span class="font-semibold text-gray-800">{{ $stream->name }}</span>
     </div>
@@ -26,7 +30,11 @@
     </div>
     @endif
 
-    @if(!$stream->mentee_id)
+    @if($stream->is_template)
+    <div class="bg-violet-50 border border-violet-200 text-violet-800 text-sm px-4 py-3 rounded-xl">
+        Starter template. Mentors will clone this plan, then make small edits for each mentee.
+    </div>
+    @elseif(!$stream->mentee_id)
     <div class="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">
         This stream has no mentee assigned. Edit the stream and select a mentee before adding months.
     </div>
@@ -42,12 +50,14 @@
             <div class="flex items-center gap-4 mt-2 text-xs text-gray-400">
                 <span>{{ $months->count() }}/6 months configured</span>
                 <span>{{ $months->sum(fn($m) => $m->weeks->count()) }} weeks total</span>
-                @if($stream->mentee)
+                @if($stream->is_template)
+                <span class="text-violet-700">Starter template{{ $stream->expertise_stream ? ' · '.$stream->expertise_stream : '' }}</span>
+                @elseif($stream->mentee)
                 <span class="text-violet-700">👤 {{ $stream->mentee->name }}</span>
                 @endif
             </div>
         </div>
-        <button onclick="openAddMonthModal()" @disabled(!$stream->mentee_id)
+        <button onclick="openAddMonthModal()" @disabled(!$stream->mentee_id && !$stream->is_template)
                 class="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             Add Month
@@ -148,8 +158,8 @@
                 </div>
                 @else
                 {{-- Empty slot --}}
-                <div class="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-5 flex items-center justify-between group hover:border-violet-300 hover:bg-violet-50/30 transition-all {{ $stream->mentee_id ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed' }}"
-                     @if($stream->mentee_id) onclick="openAddMonth({{ $m }})" @endif>
+                <div class="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-5 flex items-center justify-between group hover:border-violet-300 hover:bg-violet-50/30 transition-all {{ ($stream->mentee_id || $stream->is_template) ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed' }}"
+                     @if($stream->mentee_id || $stream->is_template) onclick="openAddMonth({{ $m }})" @endif>
                     <div>
                         <p class="text-sm font-semibold text-gray-400 group-hover:text-violet-600">Month {{ $m }} — Not configured</p>
                         <p class="text-xs text-gray-300 mt-0.5">Click to add content for this month</p>

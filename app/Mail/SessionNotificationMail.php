@@ -136,7 +136,9 @@ class SessionNotificationMail extends Mailable
         }
 
         if ($this->event === 'booked') {
-            return 'Please join a few minutes early and keep your notes ready.';
+            return $this->session->canJoinCall()
+                ? 'You can join the call now from your sessions page.'
+                : 'Please join a few minutes early and keep your notes ready.';
         }
 
         return null;

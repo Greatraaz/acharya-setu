@@ -35,16 +35,15 @@ class DashboardController extends Controller
 
         $upcomingSessions = ConsultationSession::where('mentor_id', $mentorId)
             ->with('mentee')
-            ->where('status', 'upcoming')
-            ->where('scheduled_at', '>', $now)
+            ->upcoming()
             ->orderBy('scheduled_at')
             ->limit(5)
             ->get();
 
         $sessionsNext24h = ConsultationSession::where('mentor_id', $mentorId)
             ->with('mentee')
-            ->where('status', 'upcoming')
-            ->whereBetween('scheduled_at', [$now, $now->copy()->addDay()])
+            ->upcoming()
+            ->where('scheduled_at', '<=', $now->copy()->addDay())
             ->orderBy('scheduled_at')
             ->get();
 
@@ -95,8 +94,7 @@ class DashboardController extends Controller
                 ->sum('amount'),
             'active_mentees'      => MentorMenteesQuery::for($mentorId)->count(),
             'pending_sessions'    => ConsultationSession::where('mentor_id', $mentorId)
-                ->where('status', 'upcoming')
-                ->where('scheduled_at', '>', $now)
+                ->upcoming()
                 ->count(),
             'pending_requests'    => MentorRequest::where('mentor_id', $mentorId)
                 ->where('status', MentorRequest::STATUS_PENDING)

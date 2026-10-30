@@ -7,7 +7,11 @@
 
     {{-- Breadcrumb --}}
     <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 min-w-0">
+        @if($month->stream?->is_template)
+        <a href="{{ route('admin.curriculum.templates') }}" class="hover:text-violet-600 whitespace-nowrap">Templates</a>
+        @else
         <a href="{{ route('admin.curriculum.streams') }}" class="hover:text-violet-600 whitespace-nowrap">Streams</a>
+        @endif
         <span>/</span>
         <a href="{{ route('admin.curriculum.months', $month->stream) }}" class="hover:text-violet-600 truncate max-w-[40vw] sm:max-w-none">{{ $month->stream->name }}</a>
         <span>/</span>
@@ -32,7 +36,11 @@
     </div>
     @endif
 
-    @if(!($month->mentee_id || $month->stream?->mentee_id))
+    @if($month->stream?->is_template)
+    <div class="bg-violet-50 border border-violet-200 text-violet-800 text-sm px-4 py-3 rounded-xl">
+        Editing a starter template. Mentors clone this content onto a mentee track.
+    </div>
+    @elseif(!($month->mentee_id || $month->stream?->mentee_id))
     <div class="bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">
         This stream/month has no mentee assigned. Content can still be added, but assign a mentee on the stream for mentee-specific curriculum.
     </div>
@@ -154,6 +162,9 @@
                                     {{ ucfirst($mcq->difficulty) }}
                                 </span>
                                 <div class="min-w-0 flex-1">
+                                    @if($mcq->topic?->name)
+                                    <p class="text-xs font-medium text-violet-700 mb-1">{{ $mcq->topic->name }}</p>
+                                    @endif
                                     <p class="text-sm font-semibold text-gray-800 leading-snug break-words">{{ Str::limit($mcq->question, 100) }}</p>
                                     <div class="flex flex-wrap gap-1 mt-2">
                                         @foreach($mcq->options as $i => $opt)
@@ -265,6 +276,14 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Focus Statement</label>
                 <input type="text" name="focus" value="{{ old('focus') }}" placeholder="Core focus of this week…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
             </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentor Guide (private)</label>
+                <textarea name="mentor_guide" rows="3" placeholder="Guidance for the mentor on running this week…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none">{{ old('mentor_guide') }}</textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Intro Video URL</label>
+                <input type="url" name="video_url" value="{{ old('video_url') }}" placeholder="https://youtube.com/…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+            </div>
             <label class="flex items-center gap-2 cursor-pointer">
                 <input type="hidden" name="is_active" value="0">
                 <input type="checkbox" name="is_active" value="1" checked class="rounded">
@@ -347,6 +366,10 @@
             @csrf
             <span id="mcq-method-field"></span>
             <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Topic</label>
+                <input type="text" name="topic" id="mcq-topic" placeholder="e.g. SQL basics" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+            </div>
+            <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Question <span class="text-red-500">*</span></label>
                 <textarea name="question" id="mcq-question" required rows="3" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"></textarea>
             </div>
@@ -383,6 +406,11 @@
                     <input type="number" name="order_index" id="mcq-order" value="0" min="0" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
                 </div>
             </div>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="hidden" name="is_active" value="0">
+                <input type="checkbox" id="mcq-active" name="is_active" value="1" checked class="rounded">
+                <span class="text-sm font-medium text-gray-700">Active</span>
+            </label>
             <div class="flex flex-col sm:flex-row gap-3 pt-2">
                 <button type="submit" class="w-full sm:flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors whitespace-nowrap">Save MCQ</button>
                 <button type="button" onclick="document.getElementById('mcq-modal').classList.add('hidden')" class="w-full sm:w-auto px-4 py-2.5 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">Cancel</button>
@@ -487,8 +515,13 @@ function openAddMcq(weekId) {
     document.getElementById('mcq-modal-title').textContent = 'Add MCQ';
     document.getElementById('mcq-form').action = MCQ_STORE_URLS[weekId];
     document.getElementById('mcq-method-field').innerHTML = '';
+    document.getElementById('mcq-topic').value = '';
     document.getElementById('mcq-question').value = '';
     document.getElementById('mcq-explanation').value = '';
+    document.getElementById('mcq-difficulty').value = 'medium';
+    document.getElementById('mcq-points').value = 1;
+    document.getElementById('mcq-order').value = 0;
+    document.getElementById('mcq-active').checked = true;
     document.querySelectorAll('[name="options[]"]').forEach(i => i.value = '');
     document.querySelector('[name="correct_index"][value="0"]').checked = true;
     document.getElementById('mcq-modal').classList.remove('hidden');
@@ -498,11 +531,13 @@ function openEditMcq(mcq) {
     document.getElementById('mcq-modal-title').textContent = 'Edit MCQ';
     document.getElementById('mcq-form').action = `/admin/curriculum/mcqs/${mcq.id}`;
     document.getElementById('mcq-method-field').innerHTML = '<input type="hidden" name="_method" value="PUT">';
+    document.getElementById('mcq-topic').value = (mcq.topic && mcq.topic.name) ? mcq.topic.name : '';
     document.getElementById('mcq-question').value = mcq.question || '';
     document.getElementById('mcq-explanation').value = mcq.explanation || '';
     document.getElementById('mcq-difficulty').value = mcq.difficulty || 'medium';
     document.getElementById('mcq-points').value = mcq.points || 1;
     document.getElementById('mcq-order').value = mcq.order_index || 0;
+    document.getElementById('mcq-active').checked = mcq.is_active !== false;
     const opts = document.querySelectorAll('[name="options[]"]');
     (mcq.options || []).forEach((o, i) => { if(opts[i]) opts[i].value = o; });
     const correct = document.querySelector(`[name="correct_index"][value="${mcq.correct_index}"]`);

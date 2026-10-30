@@ -10,9 +10,17 @@ use Illuminate\Support\Str;
  
 class EducationStream extends Model
 {
-    protected $fillable = ['mentee_id', 'mentor_id', 'name', 'slug', 'icon', 'color', 'description', 'is_active', 'sort_order'];
+    protected $fillable = [
+        'mentee_id', 'mentor_id', 'name', 'slug', 'icon', 'color', 'description',
+        'is_active', 'is_template', 'expertise_stream', 'expertise_field',
+        'expertise_tags', 'cloned_from_id', 'sort_order',
+    ];
  
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = [
+        'is_active'      => 'boolean',
+        'is_template'    => 'boolean',
+        'expertise_tags' => 'array',
+    ];
  
     protected static function booted(): void
     {
@@ -42,10 +50,27 @@ class EducationStream extends Model
     {
         return $this->hasMany(MenteeEnrollment::class, 'stream_id');
     }
+
+    public function clonedFrom(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'cloned_from_id');
+    }
  
     public function scopeActive(Builder $q): Builder
     {
         return $q->where('is_active', true);
+    }
+
+    /** Platform starter curricula (not assigned to a mentee). */
+    public function scopeTemplates(Builder $q): Builder
+    {
+        return $q->where('is_template', true)->whereNull('mentee_id');
+    }
+
+    /** Global onboarding catalog rows (names only, not starter curricula). */
+    public function scopeCatalog(Builder $q): Builder
+    {
+        return $q->whereNull('mentee_id')->where('is_template', false);
     }
 
     /** Tracks a mentor may view/manage for their mentees (includes admin-created rows with missing mentor_id). */
@@ -54,6 +79,7 @@ class EducationStream extends Model
         $menteeIds = collect($menteeIds)->filter()->values();
 
         return $q->whereNotNull('mentee_id')
+            ->where('is_template', false)
             ->where(function (Builder $inner) use ($mentorId, $menteeIds) {
                 $inner->where('mentor_id', $mentorId);
 
@@ -91,6 +117,7 @@ class EducationStream extends Model
         $tracks = static::query()
             ->where('mentee_id', $menteeId)
             ->where('is_active', true)
+            ->where('is_template', false)
             ->get();
 
         foreach ($tracks as $track) {

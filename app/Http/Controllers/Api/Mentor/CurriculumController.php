@@ -16,6 +16,8 @@ use App\Models\{
     ConsultationSession,
     MenteeEnrollment,
 };
+use App\Services\CurriculumTemplateImportService;
+use App\Services\CurriculumTemplateService;
 use Illuminate\Http\{Request, JsonResponse};
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -76,6 +78,137 @@ class CurriculumController extends Controller
     }
 
     // ─────────────────────────────────────────────
+    //  GET /mentor/curriculum/templates/sample
+    // ─────────────────────────────────────────────
+    public function downloadTemplateSample(CurriculumTemplateImportService $import)
+    {
+        return $import->downloadSample();
+    }
+
+    // ─────────────────────────────────────────────
+    //  POST /mentor/curriculum/templates/import
+    // ─────────────────────────────────────────────
+    public function importTemplates(Request $request, CurriculumTemplateImportService $import): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        $ext = strtolower($file->getClientOriginalExtension());
+        if (! in_array($ext, ['xlsx', 'xls', 'csv'], true)) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'Upload an .xlsx, .xls, or .csv spreadsheet.',
+            ], 422);
+        }
+
+        $result = $import->import($file, $request->user());
+
+        return response()->json([
+            'status'     => (bool) ($result['created'] || $result['updated']),
+            'statuscode' => 200,
+            'message'    => $import->summaryMessage($result),
+            'created'    => $result['created'],
+            'updated'    => $result['updated'],
+            'skipped'    => $result['skipped'],
+            'errors'     => $result['errors'],
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  GET /mentor/curriculum/templates
+    // ─────────────────────────────────────────────
+    public function templates(Request $request): JsonResponse
+    {
+        $service = app(CurriculumTemplateService::class);
+        $templates = $service->templatesForMentor($request->user());
+
+        $payload = $templates->map(fn (EducationStream $t) => $service->summarize($t))->values();
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'industry'   => \App\Support\MentorIndustry::canonicalize($request->user()->field),
+            'templates'  => $payload,
+            'matched'    => $payload,
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  GET /mentor/curriculum/templates/{template}
+    // ─────────────────────────────────────────────
+    public function showTemplate(Request $request, int $template): JsonResponse
+    {
+        $templateModel = EducationStream::query()->templates()->active()->findOrFail($template);
+        $service = app(CurriculumTemplateService::class);
+        if (! $service->visibleToMentor($request->user(), $templateModel)) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 404,
+                'message'    => 'No template found for your industry.',
+            ], 404);
+        }
+        $templateModel->match_score = 100;
+        $templateModel->matched = true;
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 200,
+            'template'   => $service->summarize($templateModel),
+            'outline'    => $service->outline($templateModel),
+        ]);
+    }
+
+    // ─────────────────────────────────────────────
+    //  POST /mentor/curriculum/templates/{template}/assign
+    // ─────────────────────────────────────────────
+    public function assignTemplate(Request $request, int $template): JsonResponse
+    {
+        $templateModel = EducationStream::query()->templates()->active()->findOrFail($template);
+        $mentor = $request->user();
+        if (! app(CurriculumTemplateService::class)->visibleToMentor($mentor, $templateModel)) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 404,
+                'message'    => 'No template found for your industry.',
+            ], 404);
+        }
+
+        $data = $request->validate([
+            'mentee_id'   => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'name'        => 'nullable|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        $menteeIds = $this->mentorMenteeIds((int) $mentor->id);
+        if (! $menteeIds->contains((int) $data['mentee_id'])) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 403,
+                'message'    => 'This mentee is not linked to you.',
+            ], 403);
+        }
+
+        $mentee = User::findOrFail($data['mentee_id']);
+        $track = app(CurriculumTemplateService::class)->cloneToMentee(
+            $templateModel,
+            $mentor,
+            $mentee,
+            $data['name'] ?? null,
+            $data['description'] ?? null,
+        );
+
+        return response()->json([
+            'status'     => true,
+            'statuscode' => 201,
+            'message'    => 'Template copied. You can edit months and weeks for this mentee.',
+            'track'      => $track,
+        ], 201);
+    }
+
+    // ─────────────────────────────────────────────
     //  POST /mentor/curriculum/tracks
     // ─────────────────────────────────────────────
     public function storeTrack(Request $request): JsonResponse
@@ -102,6 +235,7 @@ class CurriculumController extends Controller
             'slug'        => $slug,
             'description' => $data['description'] ?? null,
             'is_active'   => $request->boolean('is_active', true),
+            'is_template' => false,
             'sort_order'  => $data['sort_order'] ?? 0,
         ]);
 

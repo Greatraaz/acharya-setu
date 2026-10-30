@@ -110,6 +110,13 @@ class User extends Authenticatable
                 continue;
             }
 
+            if ($attribute === 'bio') {
+                $results['bio'] = $this->bio;
+                $results['bio_text'] = $this->bio_text;
+                $results['bio_format'] = 'html';
+                continue;
+            }
+
             $results[$attribute] = $this->getAttribute($attribute);
         }
 
@@ -125,8 +132,22 @@ class User extends Authenticatable
         }
 
         $array['preferences'] = $this->preferencesForResponse();
+        $array['bio_text'] = $this->bio_text;
+        $array['bio_format'] = 'html';
 
         return $array;
+    }
+
+    public function setBioAttribute($value): void
+    {
+        $this->attributes['bio'] = ($value === null || $value === '')
+            ? null
+            : \App\Support\RichText::sanitize((string) $value);
+    }
+
+    public function getBioTextAttribute(): string
+    {
+        return \App\Support\RichText::plain($this->attributes['bio'] ?? null);
     }
  
     protected static function booted(): void

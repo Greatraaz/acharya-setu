@@ -108,8 +108,8 @@ class MenteeOnboardingService
     {
         try {
             return EducationStream::query()
+                ->catalog()
                 ->where('is_active', true)
-                ->whereNull('mentee_id')
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->pluck('name')

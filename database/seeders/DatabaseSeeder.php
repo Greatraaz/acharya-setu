@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(UtilitiesContentSeeder::class);
         $this->call(SubscriptionPlansSeeder::class);
+        $this->call(CurriculumTemplateSeeder::class);
 
         $this->command->info('✅ Seeded! Admin: admin@acharyasetu.com / Admin@123 | Mentor: rajesh@mentor.com / Mentor@123 | Student: rahul@student.com / Student@123');
     }

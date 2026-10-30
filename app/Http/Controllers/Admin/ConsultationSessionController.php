@@ -64,11 +64,21 @@ class ConsultationSessionController extends Controller
         $data = $this->validateSession($request);
         $data = $this->normalizeScheduledAt($request, $data);
         $data['status'] = ConsultationSession::STATUS_UPCOMING;
+        if (empty($data['meeting_provider'])) {
+            $data['meeting_provider'] = 'agora';
+        }
         if (! isset($data['payment_status'])) {
             $data['payment_status'] = ((float) ($data['amount'] ?? 0) <= 0) ? 'waived' : 'paid';
         }
         ConsultationSession::create($data);
-        return redirect()->route('admin.sessions.index')->with('success', 'Session booked successfully.');
+        $immediate = $request->boolean('start_immediately');
+
+        return redirect()->route('admin.sessions.index')->with(
+            'success',
+            $immediate
+                ? 'Session created. Mentor and mentee can join immediately.'
+                : 'Session booked successfully.'
+        );
     }
  
     // ── Show ─────────────────────────────────────────────────
@@ -213,47 +223,47 @@ class ConsultationSessionController extends Controller
     private function validateSession(Request $request): array
     {
         $tz = ConsultationSession::SCHEDULE_TIMEZONE;
+        $startNow = $request->boolean('start_immediately');
 
         $data = $request->validate([
-            'mentor_id'        => 'required|exists:users,id',
-            'mentee_id'        => 'required|exists:users,id|different:mentor_id',
-            'title'            => 'required|string|max:200',
-            'agenda'           => 'nullable|string|max:2000',
-            'scheduled_at'     => 'required|date',
-            'duration_minutes' => 'required|integer|min:15|max:480',
-            'timezone'         => 'nullable|string',
-            'meeting_provider' => 'nullable|in:agora,zoom,google,other',
-            'meeting_link'     => 'nullable|url',
-            'amount'           => 'nullable|numeric|min:0',
-            'currency'         => 'nullable|string|size:3',
-            'status'           => 'nullable|in:upcoming,completed,cancelled',
+            'mentor_id'          => 'required|exists:users,id',
+            'mentee_id'          => 'required|exists:users,id|different:mentor_id',
+            'title'              => 'required|string|max:200',
+            'agenda'             => 'nullable|string|max:2000',
+            'scheduled_at'       => $startNow ? 'nullable|date' : 'required|date',
+            'duration_minutes'   => 'required|integer|min:15|max:480',
+            'timezone'           => 'nullable|string',
+            'meeting_provider'   => 'nullable|in:agora,zoom,google,other',
+            'meeting_link'       => 'nullable|url',
+            'amount'             => 'nullable|numeric|min:0',
+            'currency'           => 'nullable|string|size:3',
+            'status'             => 'nullable|in:upcoming,completed,cancelled',
+            'start_immediately'  => 'nullable|boolean',
         ]);
 
-        $scheduled = $this->parseScheduledInput((string) $request->input('scheduled_at'), $tz);
-        if ($scheduled->getTimestamp() <= Carbon::now($tz)->getTimestamp()) {
+        $now = Carbon::now($tz);
+        $scheduled = $startNow
+            ? $now->copy()
+            : $this->parseScheduledInput((string) $request->input('scheduled_at'), $tz);
+
+        $end = $scheduled->copy()->addMinutes((int) $data['duration_minutes']);
+        if ($end->getTimestamp() <= $now->getTimestamp()) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'scheduled_at' => 'The scheduled time must be in the future.',
+                'scheduled_at' => 'That slot has already ended. Use Start now, or pick a time whose duration is still open.',
             ]);
         }
+
+        $data['scheduled_at'] = $scheduled->format('Y-m-d H:i:s');
 
         return $data;
     }
 
     /**
-     * Store the selected local date/time exactly as entered for the session timezone.
-     *
      * @return array<string, mixed>
      */
     private function normalizeScheduledAt(Request $request, array $data): array
     {
-        $tz = ConsultationSession::SCHEDULE_TIMEZONE;
-
-        if (! empty($request->input('scheduled_at'))) {
-            $data['scheduled_at'] = $this->parseScheduledInput((string) $request->input('scheduled_at'), $tz)
-                ->format('Y-m-d H:i:s');
-        }
-
-        $data['timezone'] = $tz;
+        $data['timezone'] = ConsultationSession::SCHEDULE_TIMEZONE;
 
         return $data;
     }

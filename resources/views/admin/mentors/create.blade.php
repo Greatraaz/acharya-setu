@@ -33,7 +33,8 @@
 </div>
 @endif
 
-<form method="POST" action="{{ route('admin.mentor.store') }}" enctype="multipart/form-data" class="max-w-5xl">
+<form method="POST" action="{{ route('admin.mentor.store') }}" enctype="multipart/form-data" class="max-w-5xl"
+      onsubmit="if (window.tinymce) tinymce.triggerSave();">
     @csrf
 
     <div class="grid grid-cols-3 gap-6">
@@ -136,11 +137,11 @@
                 </div>
                 <div class="p-6 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Primary Field <span class="text-red-400">*</span></label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Industry / domain <span class="text-red-400">*</span></label>
                         <div class="relative">
                             <select name="field" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 appearance-none cursor-pointer">
                                 <option value="">Select primary domain…</option>
-                                @foreach(['Software Engineering','Product Management','Data Science','Design (UI/UX)','Marketing','Sales','Finance','Operations','HR','Legal','Entrepreneurship','Research','Other'] as $f)
+                                @foreach(\App\Support\MentorIndustry::all() as $f)
                                 <option value="{{ $f }}" {{ old('field') === $f ? 'selected' : '' }}>{{ $f }}</option>
                                 @endforeach
                             </select>
@@ -179,10 +180,12 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Bio <span class="text-red-400">*</span></label>
-                        <textarea name="bio" rows="5" minlength="30" maxlength="1000"
-                                  placeholder="A compelling bio — their journey, passion, and how they help mentees. Min 30 characters."
-                                  class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-gray-400 resize-none leading-relaxed">{{ old('bio') }}</textarea>
-                        <div class="flex justify-end"><span id="bio-count" class="text-xs text-gray-400 mt-1">0 / 1000</span></div>
+                        <textarea name="bio" id="bio-area" rows="8"
+                                  class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white">{{ old('bio') }}</textarea>
+                        <div class="flex justify-between mt-1">
+                            <p class="text-xs text-gray-400">Min 30 characters. Formatting is supported.</p>
+                            <span id="bio-count" class="text-xs text-gray-400">0 / 2000</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -385,14 +388,6 @@ document.querySelector('form').addEventListener('submit', function (e) {
     }
 });
 
-// ── Bio counter ───────────────────────────────────────────────
-const bioEl  = document.querySelector('[name=bio]');
-const bioCnt = document.getElementById('bio-count');
-if (bioEl) {
-    bioCnt.textContent = bioEl.value.length + ' / 1000';
-    bioEl.addEventListener('input', () => bioCnt.textContent = bioEl.value.length + ' / 1000');
-}
-
 // ── Rate → hourly ─────────────────────────────────────────────
 const rateEl   = document.getElementById('rate-input');
 const hourlyEl = document.getElementById('hourly-rate');
@@ -495,4 +490,7 @@ document.querySelectorAll('[data-radio-card] input[type=radio]').forEach(radio =
 });
 </script>
 
+@push('scripts')
+@include('partials.rich-text-editor', ['selector' => '#bio-area', 'theme' => 'light', 'height' => 280, 'minPlain' => 30, 'maxPlain' => 2000])
+@endpush
 @endsection

@@ -90,7 +90,7 @@ Full mentor profile review + quick approve/reject
                     @if($mentor->bio)
                     <div>
                         <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Bio</p>
-                        <p class="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-xl p-4">{{ $mentor->bio }}</p>
+                        <div class="rich-text text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-xl p-4">{!! $mentor->bio !!}</div>
                     </div>
                     @endif
 
@@ -118,16 +118,24 @@ Full mentor profile review + quick approve/reject
                         <div class="flex items-start gap-3 flex-1 min-w-0">
                             <div class="flex-1 min-w-0">
                                 <div class="text-[10px] text-gray-400 mb-0.5">Current</div>
+                                @if($field === 'bio')
+                                <div class="rich-text text-xs text-gray-600 bg-red-50 border border-red-100 px-2.5 py-1.5 rounded-lg">{!! $mentor->bio !!}</div>
+                                @else
                                 <div class="text-xs font-mono text-gray-600 bg-red-50 border border-red-100 px-2.5 py-1.5 rounded-lg break-all">
                                     {{ is_array($mentor->$field) ? json_encode($mentor->$field) : ($mentor->$field ?? 'null') }}
                                 </div>
+                                @endif
                             </div>
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-300 flex-shrink-0 mt-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                             <div class="flex-1 min-w-0">
                                 <div class="text-[10px] text-gray-400 mb-0.5">Proposed</div>
+                                @if($field === 'bio')
+                                <div class="rich-text text-xs text-gray-800 bg-green-50 border border-green-100 px-2.5 py-1.5 rounded-lg">{!! $value !!}</div>
+                                @else
                                 <div class="text-xs font-mono text-gray-800 bg-green-50 border border-green-100 px-2.5 py-1.5 rounded-lg break-all">
                                     {{ is_array($value) ? json_encode($value) : $value }}
                                 </div>
+                                @endif
                             </div>
                         </div>
                     </div>

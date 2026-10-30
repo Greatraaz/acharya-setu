@@ -36,7 +36,8 @@
         </div>
         @endif
 
-        <form action="{{ route('mentor.profile.update') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('mentor.profile.update') }}" method="POST" enctype="multipart/form-data"
+              onsubmit="if (window.tinymce) tinymce.triggerSave();">
             @csrf @method('PUT')
 
             {{-- ── Section: Photo + Basic ──────────── --}}
@@ -83,10 +84,10 @@
 
                 <div class="form-group">
                     <label class="form-label">Bio / About You * <span style="font-weight:400;color:var(--text-3);">(min 80 chars)</span></label>
-                    <textarea name="bio" class="form-textarea" rows="5" id="bio-area" required minlength="80" maxlength="2000">{{ old('bio', auth()->user()->bio) }}</textarea>
-                    <div style="display:flex;justify-content:space-between;margin-top:4px;">
-                        <div class="form-hint">Tell mentees who you are and how you can help them.</div>
-                        <div style="font-size:11px;color:var(--text-3);"><span id="bio-count">{{ strlen(auth()->user()->bio??'') }}</span>/2000</div>
+                    <textarea name="bio" class="form-textarea" rows="8" id="bio-area">{{ old('bio', auth()->user()->bio) }}</textarea>
+                    <div style="display:flex;justify-content:space-between;margin-top:8px;">
+                        <div class="form-hint">Tell mentees who you are and how you can help them. Formatting is supported.</div>
+                        <div style="font-size:11px;color:var(--text-3);"><span id="bio-count">{{ mb_strlen(auth()->user()->bio_text ?? '') }}</span> / 2000</div>
                     </div>
                 </div>
 
@@ -123,10 +124,19 @@
                         </select>
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Industry</label>
-                        <select name="industry" class="form-select">
-                            @foreach(['Technology','Finance','Consulting','Healthcare','Education','Startup','Government','Other'] as $ind)
-                            <option @selected(old('industry',auth()->user()->industry)===$ind)>{{ $ind }}</option>
+                        <label class="form-label">Industry / domain *</label>
+                        @php
+                            $industryOptions = \App\Support\MentorIndustry::all();
+                            $currentIndustry = old('field', auth()->user()->field);
+                            $canonicalIndustry = \App\Support\MentorIndustry::canonicalize($currentIndustry);
+                            if ($currentIndustry && ! in_array($currentIndustry, $industryOptions, true)) {
+                                array_unshift($industryOptions, $currentIndustry);
+                            }
+                        @endphp
+                        <select name="field" class="form-select" required>
+                            <option value="">— Select industry —</option>
+                            @foreach($industryOptions as $ind)
+                            <option value="{{ $ind }}" @selected($currentIndustry === $ind || $canonicalIndustry === $ind)>{{ $ind }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -198,14 +208,8 @@
 </div>
 
 @push('scripts')
+@include('partials.rich-text-editor', ['selector' => '#bio-area', 'theme' => 'auto', 'height' => 280, 'minPlain' => 80, 'maxPlain' => 2000])
 <script>
-// Bio counter
-const bioArea  = document.getElementById('bio-area');
-const bioCount = document.getElementById('bio-count');
-if (bioArea) bioArea.addEventListener('input', () => {
-    bioCount.textContent = bioArea.value.length;
-    bioCount.style.color = bioArea.value.length < 80 ? 'var(--error)' : 'var(--text-3)';
-});
 
 // Rate previews
 const rateInput = document.getElementById('rate-input');

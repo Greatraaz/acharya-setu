@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\{EducationStream, CurriculumMonth, CurriculumWeek, CurriculumTask, CurriculumMcq, MenteeEnrollment, Plan, StudentCurriculumProgress, User};
+use App\Models\{EducationStream, CurriculumMonth, CurriculumWeek, CurriculumTask, CurriculumMcq, CurriculumMcqTopic, MenteeEnrollment, Plan, StudentCurriculumProgress, User};
+use App\Services\CurriculumTemplateImportService;
+use App\Support\MentorIndustry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -66,7 +68,7 @@ class CurriculumController extends Controller
     public function catalog()
     {
         $streams = EducationStream::query()
-            ->whereNull('mentee_id')
+            ->catalog()
             ->withCount(['enrollments'])
             ->orderBy('sort_order')
             ->orderBy('name')
@@ -83,7 +85,7 @@ class CurriculumController extends Controller
                 'required',
                 'string',
                 'max:100',
-                Rule::unique('education_streams', 'name')->whereNull('mentee_id'),
+                Rule::unique('education_streams', 'name')->whereNull('mentee_id')->where('is_template', false),
             ],
             'icon'        => 'nullable|string|max:10',
             'color'       => 'nullable|string|max:20',
@@ -92,11 +94,12 @@ class CurriculumController extends Controller
             'sort_order'  => 'nullable|integer',
         ]);
 
-        $data['mentee_id']  = null;
-        $data['mentor_id']  = null;
-        $data['is_active']  = $request->boolean('is_active', true);
-        $data['sort_order'] = $data['sort_order'] ?? 0;
-        $data['slug']       = $this->resolveCatalogSlug($data['name']);
+        $data['mentee_id']   = null;
+        $data['mentor_id']   = null;
+        $data['is_template'] = false;
+        $data['is_active']   = $request->boolean('is_active', true);
+        $data['sort_order']  = $data['sort_order'] ?? 0;
+        $data['slug']        = $this->resolveCatalogSlug($data['name']);
 
         EducationStream::create($data);
 
@@ -105,14 +108,14 @@ class CurriculumController extends Controller
 
     public function updateCatalog(Request $request, EducationStream $stream)
     {
-        abort_unless($stream->mentee_id === null, 404);
+        abort_unless($stream->mentee_id === null && ! $stream->is_template, 404);
 
         $data = $request->validate([
             'name'        => [
                 'required',
                 'string',
                 'max:100',
-                Rule::unique('education_streams', 'name')->whereNull('mentee_id')->ignore($stream->id),
+                Rule::unique('education_streams', 'name')->whereNull('mentee_id')->where('is_template', false)->ignore($stream->id),
             ],
             'icon'        => 'nullable|string|max:10',
             'color'       => 'nullable|string|max:20',
@@ -132,11 +135,122 @@ class CurriculumController extends Controller
 
     public function destroyCatalog(EducationStream $stream)
     {
-        abort_unless($stream->mentee_id === null, 404);
+        abort_unless($stream->mentee_id === null && ! $stream->is_template, 404);
 
         $stream->delete();
 
         return redirect()->route('admin.curriculum.catalog')->with('success', 'Global stream deleted.');
+    }
+
+    // ── Starter templates (cloned by mentors onto mentees) ────
+    public function templates()
+    {
+        $templates = EducationStream::query()
+            ->templates()
+            ->whereNull('mentor_id')
+            ->withCount('months')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        $industries = MentorIndustry::all();
+        $grouped = [];
+        foreach ($industries as $industry) {
+            $grouped[$industry] = $templates
+                ->filter(fn (EducationStream $t) => MentorIndustry::canonicalize($t->expertise_field ?: $t->expertise_stream) === $industry)
+                ->values();
+        }
+        $unassigned = $templates
+            ->filter(function (EducationStream $t) use ($industries) {
+                $canon = MentorIndustry::canonicalize($t->expertise_field ?: $t->expertise_stream);
+
+                return $canon === null || ! in_array($canon, $industries, true);
+            })
+            ->values();
+
+        return view('admin.curriculum.templates.index', compact('templates', 'industries', 'grouped', 'unassigned'));
+    }
+
+    public function storeTemplate(Request $request)
+    {
+        $data = $this->validateTemplate($request);
+
+        $data['mentee_id']   = null;
+        $data['mentor_id']   = null;
+        $data['is_template'] = true;
+        $data['is_active']   = $request->boolean('is_active', true);
+        $data['sort_order']  = $data['sort_order'] ?? 0;
+        $data['slug']        = $this->resolveCatalogSlug($data['name']);
+        $data['expertise_tags'] = $this->parseExpertiseTags($data['expertise_tags'] ?? null);
+        $data['expertise_field'] = $data['expertise_field'];
+        $data['expertise_stream'] = $data['expertise_field'];
+
+        EducationStream::create($data);
+
+        return redirect()->route('admin.curriculum.templates')->with('success', 'Starter template created. Add months and weeks next.');
+    }
+
+    public function updateTemplate(Request $request, EducationStream $stream)
+    {
+        abort_unless($stream->is_template, 404);
+
+        $data = $this->validateTemplate($request, $stream->id);
+
+        $data['is_active']   = $request->boolean('is_active', true);
+        $data['sort_order']  = $data['sort_order'] ?? $stream->sort_order;
+        $data['slug']        = $this->resolveCatalogSlug($data['name'], $stream->id);
+        $data['expertise_tags'] = $this->parseExpertiseTags($data['expertise_tags'] ?? null);
+        $data['expertise_field'] = $data['expertise_field'];
+        $data['expertise_stream'] = $data['expertise_field'];
+
+        $stream->update($data);
+
+        return redirect()->route('admin.curriculum.templates')->with('success', 'Template updated.');
+    }
+
+    public function destroyTemplate(EducationStream $stream)
+    {
+        abort_unless($stream->is_template, 404);
+
+        $stream->delete();
+
+        return redirect()->route('admin.curriculum.templates')->with('success', 'Template deleted.');
+    }
+
+    public function downloadTemplateSample(CurriculumTemplateImportService $import)
+    {
+        return $import->downloadSample();
+    }
+
+    public function importTemplates(Request $request, CurriculumTemplateImportService $import)
+    {
+        $file = $this->validatedTemplateSpreadsheet($request);
+        $result = $import->import($file);
+        $redirect = redirect()->route('admin.curriculum.templates')
+            ->with('import_errors', $result['errors'] ?: null);
+
+        if ($result['created'] || $result['updated']) {
+            return $redirect->with('success', $import->summaryMessage($result));
+        }
+
+        return $redirect->withErrors(['file' => $import->summaryMessage($result)]);
+    }
+
+    private function validatedTemplateSpreadsheet(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        $ext = strtolower($file->getClientOriginalExtension());
+        if (! in_array($ext, ['xlsx', 'xls', 'csv'], true)) {
+            throw ValidationException::withMessages([
+                'file' => 'Upload an .xlsx, .xls, or .csv spreadsheet.',
+            ]);
+        }
+
+        return $file;
     }
  
     public function storeStream(Request $request)
@@ -153,9 +267,10 @@ class CurriculumController extends Controller
 
         $mentee = User::findOrFail($data['mentee_id']);
 
-        $data['is_active']  = $request->boolean('is_active', true);
-        $data['mentor_id']  = $mentee->assigned_mentor_id;
-        $data['slug']       = $this->resolveStreamSlug($data['name'], $data['mentee_id']);
+        $data['is_active']   = $request->boolean('is_active', true);
+        $data['is_template'] = false;
+        $data['mentor_id']   = $mentee->assigned_mentor_id;
+        $data['slug']        = $this->resolveStreamSlug($data['name'], $data['mentee_id']);
  
         $stream = EducationStream::create($data);
         $this->ensureEnrollmentForStream($stream);
@@ -200,7 +315,7 @@ class CurriculumController extends Controller
     // ── Months ────────────────────────────────────────────────
     public function months(EducationStream $stream)
     {
-        abort_unless($stream->mentee_id !== null, 404);
+        abort_unless($stream->mentee_id !== null || $stream->is_template, 404);
 
         $stream->load('mentee:id,name,email');
         $months = $stream->months()->with('weeks.tasks', 'weeks.mcqs')->orderBy('month_number')->get();
@@ -210,7 +325,7 @@ class CurriculumController extends Controller
     public function storeMonth(Request $request, EducationStream $stream)
     {
         $data = $request->validate([
-            'mentee_id'         => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'mentee_id'         => ['nullable', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'month_number'      => 'required|integer|min:1|max:12',
             'title'             => 'required|string|max:200',
             'description'       => 'nullable|string',
@@ -220,7 +335,12 @@ class CurriculumController extends Controller
             'is_active'         => 'nullable|boolean',
         ]);
 
-        $this->assertMenteeMatchesStream($stream, (int) $data['mentee_id']);
+        if ($stream->is_template) {
+            $data['mentee_id'] = null;
+        } else {
+            $data['mentee_id'] = $data['mentee_id'] ?? $stream->mentee_id;
+            $this->assertMenteeMatchesStream($stream, (int) $data['mentee_id']);
+        }
  
         $data['stream_id']         = $stream->id;
         $data['is_active']         = $request->boolean('is_active', true);
@@ -237,7 +357,7 @@ class CurriculumController extends Controller
         $month->load('stream');
 
         $data = $request->validate([
-            'mentee_id'         => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'mentee_id'         => ['nullable', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'month_number'      => 'required|integer|min:1|max:12',
             'title'             => 'required|string|max:200',
             'description'       => 'nullable|string',
@@ -247,7 +367,12 @@ class CurriculumController extends Controller
             'is_active'         => 'nullable|boolean',
         ]);
 
-        $this->assertMenteeMatchesStream($month->stream, (int) $data['mentee_id']);
+        if ($month->stream?->is_template) {
+            $data['mentee_id'] = null;
+        } else {
+            $data['mentee_id'] = $data['mentee_id'] ?? $month->stream?->mentee_id;
+            $this->assertMenteeMatchesStream($month->stream, (int) $data['mentee_id']);
+        }
  
         $data['is_active']         = $request->boolean('is_active', true);
         $data['learning_outcomes'] = array_values(
@@ -267,7 +392,7 @@ class CurriculumController extends Controller
     // ── Weeks ─────────────────────────────────────────────────
     public function weeks(CurriculumMonth $month)
     {
-        $month->load(['stream.mentee:id,name,email', 'weeks.tasks', 'weeks.mcqs']);
+        $month->load(['stream.mentee:id,name,email', 'weeks.tasks', 'weeks.mcqs.topic']);
         $plans = Plan::query()->orderBy('id')->get(['id', 'name', 'slug', 'is_active']);
         if ($plans->contains(fn ($p) => (bool) $p->is_active)) {
             $plans = $plans->where('is_active', true)->values();
@@ -408,6 +533,7 @@ class CurriculumController extends Controller
         $week->load('month.stream');
 
         $data = $request->validate([
+            'topic'         => 'nullable|string|max:255',
             'question'      => 'required|string',
             'options'       => 'required|array|min:2|max:6',
             'options.*'     => 'required|string|max:500',
@@ -416,6 +542,7 @@ class CurriculumController extends Controller
             'difficulty'    => 'required|in:easy,medium,hard',
             'points'        => 'nullable|integer|min:1',
             'order_index'   => 'nullable|integer|min:0',
+            'is_active'     => 'nullable|boolean',
         ]);
  
         $data['week_id']   = $week->id;
@@ -424,6 +551,9 @@ class CurriculumController extends Controller
             $week->mentee_id ?? $week->month->mentee_id,
             required: false
         );
+        $data['topic_id']  = $this->resolveMcqTopicId($week, $data['mentee_id'], $data['topic'] ?? null);
+        $data['is_active'] = $request->boolean('is_active', true);
+        unset($data['topic']);
  
         CurriculumMcq::create($data);
         return redirect()->back()->with('success', 'MCQ created.');
@@ -432,6 +562,7 @@ class CurriculumController extends Controller
     public function updateMcq(Request $request, CurriculumMcq $mcq)
     {
         $data = $request->validate([
+            'topic'         => 'nullable|string|max:255',
             'question'      => 'required|string',
             'options'       => 'required|array|min:2|max:6',
             'options.*'     => 'required|string|max:500',
@@ -440,7 +571,19 @@ class CurriculumController extends Controller
             'difficulty'    => 'required|in:easy,medium,hard',
             'points'        => 'nullable|integer|min:1',
             'order_index'   => 'nullable|integer|min:0',
+            'is_active'     => 'nullable|boolean',
         ]);
+
+        $mcq->load('week');
+        if ($mcq->week) {
+            $data['topic_id'] = $this->resolveMcqTopicId(
+                $mcq->week,
+                $mcq->mentee_id,
+                $data['topic'] ?? null
+            );
+        }
+        $data['is_active'] = $request->boolean('is_active', true);
+        unset($data['topic']);
  
         $mcq->update($data);
         return redirect()->back()->with('success', 'MCQ updated.');
@@ -546,11 +689,46 @@ class CurriculumController extends Controller
             ]);
         }
 
+        if ($stream->is_template) {
+            return;
+        }
+
         if (! $stream->mentee_id) {
             throw ValidationException::withMessages([
                 'mentee_id' => 'This is a global catalog stream. Build the 6-month plan on the mentee copy, not the catalog row.',
             ]);
         }
+    }
+
+    private function validateTemplate(Request $request, ?int $ignoreId = null): array
+    {
+        return $request->validate([
+            'name'             => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('education_streams', 'name')->where('is_template', true)->ignore($ignoreId),
+            ],
+            'icon'             => 'nullable|string|max:10',
+            'color'            => 'nullable|string|max:20',
+            'description'      => 'nullable|string',
+            'expertise_field'  => ['required', 'string', Rule::in(MentorIndustry::all())],
+            'expertise_tags'   => 'nullable|string',
+            'is_active'        => 'nullable|boolean',
+            'sort_order'       => 'nullable|integer',
+        ]);
+    }
+
+    private function parseExpertiseTags(?string $raw): array
+    {
+        if ($raw === null || trim($raw) === '') {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map(
+            fn ($tag) => trim($tag),
+            preg_split('/,/', $raw) ?: []
+        ))));
     }
 
     private function resolveMenteeIdForStream(EducationStream $stream, ?int $fallbackMenteeId = null, bool $required = true): ?int
@@ -601,5 +779,37 @@ class CurriculumController extends Controller
                 'current_week'      => 1,
             ]
         );
+    }
+
+    private function resolveMcqTopicId(CurriculumWeek $week, ?int $menteeId, ?string $topicName): ?int
+    {
+        $name = trim((string) $topicName);
+        if ($name === '') {
+            return null;
+        }
+
+        $topic = CurriculumMcqTopic::query()
+            ->where('week_id', $week->id)
+            ->when(
+                $menteeId,
+                fn ($q) => $q->where('mentee_id', $menteeId),
+                fn ($q) => $q->whereNull('mentee_id')
+            )
+            ->whereRaw('LOWER(TRIM(name)) = ?', [strtolower($name)])
+            ->first();
+
+        if ($topic) {
+            return $topic->id;
+        }
+
+        $topic = CurriculumMcqTopic::create([
+            'week_id'     => $week->id,
+            'mentee_id'   => $menteeId,
+            'name'        => $name,
+            'order_index' => ((int) CurriculumMcqTopic::where('week_id', $week->id)->max('order_index')) + 1,
+            'is_active'   => true,
+        ]);
+
+        return $topic->id;
     }
 }

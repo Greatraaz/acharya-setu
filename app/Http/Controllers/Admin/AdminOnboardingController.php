@@ -8,6 +8,7 @@ use App\Services\ActivityLogger;
 use App\Services\MenteeOnboardingService;
 use App\Services\PublicFileStorage;
 use App\Support\IndianPhone;
+use App\Support\RichText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -43,7 +44,7 @@ class AdminOnboardingController extends Controller
             'field'            => 'required|string|max:100',
             'expertise'        => 'required|array|min:1',
             'expertise.*'      => 'string|max:50',
-            'bio'              => 'required|string|min:30|max:1000',
+            'bio'              => RichText::rules(30),
  
             // Rates
             'rate_per_minute'  => 'required|numeric|min:0',
@@ -105,7 +106,7 @@ class AdminOnboardingController extends Controller
             'field'            => 'required|string|max:100',
             'expertise'        => 'nullable|array',
             'expertise.*'      => 'string|max:50',
-            'bio'              => 'required|string|min:30|max:1000',
+            'bio'              => RichText::rules(30),
             'rate_per_minute'  => 'required|numeric|min:0',
             'preferences'      => 'nullable|array',
             'mentor_status'    => 'required|in:pending,approved,rejected,suspended',

@@ -21,6 +21,8 @@ class MentorResource
             'name'                 => $mentor->name,
             'slug'                 => $mentor->slug,
             'bio'                  => $mentor->bio,
+            'bio_text'             => $mentor->bio_text,
+            'bio_format'           => 'html',
             'expertise'            => $mentor->expertise ?? [],
             'field'                => $mentor->field,
             'rating'               => (float) ($mentor->rating ?? 0),

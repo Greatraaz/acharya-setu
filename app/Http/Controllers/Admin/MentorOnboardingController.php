@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use App\Services\ActivityLogger;
 use App\Services\PublicFileStorage;
 use App\Support\IndianPhone;
+use App\Support\RichText;
 use Illuminate\Http\Request;
  
 class MentorOnboardingController extends Controller
@@ -92,7 +93,7 @@ class MentorOnboardingController extends Controller
             'field'     => 'required|string|max:100',
             'expertise' => 'required|array|min:1|max:10',
             'expertise.*' => 'string|max:50',
-            'bio'       => 'required|string|min:50|max:1000',
+            'bio'       => RichText::rules(50),
         ]);
  
         /** @var User $user */

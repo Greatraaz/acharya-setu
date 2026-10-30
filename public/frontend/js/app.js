@@ -1390,7 +1390,7 @@
                <div class="mentor-card-role">${m.designation || ""}${m.company ? " · " + m.company : ""}</div>
              </div>
            </div>
-           <div class="mentor-card-bio">${(m.bio || "").substring(0, 90)}${(m.bio || "").length > 90 ? "…" : ""}</div>
+           <div class="mentor-card-bio">${(function () { const t = (m.bio_text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || (m.bio || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); return t.substring(0, 90) + (t.length > 90 ? "…" : ""); })()}</div>
            <div class="mentor-tags">
              ${tags.slice(0, 4).map((e) => `<span class="tag">${e}</span>`).join("")}
            </div>
@@ -1617,6 +1617,7 @@
        document.querySelectorAll("[data-ajax-form]").forEach((form) => {
            form.addEventListener("submit", (e) => {
                e.preventDefault();
+               if (window.tinymce) tinymce.triggerSave();
                const url = form.dataset.ajaxForm || form.action;
                const method = form.dataset.method || form.method || "POST";
                const btn = form.querySelector('[type="submit"]');

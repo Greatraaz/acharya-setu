@@ -2,8 +2,7 @@
 @php
     $upcomingCount = $upcomingCount
         ?? \App\Models\ConsultationSession::where('mentee_id', auth()->id())
-            ->where('status', 'upcoming')
-            ->where('scheduled_at', '>', now())
+            ->upcoming()
             ->count();
 @endphp
 <aside class="sidebar" id="dashSidebar">

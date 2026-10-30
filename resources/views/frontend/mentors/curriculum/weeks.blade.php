@@ -210,6 +210,14 @@
                             <label class="form-label">Focus / description</label>
                             <textarea name="focus" class="form-textarea" rows="2">{{ $week->focus }}</textarea>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Mentor guide (private)</label>
+                            <textarea name="mentor_guide" class="form-textarea" rows="3" placeholder="Guidance for running this week">{{ $week->mentor_guide }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Intro video URL</label>
+                            <input type="url" name="video_url" class="form-input" value="{{ $week->video_url }}" placeholder="https://youtube.com/…">
+                        </div>
                         <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px;cursor:pointer;">
                             <input type="hidden" name="is_active" value="0">
                             <input type="checkbox" name="is_active" value="1" @checked($week->is_active)>
@@ -261,6 +269,14 @@
                     <label class="form-label">Focus</label>
                     <textarea name="focus" class="form-textarea" rows="2" placeholder="Core focus for this week"></textarea>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Mentor guide (private)</label>
+                    <textarea name="mentor_guide" class="form-textarea" rows="3" placeholder="Guidance for running this week"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Intro video URL</label>
+                    <input type="url" name="video_url" class="form-input" placeholder="https://youtube.com/…">
+                </div>
                 <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
                     <input type="hidden" name="is_active" value="0">
                     <input type="checkbox" name="is_active" value="1" checked>
@@ -311,6 +327,16 @@
                             <option value="{{ $val }}">{{ $label }}</option>
                             @endforeach
                         </select>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div class="form-group">
+                        <label class="form-label">Est. minutes</label>
+                        <input type="number" name="estimated_minutes" class="form-input" min="0" value="30">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Order</label>
+                        <input type="number" name="order_index" class="form-input" min="0" value="0">
                     </div>
                 </div>
                 <div class="form-group">
@@ -587,6 +613,8 @@ function openEditTask(task) {
     form.description.value = task.description || '';
     form.type.value = task.type || 'task';
     form.submission_type.value = task.submission_type || 'none';
+    form.estimated_minutes.value = task.estimated_minutes || 0;
+    form.order_index.value = task.order_index || 0;
     document.getElementById('task-mentee-id').value = task.mentee_id || '';
     form.querySelector('[name=is_required][type=checkbox]').checked = !!task.is_required;
     form.querySelector('[name=is_active][type=checkbox]').checked = !!task.is_active;

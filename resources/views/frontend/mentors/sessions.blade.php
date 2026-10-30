@@ -150,7 +150,7 @@
             $activeFilter = $filter ?? request('filter', 'all');
             $u = auth()->user();
             $profileComplete = (bool) $u->avatar_url
-                && strlen(trim((string) ($u->bio ?? ''))) >= 50
+                && mb_strlen($u->bio_text ?? '') >= 50
                 && ! empty($u->expertise)
                 && filled($u->designation)
                 && (float) ($u->rate_per_minute ?? 0) > 0;

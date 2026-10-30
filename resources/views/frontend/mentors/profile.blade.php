@@ -84,9 +84,13 @@
                 <div id="section-about">
                     <div class="card" style="margin-bottom:20px;">
                         <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;">About</h3>
-                        <p style="font-size:14px;color:var(--text-2);line-height:1.8;">
-                            {{ $mentor->bio ?? 'Experienced professional passionate about mentoring the next generation of talent. With over a decade in the industry, I\'ve helped hundreds of mentees achieve their career goals.' }}
-                        </p>
+                        <div class="rich-text" style="font-size:14px;color:var(--text-2);line-height:1.8;">
+                            @if(\App\Support\RichText::plain($mentor->bio) !== '')
+                                {!! $mentor->bio !!}
+                            @else
+                                Experienced professional passionate about mentoring the next generation of talent. With over a decade in the industry, I've helped hundreds of mentees achieve their career goals.
+                            @endif
+                        </div>
                     </div>
 
                     <div class="card" style="margin-bottom:20px;">

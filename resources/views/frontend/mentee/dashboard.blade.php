@@ -23,6 +23,69 @@
             </div>
         </div>
 
+        <div class="card mentee-dash__mentor-card mentee-dash__mentor-card--top">
+            <div class="mentee-dash__card-head">
+                <h3 class="mentee-dash__card-title">Your mentor</h3>
+                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-outline btn-sm">
+                    {{ ($assignedMentor ?? null) ? 'Change mentor' : 'Choose mentor' }}
+                </a>
+            </div>
+
+            @if($assignedMentor ?? null)
+            <div class="mentee-dash__mentor-row">
+                <a href="{{ $assignedMentor->profile_url }}" class="mentee-dash__mentor-profile">
+                    <div class="mentor-avatar-lg mentee-dash__mentor-avatar">
+                        @if($assignedMentor->avatar_url)
+                            <img src="{{ $assignedMentor->avatar_url }}" alt="">
+                        @else
+                            {{ strtoupper(substr($assignedMentor->name, 0, 1)) }}
+                        @endif
+                    </div>
+                    <div class="mentee-dash__mentor-info">
+                        <div class="mentee-dash__mentor-name">{{ $assignedMentor->name }}</div>
+                        <div class="mentee-dash__mentor-role">
+                            {{ $assignedMentor->designation }}{{ $assignedMentor->company ? ' · '.$assignedMentor->company : '' }}
+                        </div>
+                        <div class="mentee-dash__mentor-meta">
+                            ⭐ {{ number_format((float) ($assignedMentor->rating ?? 0), 1) }}
+                            · ₹{{ $assignedMentor->rate_per_minute }}/min
+                        </div>
+                    </div>
+                </a>
+                <div class="mentee-dash__mentor-actions">
+                    <a href="{{ $assignedMentor->profile_url }}" class="btn btn-primary btn-sm">Book session</a>
+                    <a href="{{ $assignedMentor->profile_url }}" class="btn btn-outline btn-sm">View profile</a>
+                </div>
+            </div>
+            @else
+            <div class="mentee-dash__empty">
+                <div class="mentee-dash__empty-icon">🎓</div>
+                <p>You don't have an assigned mentor yet</p>
+                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-primary btn-sm">Find & request a mentor</a>
+            </div>
+            @endif
+
+            @if(($pendingMentorRequests ?? collect())->isNotEmpty())
+            <div class="mentee-dash__pending">
+                <div class="mentee-dash__pending-label">Pending requests</div>
+                @foreach($pendingMentorRequests as $req)
+                <div class="mentee-dash__pending-row">
+                    <div class="mentee-dash__pending-main">
+                        <strong>{{ $req->mentor?->name }}</strong>
+                        <span> · {{ $req->created_at?->diffForHumans() }}</span>
+                    </div>
+                    <span class="badge badge-muted">Pending</span>
+                    <form method="POST" action="{{ route('mentee.mentor-requests.destroy', $req->id) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-ghost btn-sm">Cancel</button>
+                    </form>
+                </div>
+                @endforeach
+            </div>
+            @endif
+        </div>
+
         <div class="stats-grid mentee-dash__stats">
             <div class="stat-card">
                 <div class="stat-card-icon">📅</div>
@@ -175,69 +238,6 @@
                 </div>
                 @endif
             </div>
-        </div>
-
-        <div class="card mentee-dash__mentor-card">
-            <div class="mentee-dash__card-head">
-                <h3 class="mentee-dash__card-title">My Mentor</h3>
-                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-outline btn-sm">
-                    {{ ($assignedMentor ?? null) ? 'Change mentor' : 'Choose mentor' }}
-                </a>
-            </div>
-
-            @if($assignedMentor ?? null)
-            <div class="mentee-dash__mentor-row">
-                <a href="{{ $assignedMentor->profile_url }}" class="mentee-dash__mentor-profile">
-                    <div class="mentor-avatar-lg mentee-dash__mentor-avatar">
-                        @if($assignedMentor->avatar_url)
-                            <img src="{{ $assignedMentor->avatar_url }}" alt="">
-                        @else
-                            {{ strtoupper(substr($assignedMentor->name, 0, 1)) }}
-                        @endif
-                    </div>
-                    <div class="mentee-dash__mentor-info">
-                        <div class="mentee-dash__mentor-name">{{ $assignedMentor->name }}</div>
-                        <div class="mentee-dash__mentor-role">
-                            {{ $assignedMentor->designation }}{{ $assignedMentor->company ? ' · '.$assignedMentor->company : '' }}
-                        </div>
-                        <div class="mentee-dash__mentor-meta">
-                            ⭐ {{ number_format((float) ($assignedMentor->rating ?? 0), 1) }}
-                            · ₹{{ $assignedMentor->rate_per_minute }}/min
-                        </div>
-                    </div>
-                </a>
-                <div class="mentee-dash__mentor-actions">
-                    <a href="{{ $assignedMentor->profile_url }}" class="btn btn-primary btn-sm">Book session</a>
-                    <a href="{{ route('mentee.mentor.change') }}" class="btn btn-ghost btn-sm">Change</a>
-                </div>
-            </div>
-            @else
-            <div class="mentee-dash__empty">
-                <div class="mentee-dash__empty-icon">🎓</div>
-                <p>You don't have an assigned mentor yet</p>
-                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-primary btn-sm">Find & request a mentor</a>
-            </div>
-            @endif
-
-            @if(($pendingMentorRequests ?? collect())->isNotEmpty())
-            <div class="mentee-dash__pending">
-                <div class="mentee-dash__pending-label">Pending requests</div>
-                @foreach($pendingMentorRequests as $req)
-                <div class="mentee-dash__pending-row">
-                    <div class="mentee-dash__pending-main">
-                        <strong>{{ $req->mentor?->name }}</strong>
-                        <span> · {{ $req->created_at?->diffForHumans() }}</span>
-                    </div>
-                    <span class="badge badge-muted">Pending</span>
-                    <form method="POST" action="{{ route('mentee.mentor-requests.destroy', $req->id) }}">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-ghost btn-sm">Cancel</button>
-                    </form>
-                </div>
-                @endforeach
-            </div>
-            @endif
         </div>
 
         <div class="mentee-dash__panels">

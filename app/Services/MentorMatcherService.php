@@ -107,7 +107,7 @@ class MentorMatcherService
                 }
             }
 
-            if ($this->textContains($mentor->field ?? '', $goal) || $this->textContains($mentor->bio ?? '', $goal)) {
+            if ($this->textContains($mentor->field ?? '', $goal) || $this->textContains($mentor->bio_text ?? '', $goal)) {
                 $score += 5;
             }
         }
@@ -117,7 +117,7 @@ class MentorMatcherService
         $preferredLanguage = $preferences['preferred_language'] ?? null;
         if ($preferredLanguage) {
             $languageHaystack = implode(' ', array_filter([
-                $mentor->bio,
+                $mentor->bio_text,
                 $mentor->field,
                 implode(' ', $expertise),
                 implode(' ', $strengths),

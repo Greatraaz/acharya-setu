@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Mentor;
 
 use App\Http\Controllers\Controller;
 use App\Support\IndianPhone;
+use App\Support\MentorIndustry;
 use App\Support\ProfileUpdate;
+use App\Support\RichText;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
@@ -25,10 +28,14 @@ class ProfileController extends Controller
             'name' => 'required|string|max:100',
             'gender' => 'nullable|in:male,female,other',
             'phone' => IndianPhone::rules(),
-            'bio' => 'required|string|min:80|max:2000',
+            'bio' => RichText::rules(80),
             'designation' => 'required|string|max:100',
             'company' => 'nullable|string|max:100',
             'experience_years' => 'required|integer|min:0|max:50',
+            'field' => ['required', 'string', Rule::in(array_values(array_unique(array_filter([
+                ...MentorIndustry::all(),
+                auth()->user()->field,
+            ]))))],
             'rate_per_minute' => 'required|numeric|min:5|max:500',
             'linkedin' => 'nullable|url|max:255',
             'expertise' => 'required|array|min:1',

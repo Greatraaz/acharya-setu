@@ -17,6 +17,8 @@ use App\Models\{
     TaskSupportingMaterial,
     User,
 };
+use App\Services\CurriculumTemplateImportService;
+use App\Services\CurriculumTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -49,7 +51,82 @@ class CurriculumController extends Controller
             ? $mentees->firstWhere('id', (int) $request->mentee_id)
             : null;
 
-        return view('frontend.mentors.curriculum.tracks', compact('tracks', 'mentees', 'filterMentee', 'search'));
+        $templates = app(CurriculumTemplateService::class)->templatesForMentor(auth()->user());
+
+        return view('frontend.mentors.curriculum.tracks', compact(
+            'tracks',
+            'mentees',
+            'filterMentee',
+            'search',
+            'templates'
+        ));
+    }
+
+    public function showTemplate(EducationStream $template)
+    {
+        $service = app(CurriculumTemplateService::class);
+        abort_unless($service->visibleToMentor(auth()->user(), $template), 404);
+        $summary = $service->summarize($template);
+        $outline = $service->outline($template);
+        $mentees = $this->mentorMenteesQuery()->get(['id', 'name', 'email']);
+
+        return view('frontend.mentors.curriculum.template-show', compact('template', 'summary', 'outline', 'mentees'));
+    }
+
+    public function assignTemplate(Request $request, EducationStream $template)
+    {
+        abort_unless(app(CurriculumTemplateService::class)->visibleToMentor(auth()->user(), $template), 404);
+
+        $data = $request->validate([
+            'mentee_id'   => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'name'        => 'nullable|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        $this->assertMentorMentee((int) $data['mentee_id']);
+
+        $mentee = User::findOrFail($data['mentee_id']);
+        $track = app(CurriculumTemplateService::class)->cloneToMentee(
+            $template,
+            auth()->user(),
+            $mentee,
+            $data['name'] ?? null,
+            $data['description'] ?? null,
+        );
+
+        return redirect()
+            ->route('mentor.curriculum.months', $track)
+            ->with('success', 'Template copied for '.$mentee->name.'. Tweak months and weeks as needed, then the mentee can start.');
+    }
+
+    public function downloadTemplateSample(CurriculumTemplateImportService $import)
+    {
+        return $import->downloadSample();
+    }
+
+    public function importTemplates(Request $request, CurriculumTemplateImportService $import)
+    {
+        $request->validate([
+            'file' => 'required|file|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        $ext = strtolower($file->getClientOriginalExtension());
+        if (! in_array($ext, ['xlsx', 'xls', 'csv'], true)) {
+            throw ValidationException::withMessages([
+                'file' => 'Upload an .xlsx, .xls, or .csv spreadsheet.',
+            ]);
+        }
+
+        $result = $import->import($file, auth()->user());
+        $redirect = redirect()->route('mentor.curriculum.tracks')
+            ->with('import_errors', $result['errors'] ?: null);
+
+        if ($result['created'] || $result['updated']) {
+            return $redirect->with('success', $import->summaryMessage($result));
+        }
+
+        return $redirect->withErrors(['file' => $import->summaryMessage($result)]);
     }
 
     public function storeTrack(Request $request)
@@ -78,6 +155,7 @@ class CurriculumController extends Controller
             'slug'        => $slug,
             'description' => $data['description'] ?? null,
             'is_active'   => $request->boolean('is_active', true),
+            'is_template' => false,
             'sort_order'  => $data['sort_order'] ?? 0,
         ]);
 
@@ -165,6 +243,7 @@ class CurriculumController extends Controller
             'theme'               => 'nullable|string|max:100',
             'description'         => 'nullable|string',
             'learning_outcomes'   => 'nullable|string',
+            'milestone_badge'     => 'nullable|string|max:100',
             'is_active'           => 'nullable',
             'sort_order'          => 'nullable|integer',
         ]);
@@ -179,6 +258,7 @@ class CurriculumController extends Controller
             'theme'             => $data['theme'] ?? null,
             'description'       => $data['description'] ?? null,
             'learning_outcomes' => $this->parseLearningOutcomes($data['learning_outcomes'] ?? null),
+            'milestone_badge'   => $data['milestone_badge'] ?? null,
             'is_active'         => $request->boolean('is_active', true),
             'sort_order'        => $data['sort_order'] ?? $data['month_number'],
         ]);
@@ -202,12 +282,13 @@ class CurriculumController extends Controller
             'theme'             => 'nullable|string|max:100',
             'description'       => 'nullable|string',
             'learning_outcomes' => 'nullable|string',
+            'milestone_badge'   => 'nullable|string|max:100',
             'is_active'         => 'nullable',
             'sort_order'        => 'nullable|integer',
         ]);
 
         $fields = collect($data)->only([
-            'month_number', 'title', 'theme', 'description', 'sort_order',
+            'month_number', 'title', 'theme', 'description', 'milestone_badge', 'sort_order',
         ])->filter(fn ($v) => $v !== null)->all();
 
         if (array_key_exists('learning_outcomes', $data)) {
@@ -270,23 +351,27 @@ class CurriculumController extends Controller
                 'required', 'integer', 'min:1', 'max:52',
                 Rule::unique('curriculum_weeks', 'week_number')->where('month_id', $month->id),
             ],
-            'title'       => 'required|string|max:200',
-            'focus'       => 'nullable|string',
-            'description' => 'nullable|string',
-            'is_active'   => 'nullable',
-            'sort_order'  => 'nullable|integer',
+            'title'        => 'required|string|max:200',
+            'focus'        => 'nullable|string',
+            'description'  => 'nullable|string',
+            'mentor_guide' => 'nullable|string',
+            'video_url'    => 'nullable|url|max:2000',
+            'is_active'    => 'nullable',
+            'sort_order'   => 'nullable|integer',
         ]);
 
         $this->assertMenteeMatchesParent($month->mentee_id, (int) $data['mentee_id'], 'month');
 
         CurriculumWeek::create([
-            'month_id'    => $month->id,
-            'mentee_id'   => $data['mentee_id'],
-            'week_number' => $data['week_number'],
-            'title'       => $data['title'],
-            'focus'       => $data['focus'] ?? $data['description'] ?? null,
-            'is_active'   => $request->boolean('is_active', true),
-            'sort_order'  => $data['sort_order'] ?? $data['week_number'],
+            'month_id'     => $month->id,
+            'mentee_id'    => $data['mentee_id'],
+            'week_number'  => $data['week_number'],
+            'title'        => $data['title'],
+            'focus'        => $data['focus'] ?? $data['description'] ?? null,
+            'mentor_guide' => $data['mentor_guide'] ?? null,
+            'video_url'    => $data['video_url'] ?? null,
+            'is_active'    => $request->boolean('is_active', true),
+            'sort_order'   => $data['sort_order'] ?? $data['week_number'],
         ]);
 
         return redirect()->back()->with('success', 'Week created.');
@@ -304,18 +389,27 @@ class CurriculumController extends Controller
                     ->where('month_id', $week->month_id)
                     ->ignore($week->id),
             ],
-            'title'       => 'sometimes|string|max:200',
-            'focus'       => 'nullable|string',
-            'description' => 'nullable|string',
-            'is_active'   => 'nullable',
-            'sort_order'  => 'nullable|integer',
+            'title'        => 'sometimes|string|max:200',
+            'focus'        => 'nullable|string',
+            'description'  => 'nullable|string',
+            'mentor_guide' => 'nullable|string',
+            'video_url'    => 'nullable|url|max:2000',
+            'is_active'    => 'nullable',
+            'sort_order'   => 'nullable|integer',
         ]);
 
-        $fields = collect($data)->only(['week_number', 'title', 'sort_order'])
+        $fields = collect($data)->only(['week_number', 'title', 'mentor_guide', 'video_url', 'sort_order'])
             ->filter(fn ($v) => $v !== null)->all();
 
         if (array_key_exists('focus', $data) || array_key_exists('description', $data)) {
             $fields['focus'] = $data['focus'] ?? $data['description'] ?? null;
+        }
+
+        if (array_key_exists('mentor_guide', $data) && $data['mentor_guide'] === '') {
+            $fields['mentor_guide'] = null;
+        }
+        if (array_key_exists('video_url', $data) && $data['video_url'] === '') {
+            $fields['video_url'] = null;
         }
 
         if ($request->has('is_active')) {
@@ -349,11 +443,13 @@ class CurriculumController extends Controller
             'mentee_id'       => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'title'           => 'required|string|max:200',
             'description'     => 'nullable|string',
-            'type'            => 'nullable|in:task,reading,video,project,quiz,reflection',
-            'plan_id'         => 'nullable|integer|exists:plans,id',
-            'is_required'     => 'nullable',
-            'is_active'       => 'nullable',
-            'submission_type' => ['nullable', Rule::in(array_keys(CurriculumTask::SUBMISSION_TYPES))],
+            'type'                => 'nullable|in:task,reading,video,project,quiz,reflection',
+            'plan_id'             => 'nullable|integer|exists:plans,id',
+            'estimated_minutes'   => 'nullable|integer|min:0',
+            'order_index'         => 'nullable|integer|min:0',
+            'is_required'         => 'nullable',
+            'is_active'           => 'nullable',
+            'submission_type'     => ['nullable', Rule::in(array_keys(CurriculumTask::SUBMISSION_TYPES))],
         ];
 
         if (! $request->hasFile('attachments')) {
@@ -367,16 +463,18 @@ class CurriculumController extends Controller
         $attachments = $this->processUploadedAttachments($request, $data['attachments'] ?? []);
 
         $task = CurriculumTask::create([
-            'week_id'         => $week->id,
-            'mentee_id'       => $data['mentee_id'],
-            'plan_id'         => $data['plan_id'] ?? null,
-            'title'           => $data['title'],
-            'description'     => $data['description'] ?? null,
-            'type'            => $data['type'] ?? 'task',
-            'attachments'     => $attachments,
-            'is_required'     => $request->boolean('is_required', true),
-            'is_active'       => $request->boolean('is_active', true),
-            'submission_type' => $data['submission_type'] ?? 'none',
+            'week_id'            => $week->id,
+            'mentee_id'          => $data['mentee_id'],
+            'plan_id'            => $data['plan_id'] ?? null,
+            'title'              => $data['title'],
+            'description'        => $data['description'] ?? null,
+            'type'               => $data['type'] ?? 'task',
+            'attachments'        => $attachments,
+            'estimated_minutes'  => $data['estimated_minutes'] ?? 0,
+            'order_index'        => $data['order_index'] ?? 0,
+            'is_required'        => $request->boolean('is_required', true),
+            'is_active'          => $request->boolean('is_active', true),
+            'submission_type'    => $data['submission_type'] ?? 'none',
         ]);
 
         $task->notifyAssignee();
@@ -394,6 +492,8 @@ class CurriculumController extends Controller
             'description'         => 'nullable|string',
             'type'                => 'sometimes|in:task,reading,video,project,quiz,reflection',
             'plan_id'             => 'sometimes|integer|exists:plans,id',
+            'estimated_minutes'   => 'nullable|integer|min:0',
+            'order_index'         => 'nullable|integer|min:0',
             'is_required'         => 'nullable',
             'is_active'           => 'nullable',
             'submission_type'     => ['nullable', Rule::in(array_keys(CurriculumTask::SUBMISSION_TYPES))],
@@ -409,7 +509,7 @@ class CurriculumController extends Controller
         $this->validateTaskAttachmentFiles($request);
 
         $taskFields = collect($data)->only([
-            'title', 'description', 'type', 'plan_id', 'submission_type',
+            'title', 'description', 'type', 'plan_id', 'submission_type', 'estimated_minutes', 'order_index',
         ])->filter(fn ($v) => $v !== null)->all();
 
         if ($request->hasFile('attachments')) {

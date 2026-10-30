@@ -398,6 +398,11 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
         Route::post('/tracks',                          [MentorCurriculumController::class, 'storeTrack'])->name('tracks.store');
         Route::put('/tracks/{track}',                   [MentorCurriculumController::class, 'updateTrack'])->name('tracks.update');
 
+        Route::get('/templates/sample',                 [MentorCurriculumController::class, 'downloadTemplateSample'])->name('templates.sample');
+        Route::post('/templates/import',                [MentorCurriculumController::class, 'importTemplates'])->name('templates.import');
+        Route::get('/templates/{template}',             [MentorCurriculumController::class, 'showTemplate'])->name('templates.show')->whereNumber('template');
+        Route::post('/templates/{template}/assign',     [MentorCurriculumController::class, 'assignTemplate'])->name('templates.assign')->whereNumber('template');
+
         Route::get('/tracks/{track}/months',            [MentorCurriculumController::class, 'months'])->name('months');
         Route::post('/tracks/{track}/months',           [MentorCurriculumController::class, 'storeMonth'])->name('months.store');
         Route::put('/months/{month}',                   [MentorCurriculumController::class, 'updateMonth'])->name('months.update');
@@ -785,6 +790,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
         Route::post('/catalog',                   [CurriculumController::class, 'storeCatalog'])     ->name('catalog.store');
         Route::put('/catalog/{stream}',           [CurriculumController::class, 'updateCatalog'])    ->name('catalog.update');
         Route::delete('/catalog/{stream}',        [CurriculumController::class, 'destroyCatalog'])   ->name('catalog.destroy');
+
+        Route::get('/templates',                  [CurriculumController::class, 'templates'])        ->name('templates');
+        Route::get('/templates/sample',           [CurriculumController::class, 'downloadTemplateSample'])->name('templates.sample');
+        Route::post('/templates/import',          [CurriculumController::class, 'importTemplates'])  ->name('templates.import');
+        Route::post('/templates',                 [CurriculumController::class, 'storeTemplate'])    ->name('templates.store');
+        Route::put('/templates/{stream}',         [CurriculumController::class, 'updateTemplate'])   ->name('templates.update');
+        Route::delete('/templates/{stream}',      [CurriculumController::class, 'destroyTemplate'])  ->name('templates.destroy');
 
         Route::get('/',                           [CurriculumController::class, 'streams'])          ->name('streams');
         Route::post('/streams',                   [CurriculumController::class, 'storeStream'])      ->name('streams.store');

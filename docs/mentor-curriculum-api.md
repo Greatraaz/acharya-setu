@@ -9,6 +9,40 @@ All endpoints below are under:
 
 ---
 
+## 0) Starter templates
+
+Templates are default 6-month curricula for the mentor’s **industry** (`field` from onboarding / profile). Mentors only receive templates for that industry. Clone one onto a mentee, then PATCH months/weeks/tasks as usual.
+
+`GET /mentor/curriculum/templates`
+
+Returns `templates` (all active) and `matched` (best fit for this mentor).
+
+`GET /mentor/curriculum/templates/{id}`
+
+Returns `template` summary plus `outline` (months → weeks → tasks).
+
+`POST /mentor/curriculum/templates/{id}/assign`
+
+| Field | Type | Required |
+|---|---|---|
+| `mentee_id` | integer | Yes |
+| `name` | string | No — defaults to template name |
+| `description` | string | No |
+
+Response 201: `{ track }` — a normal mentee track you can edit with the endpoints below.
+
+`GET /mentor/curriculum/templates/sample`
+
+Downloads the Excel sample (all template / month / week / task / MCQ columns, plus a Guide sheet).
+
+`POST /mentor/curriculum/templates/import`
+
+Multipart form field `file` (`.xlsx`, `.xls`, or `.csv`). Multiple templates per sheet. Mentor imports are scoped to that mentor’s industry.
+
+Response: `{ created, updated, skipped, errors, message }`
+
+---
+
 ## 1) List Tracks
 
 `GET /mentor/curriculum/tracks`  

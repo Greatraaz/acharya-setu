@@ -53,6 +53,9 @@
                             @if($month->theme)
                             <span style="font-size:11px;background:var(--brand-muted);color:var(--brand-dark);padding:2px 8px;border-radius:999px;">{{ $month->theme }}</span>
                             @endif
+                            @if($month->milestone_badge)
+                            <span style="font-size:11px;background:#fff7ed;color:#b45309;padding:2px 8px;border-radius:999px;">🏅 {{ $month->milestone_badge }}</span>
+                            @endif
                             @unless($month->is_active)
                             <span class="session-status pending">Inactive</span>
                             @endunless
@@ -83,6 +86,7 @@
                     'theme' => $month->theme,
                     'description' => $month->description,
                     'learning_outcomes' => is_array($month->learning_outcomes) ? implode("\n", $month->learning_outcomes) : '',
+                    'milestone_badge' => $month->milestone_badge,
                     'is_active' => (bool) $month->is_active,
                 ];
             @endphp
@@ -138,7 +142,12 @@
                 <div class="form-group">
                     <label class="form-label">Learning outcomes</label>
                     <textarea name="learning_outcomes" class="form-textarea" rows="3" placeholder="One outcome per line"></textarea>
-                    <div class="form-hint">One outcome per line (saved as array, same as app API).</div>
+                    <div class="form-hint">One outcome per line — shown as bullet points to mentees.</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Milestone badge</label>
+                    <input type="text" name="milestone_badge" class="form-input" maxlength="100" placeholder="e.g. Foundation Builder">
+                    <div class="form-hint">Earned on 100% completion of this month.</div>
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
@@ -178,6 +187,7 @@ function openEditMonth(month) {
     form.theme.value = month.theme || '';
     form.description.value = month.description || '';
     form.learning_outcomes.value = month.learning_outcomes || '';
+    form.milestone_badge.value = month.milestone_badge || '';
     form.querySelector('[name=is_active][type=checkbox]').checked = !!month.is_active;
     openModal('month-modal');
 }

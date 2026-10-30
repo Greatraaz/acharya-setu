@@ -3769,6 +3769,144 @@
    .dash-header__actions .btn {
        white-space: nowrap;
    }
+   .curriculum-templates {
+       margin-bottom: 24px;
+   }
+   .curriculum-templates__header {
+       display: flex;
+       justify-content: space-between;
+       gap: 12px;
+       align-items: flex-end;
+       margin-bottom: 12px;
+   }
+   .curriculum-templates__title {
+       font-size: 15px;
+       font-weight: 700;
+   }
+   .curriculum-templates__subtitle {
+       font-size: 13px;
+       color: var(--text-2);
+       margin-top: 2px;
+       line-height: 1.45;
+   }
+   .curriculum-templates__grid {
+       display: grid;
+       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+       gap: 12px;
+   }
+   .curriculum-templates__more {
+       margin-top: 12px;
+   }
+   .curriculum-templates__more summary {
+       cursor: pointer;
+       font-size: 13px;
+       font-weight: 600;
+       color: var(--text-2);
+       list-style: none;
+   }
+   .curriculum-templates__more summary::-webkit-details-marker {
+       display: none;
+   }
+   .curriculum-template-card {
+       padding: 16px;
+       display: flex;
+       flex-direction: column;
+       gap: 10px;
+       height: 100%;
+       margin: 0;
+   }
+   .curriculum-template-card.is-matched {
+       border-color: color-mix(in srgb, var(--brand) 35%, var(--border));
+   }
+   .curriculum-template-card__icon {
+       width: 42px;
+       height: 42px;
+       border-radius: 12px;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       font-size: 20px;
+       flex-shrink: 0;
+   }
+   .curriculum-template-card__title-row {
+       display: flex;
+       align-items: flex-start;
+       gap: 8px;
+       flex-wrap: wrap;
+   }
+   .curriculum-template-card__title {
+       font-size: 14px;
+       font-weight: 700;
+       line-height: 1.35;
+       flex: 1;
+       min-width: 0;
+   }
+   .curriculum-template-card__meta {
+       font-size: 12px;
+       color: var(--text-2);
+       line-height: 1.45;
+   }
+   .curriculum-template-card__desc {
+       font-size: 12px;
+       color: var(--text-3);
+       margin: 0;
+       line-height: 1.45;
+   }
+   .curriculum-template-card__actions {
+       display: flex;
+       gap: 8px;
+       margin-top: auto;
+       position: relative;
+       z-index: 1;
+   }
+   .curriculum-template-card__actions .btn {
+       flex: 1;
+       white-space: nowrap;
+       justify-content: center;
+   }
+   .curriculum-template-pill {
+       display: inline-flex;
+       align-items: center;
+       font-size: 11px;
+       font-weight: 600;
+       color: var(--brand-dark, var(--brand));
+       background: var(--brand-muted);
+       padding: 2px 8px;
+       border-radius: 999px;
+       white-space: nowrap;
+   }
+   .curriculum-template-weeks {
+       display: grid;
+       gap: 10px;
+   }
+   .curriculum-template-week {
+       border: 1px solid var(--border);
+       border-radius: 12px;
+       padding: 10px 12px;
+       background: var(--bg, transparent);
+   }
+   .curriculum-template-week__title {
+       font-size: 13px;
+       font-weight: 650;
+   }
+   .curriculum-template-week__focus {
+       font-size: 12px;
+       color: var(--text-2);
+       margin-top: 2px;
+   }
+   .curriculum-template-week__tasks {
+       margin: 8px 0 0;
+       padding-left: 16px;
+       font-size: 12px;
+       color: var(--text-2);
+   }
+   .curriculum-template-week__tasks span {
+       color: var(--text-3);
+       text-transform: uppercase;
+       font-size: 10px;
+       letter-spacing: 0.04em;
+       margin-left: 6px;
+   }
    .curriculum-track-card {
        margin-bottom: 12px;
        padding: 16px 18px;
@@ -7524,6 +7662,17 @@
    .prose-blog ul, .prose-blog ol { margin: 0 0 1em; padding-left: 1.25em; }
    .prose-blog a { color: var(--brand); }
    .prose-blog img { max-width: 100%; border-radius: 12px; }
+
+   .rich-text p { margin: 0 0 0.7em; }
+   .rich-text p:last-child { margin-bottom: 0; }
+   .rich-text ul, .rich-text ol { margin: 0 0 0.7em; padding-left: 1.25em; }
+   .rich-text li { margin: 0.2em 0; }
+   .rich-text a { color: var(--brand); }
+   .rich-text h2, .rich-text h3 { color: var(--text); margin: 0.9em 0 0.4em; line-height: 1.3; font-weight: 700; }
+   .rich-text h2 { font-size: 1.15em; }
+   .rich-text h3 { font-size: 1.05em; }
+   .rich-text blockquote { margin: 0.7em 0; padding-left: 12px; border-left: 3px solid var(--brand); color: var(--text-2); }
+   .tox-tinymce { border-radius: 10px !important; border-color: var(--border-2) !important; }
    .blog-aside-card,
    .blog-aside-cta {
        border: 1px solid var(--border);
@@ -8952,6 +9101,12 @@
    }
    .mentee-dash__mentor-card {
        margin-bottom: 20px;
+   }
+   .mentee-dash__mentor-card--top {
+       margin-top: 0;
+       margin-bottom: 20px;
+       border-color: rgba(245, 158, 11, 0.28);
+       background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), var(--card-bg) 55%);
    }
    .mentee-dash__card-head {
        display: flex;

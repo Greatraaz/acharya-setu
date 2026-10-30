@@ -38,7 +38,7 @@
     @if($user->bio)
     <div class="bg-slate-50 rounded-xl p-3 text-sm">
         <p class="text-xs text-slate-400 mb-1">Bio</p>
-        <p class="text-slate-700">{{ $user->bio }}</p>
+        <div class="rich-text text-slate-700">{!! $user->bio !!}</div>
     </div>
     @endif
 

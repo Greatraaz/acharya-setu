@@ -171,8 +171,13 @@ class ConsultationSession extends Model
 
     public function scopeUpcoming(Builder $q): Builder
     {
+        $now = Carbon::now(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s');
+
         return $q->where('status', self::STATUS_UPCOMING)
-            ->where('scheduled_at', '>=', Carbon::now(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s'));
+            ->whereRaw(
+                'DATE_ADD(scheduled_at, INTERVAL COALESCE(duration_minutes, 0) MINUTE) > ?',
+                [$now]
+            );
     }
 
     /**

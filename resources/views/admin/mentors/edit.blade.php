@@ -28,7 +28,8 @@
 </div>
 @endif
 
-<form method="POST" action="{{ route('admin.mentor.update', $mentor) }}" enctype="multipart/form-data" class="max-w-5xl">
+<form method="POST" action="{{ route('admin.mentor.update', $mentor) }}" enctype="multipart/form-data" class="max-w-5xl"
+      onsubmit="if (window.tinymce) tinymce.triggerSave();">
     @csrf @method('PUT')
 
     <div class="grid grid-cols-3 gap-6">
@@ -137,11 +138,18 @@
                 </div>
                 <div class="p-6 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Primary Field <span class="text-red-400">*</span></label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Industry / domain <span class="text-red-400">*</span></label>
                         <div class="relative">
                             <select name="field" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 appearance-none cursor-pointer">
-                                @foreach(['Software Engineering','Product Management','Data Science','Design (UI/UX)','Marketing','Sales','Finance','Operations','HR','Legal','Entrepreneurship','Research','Other'] as $f)
-                                <option value="{{ $f }}" {{ old('field', $mentor->field) === $f ? 'selected' : '' }}>{{ $f }}</option>
+                                @php
+                                    $industryOptions = \App\Support\MentorIndustry::all();
+                                    $currentIndustry = old('field', $mentor->field);
+                                    if ($currentIndustry && ! in_array($currentIndustry, $industryOptions, true)) {
+                                        array_unshift($industryOptions, $currentIndustry);
+                                    }
+                                @endphp
+                                @foreach($industryOptions as $f)
+                                <option value="{{ $f }}" {{ $currentIndustry === $f ? 'selected' : '' }}>{{ $f }}</option>
                                 @endforeach
                             </select>
                             <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></span>
@@ -167,9 +175,12 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Bio <span class="text-red-400">*</span></label>
-                        <textarea name="bio" rows="5" minlength="30" maxlength="1000"
-                                  class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all resize-none leading-relaxed">{{ old('bio', $mentor->bio) }}</textarea>
-                        <div class="flex justify-end"><span id="bio-count" class="text-xs text-gray-400 mt-1">{{ strlen($mentor->bio ?? '') }} / 1000</span></div>
+                        <textarea name="bio" id="bio-area" rows="8"
+                                  class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white">{{ old('bio', $mentor->bio) }}</textarea>
+                        <div class="flex justify-between mt-1">
+                            <p class="text-xs text-gray-400">Min 30 characters. Formatting is supported.</p>
+                            <span id="bio-count" class="text-xs text-gray-400">{{ mb_strlen($mentor->bio_text ?? '') }} / 2000</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -283,10 +294,6 @@
 </form>
 
 <script>
-const bioEl = document.querySelector('[name=bio]');
-const bioCnt = document.getElementById('bio-count');
-bioEl?.addEventListener('input', () => bioCnt.textContent = bioEl.value.length + ' / 1000');
-
 const rateEl = document.getElementById('rate-input');
 const hourlyEl = document.getElementById('hourly-rate');
 rateEl?.addEventListener('input', () => {
@@ -328,4 +335,7 @@ document.querySelectorAll('#expertise-chips span').forEach(s => s.dataset.fieldN
 syncHiddenInputs('expertise');
 </script>
 
+@push('scripts')
+@include('partials.rich-text-editor', ['selector' => '#bio-area', 'theme' => 'light', 'height' => 280, 'minPlain' => 30, 'maxPlain' => 2000])
+@endpush
 @endsection

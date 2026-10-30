@@ -83,10 +83,22 @@
             <div class="bg-white border border-gray-200 rounded-2xl p-6">
                 <h3 class="text-sm font-semibold text-gray-800 mb-4 pb-3 border-b border-gray-100">Schedule</h3>
 
+                <label class="flex items-start gap-2.5 mb-4 cursor-pointer">
+                    <input type="hidden" name="start_immediately" value="0">
+                    <input type="checkbox" name="start_immediately" id="start-immediately" value="1"
+                           {{ old('start_immediately') ? 'checked' : '' }}
+                           class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                           onchange="toggleImmediateStart(this.checked)">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-800">Start now — join immediately</span>
+                        <span class="block text-xs text-gray-500 mt-0.5">Mentor and mentee can join as soon as you save. The 2-hour mentee booking notice does not apply to admin-created sessions.</span>
+                    </span>
+                </label>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Date & Time <span class="text-red-500">*</span></label>
-                        <input type="datetime-local" name="scheduled_at"
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Date & Time <span class="text-red-500" id="scheduled-at-required">*</span></label>
+                        <input type="datetime-local" name="scheduled_at" id="scheduled-at"
                                value="{{ old('scheduled_at', $session->scheduled_at?->format('Y-m-d\TH:i')) }}"
                                class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
                         @error('scheduled_at')<p class="text-xs text-red-500 mt-1">{{ $message }}</p>@enderror
@@ -131,7 +143,7 @@
                         <select name="meeting_provider"
                                 class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
                             <option value="">Not set</option>
-                            <option value="agora"  {{ old('meeting_provider', $session->meeting_provider) === 'agora'  ? 'selected' : '' }}>Agora</option>
+                            <option value="agora"  {{ old('meeting_provider', $session->meeting_provider ?? 'agora') === 'agora'  ? 'selected' : '' }}>Agora</option>
                             <option value="zoom"   {{ old('meeting_provider', $session->meeting_provider) === 'zoom'   ? 'selected' : '' }}>Zoom</option>
                             <option value="google" {{ old('meeting_provider', $session->meeting_provider) === 'google' ? 'selected' : '' }}>Google Meet</option>
                             <option value="other"  {{ old('meeting_provider', $session->meeting_provider) === 'other'  ? 'selected' : '' }}>Other</option>
@@ -240,3 +252,21 @@
 </form>
 
 @endsection
+
+@push('scripts')
+<script>
+function toggleImmediateStart(on) {
+    const input = document.getElementById('scheduled-at');
+    const requiredMark = document.getElementById('scheduled-at-required');
+    if (!input) return;
+    input.disabled = !!on;
+    input.required = !on;
+    if (requiredMark) requiredMark.style.display = on ? 'none' : '';
+    input.classList.toggle('bg-gray-50', !!on);
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const box = document.getElementById('start-immediately');
+    if (box) toggleImmediateStart(box.checked);
+});
+</script>
+@endpush

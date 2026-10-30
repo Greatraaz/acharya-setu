@@ -34,6 +34,7 @@
             ],
             'Learning' => [
                 // ['admin.curriculum.catalog',         '📚', 'Curriculum Streams'],
+                ['admin.curriculum.templates',       '🧩', 'Curriculum Templates'],
                 ['admin.curriculum.streams',         '🗺️', '6-Month Journey Manager'],
                 ['admin.mentee-tasks.index',         '✅', 'Mentee Tasks'],
                 ['admin.quizzes.index',              '🎯', 'Quizzes & MCQs'],

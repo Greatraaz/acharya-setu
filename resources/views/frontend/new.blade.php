@@ -228,7 +228,7 @@
                         <div class="mentor-card-role">{{ $mentor->designation }} · {{ $mentor->company }}</div>
                     </div>
                 </div>
-                <div class="mentor-card-bio">{{ Str::limit($mentor->bio, 80) }}</div>
+                <div class="mentor-card-bio">{{ Str::limit($mentor->bio_text, 80) }}</div>
                 <div class="mentor-tags">
                     @foreach(array_slice($mentor->expertise ?? [], 0, 3) as $tag)
                     <span class="tag">{{ $tag }}</span>

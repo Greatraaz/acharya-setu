@@ -12,7 +12,7 @@
 
     $checks = [
         ['Photo uploaded',  (bool) $user->avatar_url],
-        ['Bio written',     strlen(trim((string) ($user->bio ?? ''))) >= 50],
+        ['Bio written',     mb_strlen($user->bio_text ?? '') >= 50],
         ['Expertise added', ! empty($user->expertise)],
         ['Designation set', filled($user->designation)],
         ['Rate configured', (float) ($user->rate_per_minute ?? 0) > 0],

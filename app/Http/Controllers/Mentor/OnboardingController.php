@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\ConsultationSession;
 use App\Models\EducationStream;
 use App\Support\IndianPhone;
+use App\Support\MentorIndustry;
+use App\Support\RichText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class OnboardingController extends Controller
 {
@@ -20,7 +23,12 @@ class OnboardingController extends Controller
 
         $streams = collect();
         try {
-            $streams = \DB::table('education_streams')->where('is_active', true)->whereNull('mentee_id')->orderBy('sort_order')->get();
+            $streams = \DB::table('education_streams')
+                ->where('is_active', true)
+                ->whereNull('mentee_id')
+                ->where('is_template', false)
+                ->orderBy('sort_order')
+                ->get();
         } catch (\Throwable) {
             $streams = collect();
         }
@@ -39,7 +47,7 @@ class OnboardingController extends Controller
             'gender'   => 'nullable|in:male,female,other',
             'phone'    => IndianPhone::rules(),
             'linkedin' => 'nullable|url',
-            'bio'      => 'required|string|min:50|max:2000',
+            'bio'      => RichText::rules(50),
             'avatar'   => 'nullable|file|image|mimes:jpeg,png,webp|max:2048',
         ]);
 
@@ -70,7 +78,10 @@ class OnboardingController extends Controller
             'company'        => 'required|string|max:100',
             'experience_years' => 'required|integer|min:0|max:50',
             'rate_per_minute'  => 'required|numeric|min:1|max:1000',
-            'field'          => 'required|string',
+            'field'          => ['required', 'string', Rule::in(array_values(array_unique(array_filter([
+                ...MentorIndustry::all(),
+                auth()->user()->field,
+            ]))))],
             'education_stream' => 'nullable|string',
         ]);
 

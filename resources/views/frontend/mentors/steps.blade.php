@@ -329,12 +329,10 @@
             {{-- Bio --}}
             <div class="form-group">
                 <label class="form-label">Bio / About You *</label>
-                <textarea name="bio" class="form-textarea" rows="5" required minlength="50" maxlength="2000"
-                          id="bio-area"
-                          placeholder="Write a compelling bio. Tell mentees who you are, what you've done, and what kind of help you can offer. Be specific — this is your first impression.">{{ old('bio', auth()->user()->bio) }}</textarea>
+                <textarea name="bio" class="form-textarea" rows="8" id="bio-area">{{ old('bio', auth()->user()->bio) }}</textarea>
                 <div class="mentor-onboard__bio-meta">
-                    <div class="form-hint">Minimum 50 characters. Be specific about your background.</div>
-                    <div style="font-size:11px; color:var(--text-3);"><span id="bio-count">{{ strlen(auth()->user()->bio ?? '') }}</span>/2000</div>
+                    <div class="form-hint">Minimum 50 characters. Use headings, lists, and links if you like.</div>
+                    <div style="font-size:11px; color:var(--text-3);"><span id="bio-count">{{ mb_strlen(auth()->user()->bio_text ?? '') }}</span> / 2000</div>
                 </div>
             </div>
 
@@ -387,24 +385,10 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Primary Domain / Field *</label>
+                <label class="form-label">Industry / domain *</label>
                 <select name="field" class="form-select" required>
                     <option value="">— Select your primary domain —</option>
-                    @foreach([
-                        'Engineering & Technology',
-                        'Product Management',
-                        'Design & UX / UI',
-                        'Finance & Investment Banking',
-                        'MBA & Management Consulting',
-                        'Marketing & Growth',
-                        'Data Science & AI / ML',
-                        'Law & Legal',
-                        'Medicine & Healthcare',
-                        'Arts & Humanities',
-                        'Government & Public Policy',
-                        'Education & Academia',
-                        'Entrepreneurship & Startups',
-                    ] as $field)
+                    @foreach(\App\Support\MentorIndustry::all() as $field)
                     <option value="{{ $field }}" @selected(old('field', auth()->user()->field) === $field)>{{ $field }}</option>
                     @endforeach
                 </select>
@@ -586,7 +570,7 @@
             $u = auth()->user();
             $checks = [
                 ['Photo uploaded',          (bool) $u->avatar_url,                    route('mentor.onboarding', ['step'=>1])],
-                ['Bio written (50+ chars)',  strlen($u->bio ?? '') >= 50,              route('mentor.onboarding', ['step'=>1])],
+                ['Bio written (50+ chars)',  mb_strlen($u->bio_text ?? '') >= 50,       route('mentor.onboarding', ['step'=>1])],
                 ['Designation & Company',   !empty($u->designation) && !empty($u->company), route('mentor.onboarding', ['step'=>2])],
                 ['Experience & Rate',       $u->experience_years > 0 && $u->rate_per_minute > 0, route('mentor.onboarding', ['step'=>2])],
                 ['Expertise skills added',  !empty($u->expertise) && count($u->expertise) >= 1, route('mentor.onboarding', ['step'=>3])],
@@ -616,7 +600,7 @@
                 </div>
                 <span class="badge badge-muted" style="margin-left:auto;">Preview</span>
             </div>
-            <div class="mentor-card-bio">{{ Str::limit($u->bio ?? '(no bio)', 90) }}</div>
+            <div class="mentor-card-bio">{{ Str::limit($u->bio_text !== '' ? $u->bio_text : '(no bio)', 90) }}</div>
             @if(!empty($u->expertise))
             <div class="mentor-tags">
                 @foreach(array_slice($u->expertise, 0, 5) as $tag)
@@ -684,16 +668,10 @@
 @endsection
 
 @push('scripts')
+@if(($step ?? 0) == 1)
+@include('partials.rich-text-editor', ['selector' => '#bio-area', 'theme' => 'auto', 'height' => 280, 'minPlain' => 50, 'maxPlain' => 2000])
+@endif
 <script>
-// ── Bio char counter ──────────────────────────────────────────
-const bioArea = document.getElementById('bio-area');
-const bioCount = document.getElementById('bio-count');
-if (bioArea && bioCount) {
-    bioArea.addEventListener('input', () => {
-        bioCount.textContent = bioArea.value.length;
-        bioCount.style.color = bioArea.value.length < 50 ? 'var(--error)' : 'var(--text-3)';
-    });
-}
 
 // ── Rate → price previews ─────────────────────────────────────
 const rateInput = document.getElementById('rate-input');
