@@ -68,12 +68,14 @@
                         @endforelse
                     </div>
 
+                    @if($adminUser?->canAccessAdminRoute('admin.logs.index'))
                     <div class="px-4 py-3 border-t border-slate-100 bg-slate-50/70">
                         <a href="{{ route('admin.logs.index') }}"
                            class="block text-center text-xs font-medium text-slate-600 hover:text-violet-600">
                             Open activity logs →
                         </a>
                     </div>
+                    @endif
                 </div>
             </div>
 
@@ -85,7 +87,7 @@
                     </div>
                     <div class="text-left hidden md:block">
                         <p class="text-sm font-semibold">{{ $adminUser->name ?? 'Administrator' }}</p>
-                        <p class="text-xs text-slate-400">Super Admin</p>
+                        <p class="text-xs text-slate-400">{{ $adminUser?->isSuperAdmin() ? 'Super Admin' : ($adminUser?->adminRole?->name ?? 'Admin') }}</p>
                     </div>
                 </button>
 
@@ -100,10 +102,12 @@
                            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-sm text-slate-700">
                             🔐 Change Password
                         </a>
+                        @if($adminUser?->canAccessAdminRoute('admin.settings.index'))
                         <a href="{{ route('admin.settings.index') }}"
                            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 text-sm text-slate-700">
                             ⚙️ Settings
                         </a>
+                        @endif
                         <form action="{{ route('admin.logout') }}" method="POST" class="pt-2 border-t mt-2">
                             @csrf
                             <button type="submit"

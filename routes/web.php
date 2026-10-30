@@ -105,6 +105,7 @@ use App\Http\Controllers\Admin\GatedInsightController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\BulkEmailController;
+use App\Http\Controllers\Admin\AdminRoleController;
 
 use App\Http\Controllers\Frontend\InsightController;
 
@@ -613,7 +614,7 @@ Route::get( '/admin',       [AdminController::class, 'showLogin'])->name('admin'
 Route::get( '/admin/login', [AdminController::class, 'showLogin'])->name('admin.login');
 Route::post('/admin/login', [AdminController::class, 'login'])    ->name('admin.login.post');
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin', 'admin.module'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -626,6 +627,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin'])->grou
     // ── Notifications ─────────────────────────────────────────
     Route::get('/notifications',           [NotificationController::class, 'index'])    ->name('notifications.index');
     Route::post('/notifications/seen',     [NotificationController::class, 'markSeen']) ->name('notifications.seen');
+
+    // ── Roles & team ──────────────────────────────────────────
+    Route::get('/roles',                   [AdminRoleController::class, 'index'])->name('roles.index');
+    Route::post('/roles',                  [AdminRoleController::class, 'storeRole'])->name('roles.store');
+    Route::put('/roles/{role}',            [AdminRoleController::class, 'updateRole'])->name('roles.update');
+    Route::delete('/roles/{role}',         [AdminRoleController::class, 'destroyRole'])->name('roles.destroy');
+    Route::post('/roles/users',            [AdminRoleController::class, 'storeUser'])->name('roles.users.store');
+    Route::put('/roles/users/{user}',      [AdminRoleController::class, 'updateUser'])->name('roles.users.update');
+    Route::delete('/roles/users/{user}',   [AdminRoleController::class, 'destroyUser'])->name('roles.users.destroy');
 
     // ── Bulk email ────────────────────────────────────────────
     Route::get('/bulk-emails',             [BulkEmailController::class, 'create'])->name('bulk-emails.create');

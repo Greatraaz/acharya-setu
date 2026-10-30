@@ -34,7 +34,7 @@ class User extends Authenticatable
     const MENTEE_STEPS = 4;
  
     protected $fillable = [
-        'name', 'email', 'password', 'role', 'slug',
+        'name', 'email', 'password', 'role', 'admin_role_id', 'slug',
         'wallet_balance', 'bio', 'expertise', 'field', 'college', 'year',
         'gender', 'rating', 'total_sessions', 'avatar_url', 'phone', 'bank_details', 'location',
         'linkedin', 'company', 'designation', 'experience_years',
@@ -242,6 +242,56 @@ class User extends Authenticatable
     public function isMentor(): bool   { return $this->role === 'mentor'; }
     public function isMentee(): bool   { return $this->role === 'mentee'; }
     public function isAdmin(): bool    { return $this->role === 'admin'; }
+
+    public function adminRole(): BelongsTo
+    {
+        return $this->belongsTo(AdminRole::class, 'admin_role_id');
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->isAdmin() && (bool) $this->adminRole?->is_super;
+    }
+
+    public function canAccessAdminModule(?string $module): bool
+    {
+        if (! $this->isAdmin()) {
+            return false;
+        }
+
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($module === null) {
+            return false;
+        }
+
+        return $this->adminRole?->allows($module) ?? false;
+    }
+
+    public function canAccessAdminRoute(?string $route): bool
+    {
+        if (! $this->isAdmin()) {
+            return false;
+        }
+
+        if ($this->isSuperAdmin() || ! $route) {
+            return true;
+        }
+
+        foreach (['admin.dashboard', 'admin.profile.', 'admin.notifications.', 'admin.logout'] as $allowed) {
+            if ($route === rtrim($allowed, '.') || str_starts_with($route, $allowed)) {
+                return true;
+            }
+        }
+
+        if (str_starts_with($route, 'admin.users.')) {
+            return $this->canAccessAdminModule('mentors') || $this->canAccessAdminModule('mentees');
+        }
+
+        return $this->canAccessAdminModule(AdminRole::moduleForRoute($route));
+    }
  
     // ── Mentor approval helpers ───────────────────────────────
     public function isPendingApproval(): bool  { return $this->mentor_status === self::MENTOR_STATUS_PENDING; }

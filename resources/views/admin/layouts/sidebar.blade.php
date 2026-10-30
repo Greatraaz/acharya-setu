@@ -77,10 +77,33 @@
                 })->push(['admin.events-webinars.index', '🎥', 'Events & Webinars'])->values()->all(),
             ],
             'Settings' => [
+                ['admin.roles.index',    '🛡️', 'Roles & Access'],
                 ['admin.settings.index', '⚙️', 'App Settings'],
                 ['admin.logs.index',     '📜', 'Logs'],
             ],
         ];
+
+        $adminCan = fn ($route) => auth()->user()?->canAccessAdminRoute($route) ?? false;
+        foreach ($menuSections as $section => $menus) {
+            if (isset($menus['type']) && $menus['type'] === 'group') {
+                $menus['items'] = array_values(array_filter(
+                    $menus['items'],
+                    fn ($item) => ($item[0] ?? '#') === '#' || $adminCan($item[0])
+                ));
+                if ($menus['items'] === []) {
+                    unset($menuSections[$section]);
+                    continue;
+                }
+                $menuSections[$section] = $menus;
+                continue;
+            }
+            $menus = array_values(array_filter($menus, fn ($item) => $adminCan($item[0] ?? '')));
+            if ($menus === []) {
+                unset($menuSections[$section]);
+                continue;
+            }
+            $menuSections[$section] = $menus;
+        }
         @endphp
 
         @foreach($menuSections as $section => $menus)
@@ -142,7 +165,7 @@
                             $isActive = str_starts_with($current, $route)
                                 || ($route === 'admin.earnings.index' && str_starts_with((string) $current, 'admin.earnings.'));
                         } catch (\Exception $e) {
-                            $href = '#';
+                            $href = $route === 'admin.roles.index' ? url('/admin/roles') : '#';
                             $isActive = false;
                         }
                     @endphp

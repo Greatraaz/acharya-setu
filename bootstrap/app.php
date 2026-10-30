@@ -11,6 +11,7 @@ use App\Http\Middleware\Api\AdminMiddleware;
 use App\Http\Middleware\Api\MentorMiddleware;
 use App\Http\Middleware\Api\MenteeMiddleware;
 use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\EnsureAdminModule;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'mentor' => MentorMiddleware::class,
             'mentee' => MenteeMiddleware::class,
             'admin'  => AdminMiddleware::class,
+            'admin.module' => EnsureAdminModule::class,
             'active' => EnsureAccountIsActive::class,
         ]);
         $middleware->web(append: [
