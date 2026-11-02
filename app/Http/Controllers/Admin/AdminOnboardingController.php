@@ -155,7 +155,7 @@ class AdminOnboardingController extends Controller
 
     public function createExpert()
     {
-        return view('admin.experts.form', ['expert' => null]);
+        return view('admin.experts.form', ['expert' => null, 'earnings' => null]);
     }
 
     public function storeExpert(Request $request)
@@ -193,7 +193,9 @@ class AdminOnboardingController extends Controller
     {
         abort_unless($expert->isExpert(), 404);
 
-        return view('admin.experts.form', compact('expert'));
+        $earnings = app(MentorEarningController::class)->summaryFor($expert);
+
+        return view('admin.experts.form', compact('expert', 'earnings'));
     }
 
     public function updateExpert(Request $request, User $expert)

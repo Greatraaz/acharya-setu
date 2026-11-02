@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
-@section('title', 'Mentor Earnings')
-@section('heading', 'Mentor Earnings')
+@section('title', 'Session Earnings')
+@section('heading', 'Session Earnings')
 @section('content')
 
 @php
@@ -11,7 +11,7 @@
 
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-            <p class="text-sm text-gray-500">What each mentor earned from sessions, what you have already paid out, and what is still in their wallet.</p>
+            <p class="text-sm text-gray-500">What each mentor and expert earned from sessions, what you have already paid out, and what is still in their wallet.</p>
         </div>
         <a href="{{ route('admin.withdrawals.index') }}"
            class="inline-flex items-center gap-1.5 text-sm font-medium text-orange-700 bg-orange-50 border border-orange-200 hover:bg-orange-100 px-3 py-2 rounded-xl">
@@ -24,10 +24,10 @@
 
     <div class="grid grid-cols-2 xl:grid-cols-5 gap-3">
         @foreach([
-            ['Mentors earned (net)', $stats['earned'], 'After 20% fee · '.$stats['session_count'].' sessions', 'text-slate-800', 'bg-slate-50', 'border-slate-200'],
+            ['Hosts earned (net)', $stats['earned'], 'After 20% fee · '.$stats['session_count'].' sessions', 'text-slate-800', 'bg-slate-50', 'border-slate-200'],
             ['Platform fee kept', $stats['platform_fee'], '20% of session list price', 'text-indigo-700', 'bg-indigo-50', 'border-indigo-200'],
-            ['Paid to mentors', $stats['paid_out'], 'Approved bank / UPI payouts', 'text-emerald-700', 'bg-emerald-50', 'border-emerald-200'],
-            ['Still to pay', $stats['unpaid'], 'Sitting in mentor wallets', 'text-orange-700', 'bg-orange-50', 'border-orange-200'],
+            ['Paid to hosts', $stats['paid_out'], 'Approved bank / UPI payouts', 'text-emerald-700', 'bg-emerald-50', 'border-emerald-200'],
+            ['Still to pay', $stats['unpaid'], 'Sitting in mentor and expert wallets', 'text-orange-700', 'bg-orange-50', 'border-orange-200'],
             ['Pending requests', $stats['pending_out'], 'Awaiting your approval', 'text-amber-700', 'bg-amber-50', 'border-amber-200'],
         ] as [$label, $value, $hint, $tc, $bg, $bc])
         <div class="{{ $bg }} border {{ $bc }} rounded-2xl p-4">
@@ -41,9 +41,17 @@
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
         <form method="GET" class="admin-filter-form flex flex-wrap gap-3 items-end">
             <div class="flex-1 min-w-[200px]">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Search mentor</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Search host</label>
                 <input type="text" name="search" value="{{ $search }}" placeholder="Name or email"
                        class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200">
+            </div>
+            <div class="w-40">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Role</label>
+                <select name="role" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                    <option value="" @selected(($role ?? '') === '')>Mentors &amp; experts</option>
+                    <option value="mentor" @selected(($role ?? '') === 'mentor')>Mentors only</option>
+                    <option value="expert" @selected(($role ?? '') === 'expert')>Experts only</option>
+                </select>
             </div>
             <div class="w-44">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Show</label>
@@ -52,7 +60,7 @@
                     <option value="unpaid" @selected($filter === 'unpaid')>Still to pay</option>
                     <option value="pending" @selected($filter === 'pending')>Pending requests</option>
                     <option value="paid" @selected($filter === 'paid')>Already paid</option>
-                    <option value="all" @selected($filter === 'all')>All mentors</option>
+                    <option value="all" @selected($filter === 'all')>All hosts</option>
                 </select>
             </div>
             <div class="w-44">
@@ -74,7 +82,7 @@
             <table class="min-w-full text-sm">
                 <thead class="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
                     <tr>
-                        <th class="px-4 py-3 font-semibold">Mentor</th>
+                        <th class="px-4 py-3 font-semibold">Host</th>
                         <th class="px-4 py-3 font-semibold">Earned (net)</th>
                         <th class="px-4 py-3 font-semibold">Fee kept</th>
                         <th class="px-4 py-3 font-semibold">Paid out</th>
@@ -147,8 +155,8 @@
                     @empty
                     <tr>
                         <td colspan="7" class="px-4 py-16 text-center text-gray-500">
-                            <div class="font-semibold text-gray-700 mb-1">No mentor earnings yet</div>
-                            <div class="text-sm">Totals appear here after completed paid sessions credit a mentor wallet.</div>
+                            <div class="font-semibold text-gray-700 mb-1">No session earnings yet</div>
+                            <div class="text-sm">Totals appear here after completed paid sessions credit a mentor or expert wallet.</div>
                         </td>
                     </tr>
                     @endforelse

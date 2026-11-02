@@ -144,6 +144,40 @@
                 </div>
             </div>
 
+            @if($isEdit && !empty($earnings))
+            <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+                <div class="px-5 py-4 border-b border-gray-100 bg-gray-50/60 flex items-center justify-between gap-2">
+                    <h3 class="text-sm font-semibold text-gray-800">Earnings</h3>
+                    <a href="{{ route('admin.earnings.show', $expert) }}" class="text-xs font-semibold text-orange-600 hover:text-orange-700">Full ledger →</a>
+                </div>
+                <div class="p-5 space-y-3">
+                    @php $inr = fn ($n) => '₹'.number_format((float) $n, 2); @endphp
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <p class="text-[11px] uppercase tracking-wider text-gray-400">Net earned</p>
+                            <p class="text-lg font-bold text-gray-900">{{ $inr($earnings['earned']) }}</p>
+                            <p class="text-xs text-gray-400">{{ $earnings['session_count'] }} paid sessions</p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] uppercase tracking-wider text-gray-400">Wallet unpaid</p>
+                            <p class="text-lg font-bold {{ $earnings['balance'] > 0 ? 'text-orange-600' : 'text-gray-400' }}">{{ $inr($earnings['balance']) }}</p>
+                            @if($earnings['pending_out'] > 0)
+                            <p class="text-xs text-amber-600">{{ $inr($earnings['pending_out']) }} pending</p>
+                            @endif
+                        </div>
+                        <div>
+                            <p class="text-[11px] uppercase tracking-wider text-gray-400">Paid out</p>
+                            <p class="text-sm font-semibold text-emerald-700">{{ $inr($earnings['paid_out']) }}</p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] uppercase tracking-wider text-gray-400">Platform fee</p>
+                            <p class="text-sm font-semibold text-indigo-700">{{ $inr($earnings['platform_fee']) }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
             <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-100 bg-gray-50/60">
                     <h3 class="text-sm font-semibold text-gray-800">Status</h3>

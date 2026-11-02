@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 @section('title', $mentor->name.' — Earnings')
-@section('heading', 'Mentor Earnings')
+@section('heading', ($mentor->isExpert() ? 'Expert' : 'Mentor').' Earnings')
 @section('content')
 
 @php
@@ -13,7 +13,7 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('admin.earnings.index') }}"
            class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
-            ← All mentor earnings
+            ← All session earnings
         </a>
         <a href="{{ route('admin.withdrawals.index', ['search' => $mentor->email]) }}"
            class="text-sm font-medium text-orange-600 hover:text-orange-700">Withdrawal queue →</a>
@@ -40,7 +40,10 @@
         <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-2">
                 <h2 class="text-lg font-semibold text-gray-800">{{ $mentor->name }}</h2>
-                <span class="inline-flex items-center text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{{ ucfirst($mentor->mentor_status ?? 'mentor') }}</span>
+                <span class="inline-flex items-center text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{{ ucfirst($mentor->mentor_status ?? 'pending') }}</span>
+                @if($mentor->isExpert())
+                <span class="inline-flex items-center text-xs font-bold uppercase tracking-wide text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-full">Expert</span>
+                @endif
             </div>
             <p class="text-sm text-gray-500 truncate">{{ $mentor->email }}</p>
             @if($mentor->bank_details)

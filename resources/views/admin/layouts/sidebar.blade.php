@@ -27,7 +27,7 @@
                 ['admin.wallet.index',        '💰', 'Wallet'],
                 ['admin.wallet.add-fund',     '➕', 'Add Fund'],
                 ['admin.transactions.index',  '🧾', 'Transactions'],
-                ['admin.earnings.index',      '💵', 'Mentor Earnings'],
+                ['admin.earnings.index',      '💵', 'Session Earnings'],
                 ['admin.withdrawals.index',   '🏦', 'Withdrawals'],
                 ['admin.offers.index',        '🎁', 'Offers'],
                 ['admin.plans.index',         '⭐', 'Premium Plans'],

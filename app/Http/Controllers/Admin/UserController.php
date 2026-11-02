@@ -8,6 +8,9 @@ use App\Services\MenteeOnboardingService;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\EducationStream;
+use App\Models\WalletTransaction;
+use App\Models\WithdrawalRequest;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UserController extends Controller
@@ -223,16 +226,25 @@ class UserController extends Controller
 
         $experts = User::query()
             ->experts()
+            ->select('users.*')
+            ->leftJoinSub($this->expertSessionEarningsSub(), 'earn', 'earn.user_id', '=', 'users.id')
+            ->leftJoinSub($this->expertPayoutSub(), 'payout', 'payout.user_id', '=', 'users.id')
+            ->addSelect([
+                DB::raw('COALESCE(earn.earned, 0) as earned'),
+                DB::raw('COALESCE(earn.session_count, 0) as paid_session_count'),
+                DB::raw('COALESCE(payout.paid_out, 0) as paid_out'),
+                DB::raw('COALESCE(payout.pending_out, 0) as pending_out'),
+            ])
             ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
-                $inner->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('company', 'like', "%{$search}%")
-                    ->orWhere('designation', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%");
+                $inner->where('users.name', 'like', "%{$search}%")
+                    ->orWhere('users.email', 'like', "%{$search}%")
+                    ->orWhere('users.company', 'like', "%{$search}%")
+                    ->orWhere('users.designation', 'like', "%{$search}%")
+                    ->orWhere('users.phone', 'like', "%{$search}%");
             }))
-            ->when($request->filled('mentor_status'), fn ($q) => $q->where('mentor_status', $request->mentor_status))
-            ->when($request->filled('field'), fn ($q) => $q->where('field', 'like', '%'.$request->field.'%'))
-            ->latest()
+            ->when($request->filled('mentor_status'), fn ($q) => $q->where('users.mentor_status', $request->mentor_status))
+            ->when($request->filled('field'), fn ($q) => $q->where('users.field', 'like', '%'.$request->field.'%'))
+            ->orderByDesc('users.created_at')
             ->paginate(20)
             ->withQueryString();
 
@@ -242,6 +254,12 @@ class UserController extends Controller
             'pending'   => User::experts()->where('mentor_status', 'pending')->count(),
             'rejected'  => User::experts()->where('mentor_status', 'rejected')->count(),
             'suspended' => User::experts()->where('mentor_status', 'suspended')->count(),
+            'earned'    => (float) WalletTransaction::query()
+                ->whereIn('user_id', User::experts()->select('id'))
+                ->where('status', 'completed')
+                ->where($this->expertSessionEarningConstraint())
+                ->sum('amount'),
+            'unpaid'    => (float) User::experts()->sum('wallet_balance'),
         ];
 
         return view('admin.experts.index', compact('experts', 'stats'));
@@ -413,5 +431,37 @@ class UserController extends Controller
             fwrite($out, '<Cell><Data ss:Type="String">'.$text.'</Data></Cell>');
         }
         fwrite($out, "</Row>\n");
+    }
+
+    private function expertSessionEarningsSub()
+    {
+        return WalletTransaction::query()
+            ->select('user_id')
+            ->selectRaw('SUM(amount) as earned')
+            ->selectRaw('COUNT(*) as session_count')
+            ->where('status', 'completed')
+            ->where($this->expertSessionEarningConstraint())
+            ->groupBy('user_id');
+    }
+
+    private function expertPayoutSub()
+    {
+        return WithdrawalRequest::query()
+            ->select('user_id')
+            ->selectRaw("SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as paid_out")
+            ->selectRaw("SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as pending_out")
+            ->groupBy('user_id');
+    }
+
+    private function expertSessionEarningConstraint(): \Closure
+    {
+        return function ($q) {
+            $q->whereIn('type', ['credit', 'transfer_in'])
+                ->where(function ($inner) {
+                    $inner->where('meta->source', 'session_mentor_payout')
+                        ->orWhere('reference', 'like', 'SES-EARN-%')
+                        ->orWhere('description', 'like', 'Session earning%');
+                });
+        };
     }
 }

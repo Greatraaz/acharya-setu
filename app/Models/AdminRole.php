@@ -29,7 +29,7 @@ class AdminRole extends Model
             'call-logs' => ['label' => 'Call records', 'group' => 'Sessions', 'match' => ['admin.call-logs.']],
             'wallet' => ['label' => 'Wallet & add fund', 'group' => 'Finance', 'match' => ['admin.wallet.']],
             'transactions' => ['label' => 'Transactions', 'group' => 'Finance', 'match' => ['admin.transactions.']],
-            'earnings' => ['label' => 'Mentor earnings', 'group' => 'Finance', 'match' => ['admin.earnings.']],
+            'earnings' => ['label' => 'Session earnings', 'group' => 'Finance', 'match' => ['admin.earnings.']],
             'withdrawals' => ['label' => 'Withdrawals', 'group' => 'Finance', 'match' => ['admin.withdrawals.']],
             'offers' => ['label' => 'Offers', 'group' => 'Finance', 'match' => ['admin.offers.']],
             'plans' => ['label' => 'Premium plans', 'group' => 'Finance', 'match' => ['admin.plans.']],

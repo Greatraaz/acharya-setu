@@ -19,8 +19,12 @@ class MentorEarningController extends Controller
         $sort = $request->query('sort', 'unpaid');
         $search = trim((string) $request->query('search', ''));
 
+        $role = (string) $request->query('role', '');
+
         $query = User::query()
-            ->sessionHosts()
+            ->when($role === 'expert', fn ($q) => $q->experts())
+            ->when($role === 'mentor', fn ($q) => $q->mentors())
+            ->when(! in_array($role, ['mentor', 'expert'], true), fn ($q) => $q->sessionHosts())
             ->select('users.id', 'users.name', 'users.email', 'users.avatar_url', 'users.role', 'users.wallet_balance', 'users.mentor_status', 'users.rate_per_minute', 'users.bank_details')
             ->leftJoinSub($this->sessionEarningsSub(), 'earn', 'earn.user_id', '=', 'users.id')
             ->leftJoinSub($this->payoutSub(), 'payout', 'payout.user_id', '=', 'users.id')
@@ -64,7 +68,12 @@ class MentorEarningController extends Controller
         $mentors = $query->paginate(20)->withQueryString();
         $stats = $this->platformStats();
 
-        return view('admin.earnings.index', compact('mentors', 'stats', 'filter', 'sort', 'search'));
+        return view('admin.earnings.index', compact('mentors', 'stats', 'filter', 'sort', 'search', 'role'));
+    }
+
+    public function summaryFor(User $host): array
+    {
+        return $this->mentorSummary($host);
     }
 
     public function show(User $mentor)

@@ -18,16 +18,18 @@
     </div>
     @endif
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-3">
         @foreach([
-            ['Total', $stats['total'], 'bg-slate-50', 'text-slate-700', 'border-slate-200'],
-            ['Approved', $stats['approved'], 'bg-green-50', 'text-green-700', 'border-green-200'],
-            ['Pending', $stats['pending'], 'bg-amber-50', 'text-amber-700', 'border-amber-200'],
-            ['Rejected', $stats['rejected'], 'bg-red-50', 'text-red-600', 'border-red-200'],
-            ['Suspended', $stats['suspended'], 'bg-gray-50', 'text-gray-600', 'border-gray-200'],
-        ] as [$label, $count, $bg, $tc, $bc])
+            ['Total', number_format($stats['total']), 'bg-slate-50', 'text-slate-700', 'border-slate-200'],
+            ['Approved', number_format($stats['approved']), 'bg-green-50', 'text-green-700', 'border-green-200'],
+            ['Pending', number_format($stats['pending']), 'bg-amber-50', 'text-amber-700', 'border-amber-200'],
+            ['Rejected', number_format($stats['rejected']), 'bg-red-50', 'text-red-600', 'border-red-200'],
+            ['Suspended', number_format($stats['suspended']), 'bg-gray-50', 'text-gray-600', 'border-gray-200'],
+            ['Earned (net)', '₹'.number_format((float) $stats['earned'], 0), 'bg-orange-50', 'text-orange-700', 'border-orange-200'],
+            ['Wallet unpaid', '₹'.number_format((float) $stats['unpaid'], 0), 'bg-indigo-50', 'text-indigo-700', 'border-indigo-200'],
+        ] as [$label, $value, $bg, $tc, $bc])
         <div class="{{ $bg }} border {{ $bc }} rounded-xl p-4">
-            <div class="text-xl font-bold {{ $tc }}">{{ number_format($count) }}</div>
+            <div class="text-xl font-bold {{ $tc }}">{{ $value }}</div>
             <div class="text-xs font-medium text-gray-500 mt-0.5">{{ $label }}</div>
         </div>
         @endforeach
@@ -86,6 +88,7 @@
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Domain</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Charge</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sessions</th>
+                        <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Earned</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Wallet</th>
                         <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-4 py-3"></th>
@@ -123,6 +126,10 @@
                             @endif
                         </td>
                         <td class="px-4 py-4 text-sm font-bold text-gray-700">{{ $expert->total_sessions ?? 0 }}</td>
+                        <td class="px-4 py-4">
+                            <div class="text-sm font-semibold {{ (float) $expert->earned > 0 ? 'text-gray-900' : 'text-gray-400' }}">₹{{ number_format((float) $expert->earned, 0) }}</div>
+                            <div class="text-xs text-gray-400">₹{{ number_format((float) $expert->paid_out, 0) }} paid{{ (float) $expert->pending_out > 0 ? ' · ₹'.number_format((float) $expert->pending_out, 0).' pending' : '' }}</div>
+                        </td>
                         <td class="px-4 py-4 text-sm font-semibold {{ (float) $expert->wallet_balance > 0 ? 'text-orange-600' : 'text-gray-400' }}">
                             ₹{{ number_format((float) $expert->wallet_balance, 0) }}
                         </td>
