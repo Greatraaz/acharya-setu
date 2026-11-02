@@ -58,9 +58,9 @@ final class ProfileUpdate
         }
 
         $pending = false;
-        if ($user->role === 'mentor' && $user->isApproved()) {
+        if ($user->isSessionHost() && $user->isApproved()) {
             $pending = self::queueMentorChanges($user, $data);
-        } elseif ($user->role === 'mentor') {
+        } elseif ($user->isSessionHost()) {
             foreach (self::MODERATED as $key) {
                 if (array_key_exists($key, $data)) {
                     $immediate[$key] = $data[$key];

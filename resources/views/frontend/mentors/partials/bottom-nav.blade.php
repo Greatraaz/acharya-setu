@@ -1,13 +1,15 @@
 @php
+    $isExpertNav = auth()->user()?->isExpert();
     $isDash = request()->routeIs('mentor.dashboard');
     $isSessions = request()->routeIs('mentor.sessions*');
+    $isNotes = request()->routeIs('mentor.notes') || request()->routeIs('mentor.wallet*');
     $isTasks = request()->routeIs('mentor.curriculum*')
         || request()->routeIs('mentor.journey*')
         || request()->routeIs('mentor.submissions*');
     $isCommunity = request()->routeIs('mentor.community*');
     $isProfile = request()->routeIs('mentor.profile.*') || request()->routeIs('account*');
 @endphp
-<nav class="app-bottom-nav" aria-label="Mentor mobile navigation">
+<nav class="app-bottom-nav" aria-label="{{ $isExpertNav ? 'Expert' : 'Mentor' }} mobile navigation">
     <a href="{{ route('mentor.dashboard') }}" class="app-bottom-nav__item {{ $isDash ? 'is-active' : '' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <rect x="3.5" y="3.5" width="7" height="7" rx="1.4"/>
@@ -24,6 +26,22 @@
         </svg>
         <span>Sessions</span>
     </a>
+    @if($isExpertNav)
+    <a href="{{ route('mentor.notes') }}" class="app-bottom-nav__item {{ request()->routeIs('mentor.notes') ? 'is-active' : '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M8 4.5h8.5A2.5 2.5 0 0 1 19 7v12.5a2.5 2.5 0 0 1-2.5 2.5H7.5A2.5 2.5 0 0 1 5 19.5V7A2.5 2.5 0 0 1 7.5 4.5H8"/>
+            <path d="M8.5 12h7M8.5 16h5"/>
+        </svg>
+        <span>Notes</span>
+    </a>
+    <a href="{{ route('mentor.wallet') }}" class="app-bottom-nav__item {{ request()->routeIs('mentor.wallet*') ? 'is-active' : '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <rect x="3.5" y="7" width="17" height="13" rx="2"/>
+            <path d="M3.5 10h17M16 14.5h.01"/>
+        </svg>
+        <span>Earnings</span>
+    </a>
+    @else
     <a href="{{ route('mentor.curriculum.tracks') }}" class="app-bottom-nav__item {{ $isTasks ? 'is-active' : '' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M8 4.5h8.5A2.5 2.5 0 0 1 19 7v12.5a2.5 2.5 0 0 1-2.5 2.5H7.5A2.5 2.5 0 0 1 5 19.5V7A2.5 2.5 0 0 1 7.5 4.5H8"/>
@@ -40,6 +58,7 @@
         </svg>
         <span>Community</span>
     </a>
+    @endif
     <a href="{{ route('mentor.profile.edit') }}" class="app-bottom-nav__item {{ $isProfile ? 'is-active' : '' }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <circle cx="12" cy="8" r="3.2"/>

@@ -1,6 +1,6 @@
 {{-- resources/views/frontend/mentor/profile-edit.blade.php --}}
 @extends('frontend.layouts.app')
-@section('title', 'Edit Profile — Vedrix Mentor')
+@section('title', 'Edit Profile — Vedrix')
 
 @section('content')
 <div class="dash-layout">
@@ -10,7 +10,7 @@
         <div class="dash-header flex-between">
             <div>
                 <div class="dash-title">Edit Your Profile</div>
-                <div class="dash-subtitle">Keep your profile up to date to attract more mentees.</div>
+                <div class="dash-subtitle">Keep your profile and session charge up to date.</div>
             </div>
             <a href="{{ auth()->user()->profile_url }}" target="_blank" class="btn btn-outline">👁 Preview Profile</a>
         </div>

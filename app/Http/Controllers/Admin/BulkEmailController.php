@@ -143,9 +143,9 @@ class BulkEmailController extends Controller
             ->select('id', 'name', 'email', 'role')
             ->whereNotNull('email')
             ->where('email', '!=', '')
-            ->whereIn('role', ['mentor', 'mentee']);
+            ->whereIn('role', ['mentor', 'expert', 'mentee']);
 
-        if (in_array($role, ['mentor', 'mentee'], true)) {
+        if (in_array($role, ['mentor', 'expert', 'mentee'], true)) {
             $query->where('role', $role);
         }
 

@@ -38,7 +38,7 @@ class AuthController extends Controller
         'onboarding_step', 'mentor_status', 'subscription_plan',
         'education_stream', 'career_goals', 'strengths',
         'preferences', 'is_active', 'isVerifiedEmail', 'created_at',
-        'has_pending_changes',
+        'has_pending_changes', 'rate_per_minute', 'location',
     ];
 
     public function register(Request $request): JsonResponse
@@ -50,7 +50,7 @@ class AuthController extends Controller
             'email'            => ['required', 'email:filter', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'phone'            => IndianPhone::rules(required: true),
             'password'         => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
-            'role'             => ['nullable', 'in:mentor,mentee'],
+            'role'             => ['nullable', 'in:mentor,mentee,expert'],
             'college'          => ['nullable', 'string', 'max:255'],
             'year'             => ['nullable', 'string', 'max:20'],
             'field'            => ['nullable', 'string', 'max:255'],
@@ -110,6 +110,7 @@ class AuthController extends Controller
                 'experience_years'  => $validated['experience_years'] ?? 0,
                 'gender'            => $validated['gender'] ?? null,
                 'referral_code'     => $validated['referral_code'] ?? null,
+                'mentor_status'     => ($validated['role'] ?? 'mentee') === 'expert' ? 'pending' : 'approved',
                 'terms_accepted_at' => now(),
                 'terms_version'     => RegistrationData::TERMS_VERSION,
             ]);
@@ -295,7 +296,7 @@ class AuthController extends Controller
             ]);
         }
 
-        if ($user->role === 'mentor') {
+        if ($user->isSessionHost()) {
             $rules = array_merge($rules, [
                 'bio' => array_merge(['sometimes'], RichText::rules(80)),
                 'field' => ['nullable', 'string', 'max:100'],

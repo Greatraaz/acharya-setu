@@ -12,7 +12,7 @@ class CallsController extends Controller
     public function index(Request $request): JsonResponse
     {
         $u = $request->user();
-        $f = $u->role === 'mentor' ? 'mentor_id' : 'mentee_id';
+        $f = $u->isSessionHost() ? 'mentor_id' : 'mentee_id';
         return response()->json([
             'calls' => CallRecord::where($f, $u->id)
                 ->with(['mentor:id,name,avatar_url', 'mentee:id,name,avatar_url'])

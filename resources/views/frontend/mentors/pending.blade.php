@@ -7,7 +7,7 @@
     <div style="font-size:72px;margin-bottom:20px;">⏳</div>
     <h1 style="font-size:28px;font-weight:800;margin-bottom:12px;">Application Under Review</h1>
     <p style="font-size:15px;color:var(--text-2);line-height:1.75;margin-bottom:32px;">
-        Thank you for applying to be a mentor on Vedrix! Our team is reviewing your profile.
+        Thank you for applying to join Vedrix as {{ auth()->user()?->isExpert() ? 'an expert' : 'a mentor' }}! Our team is reviewing your profile.
         You'll receive an email notification within <strong style="color:var(--brand);">24–48 hours</strong>.
     </p>
     <div class="card" style="text-align:left;margin-bottom:24px;">

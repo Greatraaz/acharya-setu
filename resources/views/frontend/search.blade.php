@@ -13,7 +13,13 @@
     <div style="background:var(--bg-2);border-bottom:1px solid var(--border);padding:32px 0;">
         <div class="container">
             <h1 style="font-size:28px;font-weight:800;margin-bottom:8px;">{{ \App\Support\MentorBrowseQuery::listingTitle(request()) }}</h1>
-            <p style="font-size:14px;color:var(--text-2);margin-bottom:20px;">Browse verified mentors and refine by domain, format, and availability</p>
+            <p style="font-size:14px;color:var(--text-2);margin-bottom:16px;">Browse verified mentors and experts, then refine by domain, format, and availability</p>
+            <div class="chip-wrap" style="margin-bottom:16px;">
+                @foreach(['' => 'All', 'mentor' => 'Mentors', 'expert' => 'Experts'] as $val => $label)
+                <a href="{{ route('mentors.search', array_filter(array_merge(request()->except(['page']), ['type' => $val ?: null]))) }}"
+                   class="chip {{ request('type', '') === $val ? 'selected' : '' }}">{{ $label }}</a>
+                @endforeach
+            </div>
 
             {{-- Search bar --}}
             <div class="search-hero" style="margin:0;max-width:100%;">
@@ -156,7 +162,12 @@
                                 @else{{ strtoupper(substr($mentor->name,0,1)) }}@endif
                             </div>
                             <div class="mentor-card-info">
-                                <div class="mentor-card-name">{{ $mentor->name }}</div>
+                                <div class="mentor-card-name">
+                                    {{ $mentor->name }}
+                                    @if($mentor->isExpert())
+                                    <span class="tag" style="margin-left:6px;font-size:10px;vertical-align:middle;">Expert</span>
+                                    @endif
+                                </div>
                                 <div class="mentor-card-role">{{ $mentor->designation }}{{ $mentor->company ? ' · '.$mentor->company : '' }}</div>
                             </div>
                         </div>

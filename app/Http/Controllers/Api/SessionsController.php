@@ -19,7 +19,7 @@ class SessionsController extends Controller
     {
         $u = $request->user();
         ConsultationSession::expireMissedSessions(
-            $u->role === 'mentor' ? $u->id : null,
+            $u->isSessionHost() ? $u->id : null,
             $u->role === 'mentee' ? $u->id : null
         );
 
@@ -36,7 +36,7 @@ class SessionsController extends Controller
         $search  = trim((string) ($data['search'] ?? $data['q'] ?? ''));
         $perPage = $data['per_page'] ?? 20;
 
-        $f = $u->role === 'mentor' ? 'mentor_id' : 'mentee_id';
+        $f = $u->isSessionHost() ? 'mentor_id' : 'mentee_id';
         $query = ConsultationSession::where($f, $u->id)
             ->with([
                 'mentor:id,name,avatar_url,gender',
@@ -493,7 +493,7 @@ class SessionsController extends Controller
                 $s->complete();
                 $s->refresh();
             } elseif (($d['status'] ?? null) === 'cancelled') {
-                $role = $request->user()->role === 'mentor'
+                $role = $request->user()->isSessionHost()
                     ? SessionCancellationService::ROLE_MENTOR
                     : SessionCancellationService::ROLE_MENTEE;
                 $result = $cancellations->cancel($s, $request->user(), $role, $d['notes'] ?? null);
@@ -548,7 +548,7 @@ class SessionsController extends Controller
     {
         try {
             $session = $this->findOwnedSession($request, $id);
-            $role = $request->user()->role === 'mentor'
+            $role = $request->user()->isSessionHost()
                 ? SessionCancellationService::ROLE_MENTOR
                 : SessionCancellationService::ROLE_MENTEE;
 
@@ -654,7 +654,7 @@ class SessionsController extends Controller
     private function findOwnedSession(Request $request, int $id): ConsultationSession
     {
         $user = $request->user();
-        $field = $user->role === 'mentor' ? 'mentor_id' : 'mentee_id';
+        $field = $user->isSessionHost() ? 'mentor_id' : 'mentee_id';
 
         return ConsultationSession::where('id', $id)
             ->where($field, $user->id)

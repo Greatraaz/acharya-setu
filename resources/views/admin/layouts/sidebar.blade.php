@@ -15,6 +15,7 @@
             ],
             'People' => [
                 ['admin.mentors.index',          '👨‍💼', 'Mentors'],
+                ['admin.experts.index',          '🎯', 'Experts'],
                 ['admin.mentees.index',          '🎓', 'Mentees'],
                 ['admin.mentor-approvals.index', '✅', 'Mentor Approvals'],
             ],

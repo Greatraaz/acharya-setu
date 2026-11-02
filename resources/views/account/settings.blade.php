@@ -4,7 +4,7 @@
 @section('content')
 @php $user = $user ?? auth()->user(); @endphp
 <div class="dash-layout account-settings-page">
-    @if($user->role === 'mentor')
+    @if($user->isSessionHost())
         @include('frontend.mentors.partials.sidebar')
     @else
         @include('frontend.mentee.partials.sidebar')
@@ -235,10 +235,10 @@
                     <button type="submit" class="btn btn-primary account-settings-form__submit">Update Password</button>
                 </form>
 
-                @if($user->role === 'mentor')
+                @if($user->isSessionHost())
                 <div class="account-settings-mentor-link">
-                    <p>Want to edit your public mentor profile?</p>
-                    <a href="{{ route('mentor.profile.edit') }}" class="btn btn-outline btn-sm account-settings-mentor-link__btn">Open Mentor Profile Editor →</a>
+                    <p>Want to edit your public {{ strtolower($user->hostLabel()) }} profile?</p>
+                    <a href="{{ route('mentor.profile.edit') }}" class="btn btn-outline btn-sm account-settings-mentor-link__btn">Open Profile Editor →</a>
                 </div>
                 @endif
             </div>

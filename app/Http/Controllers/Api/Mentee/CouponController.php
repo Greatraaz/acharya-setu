@@ -44,7 +44,7 @@ class CouponController extends Controller
             'duration'    => 'required|integer|in:'.implode(',', ConsultationSession::BOOKING_DURATIONS),
         ]);
 
-        $mentor = User::where('role', 'mentor')
+        $mentor = User::sessionHosts()
             ->where('mentor_status', 'approved')
             ->find($data['mentor_id']);
 

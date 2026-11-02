@@ -151,7 +151,7 @@ class SessionCallController extends Controller
 
     private function sessionUrl(string $role, int $id): string
     {
-        return $role === 'mentor'
+        return in_array($role, ['mentor', 'expert'], true)
             ? route('mentor.sessions.show', $id)
             : route('mentee.sessions.show', $id);
     }

@@ -33,7 +33,7 @@ class AdminController extends Controller
         return response()->json($q->orderByDesc('created_at')->paginate(20));
     }
     public function showUser(string $id): JsonResponse { return response()->json(['user'=>User::with(['sessionsAsMentee','sessionsAsMentor','tasks','walletTransactions'])->findOrFail($id)]); }
-    public function updateUser(Request $request, string $id): JsonResponse { $u=User::findOrFail($id); $u->update($request->validate(['name'=>'sometimes|string','role'=>'sometimes|in:mentor,mentee,admin','is_active'=>'sometimes|boolean','subscription_plan'=>'sometimes|string','mentor_status'=>'sometimes|in:pending,approved,rejected'])); return response()->json(['user'=>$u]); }
+    public function updateUser(Request $request, string $id): JsonResponse { $u=User::findOrFail($id); $u->update($request->validate(['name'=>'sometimes|string','role'=>'sometimes|in:mentor,mentee,expert,admin','is_active'=>'sometimes|boolean','subscription_plan'=>'sometimes|string','mentor_status'=>'sometimes|in:pending,approved,rejected'])); return response()->json(['user'=>$u]); }
     public function deleteUser(string $id): JsonResponse { User::findOrFail($id)->update(['is_active'=>false]); return response()->json(['message'=>'User deactivated']); }
 
     // Sessions

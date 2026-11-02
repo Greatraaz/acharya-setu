@@ -19,7 +19,10 @@ class MentorListingController extends Controller
     // ── Public mentor listing with filters ────────────────────
     public function index(Request $request)
     {
-        $query = User::where('role', 'mentor')
+        $query = User::query()
+            ->when($request->input('type') === 'expert', fn ($q) => $q->where('role', 'expert'))
+            ->when($request->input('type') === 'mentor', fn ($q) => $q->where('role', 'mentor'))
+            ->when(! in_array($request->input('type'), ['mentor', 'expert'], true), fn ($q) => $q->sessionHosts())
             ->where('mentor_status', 'approved')
             ->where('is_active', true);
 
@@ -59,7 +62,7 @@ class MentorListingController extends Controller
         }
 
         $mentorFields = User::query()
-            ->where('role', 'mentor')
+            ->sessionHosts()
             ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
             ->where('is_active', true)
             ->whereNotNull('field')
@@ -78,7 +81,7 @@ class MentorListingController extends Controller
     {
         // Old numeric URLs → permanent redirect to slug
         if (ctype_digit($slug)) {
-            $mentor = User::where('role', 'mentor')
+            $mentor = User::sessionHosts()
                 ->where('mentor_status', 'approved')
                 ->where('is_active', true)
                 ->findOrFail((int) $slug);
@@ -88,7 +91,7 @@ class MentorListingController extends Controller
             }
         }
 
-        $mentor = User::where('role', 'mentor')
+        $mentor = User::sessionHosts()
             ->where('mentor_status', 'approved')
             ->where('is_active', true)
             ->where('slug', $slug)
@@ -118,7 +121,7 @@ class MentorListingController extends Controller
      */
     public function availability(int $id, Request $request)
     {
-        $mentor = User::where('role', 'mentor')
+        $mentor = User::sessionHosts()
             ->where('mentor_status', 'approved')
             ->findOrFail($id);
 

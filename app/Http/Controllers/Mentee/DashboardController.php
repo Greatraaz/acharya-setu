@@ -50,7 +50,7 @@ class DashboardController extends Controller
 
         $weekTasks = $this->loadWeekTasks($mentee, $enrollment);
 
-        $recommendedMentors = User::where('role', 'mentor')
+        $recommendedMentors = User::sessionHosts()
             ->where('mentor_status', 'approved')
             ->where('is_active', true)
             ->orderByDesc('rating')

@@ -116,7 +116,7 @@
 
 <script src="{{ asset('frontend/js/app.js') }}?v={{ filemtime(public_path('frontend/js/app.js')) }}"></script>
 @auth
-    @if(in_array(auth()->user()->role, ['mentor', 'mentee'], true))
+    @if(in_array(auth()->user()->role, ['mentor', 'expert', 'mentee'], true))
         @include('frontend.partials.push-notifications')
     @endif
 @endauth

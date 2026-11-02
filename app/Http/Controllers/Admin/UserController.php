@@ -216,6 +216,79 @@ class UserController extends Controller
         );
         return redirect()->back()->with('success', "Mentor status updated.");
     }
+
+    public function expertIndex(Request $request)
+    {
+        $search = trim((string) $request->input('search', ''));
+
+        $experts = User::query()
+            ->experts()
+            ->when($search !== '', fn ($q) => $q->where(function ($inner) use ($search) {
+                $inner->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('company', 'like', "%{$search}%")
+                    ->orWhere('designation', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            }))
+            ->when($request->filled('mentor_status'), fn ($q) => $q->where('mentor_status', $request->mentor_status))
+            ->when($request->filled('field'), fn ($q) => $q->where('field', 'like', '%'.$request->field.'%'))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        $stats = [
+            'total'     => User::experts()->count(),
+            'approved'  => User::experts()->where('mentor_status', 'approved')->count(),
+            'pending'   => User::experts()->where('mentor_status', 'pending')->count(),
+            'rejected'  => User::experts()->where('mentor_status', 'rejected')->count(),
+            'suspended' => User::experts()->where('mentor_status', 'suspended')->count(),
+        ];
+
+        return view('admin.experts.index', compact('experts', 'stats'));
+    }
+
+    public function expertToggleStatus(User $expert)
+    {
+        abort_unless($expert->isExpert(), 404);
+        $expert->update(['is_active' => ! $expert->is_active]);
+        ActivityLogger::record(
+            'expert_status_changed',
+            auth()->user()->name . " set expert {$expert->name} to " . ($expert->is_active ? 'active' : 'inactive'),
+            'users',
+            'info'
+        );
+
+        return redirect()->back()->with('success', 'Expert status updated.');
+    }
+
+    public function expertApprove(User $expert)
+    {
+        abort_unless($expert->isExpert(), 404);
+        $expert->approve(auth()->id());
+        ActivityLogger::record(
+            'expert_approved',
+            auth()->user()->name . " approved expert: {$expert->name}",
+            'users',
+            'success'
+        );
+
+        return redirect()->back()->with('success', "{$expert->name} is now live as an expert.");
+    }
+
+    public function expertDestroy(User $expert)
+    {
+        abort_unless($expert->isExpert(), 404);
+        ActivityLogger::record(
+            'user_deleted',
+            auth()->user()->name . " deleted expert: {$expert->name}",
+            'users',
+            'danger'
+        );
+        $name = $expert->name;
+        $expert->delete();
+
+        return redirect()->route('admin.experts.index')->with('success', "{$name} has been deleted.");
+    }
  
     public function mentorTrashed(Request $request)
     {

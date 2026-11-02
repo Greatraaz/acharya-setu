@@ -60,6 +60,26 @@ class NotificationController extends Controller
             ];
         }
 
+        $pendingExperts = User::experts()
+            ->where('mentor_status', User::MENTOR_STATUS_PENDING)
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get(['id', 'name', 'email', 'created_at']);
+
+        foreach ($pendingExperts as $expert) {
+            $items[] = [
+                'id'          => 'expert-pending-' . $expert->id,
+                'icon'        => '🎯',
+                'title'       => 'Expert approval pending',
+                'body'        => "{$expert->name} is waiting for approval.",
+                'url'         => route('admin.experts.edit', $expert),
+                'time'        => optional($expert->created_at)->diffForHumans(),
+                'at'          => optional($expert->created_at)?->timestamp,
+                'level'       => 'warning',
+                'dismissable' => false,
+            ];
+        }
+
         $pendingChanges = MentorPendingChange::pending()
             ->with('mentor:id,name')
             ->latest()

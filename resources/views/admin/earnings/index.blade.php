@@ -101,7 +101,12 @@
                                 </div>
                                 @endif
                                 <div class="min-w-0">
-                                    <div class="font-semibold text-gray-800 truncate">{{ $row->name }}</div>
+                                    <div class="font-semibold text-gray-800 truncate">
+                                        {{ $row->name }}
+                                        @if(($row->role ?? '') === 'expert')
+                                        <span class="ml-1 text-[10px] font-bold uppercase tracking-wide text-violet-700 bg-violet-50 border border-violet-100 px-1.5 py-0.5 rounded-full">Expert</span>
+                                        @endif
+                                    </div>
                                     <div class="text-xs text-gray-500 truncate">{{ $row->email }}</div>
                                     <div class="text-[11px] text-gray-400">{{ (int) $row->session_count }} paid sessions</div>
                                 </div>

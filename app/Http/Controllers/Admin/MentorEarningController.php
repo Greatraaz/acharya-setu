@@ -20,7 +20,7 @@ class MentorEarningController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         $query = User::query()
-            ->mentors()
+            ->sessionHosts()
             ->select('users.id', 'users.name', 'users.email', 'users.avatar_url', 'users.role', 'users.wallet_balance', 'users.mentor_status', 'users.rate_per_minute', 'users.bank_details')
             ->leftJoinSub($this->sessionEarningsSub(), 'earn', 'earn.user_id', '=', 'users.id')
             ->leftJoinSub($this->payoutSub(), 'payout', 'payout.user_id', '=', 'users.id')
@@ -69,7 +69,7 @@ class MentorEarningController extends Controller
 
     public function show(User $mentor)
     {
-        abort_unless($mentor->isMentor(), 404);
+        abort_unless($mentor->isSessionHost(), 404);
 
         $summary = $this->mentorSummary($mentor);
 
@@ -96,7 +96,7 @@ class MentorEarningController extends Controller
 
     public function pay(Request $request, User $mentor)
     {
-        abort_unless($mentor->isMentor(), 404);
+        abort_unless($mentor->isSessionHost(), 404);
 
         $data = $request->validate([
             'amount'       => 'required|numeric|min:1',
@@ -226,7 +226,7 @@ class MentorEarningController extends Controller
             ->selectRaw("COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) as pending_out")
             ->first();
 
-        $unpaid = (float) User::query()->mentors()->sum('wallet_balance');
+        $unpaid = (float) User::query()->sessionHosts()->sum('wallet_balance');
 
         return [
             'earned'        => (float) ($earn->earned ?? 0),

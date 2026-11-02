@@ -151,6 +151,90 @@ class AdminOnboardingController extends Controller
             ->with('success', "Mentor profile updated.");
     }
  
+    // ── EXPERT ────────────────────────────────────────────────
+
+    public function createExpert()
+    {
+        return view('admin.experts.form', ['expert' => null]);
+    }
+
+    public function storeExpert(Request $request)
+    {
+        $data = $this->expertPayload($request);
+
+        if ($request->hasFile('avatar')) {
+            $data['avatar_url'] = PublicFileStorage::store($request->file('avatar'), 'avatars');
+        }
+
+        $expert = User::create(array_merge($data, [
+            'password'             => Hash::make($data['password']),
+            'role'                 => 'expert',
+            'onboarding_step'      => 5,
+            'onboarding_completed' => true,
+            'is_active'            => $data['mentor_status'] === 'approved',
+            'approved_by'          => $data['mentor_status'] === 'approved' ? auth()->id() : null,
+            'approved_at'          => $data['mentor_status'] === 'approved' ? now() : null,
+        ]));
+
+        unset($expert->password);
+
+        ActivityLogger::record(
+            'expert_created_by_admin',
+            auth()->user()->name . " created expert account for: {$expert->name}",
+            'users',
+            'success'
+        );
+
+        return redirect()->route('admin.experts.index')
+            ->with('success', "Expert account created for {$expert->name}.");
+    }
+
+    public function editExpert(User $expert)
+    {
+        abort_unless($expert->isExpert(), 404);
+
+        return view('admin.experts.form', compact('expert'));
+    }
+
+    public function updateExpert(Request $request, User $expert)
+    {
+        abort_unless($expert->isExpert(), 404);
+
+        $data = $this->expertPayload($request, $expert);
+
+        if ($request->hasFile('avatar')) {
+            PublicFileStorage::deleteByUrl($expert->avatar_url);
+            $data['avatar_url'] = PublicFileStorage::store($request->file('avatar'), 'avatars');
+        }
+
+        if (! empty($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
+        }
+
+        $oldStatus = $expert->mentor_status;
+        if ($data['mentor_status'] === 'approved' && $oldStatus !== 'approved') {
+            $data['approved_by'] = auth()->id();
+            $data['approved_at'] = now();
+            $data['is_active'] = true;
+        } elseif ($data['mentor_status'] !== 'approved') {
+            $data['is_active'] = $request->boolean('is_active');
+        }
+
+        $expert->update($data);
+
+        ActivityLogger::record(
+            'expert_updated_by_admin',
+            auth()->user()->name . " updated expert profile: {$expert->name}",
+            'users',
+            'info'
+        );
+
+        return redirect()->route('admin.experts.index')
+            ->with('success', "Expert profile updated.");
+    }
+
     // ── MENTEE ────────────────────────────────────────────────
 
     public function createMentee(MenteeOnboardingService $onboarding)
@@ -347,5 +431,43 @@ class AdminOnboardingController extends Controller
     private function educationStreamOptions(MenteeOnboardingService $onboarding, ?User $mentee = null): array
     {
         return $onboarding->onboardingStreamNames($mentee?->education_stream);
+    }
+
+    private function expertPayload(Request $request, ?User $expert = null): array
+    {
+        $data = $request->validate([
+            'name'             => 'required|string|max:100',
+            'email'            => ['required', 'email', Rule::unique('users', 'email')->ignore($expert?->id)],
+            'password'         => $expert ? ['nullable', Password::min(8)] : ['required', Password::min(8)],
+            'phone'            => IndianPhone::rules(),
+            'gender'           => 'nullable|in:male,female,other,prefer_not_to_say',
+            'avatar'           => 'nullable|image|max:2048',
+            'designation'      => 'required|string|max:150',
+            'company'          => 'nullable|string|max:150',
+            'experience_years' => 'nullable|integer|min:0|max:50',
+            'linkedin'         => 'nullable|url',
+            'location'         => 'nullable|string|max:150',
+            'field'            => 'required|string|max:100',
+            'expertise_text'   => 'nullable|string|max:500',
+            'bio'              => RichText::rules(30),
+            'rate_per_minute'  => 'required|numeric|min:0',
+            'mentor_status'    => 'required|in:pending,approved,rejected,suspended',
+            'is_active'        => 'nullable|boolean',
+        ]);
+
+        if (array_key_exists('phone', $data)) {
+            $data['phone'] = IndianPhone::normalize($data['phone']);
+        }
+
+        $data['expertise'] = collect(explode(',', (string) ($data['expertise_text'] ?? '')))
+            ->map(fn ($tag) => trim($tag))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        unset($data['expertise_text'], $data['avatar'], $data['is_active']);
+
+        return $data;
     }
 }

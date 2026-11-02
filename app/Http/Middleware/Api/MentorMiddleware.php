@@ -27,8 +27,8 @@ class MentorMiddleware
             return response()->json(['status'=> false, 'message' => 'Unauthenticated.'], 401);
         }
 
-        if ($user->role !== 'mentor') {
-            return response()->json(['status'=> false, 'message' => 'Unauthorized. You are not a mentor.'], 403);
+        if (! $user->isSessionHost()) {
+            return response()->json(['status'=> false, 'message' => 'Unauthorized. Session host access required.'], 403);
         }
 
         return $next($request);

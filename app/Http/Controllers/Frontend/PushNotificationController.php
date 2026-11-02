@@ -13,7 +13,7 @@ class PushNotificationController extends Controller
     public function feed(Request $request): JsonResponse
     {
         $user = $request->user();
-        if (! $user || ! in_array($user->role, ['mentor', 'mentee'], true)) {
+        if (! $user || ! in_array($user->role, ['mentor', 'expert', 'mentee'], true)) {
             return response()->json(['notifications' => [], 'unread_count' => 0, 'unreadCount' => 0], 403);
         }
 

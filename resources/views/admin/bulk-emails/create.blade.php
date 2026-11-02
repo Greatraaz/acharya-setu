@@ -80,10 +80,11 @@
 
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-2">Send to *</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="audience-options">
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="audience-options">
                         @foreach([
                             'all' => 'All users',
                             'mentors' => 'Mentors',
+                            'experts' => 'Experts',
                             'mentees' => 'Mentees',
                             'specific' => 'Specific users',
                         ] as $value => $label)

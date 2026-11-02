@@ -14,7 +14,7 @@
     }
     .register-page__inner {
         width: 100%;
-        max-width: 480px;
+        max-width: 560px;
     }
     .register-page__hero {
         text-align: center;
@@ -109,6 +109,9 @@
             max-width: none;
         }
     }
+    body:has(.register-page) .loader-overlay {
+        display: none !important;
+    }
 </style>
 @endpush
 
@@ -145,17 +148,22 @@
             <h2 style="font-size:18px;margin-bottom:6px;">I want to join as a…</h2>
             <p style="font-size:13px;color:var(--text-2);margin-bottom:20px;">Choose your role to get started</p>
 
-            <input type="hidden" name="role" id="role-input" value="mentee">
+            <input type="hidden" name="role" id="role-input" value="{{ in_array($defaultRole, ['mentor','mentee','expert'], true) ? $defaultRole : 'mentee' }}">
             <div class="role-grid">
-                <div class="role-card selected" onclick="selectRole(this,'mentee')">
+                <div class="role-card {{ ($defaultRole ?? 'mentee') === 'mentee' ? 'selected' : '' }}" onclick="selectRole(this,'mentee')">
                     <div class="role-icon">🎓</div>
                     <h4>Mentee</h4>
-                    <p>I want to find a mentor & grow my career</p>
+                    <p>Find a mentor and grow</p>
                 </div>
-                <div class="role-card" onclick="selectRole(this,'mentor')">
+                <div class="role-card {{ ($defaultRole ?? '') === 'mentor' ? 'selected' : '' }}" onclick="selectRole(this,'mentor')">
                     <div class="role-icon">👨‍💼</div>
                     <h4>Mentor</h4>
-                    <p>I want to share my expertise & earn</p>
+                    <p>Guide mentees long-term</p>
+                </div>
+                <div class="role-card {{ ($defaultRole ?? '') === 'expert' ? 'selected' : '' }}" onclick="selectRole(this,'expert')">
+                    <div class="role-icon">🎯</div>
+                    <h4>Expert</h4>
+                    <p>Coach in focused 1:1 sessions</p>
                 </div>
             </div>
 
@@ -277,6 +285,7 @@ FormStepper.show = function(n) {
         el.classList.toggle('active', num === n);
     });
     if (n === 3) {
+        if (typeof hideLoader === 'function') hideLoader();
         initOtpInputs('#email-otp-grid');
         startResendTimer('#resend-link', '#resend-count', 30);
     }
@@ -327,7 +336,7 @@ function sendOtpStep() {
         email: data.email,
         phone: '+91' + data.phoneDigits,
     }, {
-        btn, loader: true,
+        btn, loader: false,
         onSuccess: () => {
             window.registrationOtpExpiresAt = Date.now() + 10 * 60 * 1000;
             window.registrationOtpExpiryNotified = false;
@@ -363,7 +372,7 @@ function verifyAndRegister() {
         email_otp:       emailOtp,
         accepted_terms:  true,
     }, {
-        btn, loader: true,
+        btn, loader: false,
         onSuccess: data => {
             showToast('success', 'Account created! Redirecting…');
             setTimeout(() => window.location.href = data.redirect || '/dashboard', 1500);

@@ -26,7 +26,7 @@ class SessionBookingService
      */
     public function book(User $mentee, array $data, string $source = 'api'): array
     {
-        $mentor = User::where('role', 'mentor')
+        $mentor = User::sessionHosts()
             ->where('mentor_status', 'approved')
             ->find($data['mentor_id'] ?? null);
 

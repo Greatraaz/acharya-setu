@@ -23,7 +23,7 @@ class ConfigController extends Controller
         'onboarding_step', 'mentor_status', 'subscription_plan',
         'education_stream', 'career_goals', 'strengths',
         'preferences', 'is_active', 'isVerifiedEmail', 'created_at',
-        'assigned_mentor_id',
+        'assigned_mentor_id', 'rate_per_minute', 'location',
     ];
 
     public function show(

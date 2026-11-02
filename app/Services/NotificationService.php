@@ -60,6 +60,33 @@ class NotificationService
         }
     }
 
+    public function notifyAdmins(string $type, string $title, string $body, array $data = [], ?string $url = null): void
+    {
+        $this->sendToIds(
+            User::query()->where('role', 'admin')->where('is_active', true)->pluck('id'),
+            $type,
+            $title,
+            $body,
+            $data,
+            $url
+        );
+    }
+
+    public function expertPendingApproval(User $expert): void
+    {
+        if (! $expert->isExpert()) {
+            return;
+        }
+
+        $this->notifyAdmins(
+            'expert_pending_approval',
+            'Expert approval pending',
+            "{$expert->name} submitted an expert profile and is waiting for approval.",
+            ['expert_id' => $expert->id],
+            route('admin.experts.edit', $expert)
+        );
+    }
+
     public function sendDueSessionReminders(): int
     {
         if (! Schema::hasTable('consultation_sessions')) {
@@ -185,7 +212,7 @@ class NotificationService
 
     public function roleUrl(User $user, string $suffix, mixed $params = []): ?string
     {
-        $prefix = $user->isMentor() ? 'mentor.' : ($user->isMentee() ? 'mentee.' : null);
+        $prefix = $user->isSessionHost() ? 'mentor.' : ($user->isMentee() ? 'mentee.' : null);
         if (! $prefix) {
             return null;
         }

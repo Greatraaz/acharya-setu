@@ -746,7 +746,7 @@
                                 <span class="user-caret">▾</span>
                             </button>
                             <div class="user-dropdown" role="menu">
-                                @if($user->role === 'mentor')
+                                @if($user->isSessionHost())
                                     <a class="vj-account-item" href="{{ route('mentor.dashboard') }}">📊 Dashboard</a>
                                     <a class="vj-account-item" href="{{ route('mentor.sessions') }}">📅 My Sessions</a>
                                     <a class="vj-account-item" href="{{ route('mentor.profile.edit') }}">✏️ Edit Profile</a>
@@ -795,7 +795,7 @@
                 <a href="{{ route('mentors.search') }}" class="vj-btn vj-btn-primary justify-content-center">Find a Mentor</a>
                 @endif
                 @auth
-                    @if(auth()->user()->role === 'mentor')
+                    @if(auth()->user()->isSessionHost())
                         <a href="{{ route('mentor.dashboard') }}" class="vj-btn vj-btn-outline-mustard justify-content-center">Dashboard</a>
                     @elseif(auth()->user()->role === 'mentee')
                         <a href="{{ route('mentee.dashboard') }}" class="vj-btn vj-btn-outline-mustard justify-content-center">Dashboard</a>

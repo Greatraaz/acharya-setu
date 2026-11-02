@@ -327,7 +327,7 @@ class PortalController extends Controller
             ->get();
 
         $inviteCandidates = User::query()
-            ->whereIn('role', ['mentor', 'mentee'])
+            ->whereIn('role', ['mentor', 'expert', 'mentee'])
             ->where('is_active', true)
             ->whereNotIn('id', $members->pluck('id'))
             ->orderBy('name')

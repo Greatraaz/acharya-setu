@@ -34,7 +34,7 @@ class RegisterController extends Controller
             'email'          => ['required', 'email:filter', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'phone'          => IndianPhone::rules(required: true),
             'password'       => ['required', Password::min(8)->mixedCase()->numbers()],
-            'role'           => 'required|in:mentor,mentee',
+            'role'           => 'required|in:mentor,mentee,expert',
             'email_otp'      => 'required|digits:6',
             'accepted_terms' => 'required|accepted',
         ]);
@@ -69,7 +69,7 @@ class RegisterController extends Controller
                 'phone'                 => IndianPhone::normalize($request->phone),
                 'password'              => Hash::make($request->password),
                 'role'                  => $request->role,
-                'mentor_status'         => $request->role === 'mentor' ? 'pending' : 'approved',
+                'mentor_status'         => in_array($request->role, ['mentor', 'expert'], true) ? 'pending' : 'approved',
                 'onboarding_completed'  => false,
                 'onboarding_step'       => 0,
                 'is_active'             => true,
@@ -90,7 +90,7 @@ class RegisterController extends Controller
         $request->session()->regenerate();
 
         $redirect = match ($user->role) {
-            'mentor' => route('mentor.onboarding', ['step' => 1]),
+            'mentor', 'expert' => route('mentor.onboarding', ['step' => 1]),
             'mentee' => route('mentee.onboarding', ['step' => 1]),
             default  => route('dashboard'),
         };

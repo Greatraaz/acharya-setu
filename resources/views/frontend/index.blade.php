@@ -725,7 +725,7 @@
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <div class="d-flex flex-wrap align-items-center">
                     @auth
-                        <a href="{{ auth()->user()->role === 'mentor' ? route('mentor.dashboard') : route('mentee.dashboard') }}" class="nav-btn nav-btn-outline">Dashboard</a>
+                        <a href="{{ auth()->user()->isSessionHost() ? route('mentor.dashboard') : route('mentee.dashboard') }}" class="nav-btn nav-btn-outline">Dashboard</a>
                     @else
                         <a href="{{ route('login') }}" class="nav-btn nav-btn-outline">Login</a>
                     @endauth

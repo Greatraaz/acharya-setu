@@ -61,7 +61,7 @@ class AvailabilityController extends Controller
      */
     public function getByMentor(int $mentorId, Request $request): JsonResponse
     {
-        $mentor = \App\Models\User::where('role', 'mentor')
+        $mentor = \App\Models\User::sessionHosts()
             ->where('mentor_status', 'approved')
             ->find($mentorId);
 

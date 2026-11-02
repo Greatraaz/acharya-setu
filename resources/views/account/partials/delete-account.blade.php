@@ -1,4 +1,4 @@
-@if(in_array(auth()->user()->role, ['mentor', 'mentee'], true))
+@if(in_array(auth()->user()->role, ['mentor', 'expert', 'mentee'], true))
 <div class="card account-settings-delete" id="delete-account">
     <h3 class="account-settings-delete__title">Delete account</h3>
     <p class="account-settings-delete__text">

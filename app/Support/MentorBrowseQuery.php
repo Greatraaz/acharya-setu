@@ -14,8 +14,12 @@ class MentorBrowseQuery
         $search = trim((string) $request->input('search', $request->input('q', '')));
         $field = trim((string) $request->input('field', ''));
 
+        $type = strtolower(trim((string) $request->input('type', '')));
+
         return User::query()
-            ->where('role', 'mentor')
+            ->when($type === 'expert', fn (Builder $q) => $q->where('role', 'expert'))
+            ->when($type === 'mentor', fn (Builder $q) => $q->where('role', 'mentor'))
+            ->when(! in_array($type, ['mentor', 'expert'], true), fn (Builder $q) => $q->sessionHosts())
             ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
             ->where('is_active', true)
             ->when($mentee?->assigned_mentor_id && $request->boolean('exclude_assigned'), function (Builder $q) use ($mentee) {
@@ -165,7 +169,15 @@ class MentorBrowseQuery
 
         $labels = array_values(array_unique(array_filter($labels)));
 
-        return $labels === [] ? 'Find Your Perfect Mentor' : implode(' · ', $labels);
+        if ($labels === []) {
+            return match (strtolower(trim((string) $request->input('type', '')))) {
+                'expert' => 'Find an Expert',
+                'mentor' => 'Find Your Perfect Mentor',
+                default => 'Find Mentors & Experts',
+            };
+        }
+
+        return implode(' · ', $labels);
     }
 
     /** @return list<string> */

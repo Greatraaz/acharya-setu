@@ -26,6 +26,7 @@ class User extends Authenticatable
     const MENTOR_STATUS_APPROVED = 'approved';
     const MENTOR_STATUS_REJECTED = 'rejected';
     const MENTOR_STATUS_SUSPENDED = 'suspended';
+    public const SESSION_HOST_ROLES = ['mentor', 'expert'];
  
     // ── Onboarding steps ─────────────────────────────────────
     // MENTOR steps: 0=role, 1=personal, 2=professional, 3=expertise, 4=rates, 5=done
@@ -161,12 +162,12 @@ class User extends Authenticatable
                 }
             }
 
-            if ($user->role !== 'mentor') {
+            if (! $user->isSessionHost()) {
                 return;
             }
 
             if ($user->isDirty('name') || blank($user->slug)) {
-                $user->slug = static::generateUniqueSlug($user->name ?: 'mentor', $user->id);
+                $user->slug = static::generateUniqueSlug($user->name ?: $user->role, $user->id);
             }
         });
     }
@@ -204,7 +205,7 @@ class User extends Authenticatable
      */
     public function ensureSlug(): string
     {
-        if ($this->role !== 'mentor') {
+        if (! $this->isSessionHost()) {
             return (string) ($this->slug ?: $this->id);
         }
 
@@ -213,7 +214,7 @@ class User extends Authenticatable
         }
 
         $this->forceFill([
-            'slug' => static::generateUniqueSlug($this->name ?: 'mentor', $this->id),
+            'slug' => static::generateUniqueSlug($this->name ?: $this->role, $this->id),
         ])->saveQuietly();
 
         return $this->slug;
@@ -227,7 +228,7 @@ class User extends Authenticatable
         $fixed = 0;
 
         static::query()
-            ->where('role', 'mentor')
+            ->sessionHosts()
             ->where(fn ($q) => $q->whereNull('slug')->orWhere('slug', ''))
             ->orderBy('id')
             ->each(function (User $user) use (&$fixed) {
@@ -240,8 +241,17 @@ class User extends Authenticatable
 
     // ── Role helpers ──────────────────────────────────────────
     public function isMentor(): bool   { return $this->role === 'mentor'; }
+    public function isExpert(): bool   { return $this->role === 'expert'; }
     public function isMentee(): bool   { return $this->role === 'mentee'; }
     public function isAdmin(): bool    { return $this->role === 'admin'; }
+    public function isSessionHost(): bool
+    {
+        return in_array($this->role, self::SESSION_HOST_ROLES, true);
+    }
+    public function hostLabel(): string
+    {
+        return $this->isExpert() ? 'Expert' : ($this->isMentor() ? 'Mentor' : ucfirst((string) $this->role));
+    }
 
     public function adminRole(): BelongsTo
     {
@@ -507,6 +517,11 @@ class User extends Authenticatable
 
     // ── Scopes ────────────────────────────────────────────────
     public function scopeMentors(Builder $q): Builder  { return $q->where('role', 'mentor'); }
+    public function scopeExperts(Builder $q): Builder  { return $q->where('role', 'expert'); }
+    public function scopeSessionHosts(Builder $q): Builder
+    {
+        return $q->whereIn('role', self::SESSION_HOST_ROLES);
+    }
     public function scopeMentees(Builder $q): Builder  { return $q->where('role', 'mentee'); }
     public function scopeActive(Builder $q): Builder   { return $q->where('is_active', true); }
     public function scopeApproved(Builder $q): Builder { return $q->where('mentor_status', 'approved'); }

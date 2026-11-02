@@ -175,7 +175,7 @@ class OtpController extends Controller
     private function redirectForUser(User $user): string
     {
         if ($user->role === 'admin') return route('admin.dashboard');
-        if ($user->role === 'mentor') {
+        if ($user->isSessionHost()) {
             if (! $user->onboarding_completed) {
                 $step = max(1, $user->onboarding_step + 1);
                 return route('mentor.onboarding', ['step' => min($step, 5)]);

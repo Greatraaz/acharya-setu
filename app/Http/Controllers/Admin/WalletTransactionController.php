@@ -172,7 +172,7 @@ class WalletTransactionController extends Controller
             $query->where('role', 'mentee');
         } else {
             // "customer" in the UI = mentees + mentors
-            $query->whereIn('role', ['mentee', 'mentor']);
+            $query->whereIn('role', ['mentee', 'mentor', 'expert']);
         }
 
         if ($search !== '') {
@@ -293,7 +293,7 @@ class WalletTransactionController extends Controller
         if ($type === 'admin') {
             $query->where('role', 'admin');
         } else {
-            $query->whereIn('role', ['mentee', 'mentor']);
+            $query->whereIn('role', ['mentee', 'mentor', 'expert']);
         }
 
         return $query->firstOrFail();

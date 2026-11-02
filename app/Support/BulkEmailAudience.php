@@ -9,22 +9,24 @@ final class BulkEmailAudience
 {
     public const ALL = 'all';
     public const MENTORS = 'mentors';
+    public const EXPERTS = 'experts';
     public const MENTEES = 'mentees';
     public const SPECIFIC = 'specific';
 
     /** @return list<string> */
     public static function options(): array
     {
-        return [self::ALL, self::MENTORS, self::MENTEES, self::SPECIFIC];
+        return [self::ALL, self::MENTORS, self::EXPERTS, self::MENTEES, self::SPECIFIC];
     }
 
     public static function label(string $audience): string
     {
         return match ($audience) {
             self::MENTORS => 'mentors',
+            self::EXPERTS => 'experts',
             self::MENTEES => 'mentees',
             self::SPECIFIC => 'selected users',
-            default => 'all mentors and mentees',
+            default => 'all mentors, experts and mentees',
         };
     }
 
@@ -39,9 +41,10 @@ final class BulkEmailAudience
 
         return match ($audience) {
             self::MENTORS => $query->mentors()->active(),
+            self::EXPERTS => $query->experts()->active(),
             self::MENTEES => $query->mentees()->active(),
             self::SPECIFIC => $query->whereIn('id', $userIds !== [] ? $userIds : [0]),
-            default => $query->whereIn('role', ['mentor', 'mentee'])->active(),
+            default => $query->whereIn('role', ['mentor', 'expert', 'mentee'])->active(),
         };
     }
 

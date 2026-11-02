@@ -118,7 +118,7 @@ class ChannelController extends Controller
             ->get();
 
         $inviteCandidates = User::query()
-            ->whereIn('role', ['mentor', 'mentee'])
+            ->whereIn('role', ['mentor', 'expert', 'mentee'])
             ->where('is_active', true)
             ->whereNotIn('id', $members->pluck('id'))
             ->orderBy('name')
@@ -174,13 +174,13 @@ class ChannelController extends Controller
 
         $invitee = User::findOrFail($data['user_id']);
 
-        if (! in_array($invitee->role, ['mentor', 'mentee', 'admin'], true)) {
-            return back()->with('error', 'Only mentors and mentees can be invited.');
+        if (! in_array($invitee->role, ['mentor', 'expert', 'mentee', 'admin'], true)) {
+            return back()->with('error', 'Only mentors, experts and mentees can be invited.');
         }
 
         $channel->addMember($invitee);
 
-        if (in_array($invitee->role, ['mentor', 'mentee'], true)) {
+        if (in_array($invitee->role, ['mentor', 'expert', 'mentee'], true)) {
             $notifications = app(\App\Services\NotificationService::class);
             $notifications->send(
                 $invitee,

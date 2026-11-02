@@ -22,7 +22,7 @@ class MentorsController extends Controller
     public function fields(): JsonResponse
     {
         $rows = User::query()
-            ->where('role', 'mentor')
+            ->sessionHosts()
             ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
             ->where('is_active', true)
             ->whereNotNull('field')
@@ -60,6 +60,7 @@ class MentorsController extends Controller
             'sort'              => 'nullable|in:best,rating,sessions,name,rate_asc,rate_desc',
             'per_page'          => 'nullable|integer|min:1|max:100',
             'exclude_assigned'  => 'nullable|boolean',
+            'type'              => 'nullable|in:mentor,expert',
         ]);
 
         $search  = trim((string) ($data['search'] ?? $data['q'] ?? ''));
@@ -158,7 +159,7 @@ class MentorsController extends Controller
     public function show(int $id): JsonResponse
     {
         $mentor = User::where('id', $id)
-            ->where('role', 'mentor')
+            ->sessionHosts()
             ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
             ->where('is_active', true)
             ->firstOrFail();
@@ -202,7 +203,7 @@ class MentorsController extends Controller
      */
     public function availability(int $id, Request $request): JsonResponse
     {
-        $mentor = User::where('id', $id)->where('role', 'mentor')->where('mentor_status', 'approved')->first();
+        $mentor = User::where('id', $id)->sessionHosts()->where('mentor_status', 'approved')->first();
         if (! $mentor) {
             return response()->json(['message' => 'Mentor not found.'], 404);
         }

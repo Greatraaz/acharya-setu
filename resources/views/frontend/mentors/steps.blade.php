@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'Become a Mentor — Step ' . $step . ' of 5 — Vedrix')
+@section('title', 'Become a '.(auth()->user()?->hostLabel() ?? 'Mentor').' — Step ' . $step . ' of 5 — Vedrix')
 
 @push('styles')
 <style>
@@ -214,8 +214,8 @@
     {{-- ── HEADER ────────────────────────────────────────── --}}
     <div class="mentor-onboard__hero">
         <img src="{{ asset('images/logo.png') }}" alt="Vedrix">
-        <h1 style="font-size:22px; font-weight:800; margin-bottom:4px;">Become a Mentor</h1>
-        <p style="font-size:13px; color:var(--text-2);">Step {{ $step }} of 5 — Complete your profile to start mentoring</p>
+        <h1 style="font-size:22px; font-weight:800; margin-bottom:4px;">Become a {{ auth()->user()?->hostLabel() ?? 'Mentor' }}</h1>
+        <p style="font-size:13px; color:var(--text-2);">Step {{ $step }} of 5 — Complete your profile to start taking sessions</p>
     </div>
 
     {{-- ── STEP PROGRESS BAR ──────────────────────────────── --}}

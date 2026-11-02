@@ -101,7 +101,7 @@ class Message extends Model
             return;
         }
 
-        if (! in_array($recipient->role, ['mentor', 'mentee'], true)) {
+        if (! in_array($recipient->role, ['mentor', 'expert', 'mentee'], true)) {
             return;
         }
 

@@ -1,5 +1,5 @@
 @extends('frontend.layouts.app')
-@section('title', 'Mentor Dashboard — Vedrix')
+@section('title', (auth()->user()?->isExpert() ? 'Expert' : 'Mentor').' Dashboard — Vedrix')
 
 @section('content')
 @php
@@ -40,7 +40,7 @@
                 <div class="dash-title">{{ $greeting }}, {{ $firstName }} 👋</div>
                 <div class="dash-subtitle mentor-dash__subtitle">
                     @if($user->mentor_status === 'approved')
-                        <span class="badge badge-success">✓ Active Mentor</span>
+                        <span class="badge badge-success">✓ Active {{ $user->hostLabel() }}</span>
                     @elseif($user->mentor_status === 'pending')
                         <span class="badge badge-muted">⏳ Pending Approval</span>
                     @else
@@ -60,7 +60,7 @@
             <span class="alert-icon">⏳</span>
             <div>
                 <strong>Profile under review</strong>
-                <p>Your mentor profile is being reviewed by our team. We'll notify you within 24–48 hours.</p>
+                <p>Your {{ strtolower($user->hostLabel()) }} profile is being reviewed by our team. We'll notify you within 24–48 hours.</p>
             </div>
         </div>
         @endif
@@ -92,9 +92,9 @@
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-card-icon">🎓</div>
-                <div class="stat-card-label">Active Mentees</div>
-                <div class="stat-card-value">{{ $stats['active_mentees'] ?? 0 }}</div>
+                <div class="stat-card-icon">{{ $user->isExpert() ? '📝' : '🎓' }}</div>
+                <div class="stat-card-label">{{ $user->isExpert() ? 'Upcoming' : 'Active Mentees' }}</div>
+                <div class="stat-card-value">{{ $user->isExpert() ? ($stats['pending_sessions'] ?? 0) : ($stats['active_mentees'] ?? 0) }}</div>
                 <div class="stat-card-delta">{{ $stats['pending_sessions'] ?? 0 }} upcoming sessions</div>
             </div>
         </div>
@@ -161,7 +161,7 @@
             </div>
         </div>
 
-        @if(($pendingMentorRequests ?? collect())->isNotEmpty())
+        @if($user->isMentor() && ($pendingMentorRequests ?? collect())->isNotEmpty())
         <div class="card mentor-dash__section">
             <div class="mentor-dash__card-head">
                 <h3 class="mentor-dash__card-title">Mentee requests</h3>
@@ -207,9 +207,16 @@
 
             <div class="card">
                 <div class="mentor-dash__card-head">
-                    <h3 class="mentor-dash__card-title">Mentee progress</h3>
-                    <a href="{{ route('mentor.journey') }}" class="mentor-dash__card-link">Progress →</a>
+                    <h3 class="mentor-dash__card-title">{{ $user->isExpert() ? 'Session notes' : 'Mentee progress' }}</h3>
+                    <a href="{{ $user->isExpert() ? route('mentor.notes') : route('mentor.journey') }}" class="mentor-dash__card-link">{{ $user->isExpert() ? 'Notes →' : 'Progress →' }}</a>
                 </div>
+                @if($user->isExpert())
+                <div class="mentor-dash__empty">
+                    <div class="mentor-dash__empty-icon">📝</div>
+                    <p>Keep notes after each session so mentees have a clear takeaway.</p>
+                    <a href="{{ route('mentor.notes') }}" class="btn btn-outline btn-sm">Open notes</a>
+                </div>
+                @else
                 @forelse($menteeProgress ?? [] as $enrollment)
                 @php $progress = $enrollment->progress_data ?? ['percent' => 0]; @endphp
                 <div class="mentor-dash__progress-row">
@@ -231,6 +238,7 @@
                     <a href="{{ route('mentor.curriculum.tracks') }}" class="btn btn-outline btn-sm">Create a track</a>
                 </div>
                 @endforelse
+                @endif
             </div>
         </div>
 

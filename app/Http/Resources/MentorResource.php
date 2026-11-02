@@ -18,6 +18,7 @@ class MentorResource
 
         return array_merge([
             'id'                   => $mentor->id,
+            'role'                 => $mentor->role,
             'name'                 => $mentor->name,
             'slug'                 => $mentor->slug,
             'bio'                  => $mentor->bio,
@@ -53,7 +54,7 @@ class MentorResource
     public static function distinctFields(): array
     {
         return User::query()
-            ->where('role', 'mentor')
+            ->sessionHosts()
             ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
             ->where('is_active', true)
             ->whereNotNull('field')

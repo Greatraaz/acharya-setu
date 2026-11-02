@@ -150,7 +150,9 @@ class OnboardingController extends Controller
             'onboarding_step'      => 5,
         ]);
 
-        // TODO: notify admin of new mentor application
+        if ($user->isExpert()) {
+            app(\App\Services\NotificationService::class)->expertPendingApproval($user);
+        }
 
         if ($request->ajax()) {
             return response()->json(['message' => 'Profile submitted for review!', 'redirect' => route('mentor.onboarding.pending')]);

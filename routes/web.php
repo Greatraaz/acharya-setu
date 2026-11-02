@@ -250,7 +250,7 @@ Route::match(['get', 'post'], '/admin/logout', [AdminController::class, 'logout'
 |  MENTOR ONBOARDING  (auth + role:mentor + not yet approved)
 |=============================================================
 */
-Route::middleware(['auth', 'role:mentor'])->group(function () {
+Route::middleware(['auth', 'role:mentor,expert'])->group(function () {
 
     // Redirect bare URL to step 1
     Route::get('/mentor/onboarding', fn() => redirect()->route('mentor.onboarding', ['step' => 1]));
@@ -296,7 +296,7 @@ Route::middleware(['auth', 'role:mentee'])->group(function () {
 |  MENTOR DASHBOARD  (auth + role:mentor + approved)
 |=============================================================
 */
-Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
+Route::middleware(['auth', 'role:mentor,expert', 'mentor.approved'])
      ->prefix('mentor')
      ->name('mentor.')
      ->group(function () {
@@ -304,10 +304,11 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
     // Dashboard
     Route::get('/dashboard', [MentorDashboardController::class, 'index'])->name('dashboard');
 
-    // Mentee assignment requests
-    Route::get( '/requests',              [MentorMentorRequestController::class, 'index'])->name('requests');
-    Route::post('/requests/{id}/accept',  [MentorMentorRequestController::class, 'accept'])->name('requests.accept')->whereNumber('id');
-    Route::post('/requests/{id}/reject',  [MentorMentorRequestController::class, 'reject'])->name('requests.reject')->whereNumber('id');
+    Route::middleware('role:mentor')->group(function () {
+        Route::get( '/requests',              [MentorMentorRequestController::class, 'index'])->name('requests');
+        Route::post('/requests/{id}/accept',  [MentorMentorRequestController::class, 'accept'])->name('requests.accept')->whereNumber('id');
+        Route::post('/requests/{id}/reject',  [MentorMentorRequestController::class, 'reject'])->name('requests.reject')->whereNumber('id');
+    });
 
     // Sessions
     Route::get( '/sessions',              [MentorSessionController::class, 'index'])   ->name('sessions');
@@ -339,6 +340,8 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
 
     // Session notes / mentees / journey / community / assessments
     Route::get('/notes',                          [MentorPortalController::class, 'notes'])->name('notes');
+
+    Route::middleware('role:mentor')->group(function () {
     Route::get('/mentees',                        [MentorPortalController::class, 'mentees'])->name('mentees');
     Route::get('/mentees/{id}',                   [MentorPortalController::class, 'menteeShow'])->name('mentees.show');
     Route::get('/journey',                        [MentorPortalController::class, 'journey'])->name('journey');
@@ -427,6 +430,7 @@ Route::middleware(['auth', 'role:mentor', 'mentor.approved'])
         Route::post('/weeks/{week}/supporting-materials', [MentorCurriculumController::class, 'storeSupportingMaterial'])->name('materials.store');
         Route::match(['put', 'post'], '/supporting-materials/{material}', [MentorCurriculumController::class, 'updateSupportingMaterial'])->name('materials.update');
         Route::delete('/supporting-materials/{material}', [MentorCurriculumController::class, 'destroySupportingMaterial'])->name('materials.destroy');
+    });
     });
 });
 
@@ -559,7 +563,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         $role = auth()->user()->role;
         if ($role === 'admin')  return redirect()->route('admin.dashboard');
-        if ($role === 'mentor') return redirect()->route('mentor.dashboard');
+        if (in_array($role, ['mentor', 'expert'], true)) return redirect()->route('mentor.dashboard');
         return redirect()->route('mentee.dashboard');
     })->name('dashboard');
 
@@ -670,6 +674,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin', 'admin
     Route::post('/mentee',               [AdminOnboardingController::class, 'storeMentee']) ->name('mentee.store');
     Route::get( '/mentee/{mentee}/edit', [AdminOnboardingController::class, 'editMentee'])  ->name('mentee.edit');
     Route::put( '/mentee/{mentee}',      [AdminOnboardingController::class, 'updateMentee'])->name('mentee.update');
+
+    Route::bind('expert', fn ($value) => \App\Models\User::experts()->whereKey($value)->firstOrFail());
+
+    Route::prefix('experts')->name('experts.')->group(function () {
+        Route::get('/',                        [UserController::class, 'expertIndex'])->name('index');
+        Route::get('/create',                  [AdminOnboardingController::class, 'createExpert'])->name('create');
+        Route::post('/',                       [AdminOnboardingController::class, 'storeExpert'])->name('store');
+        Route::get('/{expert}/edit',           [AdminOnboardingController::class, 'editExpert'])->name('edit');
+        Route::put('/{expert}',                [AdminOnboardingController::class, 'updateExpert'])->name('update');
+        Route::post('/{expert}/toggle-status', [UserController::class, 'expertToggleStatus'])->name('toggle-status');
+        Route::post('/{expert}/approve',       [UserController::class, 'expertApprove'])->name('approve');
+        Route::delete('/{expert}',             [UserController::class, 'expertDestroy'])->name('destroy');
+    });
 
     // ── Mentee List ───────────────────────────────────────────
     Route::prefix('mentees')->name('mentees.')->group(function () {

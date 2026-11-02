@@ -23,6 +23,7 @@ class AdminRole extends Model
     {
         return [
             'mentors' => ['label' => 'Mentors & approvals', 'group' => 'People', 'match' => ['admin.mentors.', 'admin.mentor.', 'admin.mentor-approvals.']],
+            'experts' => ['label' => 'Experts', 'group' => 'People', 'match' => ['admin.experts.']],
             'mentees' => ['label' => 'Mentees', 'group' => 'People', 'match' => ['admin.mentees.', 'admin.mentee.']],
             'sessions' => ['label' => 'Sessions', 'group' => 'Sessions', 'match' => ['admin.sessions.', 'admin.session-invoices.']],
             'call-logs' => ['label' => 'Call records', 'group' => 'Sessions', 'match' => ['admin.call-logs.']],
