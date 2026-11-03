@@ -225,6 +225,8 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/auth/google', [GoogleAuthController::class, 'login'])->name('auth.google');
     Route::post('/auth/google', [GoogleAuthController::class, 'register'])->name('auth.google.register');
+    Route::get('/auth/google/complete', [GoogleAuthController::class, 'showComplete'])->name('auth.google.complete');
+    Route::post('/auth/google/complete', [GoogleAuthController::class, 'complete'])->name('auth.google.complete.post');
 
     // ── OTP (registration + login via phone) ─────────────────
     Route::post('/auth/send-otp',       [OtpController::class, 'send'])       ->name('otp.send');

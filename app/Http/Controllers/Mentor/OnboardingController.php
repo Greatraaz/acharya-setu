@@ -42,13 +42,18 @@ class OnboardingController extends Controller
             return $done;
         }
 
+        $user = auth()->user();
+        $needsAvatar = blank($user->avatar_url);
+
         $data = $request->validate([
             'name'     => 'required|string|max:100',
             'gender'   => 'nullable|in:male,female,other',
             'phone'    => IndianPhone::rules(),
             'linkedin' => 'nullable|url',
             'bio'      => RichText::rules(50),
-            'avatar'   => 'nullable|file|image|mimes:jpeg,png,webp|max:2048',
+            'avatar'   => [$needsAvatar ? 'required' : 'nullable', 'file', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
+        ], [
+            'avatar.required' => 'Please upload a profile photo to continue.',
         ]);
 
         if (array_key_exists('phone', $data)) {
@@ -61,7 +66,7 @@ class OnboardingController extends Controller
         }
         unset($data['avatar']);
 
-        auth()->user()->update(array_merge($data, ['onboarding_step' => 1]));
+        $user->update(array_merge($data, ['onboarding_step' => 1]));
 
         return $this->stepResponse($request, 2);
     }
@@ -138,8 +143,10 @@ class OnboardingController extends Controller
             return $this->finishedRedirect($request) ?? redirect()->route('mentor.onboarding.pending');
         }
 
-        if (empty($user->bio) || empty($user->designation) || empty($user->expertise) || (float) $user->rate_per_minute < 1) {
-            $msg = 'Please complete all required sections before submitting.';
+        if (empty($user->avatar_url) || empty($user->bio) || empty($user->designation) || empty($user->expertise) || (float) $user->rate_per_minute < 1) {
+            $msg = empty($user->avatar_url)
+                ? 'Please upload a profile photo before submitting.'
+                : 'Please complete all required sections before submitting.';
             if ($request->ajax()) return response()->json(['message' => $msg], 422);
             return back()->with('error', $msg);
         }

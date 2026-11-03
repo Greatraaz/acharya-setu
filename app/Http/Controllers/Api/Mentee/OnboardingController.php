@@ -54,6 +54,19 @@ class OnboardingController extends Controller
 
         $user = $request->user();
 
+        $needsAvatar = blank($user->avatar_url);
+        $hasAvatarUpload = $request->hasFile('avatar')
+            || (is_string($request->input('avatar')) && trim((string) $request->input('avatar')) !== '');
+
+        if ($needsAvatar && ! $hasAvatarUpload) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'Please upload a profile photo to continue.',
+                'errors'     => ['avatar' => ['Please upload a profile photo to continue.']],
+            ], 422);
+        }
+
         $data = $request->validate([
             'name'     => 'required|string|max:100',
             'gender'   => 'nullable|in:male,female,other',
@@ -98,6 +111,15 @@ class OnboardingController extends Controller
         unset($data['address'], $data['avatar'], $data['mimeType']);
 
         $user->update(array_merge($data, ['onboarding_step' => 1]));
+
+        if (blank($user->fresh()->avatar_url)) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 422,
+                'message'    => 'Please upload a profile photo to continue.',
+                'errors'     => ['avatar' => ['Please upload a profile photo to continue.']],
+            ], 422);
+        }
         $freshUser = $user->fresh();
         $fullAvatarUrl = $freshUser->avatar_url;
         if ($fullAvatarUrl && ! str_starts_with($fullAvatarUrl, 'http://') && ! str_starts_with($fullAvatarUrl, 'https://')) {

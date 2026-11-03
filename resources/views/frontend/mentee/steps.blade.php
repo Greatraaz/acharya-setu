@@ -475,6 +475,8 @@
             data-ajax-form="{{ route('mentee.onboarding.save1') }}"
             data-redirect="{{ route('mentee.onboarding', ['step' => 2]) }}"
             data-success="Saved!"
+            data-require-avatar="1"
+            data-has-avatar="{{ auth()->user()->avatar_url ? '1' : '0' }}"
         >
             @csrf
 
@@ -496,8 +498,8 @@
                         @endif
                     </div>
                     <input type="file" id="avatar-input" name="avatar" accept="image/jpeg,image/png,image/webp,image/jpg" style="display:none;"
-                           onchange="previewImage(this, '#avatar-preview')">
-                    <div class="mentee-onboard__avatar-hint" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.4;">Click to upload photo</div>
+                           onchange="previewImage(this, '#avatar-preview'); this.form.dataset.hasAvatar='1';">
+                    <div class="mentee-onboard__avatar-hint" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.4;">Photo required *</div>
                 </div>
                 <div class="mentee-onboard__fields">
                     <div class="form-group" style="margin-bottom:12px;">

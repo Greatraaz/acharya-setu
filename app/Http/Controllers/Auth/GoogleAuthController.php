@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 use RuntimeException;
 
 class GoogleAuthController extends Controller
@@ -32,6 +33,72 @@ class GoogleAuthController extends Controller
         ]);
 
         return $this->start($request, 'register');
+    }
+
+    public function showComplete(Request $request): View|RedirectResponse
+    {
+        $pending = $request->session()->get('google_pending_signup');
+        if (! is_array($pending) || blank($pending['email'] ?? null)) {
+            return redirect()
+                ->route('register')
+                ->with('error', 'Start again with Google and choose your role.');
+        }
+
+        return view('frontend.auth.google-complete', [
+            'googleName' => (string) ($pending['name'] ?? ''),
+            'googleEmail' => (string) $pending['email'],
+            'defaultRole' => old('role', 'mentee'),
+        ]);
+    }
+
+    public function complete(Request $request): RedirectResponse
+    {
+        $pending = $request->session()->get('google_pending_signup');
+        if (! is_array($pending) || blank($pending['id'] ?? null) || blank($pending['email'] ?? null)) {
+            return redirect()
+                ->route('register')
+                ->with('error', 'Google signup expired. Please continue with Google again.');
+        }
+
+        $request->validate([
+            'role' => 'required|in:mentor,mentee,expert',
+            'accepted_terms' => 'accepted',
+        ], [
+            'accepted_terms.accepted' => 'Please accept the Terms & Conditions.',
+        ]);
+
+        try {
+            $user = $this->google->findOrCreate(
+                [
+                    'id' => (string) $pending['id'],
+                    'email' => (string) $pending['email'],
+                    'name' => (string) ($pending['name'] ?? ''),
+                    'avatar' => $pending['avatar'] ?? null,
+                    'email_verified' => (bool) ($pending['email_verified'] ?? false),
+                ],
+                $request->input('role'),
+                true
+            );
+        } catch (RuntimeException $e) {
+            return redirect()
+                ->route('auth.google.complete')
+                ->withErrors(['google' => $e->getMessage()])
+                ->with('error', $e->getMessage())
+                ->withInput();
+        }
+
+        $request->session()->forget('google_pending_signup');
+
+        if (LoginThrottle::isDisabled($user)) {
+            return $this->fail('This account has been disabled.', 'register');
+        }
+
+        Auth::guard('web')->login($user, true);
+        $request->session()->regenerate();
+
+        return redirect()
+            ->to($user->postAuthRedirectUrl())
+            ->with('success', 'Signed in with Google. Complete your profile before taking sessions.');
     }
 
     private function start(Request $request, string $intent): RedirectResponse
@@ -78,6 +145,15 @@ class GoogleAuthController extends Controller
                 (bool) ($payload['accepted_terms'] ?? false)
             );
         } catch (RuntimeException $e) {
+            // New Google user came from Login (no role) — ask them to pick one.
+            if (isset($profile) && $this->needsRoleSelection($e->getMessage())) {
+                $request->session()->put('google_pending_signup', $profile);
+
+                return redirect()
+                    ->route('auth.google.complete')
+                    ->with('info', 'Choose how you want to join Vedrix to finish Google signup.');
+            }
+
             return $this->fail($e->getMessage(), $intent);
         }
 
@@ -96,6 +172,12 @@ class GoogleAuthController extends Controller
         return redirect()
             ->to($user->postAuthRedirectUrl())
             ->with('success', $message);
+    }
+
+    private function needsRoleSelection(string $message): bool
+    {
+        return str_contains($message, 'Choose Mentee, Mentor, or Expert')
+            || str_contains($message, 'Terms & Conditions');
     }
 
     private function fail(string $message, string $intent = 'login'): RedirectResponse

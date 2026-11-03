@@ -6126,17 +6126,64 @@
    .assess-question strong { color: var(--text); display: block; margin-bottom: 6px; }
    .tox-tinymce {
        border-radius: 10px !important;
-       border-color: var(--input-border) !important;
+       border: 1.5px solid var(--input-border) !important;
+       background: var(--input-bg) !important;
    }
+   .tox .tox-edit-area,
+   .tox .tox-edit-area__iframe {
+       background: var(--input-bg) !important;
+   }
+   .tox .tox-statusbar {
+       border-top: 1px solid var(--input-border) !important;
+       background: var(--input-bg) !important;
+       color: var(--text-3) !important;
+   }
+   .tox .tox-toolbar,
+   .tox .tox-toolbar__overflow,
+   .tox .tox-toolbar__primary,
+   .tox .tox-menubar {
+       background: var(--input-bg) !important;
+       border-bottom: 1px solid var(--input-border) !important;
+   }
+
+   /* Light theme — match form inputs */
    html[data-theme="light"] .tox-tinymce,
    html[data-theme="light"] .tox .tox-edit-area,
-   html[data-theme="light"] .tox .tox-edit-area__iframe {
-       background: #ffffff !important;
+   html[data-theme="light"] .tox .tox-edit-area__iframe,
+   html[data-theme="light"] .tox .tox-toolbar,
+   html[data-theme="light"] .tox .tox-toolbar__primary,
+   html[data-theme="light"] .tox .tox-statusbar {
+       background: #f4f4f5 !important;
    }
+   html[data-theme="light"] .tox .tox-tbtn svg,
+   html[data-theme="light"] .tox .tox-tbtn,
+   html[data-theme="light"] .tox .tox-statusbar__path-item,
+   html[data-theme="light"] .tox .tox-label {
+       color: #3f3f46 !important;
+       fill: #3f3f46 !important;
+   }
+   html[data-theme="light"] .tox .tox-tbtn:hover {
+       background: #e4e4e7 !important;
+   }
+
+   /* Dark theme — readable toolbar + editor */
    html:not([data-theme="light"]) .tox-tinymce,
    html:not([data-theme="light"]) .tox .tox-edit-area,
-   html:not([data-theme="light"]) .tox .tox-edit-area__iframe {
-       background: #0b1220 !important;
+   html:not([data-theme="light"]) .tox .tox-edit-area__iframe,
+   html:not([data-theme="light"]) .tox .tox-toolbar,
+   html:not([data-theme="light"]) .tox .tox-toolbar__primary,
+   html:not([data-theme="light"]) .tox .tox-statusbar {
+       background: #18181b !important;
+   }
+   html:not([data-theme="light"]) .tox .tox-tbtn svg,
+   html:not([data-theme="light"]) .tox .tox-tbtn,
+   html:not([data-theme="light"]) .tox .tox-statusbar__path-item,
+   html:not([data-theme="light"]) .tox .tox-label {
+       color: #e4e4e7 !important;
+       fill: #e4e4e7 !important;
+   }
+   html:not([data-theme="light"]) .tox .tox-tbtn:hover {
+       background: #27272a !important;
    }
 
    @media (max-width: 900px) {

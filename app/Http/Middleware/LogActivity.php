@@ -13,6 +13,7 @@ class LogActivity
         'admin.*.latest',     // AJAX polling
         'admin.*.export',     // CSV exports
         'debugbar.*',
+        'auth.google*',       // OAuth callback URLs are too long for activity_logs.url
     ];
  
     private array $eventMap = [

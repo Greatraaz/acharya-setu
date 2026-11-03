@@ -39,8 +39,10 @@
             <div class="dash-header__main">
                 <div class="dash-title">{{ $greeting }}, {{ $firstName }} 👋</div>
                 <div class="dash-subtitle mentor-dash__subtitle">
-                    @if($user->mentor_status === 'approved')
+                    @if($user->mentor_status === 'approved' && $user->onboarding_completed)
                         <span class="badge badge-success">✓ Active {{ $user->hostLabel() }}</span>
+                    @elseif($user->mentor_status === 'approved' && ! $user->onboarding_completed)
+                        <span class="badge badge-muted">📝 Complete profile</span>
                     @elseif($user->mentor_status === 'pending')
                         <span class="badge badge-muted">⏳ Pending Approval</span>
                     @else
@@ -55,12 +57,21 @@
             </div>
         </div>
 
-        @if($user->mentor_status === 'pending')
+        @if($user->mentor_status === 'pending' && $user->onboarding_completed)
         <div class="alert alert-info mentor-dash__alert">
             <span class="alert-icon">⏳</span>
             <div>
                 <strong>Profile under review</strong>
                 <p>Your {{ strtolower($user->hostLabel()) }} profile is being reviewed by our team. We'll notify you within 24–48 hours.</p>
+            </div>
+        </div>
+        @elseif($user->mentor_status === 'approved' && ! $user->onboarding_completed)
+        <div class="alert alert-info mentor-dash__alert">
+            <span class="alert-icon">📝</span>
+            <div>
+                <strong>Complete your profile</strong>
+                <p>Your account is already confirmed. Finish your profile to go live and take sessions — no further approval needed.</p>
+                <a href="{{ route('mentor.onboarding', ['step' => 1]) }}" class="btn btn-primary btn-sm" style="margin-top:8px;">Complete profile</a>
             </div>
         </div>
         @endif

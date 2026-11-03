@@ -288,6 +288,7 @@
        localStorage.setItem("as_theme", next);
        updateThemeIcons(next);
        syncHeaderLogos(next);
+       document.dispatchEvent(new CustomEvent("as:themechange", { detail: { theme: next } }));
    };
    
    /* ── Modal System ────────────────────────────────────────── */
@@ -1621,6 +1622,18 @@
            form.addEventListener("submit", (e) => {
                e.preventDefault();
                if (window.tinymce) tinymce.triggerSave();
+
+               if (form.dataset.requireAvatar === "1") {
+                   const input = form.querySelector('input[name="avatar"][type="file"]');
+                   const hasExisting = form.dataset.hasAvatar === "1";
+                   const hasFile = input && input.files && input.files.length > 0;
+                   if (!hasExisting && !hasFile) {
+                       showToast("error", "Please upload a profile photo to continue.");
+                       if (input) input.click();
+                       return;
+                   }
+               }
+
                const url = form.dataset.ajaxForm || form.action;
                const method = form.dataset.method || form.method || "POST";
                const btn = form.querySelector('[type="submit"]');

@@ -75,13 +75,17 @@ class OnboardingController extends Controller
             return $locked;
         }
 
+        $needsAvatar = blank($user->avatar_url);
+
         $data = $request->validate([
             'name'     => 'required|string|max:100',
             'gender'   => 'nullable|in:male,female,other',
             'phone'    => IndianPhone::rules(),
             'linkedin' => 'nullable|url',
             'bio'      => RichText::rules(50),
-            'avatar'   => 'nullable|file|image|mimes:jpeg,png,webp|max:2048',
+            'avatar'   => [$needsAvatar ? 'required' : 'nullable', 'file', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
+        ], [
+            'avatar.required' => 'Please upload a profile photo to continue.',
         ]);
 
         if (array_key_exists('phone', $data)) {
@@ -96,6 +100,7 @@ class OnboardingController extends Controller
             $path = $request->file('avatar')->store('avatars', 'public');
             $data['avatar_url'] = '/storage/' . $path;
         }
+        unset($data['avatar']);
 
         $user->update(array_merge($data, ['onboarding_step' => 1]));
 
@@ -260,6 +265,7 @@ class OnboardingController extends Controller
 
         $missingFields = [];
 
+        if (blank($user->avatar_url)) $missingFields[] = 'avatar';
         if (RichText::plain($user->bio) === '') $missingFields[] = 'bio';
         if (empty($user->designation)) $missingFields[] = 'designation';
         if (empty($user->expertise))   $missingFields[] = 'expertise';

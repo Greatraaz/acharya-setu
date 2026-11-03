@@ -17,8 +17,9 @@ class ActivityLogger
             'logged_at'  => now(),
             'level'      => ActivityLog::LEVEL_INFO,
             'ip_address' => Request::ip(),
-            'user_agent' => substr(Request::userAgent() ?? '', 0, 255),
-            'url'        => substr(Request::fullUrl(), 0, 500),
+            'user_agent' => substr((string) (Request::userAgent() ?? ''), 0, 255),
+            // Column is VARCHAR(255); Google OAuth callbacks include a long ?code= query.
+            'url'        => substr((string) Request::fullUrl(), 0, 255),
             'method'     => Request::method(),
         ];
  
@@ -102,13 +103,18 @@ class ActivityLogger
         return $this->withOld($old)->withNew($dirty);
     }
  
-    public function log(): ActivityLog
+    public function log(): ?ActivityLog
     {
-        return ActivityLog::create($this->payload);
+        try {
+            return ActivityLog::create($this->payload);
+        } catch (\Throwable) {
+            // Never break auth/business flows because activity logging failed.
+            return null;
+        }
     }
  
     // ── Static shortcuts ───────────────────────────────────────
-    public static function record(string $event, string $description, string $module = 'system', string $level = 'info'): ActivityLog
+    public static function record(string $event, string $description, string $module = 'system', string $level = 'info'): ?ActivityLog
     {
         return (new static())
             ->event($event)
@@ -119,7 +125,7 @@ class ActivityLogger
     }
  
     // Auth events
-    public static function login(\App\Models\User $user): ActivityLog
+    public static function login(\App\Models\User $user): ?ActivityLog
     {
         return (new static())
             ->by($user)
@@ -130,7 +136,7 @@ class ActivityLogger
             ->log();
     }
  
-    public static function logout(\App\Models\User $user): ActivityLog
+    public static function logout(\App\Models\User $user): ?ActivityLog
     {
         return (new static())
             ->by($user)
@@ -141,7 +147,7 @@ class ActivityLogger
             ->log();
     }
  
-    public static function loginFailed(string $email): ActivityLog
+    public static function loginFailed(string $email): ?ActivityLog
     {
         return (new static())
             ->event('login_failed')
@@ -153,7 +159,7 @@ class ActivityLogger
     }
  
     // Model CRUD shortcuts
-    public static function created(Model $model, string $module, string $label = ''): ActivityLog
+    public static function created(Model $model, string $module, string $label = ''): ?ActivityLog
     {
         $name = $label ?: (class_basename($model));
         return (new static())
@@ -165,7 +171,7 @@ class ActivityLogger
             ->log();
     }
  
-    public static function updated(Model $model, string $module, string $label = ''): ActivityLog
+    public static function updated(Model $model, string $module, string $label = ''): ?ActivityLog
     {
         $name = $label ?: class_basename($model);
         return (new static())
@@ -178,7 +184,7 @@ class ActivityLogger
             ->log();
     }
  
-    public static function deleted(Model $model, string $module, string $label = ''): ActivityLog
+    public static function deleted(Model $model, string $module, string $label = ''): ?ActivityLog
     {
         $name = $label ?: class_basename($model);
         return (new static())

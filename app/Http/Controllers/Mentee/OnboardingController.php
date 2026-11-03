@@ -35,15 +35,18 @@ class OnboardingController extends Controller
             return $done;
         }
 
+        $user = auth()->user();
+        $needsAvatar = blank($user->avatar_url);
+
         $data = $request->validate([
             'name'   => 'required|string|max:100',
             'gender' => 'nullable|in:male,female,other',
             'phone'  => IndianPhone::rules(),
             'address'=> 'required|string|max:200',
-            'avatar' => 'nullable|image|mimes:jpeg,png,webp,jpg|max:2048',
+            'avatar' => [$needsAvatar ? 'required' : 'nullable', 'image', 'mimes:jpeg,png,webp,jpg', 'max:2048'],
+        ], [
+            'avatar.required' => 'Please upload a profile photo to continue.',
         ]);
-
-        $user = auth()->user();
 
         if (array_key_exists('phone', $data)) {
             $data['phone'] = IndianPhone::normalize($data['phone']);

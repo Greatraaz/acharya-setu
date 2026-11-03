@@ -330,6 +330,9 @@ class MenteeOnboardingService
     {
         $missing = [];
 
+        if (empty($user->avatar_url)) {
+            $missing[] = 'avatar';
+        }
         if (empty($user->name)) {
             $missing[] = 'name';
         }

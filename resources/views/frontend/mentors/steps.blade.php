@@ -263,6 +263,8 @@
             data-ajax-form="{{ route('mentor.onboarding.save1') }}"
             data-redirect="{{ route('mentor.onboarding', ['step' => 2]) }}"
             data-success="Step 1 saved!"
+            data-require-avatar="1"
+            data-has-avatar="{{ auth()->user()->avatar_url ? '1' : '0' }}"
         >
             @csrf
 
@@ -285,9 +287,9 @@
                             {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                         @endif
                     </div>
-                    <input type="file" id="avatar-input" name="avatar" accept="image/*" style="display:none;"
-                           onchange="previewImage(this, '#avatar-preview')">
-                    <div class="mentor-onboard__avatar-hint" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.4;">Click to upload photo</div>
+                    <input type="file" id="avatar-input" name="avatar" accept="image/jpeg,image/png,image/webp" style="display:none;"
+                           onchange="previewImage(this, '#avatar-preview'); this.form.dataset.hasAvatar='1';">
+                    <div class="mentor-onboard__avatar-hint" style="font-size:10px; color:var(--text-3); margin-top:6px; line-height:1.4;">Photo required *</div>
                 </div>
 
                 {{-- Name + Gender --}}
@@ -571,6 +573,7 @@
         @elseif($step == 5)
         @php
             $u = auth()->user();
+            $alreadyApproved = $u->mentor_status === 'approved';
             $checks = [
                 ['Photo uploaded',          (bool) $u->avatar_url,                    route('mentor.onboarding', ['step'=>1])],
                 ['Bio written (50+ chars)',  mb_strlen($u->bio_text ?? '') >= 50,       route('mentor.onboarding', ['step'=>1])],
@@ -584,8 +587,14 @@
             $pct      = (int) round($doneCnt / count($checks) * 100);
         @endphp
 
-        <h2 style="font-size:20px; font-weight:800; margin-bottom:4px;">Review & Submit</h2>
-        <p style="font-size:13px; color:var(--text-2); margin-bottom:24px;">Review your profile before submitting for approval by our team.</p>
+        <h2 style="font-size:20px; font-weight:800; margin-bottom:4px;">{{ $alreadyApproved ? 'Review & Go Live' : 'Review & Submit' }}</h2>
+        <p style="font-size:13px; color:var(--text-2); margin-bottom:24px;">
+            @if($alreadyApproved)
+                Your account is already confirmed. Review your details and save your profile to start taking sessions.
+            @else
+                Review your profile before submitting for approval by our team.
+            @endif
+        </p>
 
         {{-- Preview card --}}
         <div class="mentor-card" style="margin-bottom:24px; cursor:default;">
@@ -651,7 +660,11 @@
         {{-- Info notice --}}
         <div style="background:var(--info-muted); border:1px solid rgba(59,130,246,.25); border-radius:var(--radius); padding:14px 16px; margin-bottom:24px; font-size:13px; color:var(--text-2); line-height:1.7;">
             ℹ️ <strong style="color:var(--text);">What happens next?</strong><br>
-            Our team will review your profile within <strong>24–48 hours</strong>. You'll receive an email notification once approved. After approval, your profile goes live and mentees can book sessions.
+            @if($alreadyApproved)
+                Once you save, your profile goes live and mentees can discover and book sessions with you. No further admin approval is needed.
+            @else
+                Our team will review your profile within <strong>24–48 hours</strong>. You'll receive an email notification once approved. After approval, your profile goes live and mentees can book sessions.
+            @endif
         </div>
 
         <div class="mentor-onboard__actions">
@@ -659,7 +672,7 @@
             <form action="{{ route('mentor.onboarding.submit') }}" method="POST">
                 @csrf
                 <button type="submit" class="btn btn-primary btn-full" style="font-size:15px; padding:14px;" @disabled(!$allDone)>
-                    ✓ Submit for Approval
+                    {{ $alreadyApproved ? '✓ Save & Start Taking Sessions' : '✓ Submit for Approval' }}
                 </button>
             </form>
         </div>
