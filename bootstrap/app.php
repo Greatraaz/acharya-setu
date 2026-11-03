@@ -10,6 +10,7 @@ use App\Http\Middleware\OnboardingComplete;
 use App\Http\Middleware\Api\AdminMiddleware;
 use App\Http\Middleware\Api\MentorMiddleware;
 use App\Http\Middleware\Api\MenteeMiddleware;
+use App\Http\Middleware\DecodeDashboardIds;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureAdminModule;
 
@@ -34,8 +35,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin'  => AdminMiddleware::class,
             'admin.module' => EnsureAdminModule::class,
             'active' => EnsureAccountIsActive::class,
+            'hide.ids' => DecodeDashboardIds::class,
         ]);
-        $middleware->web(append: [
+        $middleware->web(prepend: [
+            DecodeDashboardIds::class,
+        ], append: [
             EnsureAccountIsActive::class,
         ]);
     })

@@ -26,7 +26,13 @@ class PushNotificationController extends Controller
             ->orderByDesc('id')
             ->limit(40)
             ->get()
-            ->map(fn (Notification $n) => $n->toFeedArray())
+            ->map(function (Notification $n) {
+                $row = $n->toFeedArray();
+                $row['seq'] = (int) $n->id;
+                $row['id'] = encrypt_id($n->id);
+
+                return $row;
+            })
             ->values();
 
         $unread = Notification::query()

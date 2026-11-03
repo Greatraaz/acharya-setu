@@ -747,12 +747,18 @@
                             </button>
                             <div class="user-dropdown" role="menu">
                                 @if($user->isSessionHost())
+                                    @if(! $user->onboarding_completed)
+                                        <a class="vj-account-item" href="{{ route('mentor.onboarding', ['step' => 1]) }}">📝 Complete profile</a>
+                                    @endif
                                     <a class="vj-account-item" href="{{ route('mentor.dashboard') }}">📊 Dashboard</a>
                                     <a class="vj-account-item" href="{{ route('mentor.sessions') }}">📅 My Sessions</a>
                                     <a class="vj-account-item" href="{{ route('mentor.profile.edit') }}">✏️ Edit Profile</a>
                                     <a class="vj-account-item" href="{{ route('account') }}">👤 Account Settings</a>
                                     <a class="vj-account-item" href="{{ route('mentor.wallet') }}">💰 Wallet</a>
                                 @elseif($user->role === 'mentee')
+                                    @if(! $user->onboarding_completed)
+                                        <a class="vj-account-item" href="{{ route('mentee.onboarding', ['step' => 1]) }}">📝 Complete profile</a>
+                                    @endif
                                     <a class="vj-account-item" href="{{ route('mentee.dashboard') }}">📊 Dashboard</a>
                                     <a class="vj-account-item" href="{{ route('mentee.sessions') }}">📅 My Sessions</a>
                                     <a class="vj-account-item" href="{{ route('mentee.journey.index') }}">🗺️ My Journey</a>

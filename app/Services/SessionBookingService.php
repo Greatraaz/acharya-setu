@@ -26,8 +26,13 @@ class SessionBookingService
      */
     public function book(User $mentee, array $data, string $source = 'api'): array
     {
+        if (! $mentee->onboarding_completed) {
+            return $this->fail('Complete your profile before booking a session.', 422);
+        }
+
         $mentor = User::sessionHosts()
             ->where('mentor_status', 'approved')
+            ->where('onboarding_completed', true)
             ->find($data['mentor_id'] ?? null);
 
         if (! $mentor) {

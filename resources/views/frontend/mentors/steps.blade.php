@@ -216,6 +216,9 @@
         <img src="{{ asset('images/logo.png') }}" alt="Vedrix">
         <h1 style="font-size:22px; font-weight:800; margin-bottom:4px;">Become a {{ auth()->user()?->hostLabel() ?? 'Mentor' }}</h1>
         <p style="font-size:13px; color:var(--text-2);">Step {{ $step }} of 5 — Complete your profile to start taking sessions</p>
+        @if(auth()->user()?->mentor_status === 'approved' && ! auth()->user()->onboarding_completed)
+            <p style="font-size:13px;color:var(--brand);margin-top:8px;font-weight:600;">Your account is confirmed. Finish this profile before taking sessions.</p>
+        @endif
     </div>
 
     {{-- ── STEP PROGRESS BAR ──────────────────────────────── --}}
@@ -663,6 +666,13 @@
         @endif
 
     </div>{{-- /card --}}
+    @if(auth()->user()?->canSkipOnboarding())
+    <form action="{{ route('mentor.onboarding.skip') }}" method="POST" style="text-align:center;margin-top:18px;">
+        @csrf
+        <button type="submit" class="btn btn-ghost">I'll complete this later</button>
+        <p style="font-size:12px;color:var(--text-3);margin-top:8px;">After confirmation you must finish your profile before taking sessions.</p>
+    </form>
+    @endif
 </div>
 </div>
 @endsection

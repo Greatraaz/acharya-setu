@@ -14,9 +14,13 @@ class MentorApproved
 
         if (! $user) return redirect()->route('login');
 
-        // If onboarding not done yet, send to onboarding
         if (! $user->onboarding_completed) {
+            if ($user->isGoogleOnly() && in_array($user->mentor_status, ['pending', 'rejected'], true)) {
+                return redirect()->route('mentor.onboarding.pending');
+            }
+
             $step = max(1, $user->onboarding_step + 1);
+
             return redirect()->route('mentor.onboarding', ['step' => min($step, 5)]);
         }
 

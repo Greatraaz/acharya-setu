@@ -52,6 +52,8 @@ class OnboardingController extends Controller
             'current_step'          => $user->onboarding_step ?? 0,
             'onboarding_completed'  => (bool) $user->onboarding_completed,
             'mentor_status'         => $user->mentor_status,
+            'can_skip_onboarding'   => $user->canSkipOnboarding(),
+            'can_use_platform'      => $user->canUsePlatform(),
             'total_steps'           => 5,
         ], $statusCode);
     }
@@ -243,7 +245,7 @@ class OnboardingController extends Controller
             ], 401);
         }
 
-        if ($user->onboarding_completed || $user->mentor_status === 'approved') {
+        if ($user->onboarding_completed) {
             return response()->json([
                 'status'               => true,
                 'statuscode'           => 200,
@@ -272,23 +274,59 @@ class OnboardingController extends Controller
             ], 422);
         }
 
+        $alreadyApproved = $user->mentor_status === 'approved';
         $user->update([
-            'mentor_status'        => 'pending',
+            'mentor_status'        => $alreadyApproved ? 'approved' : 'pending',
             'onboarding_completed' => true,
             'onboarding_step'      => 5,
         ]);
 
-        if ($user->isExpert()) {
+        if (! $alreadyApproved && $user->isExpert()) {
             app(\App\Services\NotificationService::class)->expertPendingApproval($user);
         }
 
         return response()->json([
-            'status'              => true,
-            'statuscode'          => 200,
-            'message'             => 'Profile submitted for review!',
-            'mentor_status'       => 'pending',
-            'onboarding_completed'=> true,
-            'user'                => $user->fresh(),
+            'status'               => true,
+            'statuscode'           => 200,
+            'message'              => $alreadyApproved
+                ? 'Profile saved. You can now take sessions.'
+                : 'Profile submitted for review!',
+            'mentor_status'        => $user->mentor_status,
+            'onboarding_completed' => true,
+            'user'                 => $user->fresh(),
+        ]);
+    }
+
+    public function skipLater(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 401,
+                'message'    => 'User record not found.',
+            ], 401);
+        }
+
+        if (! $user->canSkipOnboarding()) {
+            return response()->json([
+                'status'               => false,
+                'statuscode'           => 422,
+                'message'              => $user->platformGateMessage(),
+                'onboarding_completed' => (bool) $user->onboarding_completed,
+                'mentor_status'        => $user->mentor_status,
+                'can_use_platform'     => $user->canUsePlatform(),
+            ], 422);
+        }
+
+        return response()->json([
+            'status'               => true,
+            'statuscode'           => 200,
+            'message'              => 'You can complete your profile after confirmation. It is required before taking sessions.',
+            'onboarding_completed' => false,
+            'mentor_status'        => $user->mentor_status,
+            'can_use_platform'     => false,
+            'can_skip_onboarding'  => true,
         ]);
     }
 
@@ -367,7 +405,7 @@ class OnboardingController extends Controller
     // ─────────────────────────────────────────────
     private function locked($user): ?JsonResponse
     {
-        if (! $user->onboarding_completed && $user->mentor_status !== 'approved') {
+        if (! $user->onboarding_completed) {
             return null;
         }
 

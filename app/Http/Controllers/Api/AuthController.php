@@ -16,6 +16,7 @@ use App\Support\PasswordReset as PasswordResetGuard;
 use App\Support\ProfileUpdate;
 use App\Support\RichText;
 use App\Support\RegistrationData;
+use App\Services\GoogleAccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
@@ -39,6 +40,7 @@ class AuthController extends Controller
         'education_stream', 'career_goals', 'strengths',
         'preferences', 'is_active', 'isVerifiedEmail', 'created_at',
         'has_pending_changes', 'rate_per_minute', 'location',
+        'auth_provider',
     ];
 
     public function register(Request $request): JsonResponse
@@ -191,6 +193,14 @@ class AuthController extends Controller
 
         $user = User::where('email', $email)->first();
 
+        if ($user?->isGoogleOnly()) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'error'   => 'This account uses Google. Continue with Google to sign in.',
+            ], 422);
+        }
+
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             LoginThrottle::hit($email, $ip);
 
@@ -217,6 +227,70 @@ class AuthController extends Controller
             'token'   => $user->createToken('api', ['*'], now()->addWeek())->plainTextToken,
             'user'    => $user->only(self::USER_FIELDS),
         ], 200);
+    }
+
+    public function google(Request $request, GoogleAccountService $google): JsonResponse
+    {
+        if (! $google->isConfigured()) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'message' => 'Google sign-in is not configured yet.',
+            ], 503);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'id_token'       => ['required_without:access_token', 'nullable', 'string'],
+            'access_token'   => ['required_without:id_token', 'nullable', 'string'],
+            'role'           => ['nullable', 'in:mentor,mentee,expert'],
+            'accepted_terms' => ['nullable', 'accepted'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        try {
+            $profile = filled($validated['id_token'] ?? null)
+                ? $google->userFromIdToken($validated['id_token'])
+                : $google->userFromAccessToken($validated['access_token']);
+            $user = $google->findOrCreate(
+                $profile,
+                $validated['role'] ?? null,
+                (bool) ($validated['accepted_terms'] ?? false)
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        if (LoginThrottle::isDisabled($user)) {
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'message' => 'This account has been disabled.',
+            ], 403);
+        }
+
+        return response()->json([
+            'success'              => true,
+            'status'               => true,
+            'token'                => $user->createToken('api', ['*'], now()->addWeek())->plainTextToken,
+            'user'                 => $user->only(self::USER_FIELDS),
+            'onboarding_completed' => (bool) $user->onboarding_completed,
+            'can_use_platform'     => $user->canUsePlatform(),
+            'can_skip_onboarding'  => $user->canSkipOnboarding(),
+            'is_new'               => (bool) $user->wasRecentlyCreated,
+        ], $user->wasRecentlyCreated ? 201 : 200);
     }
 
     public function me(Request $request): JsonResponse

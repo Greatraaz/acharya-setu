@@ -131,7 +131,7 @@
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
 (function () {
-    const requestId = {{ (int) $item->id }};
+    const requestId = @json(encrypt_id($item->id));
     const paymentChoice = @json($paymentChoice);
     const flashPay = @json(session('pay'));
     const walletUrl = @json(route('mentee.wallet'));

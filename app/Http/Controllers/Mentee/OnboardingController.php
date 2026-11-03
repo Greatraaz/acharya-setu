@@ -182,6 +182,30 @@ class OnboardingController extends Controller
         return redirect($redirect)->with('success', $message);
     }
 
+    public function skipLater(Request $request)
+    {
+        $user = auth()->user();
+        if (! $user->canSkipOnboarding()) {
+            $redirect = $user->postAuthRedirectUrl();
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message'  => $user->platformGateMessage(),
+                    'redirect' => $redirect,
+                ], 422);
+            }
+
+            return redirect()->to($redirect)->with('error', $user->platformGateMessage());
+        }
+
+        $redirect = route('home');
+        $message = 'Complete your profile before booking sessions or opening the dashboard.';
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['message' => $message, 'redirect' => $redirect]);
+        }
+
+        return redirect()->to($redirect)->with('info', $message);
+    }
+
     private function alreadyComplete(Request $request)
     {
         if (! auth()->user()->onboarding_completed) {

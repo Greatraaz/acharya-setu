@@ -25,6 +25,7 @@ class MentorsController extends Controller
             ->sessionHosts()
             ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
             ->where('is_active', true)
+            ->where('onboarding_completed', true)
             ->whereNotNull('field')
             ->where('field', '!=', '')
             ->selectRaw('field, COUNT(*) as mentor_count')
@@ -162,6 +163,7 @@ class MentorsController extends Controller
             ->sessionHosts()
             ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
             ->where('is_active', true)
+            ->where('onboarding_completed', true)
             ->firstOrFail();
 
         $reviews = SessionReview::where('reviewee_id', $id)
@@ -203,7 +205,7 @@ class MentorsController extends Controller
      */
     public function availability(int $id, Request $request): JsonResponse
     {
-        $mentor = User::where('id', $id)->sessionHosts()->where('mentor_status', 'approved')->first();
+        $mentor = User::where('id', $id)->sessionHosts()->where('mentor_status', 'approved')->where('onboarding_completed', true)->first();
         if (! $mentor) {
             return response()->json(['message' => 'Mentor not found.'], 404);
         }

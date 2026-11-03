@@ -53,6 +53,7 @@ class DashboardController extends Controller
         $recommendedMentors = User::sessionHosts()
             ->where('mentor_status', 'approved')
             ->where('is_active', true)
+            ->where('onboarding_completed', true)
             ->orderByDesc('rating')
             ->limit(3)
             ->get();

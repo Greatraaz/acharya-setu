@@ -80,7 +80,7 @@ const MOCK_VERIFY_TEMPLATE = @json(route('mentee.mock-interviews.verify', ['mock
 const MOCK_PAY_TEMPLATE = @json(route('mentee.mock-interviews.pay', ['mockInterview' => '__ID__']));
 const MOCK_SHOW_TEMPLATE = @json(route('mentee.mock-interviews.show', ['mockInterview' => '__ID__']));
 const MOCK_FLASH_PAY = @json(session('pay'));
-const MOCK_PENDING_ID = @json(session('pending_request_id'));
+const MOCK_PENDING_ID = @json(session('pending_request_id') ? encrypt_id(session('pending_request_id')) : null);
 
 function mockUrl(template, id) {
     return template.replace('__ID__', String(id));

@@ -36,8 +36,8 @@
                         </div>
                         <div style="display:flex;gap:10px;flex-shrink:0;">
                             @if($session->status === 'pending')
-                                <button class="btn btn-success" onclick="acceptSession({{ $session->id }})">✓ Accept</button>
-                                <button class="btn btn-outline" style="color:var(--error);" onclick="declineSession({{ $session->id }})">✗ Decline</button>
+                                <button class="btn btn-success" onclick="acceptSession('{{ encrypt_id($session->id) }}')">✓ Accept</button>
+                                <button class="btn btn-outline" style="color:var(--error);" onclick="declineSession('{{ encrypt_id($session->id) }}')">✗ Decline</button>
                             @elseif(in_array($session->status, ['confirmed', 'upcoming', 'ongoing'], true))
                                 <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
                             @elseif($session->status === 'completed')

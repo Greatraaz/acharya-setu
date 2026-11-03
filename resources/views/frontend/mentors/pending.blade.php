@@ -6,9 +6,15 @@
 <div style="max-width:520px;width:100%;text-align:center;">
     <div style="font-size:72px;margin-bottom:20px;">⏳</div>
     <h1 style="font-size:28px;font-weight:800;margin-bottom:12px;">Application Under Review</h1>
+    @php $pendingUser = auth()->user(); @endphp
     <p style="font-size:15px;color:var(--text-2);line-height:1.75;margin-bottom:32px;">
-        Thank you for applying to join Vedrix as {{ auth()->user()?->isExpert() ? 'an expert' : 'a mentor' }}! Our team is reviewing your profile.
-        You'll receive an email notification within <strong style="color:var(--brand);">24–48 hours</strong>.
+        @if($pendingUser && ! $pendingUser->onboarding_completed)
+            Your {{ $pendingUser->isExpert() ? 'expert' : 'mentor' }} account is created. You can finish your profile now, or after we confirm you.
+            After confirmation, your profile is required before taking sessions.
+        @else
+            Thank you for applying to join Vedrix as {{ $pendingUser?->isExpert() ? 'an expert' : 'a mentor' }}! Our team is reviewing your profile.
+            You'll receive an email notification within <strong style="color:var(--brand);">24–48 hours</strong>.
+        @endif
     </p>
     <div class="card" style="text-align:left;margin-bottom:24px;">
         <div style="font-size:14px;font-weight:700;margin-bottom:14px;">What happens next?</div>
@@ -33,6 +39,10 @@
     </div>
     <a href="{{ route('mentor.onboarding', ['step'=>1]) }}" class="btn btn-primary btn-lg">Update & Resubmit</a>
     @else
+    @if($pendingUser && ! $pendingUser->onboarding_completed)
+    <a href="{{ route('mentor.onboarding', ['step' => 1]) }}" class="btn btn-primary btn-lg">Complete profile</a>
+    &nbsp;
+    @endif
     <a href="{{ route('home') }}" class="btn btn-outline">Back to Home</a>
     &nbsp;
     <a href="mailto:mentors@vedrix.com" class="btn btn-ghost">Contact Support</a>

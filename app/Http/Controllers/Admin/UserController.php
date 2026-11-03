@@ -290,7 +290,21 @@ class UserController extends Controller
             'success'
         );
 
-        return redirect()->back()->with('success', "{$expert->name} is now live as an expert.");
+        $needsProfile = ! $expert->fresh()->onboarding_completed;
+        app(\App\Services\NotificationService::class)->send(
+            $expert,
+            'expert_approved',
+            'You are approved',
+            $needsProfile
+                ? 'Your account is confirmed. Complete your profile before taking sessions.'
+                : 'Your expert profile is live. You can start taking sessions.',
+            [],
+            $needsProfile ? route('mentor.onboarding', ['step' => 1]) : route('mentor.dashboard')
+        );
+
+        return redirect()->back()->with('success', $needsProfile
+            ? "{$expert->name} is approved. They must complete their profile before taking sessions."
+            : "{$expert->name} is now live as an expert.");
     }
 
     public function expertDestroy(User $expert)

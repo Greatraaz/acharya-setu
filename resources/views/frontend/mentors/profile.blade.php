@@ -1,5 +1,41 @@
 @extends('frontend.layouts.app')
-@section('title', ($mentor->name ?? 'Mentor') . ' — Vedrix')
+@php
+    $hostLabel = $mentor->hostLabel();
+    $isExpert = $mentor->isExpert();
+    $rate = (float) ($mentor->rate_per_minute ?? 0);
+    $hourly = (int) round($rate * 60);
+    $prefs = is_array($mentor->preferences) ? $mentor->preferences : [];
+    $expertise = array_values(array_filter($mentor->expertise ?? []));
+    $strengths = array_values(array_filter($mentor->strengths ?? []));
+    $modes = array_values(array_filter((array) ($prefs['session_modes'] ?? [])));
+    $modeLabels = ['video' => 'Video', 'audio' => 'Audio', 'chat' => 'Chat', 'in_person' => 'In person'];
+    $preferredLength = (int) ($prefs['session_length'] ?? 0);
+    $preferredTime = trim((string) ($prefs['preferred_time'] ?? ''));
+    $weekly = $availabilityOverview['weekly_summary'] ?? [];
+    $nextOpen = collect($availabilityOverview['days'] ?? [])->firstWhere('available', true);
+    $bioPlain = \App\Support\RichText::plain($mentor->bio);
+    $reviewCount = $reviews->count();
+    $score = $reviewCount > 0
+        ? round((float) $reviews->avg('overall_rating'), 1)
+        : (float) ($mentor->rating ?? 0);
+    $filledStars = max(0, min(5, (int) round($score)));
+    $recommendCount = $reviews->where('would_recommend', true)->count();
+    $dimAvgs = [];
+    foreach (['Communication' => 'communication_rating', 'Knowledge' => 'knowledge_rating', 'Punctuality' => 'punctuality_rating', 'Helpfulness' => 'helpfulness_rating'] as $label => $col) {
+        $avg = $reviews->avg($col);
+        if ($avg !== null) {
+            $dimAvgs[$label] = round((float) $avg, 1);
+        }
+    }
+    $linkedin = trim((string) ($mentor->linkedin ?? ''));
+    if ($linkedin !== '' && ! str_starts_with($linkedin, 'http')) {
+        $linkedin = 'https://'.$linkedin;
+    }
+    $listingUrl = route('mentors.search', $isExpert ? ['type' => 'expert'] : ['type' => 'mentor']);
+    $metaBio = $bioPlain !== '' ? \Illuminate\Support\Str::limit($bioPlain, 160) : $mentor->designation.' at Vedrix';
+@endphp
+@section('title', ($mentor->name ?? $hostLabel).' — Vedrix')
+@section('meta_description', $mentor->name.' · '.$hostLabel.($mentor->designation ? ' · '.$mentor->designation : '').'. '.$metaBio)
 
 @section('content')
 @auth
@@ -7,42 +43,61 @@
         @include('frontend.mentee.partials.bottom-nav')
     @endif
 @endauth
-<div data-mentor-id="{{ $mentor->id ?? 1 }}">
 
-    {{-- Profile Hero --}}
-    <div class="profile-hero">
-        <div class="container">
-            <div class="profile-hero-inner">
-                <div class="profile-avatar-xl">
-                    @if($mentor->avatar_url ?? false)
-                        <img src="{{ $mentor->avatar_url }}" alt="{{ $mentor->name }}">
-                    @else
-                        {{ strtoupper(substr($mentor->name ?? 'M', 0, 1)) }}
+<div class="mp" data-mentor-id="{{ $mentor->id }}">
+    <div class="container mp-wrap">
+        <nav class="mp-crumb" aria-label="Breadcrumb">
+            <a href="{{ $listingUrl }}">{{ $isExpert ? 'Experts' : 'Mentors' }}</a>
+            <span aria-hidden="true">/</span>
+            <span>{{ $mentor->name }}</span>
+        </nav>
+
+        <header class="mp-hero">
+            <div class="mp-hero__avatar profile-avatar-xl">
+                @if($mentor->avatar_url)
+                    <img src="{{ $mentor->avatar_url }}" alt="{{ $mentor->name }}">
+                @else
+                    {{ strtoupper(substr($mentor->name ?? 'M', 0, 1)) }}
+                @endif
+            </div>
+
+            <div class="mp-hero__body">
+                <div class="mp-hero__badges">
+                    <span class="mp-pill {{ $isExpert ? 'mp-pill--violet' : 'mp-pill--brand' }}">{{ $hostLabel }}</span>
+                    @if(($mentor->mentor_status ?? '') === 'approved')
+                    <span class="mp-pill mp-pill--ok">Verified</span>
+                    @endif
+                    @if((int) ($mentor->experience_years ?? 0) > 0)
+                    <span class="mp-pill">{{ (int) $mentor->experience_years }}+ yrs experience</span>
                     @endif
                 </div>
-                <div style="flex:1;padding-bottom:20px;">
-                    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
-                        <h1 style="font-size:22px;font-weight:800;">{{ $mentor->name ?? 'Mentor Name' }}</h1>
-                        @if(($mentor->mentor_status ?? '') === 'approved')
-                        <span class="badge badge-success">✓ Verified</span>
-                        @endif
-                        <span class="badge badge-brand">{{ $mentor->experience_years ?? 0 }}+ yrs exp</span>
-                    </div>
-                    <div style="font-size:14px;color:var(--text-2);margin-bottom:10px;">
-                        {{ $mentor->designation ?? 'Mentor' }}{{ ($mentor->company ?? '') ? ' · '.$mentor->company : '' }}
-                    </div>
-                    <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:var(--text-2);">
-                        <span>⭐ <strong>{{ number_format($mentor->rating ?? 4.9, 1) }}</strong> rating</span>
-                        <span>📅 <strong>{{ $mentor->total_sessions ?? 0 }}</strong> sessions</span>
-                        <span>💰 <strong>₹{{ $mentor->rate_per_minute ?? 10 }}/min</strong></span>
-                    </div>
+                <h1 class="mp-hero__name">{{ $mentor->name }}</h1>
+                <p class="mp-hero__role">
+                    {{ $mentor->designation ?: $hostLabel }}
+                    @if($mentor->company) <span>· {{ $mentor->company }}</span> @endif
+                    @if($mentor->field) <span>· {{ $mentor->field }}</span> @endif
+                </p>
+                @if($mentor->location || $nextOpen)
+                <div class="mp-hero__meta">
+                    @if($mentor->location)
+                    <span>{{ $mentor->location }}</span>
+                    @endif
+                    @if($nextOpen)
+                    <span>Next opening {{ \Carbon\Carbon::parse($nextOpen['date'])->timezone('Asia/Kolkata')->format('D, j M') }}</span>
+                    @endif
                 </div>
-                <div style="padding-bottom:20px;display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
-                    <button class="btn btn-primary btn-lg" onclick="scrollToBook()">
-                        📅 Book a Session
-                    </button>
+                @endif
+            </div>
+
+            <div class="mp-hero__actions">
+                <button type="button" class="btn btn-primary btn-lg" onclick="scrollToBook()">Book a session</button>
+                <div class="mp-hero__links">
+                    @if($linkedin)
+                    <a class="btn btn-outline btn-sm" href="{{ $linkedin }}" target="_blank" rel="noopener">LinkedIn</a>
+                    @endif
+                    <button type="button" class="btn btn-ghost btn-sm" id="mp-share-btn">Share</button>
                     @auth
-                        @if(auth()->user()->role === 'mentee')
+                        @if(auth()->user()->role === 'mentee' && ! $isExpert)
                             @php
                                 $isAssigned = (int) auth()->user()->assigned_mentor_id === (int) $mentor->id;
                                 $hasPending = \App\Models\MentorRequest::where('mentee_id', auth()->id())
@@ -51,14 +106,14 @@
                                     ->exists();
                             @endphp
                             @if($isAssigned)
-                                <span class="badge badge-success">Your mentor</span>
+                                <span class="mp-pill mp-pill--ok">Your mentor</span>
                             @elseif($hasPending)
-                                <span class="badge badge-muted">Request pending</span>
+                                <span class="mp-pill">Request pending</span>
                             @else
                                 <form method="POST" action="{{ route('mentee.mentor-requests.store') }}">
                                     @csrf
                                     <input type="hidden" name="mentor_id" value="{{ $mentor->id }}">
-                                    <button type="submit" class="btn btn-outline">
+                                    <button type="submit" class="btn btn-outline btn-sm">
                                         {{ auth()->user()->assigned_mentor_id ? 'Request as my mentor' : 'Choose as my mentor' }}
                                     </button>
                                 </form>
@@ -67,76 +122,213 @@
                     @endauth
                 </div>
             </div>
-            <div class="profile-hero-tabs">
-                <div class="profile-tab active" onclick="showSection('about')">About</div>
-                <div class="profile-tab" onclick="showSection('reviews')">Reviews</div>
+        </header>
+
+        <div class="mp-stats" role="list">
+            <div class="mp-stat" role="listitem">
+                <span class="mp-stat__value">{{ number_format($score, 1) }}</span>
+                <span class="mp-stat__label">Rating{{ $reviewCount ? ' · '.$reviewCount.' '. \Illuminate\Support\Str::plural('review', $reviewCount) : '' }}</span>
+            </div>
+            <div class="mp-stat" role="listitem">
+                <span class="mp-stat__value">{{ number_format((int) ($mentor->total_sessions ?? 0)) }}</span>
+                <span class="mp-stat__label">Sessions completed</span>
+            </div>
+            <div class="mp-stat" role="listitem">
+                <span class="mp-stat__value">{{ (int) ($mentor->experience_years ?? 0) }}+</span>
+                <span class="mp-stat__label">Years experience</span>
+            </div>
+            <div class="mp-stat" role="listitem">
+                <span class="mp-stat__value">₹{{ rtrim(rtrim(number_format($rate, 2), '0'), '.') }}</span>
+                <span class="mp-stat__label">Per minute</span>
+            </div>
+            <div class="mp-stat" role="listitem">
+                <span class="mp-stat__value">₹{{ number_format($hourly) }}</span>
+                <span class="mp-stat__label">Per hour</span>
             </div>
         </div>
-    </div>
 
-    {{-- Main --}}
-    <div class="container" style="padding-top:32px;padding-bottom:60px;">
-        <div style="display:grid;grid-template-columns:1fr 340px;gap:32px;align-items:start;">
+        <div class="mp-layout">
+            <div class="mp-main">
+                <div class="mp-tabs" role="tablist">
+                    <a class="mp-tab is-active" href="#about">About</a>
+                    <a class="mp-tab" href="#profile-details">Profile</a>
+                    <a class="mp-tab" href="#availability-overview">Availability</a>
+                    <a class="mp-tab" href="#reviews">Reviews</a>
+                </div>
 
-            {{-- Left content --}}
-            <div>
-                {{-- About --}}
-                <div id="section-about">
-                    <div class="card" style="margin-bottom:20px;">
-                        <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;">About</h3>
-                        <div class="rich-text" style="font-size:14px;color:var(--text-2);line-height:1.8;">
-                            @if(\App\Support\RichText::plain($mentor->bio) !== '')
-                                {!! $mentor->bio !!}
-                            @else
-                                Experienced professional passionate about mentoring the next generation of talent. With over a decade in the industry, I've helped hundreds of mentees achieve their career goals.
-                            @endif
-                        </div>
+                <section id="about" class="mp-section">
+                    <div class="card mp-card">
+                        <h2>About</h2>
+                        @if($bioPlain !== '')
+                        <div class="rich-text mp-bio">{!! $mentor->bio !!}</div>
+                        @else
+                        <p class="mp-empty">{{ $mentor->name }} hasn’t added a bio yet.</p>
+                        @endif
                     </div>
 
-                    <div class="card" style="margin-bottom:20px;">
-                        <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;">Expertise</h3>
+                    @if($expertise !== [])
+                    <div class="card mp-card">
+                        <h2>Expertise</h2>
                         <div class="chip-wrap">
-                            @foreach(($mentor->expertise ?? ['Product Strategy','User Research','Agile','SQL','Python','Leadership']) as $skill)
+                            @foreach($expertise as $skill)
                             <span class="chip selected">{{ $skill }}</span>
                             @endforeach
                         </div>
                     </div>
+                    @endif
 
-                    <div class="card" style="margin-bottom:20px;">
-                        <h3 style="font-size:16px;font-weight:700;margin-bottom:14px;">What You'll Get</h3>
-                        <div style="display:flex;flex-direction:column;gap:10px;">
-                            @foreach([
-                                ['🎯','Personalized guidance tailored to your specific goals and challenges'],
-                                ['📋','Action items and roadmap for your next 30-90 days'],
-                                ['📁','Session notes and resources shared after every call'],
-                                ['💡','Industry insights and network introductions where applicable'],
-                            ] as [$icon, $text])
-                            <div style="display:flex;gap:12px;align-items:flex-start;">
-                                <span style="font-size:18px;flex-shrink:0;">{{ $icon }}</span>
-                                <span style="font-size:13px;color:var(--text-2);">{{ $text }}</span>
-                            </div>
+                    @if($strengths !== [])
+                    <div class="card mp-card">
+                        <h2>Strengths</h2>
+                        <div class="chip-wrap">
+                            @foreach($strengths as $item)
+                            <span class="chip">{{ $item }}</span>
                             @endforeach
                         </div>
                     </div>
-                </div>
+                    @endif
 
-                {{-- Reviews --}}
-                <div id="section-reviews" class="hidden">
-                    @php
-                        $reviewCount = $reviews->count();
-                        $score = $reviewCount > 0
-                            ? round((float) $reviews->avg('overall_rating'), 1)
-                            : (float) ($mentor->rating ?? 0);
-                        $filledStars = max(0, min(5, (int) round($score)));
-                    @endphp
-                    <div class="card" style="margin-bottom:16px;">
-                        <div style="display:flex;align-items:center;gap:24px;">
-                            <div style="text-align:center;">
-                                <div style="font-size:48px;font-weight:900;color:var(--brand);line-height:1;">{{ number_format($score, 1) }}</div>
-                                <div class="stars">{{ str_repeat('★', $filledStars) }}{{ str_repeat('☆', 5 - $filledStars) }}</div>
-                                <div style="font-size:12px;color:var(--text-2);">{{ $reviewCount }} {{ \Illuminate\Support\Str::plural('review', $reviewCount) }}</div>
+                    <div class="card mp-card">
+                        <h2>What you’ll get</h2>
+                        <ul class="mp-perks">
+                            <li>
+                                <span class="mp-perks__icon">1:1</span>
+                                <div>
+                                    <strong>Focused {{ strtolower($hostLabel) }} session</strong>
+                                    <p>Live video call on the slot you pick — 30, 60, 90, or 120 minutes.</p>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="mp-perks__icon">₹</span>
+                                <div>
+                                    <strong>Clear pricing</strong>
+                                    <p>₹{{ rtrim(rtrim(number_format($rate, 2), '0'), '.') }}/min · ₹{{ number_format($hourly) }}/hour. You only pay for the duration you book.</p>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="mp-perks__icon">✎</span>
+                                <div>
+                                    <strong>Session notes</strong>
+                                    <p>Shared notes and next steps after the call so nothing is lost.</p>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="mp-perks__icon">→</span>
+                                <div>
+                                    <strong>Practical takeaways</strong>
+                                    <p>Action items and a short roadmap you can use in the next 30–90 days.</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section id="profile-details" class="mp-section">
+                    <div class="card mp-card">
+                        <h2>Professional profile</h2>
+                        <dl class="mp-facts">
+                            <div>
+                                <dt>Title</dt>
+                                <dd>{{ $mentor->designation ?: '—' }}</dd>
                             </div>
+                            <div>
+                                <dt>Company</dt>
+                                <dd>{{ $mentor->company ?: '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt>Domain</dt>
+                                <dd>{{ $mentor->field ?: '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt>Experience</dt>
+                                <dd>{{ (int) ($mentor->experience_years ?? 0) }} years</dd>
+                            </div>
+                            @if($mentor->education_stream)
+                            <div>
+                                <dt>Education stream</dt>
+                                <dd>{{ $mentor->education_stream }}</dd>
+                            </div>
+                            @endif
+                            @if($mentor->location)
+                            <div>
+                                <dt>Location</dt>
+                                <dd>{{ $mentor->location }}</dd>
+                            </div>
+                            @endif
+                            <div>
+                                <dt>Session format</dt>
+                                <dd>
+                                    @if($modes !== [])
+                                        {{ collect($modes)->map(fn ($m) => $modeLabels[$m] ?? ucfirst($m))->join(', ') }}
+                                    @else
+                                        1:1 video
+                                    @endif
+                                </dd>
+                            </div>
+                            @if($preferredLength)
+                            <div>
+                                <dt>Preferred length</dt>
+                                <dd>{{ $preferredLength }} minutes</dd>
+                            </div>
+                            @endif
+                            @if($preferredTime !== '')
+                            <div>
+                                <dt>Preferred time</dt>
+                                <dd>{{ $preferredTime }}</dd>
+                            </div>
+                            @endif
+                        </dl>
+                    </div>
+                </section>
+
+                <section id="availability-overview" class="mp-section">
+                    <div class="card mp-card">
+                        <h2>Weekly availability</h2>
+                        <p class="mp-card__hint">Times are in IST. Green days are when {{ explode(' ', $mentor->name)[0] }} usually takes sessions.</p>
+                        @if($weekly !== [])
+                        <div class="mp-week">
+                            @foreach($weekly as $day)
+                            <div class="mp-week__day {{ !empty($day['enabled']) ? 'is-on' : 'is-off' }}">
+                                <strong>{{ $day['label'] }}</strong>
+                                <span>
+                                    @if(!empty($day['enabled']))
+                                        {{ $day['windows'] ?: (($day['from'] && $day['to']) ? $day['from'].'–'.$day['to'] : 'Open') }}
+                                    @else
+                                        Off
+                                    @endif
+                                </span>
+                            </div>
+                            @endforeach
                         </div>
+                        @else
+                        <p class="mp-empty">Weekly hours will appear here once this {{ strtolower($hostLabel) }} publishes a schedule.</p>
+                        @endif
+                    </div>
+                </section>
+
+                <section id="reviews" class="mp-section">
+                    <div class="card mp-card mp-reviews-head">
+                        <div class="mp-score">
+                            <div class="mp-score__num">{{ number_format($score, 1) }}</div>
+                            <div class="stars" aria-hidden="true">{{ str_repeat('★', $filledStars) }}{{ str_repeat('☆', 5 - $filledStars) }}</div>
+                            <p>{{ $reviewCount }} {{ \Illuminate\Support\Str::plural('review', $reviewCount) }}</p>
+                            @if($reviewCount > 0)
+                            <p class="mp-score__rec">{{ $recommendCount }} of {{ $reviewCount }} would recommend</p>
+                            @endif
+                        </div>
+                        @if($dimAvgs !== [])
+                        <div class="mp-bars">
+                            @foreach($dimAvgs as $label => $value)
+                            <div class="mp-bar">
+                                <div class="mp-bar__row">
+                                    <span>{{ $label }}</span>
+                                    <strong>{{ number_format($value, 1) }}</strong>
+                                </div>
+                                <div class="mp-bar__track"><i style="width: {{ min(100, ($value / 5) * 100) }}%"></i></div>
+                            </div>
+                            @endforeach
+                        </div>
+                        @endif
                     </div>
 
                     @forelse($reviews as $review)
@@ -150,15 +342,18 @@
                             'Helpfulness' => $review->helpfulness_rating,
                         ], fn ($value) => $value !== null && $value !== '');
                     @endphp
-                    <div class="testimonial-card" style="margin-bottom:12px;">
-                        <div class="stars">{{ str_repeat('★', $overall) }}{{ str_repeat('☆', 5 - $overall) }}</div>
+                    <article class="testimonial-card mp-review">
+                        <div class="mp-review__top">
+                            <div class="stars">{{ str_repeat('★', $overall) }}{{ str_repeat('☆', 5 - $overall) }}</div>
+                            <time>{{ $review->submitted_at?->diffForHumans() ?? $review->created_at?->diffForHumans() }}</time>
+                        </div>
                         @if(filled($review->review_text))
                         <p class="testimonial-text">“{{ $review->review_text }}”</p>
                         @endif
                         @if($detailScores !== [])
-                        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                        <div class="mp-review__chips">
                             @foreach($detailScores as $label => $value)
-                            <span style="font-size:12px;color:var(--text-2);background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:4px 10px;">{{ $label }} {{ (int) $value }}/5</span>
+                            <span>{{ $label }} {{ (int) $value }}/5</span>
                             @endforeach
                         </div>
                         @endif
@@ -166,35 +361,36 @@
                             <div class="author-avatar">{{ strtoupper(substr($reviewerName, 0, 1)) }}</div>
                             <div>
                                 <div class="author-name">{{ $reviewerName }}</div>
-                                <div class="author-role">
-                                    {{ $review->submitted_at?->diffForHumans() ?? $review->created_at?->diffForHumans() }}
-                                    @if($review->would_recommend) · Would recommend @endif
-                                </div>
+                                <div class="author-role">{{ $review->would_recommend ? 'Would recommend' : 'Verified mentee' }}</div>
                             </div>
                         </div>
-                    </div>
+                    </article>
                     @empty
-                    <div class="card" style="text-align:center;padding:28px 16px;">
-                        <div style="font-size:28px;margin-bottom:8px;">⭐</div>
-                        <p style="font-size:14px;color:var(--text-2);margin:0;">No reviews yet. Feedback from mentees will appear here.</p>
+                    <div class="card mp-card mp-empty-card">
+                        <p>No reviews yet. Feedback from mentees will show up here after completed sessions.</p>
                     </div>
                     @endforelse
-                </div>
+                </section>
             </div>
 
-            {{-- Booking Widget (sticky) --}}
-            <div id="book-section" style="position:sticky;top:calc(var(--nav-h) + 20px);">
-                <div class="card">
-                    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;">Book a Session</h3>
-                    <p style="font-size:12px;color:var(--text-2);margin-bottom:16px;">₹{{ $mentor->rate_per_minute ?? 10 }}/min</p>
+            <aside id="book-section" class="mp-aside">
+                <div class="card mp-book">
+                    <div class="mp-book__head">
+                        <div>
+                            <p class="mp-book__kicker">Book a session</p>
+                            <p class="mp-book__price">₹{{ rtrim(rtrim(number_format($rate, 2), '0'), '.') }}<small>/min</small></p>
+                        </div>
+                        <span class="mp-book__hour">₹{{ number_format($hourly) }}/hr</span>
+                    </div>
+                    <p class="mp-book__note">Pick a date, duration, and time. Payment is only taken when you confirm.</p>
 
-                    <div class="booking-card" style="padding:0;border:0;background:transparent;box-shadow:none;">
-                        <p class="label-caps" style="margin-bottom:10px;">Mentor Availability</p>
+                    <div class="booking-card mp-book__block" style="padding:0;border:0;background:transparent;box-shadow:none;">
+                        <p class="label-caps" style="margin-bottom:10px;">{{ $hostLabel }} availability</p>
                         <div id="availabilitySummary"></div>
                     </div>
 
-                    <div class="booking-cal-head" style="margin-top:8px;">
-                        <p class="label-caps" style="margin:0;">Select a Date</p>
+                    <div class="booking-cal-head">
+                        <p class="label-caps" style="margin:0;">Select a date</p>
                         <div class="booking-cal-nav">
                             <button type="button" class="btn btn-ghost btn-sm" id="cal-prev-month" aria-label="Previous month">‹</button>
                             <strong id="cal-month-label"></strong>
@@ -203,27 +399,32 @@
                     </div>
                     <div id="dateGrid" class="calendar-grid calendar-grid--month"></div>
 
-                    <p class="label-caps" style="margin:16px 0 10px;">Session Duration</p>
+                    <p class="label-caps mp-book__label">Session duration</p>
                     <div class="duration-btns">
-                        <div class="duration-btn selected" data-min="30" onclick="BookingWidget.setDuration(30)">30m</div>
-                        <div class="duration-btn" data-min="60" onclick="BookingWidget.setDuration(60)">60m</div>
-                        <div class="duration-btn" data-min="90" onclick="BookingWidget.setDuration(90)">90m</div>
-                        <div class="duration-btn" data-min="120" onclick="BookingWidget.setDuration(120)">120m</div>
+                        @foreach(\App\Models\ConsultationSession::BOOKING_DURATIONS as $mins)
+                        <button type="button"
+                                class="duration-btn{{ $mins === 30 ? ' selected' : '' }}"
+                                data-min="{{ $mins }}"
+                                onclick="BookingWidget.setDuration({{ $mins }})">
+                            <span class="duration-btn__time">{{ $mins }}m</span>
+                            <span class="duration-btn__price">₹{{ number_format($rate * $mins) }}</span>
+                        </button>
+                        @endforeach
                     </div>
 
-                    <p class="label-caps" style="margin:16px 0 10px;" id="slots-heading">Available Slots</p>
+                    <p class="label-caps mp-book__label" id="slots-heading">Available slots</p>
                     <div id="timeGrid" class="time-grid">
                         <div style="grid-column:1/-1;text-align:center;padding:12px;font-size:12px;color:var(--text-3);">Select an available date</div>
                     </div>
 
-                    <p class="label-caps" style="margin:16px 0 10px;">Session Details</p>
+                    <p class="label-caps mp-book__label">Session details</p>
                     <div class="form-group">
-                        <label class="form-label">Topic <span style="color:var(--error)">*</span></label>
+                        <label class="form-label" for="booking-topic">Topic <span style="color:var(--error)">*</span></label>
                         <input type="text" class="form-input" id="booking-topic" placeholder="What would you like to discuss?" maxlength="255">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Notes (optional)</label>
-                        <textarea class="form-input" rows="2" id="booking-agenda" placeholder="Any additional context..."></textarea>
+                        <label class="form-label" for="booking-agenda">Notes (optional)</label>
+                        <textarea class="form-input" rows="2" id="booking-agenda" placeholder="Any additional context…"></textarea>
                     </div>
 
                     @include('frontend.partials.booking-coupon-picker')
@@ -232,46 +433,136 @@
                         <div class="booking-summary-row"><span>Date</span><span id="bk-date">—</span></div>
                         <div class="booking-summary-row"><span>Time</span><span id="bk-time">—</span></div>
                         <div class="booking-summary-row"><span>Duration</span><span id="bk-duration">30 min</span></div>
-                        <div class="booking-summary-row"><span>Subtotal</span><strong id="bk-subtotal">₹{{ ($mentor->rate_per_minute ?? 10) * 30 }}</strong></div>
+                        <div class="booking-summary-row"><span>Subtotal</span><strong id="bk-subtotal">₹{{ number_format($rate * 30) }}</strong></div>
                         <div class="booking-summary-row booking-summary-row--discount" id="bk-discount-row" hidden>
                             <span>Coupon</span><strong id="bk-discount">—</strong>
                         </div>
                         <div class="booking-summary-row booking-summary-row--total" style="padding-top:12px;">
-                            <span>Total</span><strong id="bk-total" style="color:var(--brand);">₹{{ ($mentor->rate_per_minute ?? 10) * 30 }}</strong>
+                            <span>Total</span><strong id="bk-total">₹{{ number_format($rate * 30) }}</strong>
                         </div>
                     </div>
 
-                    <input type="hidden" id="booking-mentor-id" value="{{ $mentor->id ?? 1 }}">
+                    <input type="hidden" id="booking-mentor-id" value="{{ $mentor->id }}">
                     <input type="hidden" name="booking_date">
                     <input type="hidden" name="booking_time">
                     <input type="hidden" name="booking_duration">
                     <input type="hidden" name="booking_amount">
 
-                    <button class="btn btn-primary btn-full btn-lg" style="margin-top:16px;" onclick="confirmBooking()">
-                        Book Session
+                    <button type="button" class="btn btn-primary btn-full btn-lg mp-book__cta" onclick="confirmBooking()">
+                        Confirm booking
                     </button>
+                    <p class="mp-book__fine">You’ll choose Wallet or Razorpay on the next step if the session is paid.</p>
                 </div>
-            </div>
-
+            </aside>
         </div>
+    </div>
+
+    <div class="mp-dock" aria-hidden="false">
+        <div class="mp-dock__price">
+            <strong>₹{{ rtrim(rtrim(number_format($rate, 2), '0'), '.') }}/min</strong>
+            <span>{{ $mentor->name }} · {{ $hostLabel }}</span>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="scrollToBook()">Book</button>
     </div>
 </div>
 @endsection
 
 @push('scripts')
 <script>
-BookingWidget.init({{ $mentor->rate_per_minute ?? 10 }}, {{ (int) $mentor->id }});
+BookingWidget.init({{ $rate }}, {{ (int) $mentor->id }});
 
 function scrollToBook() {
     document.getElementById('book-section')?.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
-function showSection(name) {
-    document.querySelectorAll('[id^="section-"]').forEach(el => el.classList.add('hidden'));
-    document.getElementById('section-' + name)?.classList.remove('hidden');
-    document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
-}
+(function () {
+    const btn = document.getElementById('mp-share-btn');
+    if (!btn) return;
+
+    function toast(type, message) {
+        if (typeof window.showToast === 'function') window.showToast(type, message);
+    }
+
+    function copied() {
+        const original = btn.textContent;
+        btn.textContent = 'Copied';
+        toast('success', 'Profile link copied');
+        setTimeout(() => { btn.textContent = original; }, 2000);
+    }
+
+    function fallbackCopy(text) {
+        const input = document.createElement('textarea');
+        input.value = text;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.top = '0';
+        input.style.left = '0';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.focus();
+        input.select();
+        input.setSelectionRange(0, text.length);
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        document.body.removeChild(input);
+        return ok;
+    }
+
+    btn.addEventListener('click', async function (e) {
+        e.preventDefault();
+        const url = window.location.href;
+        const payload = { title: document.title, text: document.title, url: url };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(payload);
+                return;
+            } catch (err) {
+                if (err && err.name === 'AbortError') return;
+            }
+        }
+
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(url);
+                copied();
+                return;
+            }
+        } catch (e) {}
+
+        if (fallbackCopy(url)) {
+            copied();
+            return;
+        }
+
+        toast('error', 'Could not copy the link. Copy it from the address bar.');
+    });
+})();
+
+(function () {
+    const tabs = document.querySelectorAll('.mp-tab');
+    const sections = ['about', 'profile-details', 'availability-overview', 'reviews']
+        .map((id) => document.getElementById(id))
+        .filter(Boolean);
+
+    tabs.forEach((tab) => {
+        tab.addEventListener('click', (e) => {
+            const target = document.querySelector(tab.getAttribute('href'));
+            if (!target) return;
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
+    if (!('IntersectionObserver' in window) || !sections.length) return;
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            tabs.forEach((tab) => tab.classList.toggle('is-active', tab.getAttribute('href') === '#' + entry.target.id));
+        });
+    }, { rootMargin: '-20% 0px -65% 0px', threshold: 0.1 });
+    sections.forEach((el) => io.observe(el));
+})();
 
 function confirmBooking(paymentMethod) {
     const data = BookingWidget.getBookingData();

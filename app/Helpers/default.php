@@ -46,3 +46,17 @@ if (!function_exists('activity')) {
         return new ActivityLogger();
     }
 }
+
+if (!function_exists('encrypt_id')) {
+    function encrypt_id(mixed $id): string
+    {
+        return \App\Support\UrlId::encrypt($id);
+    }
+}
+
+if (!function_exists('decrypt_id')) {
+    function decrypt_id(mixed $encryption): mixed
+    {
+        return \App\Support\UrlId::decrypt($encryption);
+    }
+}

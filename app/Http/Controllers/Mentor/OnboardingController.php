@@ -134,7 +134,7 @@ class OnboardingController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->onboarding_completed || $user->mentor_status === 'approved') {
+        if ($user->onboarding_completed) {
             return $this->finishedRedirect($request) ?? redirect()->route('mentor.onboarding.pending');
         }
 
@@ -144,26 +144,58 @@ class OnboardingController extends Controller
             return back()->with('error', $msg);
         }
 
+        $alreadyApproved = $user->mentor_status === 'approved';
         $user->update([
-            'mentor_status'        => 'pending',
+            'mentor_status'        => $alreadyApproved ? 'approved' : 'pending',
             'onboarding_completed' => true,
             'onboarding_step'      => 5,
         ]);
 
-        if ($user->isExpert()) {
+        if (! $alreadyApproved && $user->isExpert()) {
             app(\App\Services\NotificationService::class)->expertPendingApproval($user);
         }
 
+        $redirect = $alreadyApproved
+            ? route('mentor.dashboard')
+            : route('mentor.onboarding.pending');
+        $message = $alreadyApproved
+            ? 'Profile saved. You can now take sessions.'
+            : 'Profile submitted for review!';
+
         if ($request->ajax()) {
-            return response()->json(['message' => 'Profile submitted for review!', 'redirect' => route('mentor.onboarding.pending')]);
+            return response()->json(['message' => $message, 'redirect' => $redirect]);
         }
-        return redirect()->route('mentor.onboarding.pending');
+        return redirect($redirect)->with('success', $message);
+    }
+
+    public function skipLater(Request $request)
+    {
+        $user = auth()->user();
+        if (! $user->canSkipOnboarding()) {
+            $redirect = $user->postAuthRedirectUrl();
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message'  => $user->platformGateMessage(),
+                    'redirect' => $redirect,
+                ], 422);
+            }
+
+            return redirect()->to($redirect)->with('error', $user->platformGateMessage());
+        }
+
+        $redirect = route('mentor.onboarding.pending');
+        $message = 'You can complete your profile after confirmation. It is required before taking sessions.';
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['message' => $message, 'redirect' => $redirect]);
+        }
+
+        return redirect()->to($redirect)->with('info', $message);
     }
 
     private function finishedRedirect(?Request $request = null)
     {
         $user = auth()->user();
-        if (! $user->onboarding_completed && $user->mentor_status !== 'approved') {
+        if (! $user->onboarding_completed) {
             return null;
         }
 

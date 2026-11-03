@@ -24,7 +24,7 @@
                 <select id="assess-question-filter" name="assessment_id" class="form-input form-select assess-questions-toolbar__select" aria-label="Filter by assessment">
                     <option value="">All assessments</option>
                     @foreach($assessments as $a)
-                    <option value="{{ $a->id }}" @selected((string) request('assessment_id') === (string) $a->id)>{{ $a->title }}</option>
+                    <option value="{{ encrypt_id($a->id) }}" @selected((string) request('assessment_id') === (string) $a->id)>{{ $a->title }}</option>
                     @endforeach
                 </select>
                 <div class="assess-questions-toolbar__search-row">

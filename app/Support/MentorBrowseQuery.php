@@ -22,6 +22,7 @@ class MentorBrowseQuery
             ->when(! in_array($type, ['mentor', 'expert'], true), fn (Builder $q) => $q->sessionHosts())
             ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
             ->where('is_active', true)
+            ->where('onboarding_completed', true)
             ->when($mentee?->assigned_mentor_id && $request->boolean('exclude_assigned'), function (Builder $q) use ($mentee) {
                 $q->where('id', '!=', $mentee->assigned_mentor_id);
             })

@@ -24,7 +24,8 @@ class MentorListingController extends Controller
             ->when($request->input('type') === 'mentor', fn ($q) => $q->where('role', 'mentor'))
             ->when(! in_array($request->input('type'), ['mentor', 'expert'], true), fn ($q) => $q->sessionHosts())
             ->where('mentor_status', 'approved')
-            ->where('is_active', true);
+            ->where('is_active', true)
+            ->where('onboarding_completed', true);
 
         $this->applyListingFilters($query, $request);
 
@@ -65,6 +66,7 @@ class MentorListingController extends Controller
             ->sessionHosts()
             ->where('mentor_status', User::MENTOR_STATUS_APPROVED)
             ->where('is_active', true)
+            ->where('onboarding_completed', true)
             ->whereNotNull('field')
             ->where('field', '!=', '')
             ->distinct()
@@ -84,6 +86,7 @@ class MentorListingController extends Controller
             $mentor = User::sessionHosts()
                 ->where('mentor_status', 'approved')
                 ->where('is_active', true)
+                ->where('onboarding_completed', true)
                 ->findOrFail((int) $slug);
 
             if ($mentor->slug) {
@@ -94,6 +97,7 @@ class MentorListingController extends Controller
         $mentor = User::sessionHosts()
             ->where('mentor_status', 'approved')
             ->where('is_active', true)
+            ->where('onboarding_completed', true)
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -123,6 +127,7 @@ class MentorListingController extends Controller
     {
         $mentor = User::sessionHosts()
             ->where('mentor_status', 'approved')
+            ->where('onboarding_completed', true)
             ->findOrFail($id);
 
         if ($request->boolean('week') || (! $request->filled('date') && $request->filled('days'))) {

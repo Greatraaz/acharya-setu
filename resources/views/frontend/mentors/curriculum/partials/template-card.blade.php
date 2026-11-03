@@ -25,7 +25,7 @@
         <a href="{{ route('mentor.curriculum.templates.show', $template) }}" class="btn btn-outline btn-sm">Preview</a>
         <button type="button"
                 class="btn btn-primary btn-sm js-assign-template"
-                data-id="{{ $template->id }}"
+                data-id="{{ encrypt_id($template->id) }}"
                 data-name="{{ $template->name }}"
                 data-action="{{ route('mentor.curriculum.templates.assign', $template) }}">Assign</button>
     </div>

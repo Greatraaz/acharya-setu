@@ -88,6 +88,7 @@ Route::prefix('v1')->group(function () {
 Route::prefix('v1/auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login',    [AuthController::class, 'login']);
+    Route::post('/google',   [AuthController::class, 'google']);
     Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
     Route::post('/send-otp',    [AuthController::class, 'sendOtp']);
     Route::post('/verify-otp',  [AuthController::class, 'verifyOtp']);
@@ -178,6 +179,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'active'])->group(function () {
             Route::post('step/3',   [MenteeOnboarding::class, 'saveStep3']); // POST career goals
             Route::post('step/4',   [MenteeOnboarding::class, 'saveStep4']); // POST preferences
             Route::post('complete', [MenteeOnboarding::class, 'complete']);   // POST mark complete
+            Route::post('skip',     [MenteeOnboarding::class, 'skipLater']);
         });
 
         // Curriculum (mentor-assigned) + admin MCQs
@@ -399,6 +401,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'active'])->group(function () {
             Route::post('step/3',   [MentorOnboarding::class, 'saveStep3']); // POST expertise chips
             Route::post('step/4',   [MentorOnboarding::class, 'saveStep4']); // POST preferences & strengths
             Route::post('submit',   [MentorOnboarding::class, 'submit']);     // POST submit for approval
+            Route::post('skip',     [MentorOnboarding::class, 'skipLater']);
         });
 
         // ── Mentor Curriculum (Track → Month → Week → Task) ─────────────

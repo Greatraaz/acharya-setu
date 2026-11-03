@@ -46,6 +46,7 @@ class CouponController extends Controller
 
         $mentor = User::sessionHosts()
             ->where('mentor_status', 'approved')
+            ->where('onboarding_completed', true)
             ->find($data['mentor_id']);
 
         if (! $mentor) {

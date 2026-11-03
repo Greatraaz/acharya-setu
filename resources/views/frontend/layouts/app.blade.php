@@ -92,6 +92,7 @@
     @endif
 </head>
 <body class="vj-site vj-site-app">@include('frontend.partials.site-header', ['showAppTheme' => $showAppTheme])
+@include('frontend.partials.profile-gate-banner')
 
 @yield('content')
 

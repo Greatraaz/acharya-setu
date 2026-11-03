@@ -7,14 +7,17 @@
         @include('frontend.mentee.partials.bottom-nav')
     @endif
 @endauth
-<div>
+<div class="mentors-browse">
 
     {{-- Search Header --}}
-    <div style="background:var(--bg-2);border-bottom:1px solid var(--border);padding:32px 0;">
+    <section class="mentors-browse__hero">
         <div class="container">
-            <h1 style="font-size:28px;font-weight:800;margin-bottom:8px;">{{ \App\Support\MentorBrowseQuery::listingTitle(request()) }}</h1>
-            <p style="font-size:14px;color:var(--text-2);margin-bottom:16px;">Browse verified mentors and experts, then refine by domain, format, and availability</p>
-            <div class="chip-wrap" style="margin-bottom:16px;">
+            <p class="mentors-browse__eyebrow">Vedrix Mentor Network</p>
+            <h1 class="mentors-browse__title">{{ \App\Support\MentorBrowseQuery::listingTitle(request()) }}</h1>
+            <p class="mentors-browse__lede">Browse verified mentors and experts, then refine by domain, format, and availability</p>
+            <div class="lain"></div>
+
+            <div class="chip-wrap mentors-browse__tabs">
                 @foreach(['' => 'All', 'mentor' => 'Mentors', 'expert' => 'Experts'] as $val => $label)
                 <a href="{{ route('mentors.search', array_filter(array_merge(request()->except(['page']), ['type' => $val ?: null]))) }}"
                    class="chip {{ request('type', '') === $val ? 'selected' : '' }}">{{ $label }}</a>
@@ -22,20 +25,20 @@
             </div>
 
             {{-- Search bar --}}
-            <div class="search-hero" style="margin:0;max-width:100%;">
+            <div class="search-hero mentors-browse__search">
                 <svg class="search-hero__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
                     <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
                 <input type="text" id="mentor-search-input" value="{{ request('q') }}" placeholder="Search by name, skill, company…">
                 <div class="search-filters">
-                    <select data-filter="experience" class="search-filter-btn" style="background:var(--bg-4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-2);font-size:12px;">
+                    <select data-filter="experience" class="search-filter-btn">
                         <option value="">Any Experience</option>
                         <option value="1-3" @selected(request('exp') === '1-3' || request('experience') === '1-3')>1–3 yrs</option>
                         <option value="3-7" @selected(request('exp') === '3-7' || request('experience') === '3-7')>3–7 yrs</option>
                         <option value="7+" @selected(request('exp') === '7+' || request('experience') === '7+')>7+ yrs</option>
                     </select>
-                    <select data-filter="rate_max" class="search-filter-btn" style="background:var(--bg-4);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-2);font-size:12px;">
+                    <select data-filter="rate_max" class="search-filter-btn">
                         <option value="">Any Price</option>
                         <option value="10" @selected((string) request('rate_max') === '10')>Under ₹10/min</option>
                         <option value="20" @selected((string) request('rate_max') === '20')>Under ₹20/min</option>
@@ -46,7 +49,7 @@
             </div>
 
             {{-- Quick chips from mentor fields in DB --}}
-            <div class="chip-wrap" id="mentor-field-chips" style="margin-top:14px;">
+            <div class="chip-wrap mentors-browse__fields" id="mentor-field-chips">
                 @foreach($mentorFields ?? [] as $chip)
                 <button type="button"
                         class="chip {{ request('field') === $chip ? 'selected' : '' }}"
@@ -55,154 +58,156 @@
                 @endforeach
             </div>
         </div>
-    </div>
+    </section>
 
     {{-- Main Content --}}
-    <div class="container" style="padding-top:32px;padding-bottom:60px;">
-        <div class="search-layout">
+    <div class="mentors-browse__body">
+        <div class="container">
+            <div class="search-layout">
 
-            <button type="button" class="search-filter-toggle" id="searchFilterToggle">Show filters</button>
+                <button type="button" class="search-filter-toggle" id="searchFilterToggle">Show filters</button>
 
-            {{-- FILTERS SIDEBAR --}}
-            <div class="filter-sidebar">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                    <span style="font-size:14px;font-weight:700;">Filters</span>
-                    <button class="btn btn-ghost btn-sm" onclick="clearAllFilters()">Clear all</button>
-                </div>
-
-                {{-- Domain --}}
-                <div class="filter-section">
-                    <div class="filter-section-title">Domain</div>
-                    @foreach(\App\Support\MentorBrowseQuery::domainOptions() as [$val, $label])
-                    <label class="filter-option">
-                        <input type="checkbox" data-filter="domain" value="{{ $val }}" @checked(in_array($val, (array) request('domain', []), true))>
-                        {{ $label }}
-                    </label>
-                    @endforeach
-                </div>
-
-                {{-- Price --}}
-                <div class="filter-section">
-                    <div class="filter-section-title">Price (₹/min)</div>
-                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="" @checked(!request()->filled('rate_range'))> Any</label>
-                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="0-10" @checked(request('rate_range') === '0-10')> Under ₹10</label>
-                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="10-20" @checked(request('rate_range') === '10-20')> ₹10–₹20</label>
-                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="20-50" @checked(request('rate_range') === '20-50')> ₹20–₹50</label>
-                    <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="50+" @checked(request('rate_range') === '50+')> ₹50+</label>
-                </div>
-
-                {{-- Rating --}}
-                <div class="filter-section">
-                    <div class="filter-section-title">Minimum Rating</div>
-                    <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="" @checked(!request()->filled('min_rating'))> Any</label>
-                    <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="4.5" @checked((string) request('min_rating') === '4.5')> ⭐ 4.5+</label>
-                    <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="4" @checked((string) request('min_rating') === '4')> ⭐ 4.0+</label>
-                </div>
-
-                {{-- Experience --}}
-                <div class="filter-section">
-                    <div class="filter-section-title">Experience</div>
-                    @php $expSelected = (array) request('exp', []); @endphp
-                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="1-3" @checked(in_array('1-3', $expSelected, true))> 1–3 years</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="3-7" @checked(in_array('3-7', $expSelected, true))> 3–7 years</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="7-15" @checked(in_array('7-15', $expSelected, true))> 7–15 years</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="exp" value="15+" @checked(in_array('15+', $expSelected, true))> 15+ years</label>
-                </div>
-
-                {{-- Meeting duration --}}
-                <div class="filter-section">
-                    <div class="filter-section-title">Meeting duration</div>
-                    <label class="filter-option"><input type="radio" data-filter="duration" name="duration" value="" @checked(!request()->filled('duration'))> Any</label>
-                    @foreach(\App\Models\ConsultationSession::BOOKING_DURATIONS as $minutes)
-                    <label class="filter-option"><input type="radio" data-filter="duration" name="duration" value="{{ $minutes }}" @checked((string) request('duration') === (string) $minutes)> {{ $minutes }} minutes</label>
-                    @endforeach
-                </div>
-
-                {{-- Mentorship model / session type hidden — session modes are unused --}}
-
-                {{-- Availability --}}
-                <div class="filter-section">
-                    <div class="filter-section-title">Availability</div>
-                    @php $availabilitySelected = (array) request('availability', []); @endphp
-                    <label class="filter-option"><input type="checkbox" data-filter="availability" value="today" @checked(in_array('today', $availabilitySelected, true))> Available Today</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="availability" value="weekend" @checked(in_array('weekend', $availabilitySelected, true))> Weekends</label>
-                    <label class="filter-option"><input type="checkbox" data-filter="availability" value="evening" @checked(in_array('evening', $availabilitySelected, true))> Evenings (6–10 PM)</label>
-                </div>
-            </div>
-
-            {{-- RESULTS --}}
-            <div>
-                {{-- Results header --}}
-                <div class="search-results-header">
-                    <div style="font-size:13px;color:var(--text-2);" id="mentor-count-wrap">
-                        @if(($mentors->total() ?? 0) > 0)
-                            Showing <strong id="mentor-count-range" style="color:var(--text);">{{ $mentors->firstItem() }}–{{ $mentors->lastItem() }}</strong>
-                            of <strong id="mentor-count" style="color:var(--text);">{{ $mentors->total() }}</strong> mentors
-                        @else
-                            Showing <strong id="mentor-count" style="color:var(--text);">0</strong> mentors
-                        @endif
+                {{-- FILTERS SIDEBAR --}}
+                <aside class="filter-sidebar">
+                    <div class="mentors-browse__filter-head">
+                        <span>Filters</span>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="clearAllFilters()">Clear all</button>
                     </div>
-                    <select data-sort-select class="search-sort-select">
-                        <option value="best" @selected(request('sort', 'best') === 'best')>Best Match</option>
-                        <option value="rating" @selected(request('sort') === 'rating')>Highest Rated</option>
-                        <option value="rate_asc" @selected(request('sort') === 'rate_asc')>Lowest Price</option>
-                        <option value="rate_desc" @selected(request('sort') === 'rate_desc')>Highest Price</option>
-                        <option value="sessions" @selected(request('sort') === 'sessions')>Most Sessions</option>
-                    </select>
-                </div>
 
-                {{-- MENTOR GRID --}}
-                <div id="mentors-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;">
-                    {{-- Initial load from server --}}
-                    @forelse($mentors ?? [] as $mentor)
-                    <div class="mentor-card">
-                        <div class="mentor-card-head">
-                            <div class="mentor-avatar-lg">
-                                @if($mentor->avatar_url)<img src="{{ $mentor->avatar_url }}" alt="{{ $mentor->name }}">
-                                @else{{ strtoupper(substr($mentor->name,0,1)) }}@endif
-                            </div>
-                            <div class="mentor-card-info">
-                                <div class="mentor-card-name">
-                                    {{ $mentor->name }}
-                                    @if($mentor->isExpert())
-                                    <span class="tag" style="margin-left:6px;font-size:10px;vertical-align:middle;">Expert</span>
-                                    @endif
+                    {{-- Domain --}}
+                    <div class="filter-section">
+                        <div class="filter-section-title">Domain</div>
+                        @foreach(\App\Support\MentorBrowseQuery::domainOptions() as [$val, $label])
+                        <label class="filter-option">
+                            <input type="checkbox" data-filter="domain" value="{{ $val }}" @checked(in_array($val, (array) request('domain', []), true))>
+                            {{ $label }}
+                        </label>
+                        @endforeach
+                    </div>
+
+                    {{-- Price --}}
+                    <div class="filter-section">
+                        <div class="filter-section-title">Price (₹/min)</div>
+                        <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="" @checked(!request()->filled('rate_range'))> Any</label>
+                        <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="0-10" @checked(request('rate_range') === '0-10')> Under ₹10</label>
+                        <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="10-20" @checked(request('rate_range') === '10-20')> ₹10–₹20</label>
+                        <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="20-50" @checked(request('rate_range') === '20-50')> ₹20–₹50</label>
+                        <label class="filter-option"><input type="radio" data-filter="rate_range" name="rate_range" value="50+" @checked(request('rate_range') === '50+')> ₹50+</label>
+                    </div>
+
+                    {{-- Rating --}}
+                    <div class="filter-section">
+                        <div class="filter-section-title">Minimum Rating</div>
+                        <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="" @checked(!request()->filled('min_rating'))> Any</label>
+                        <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="4.5" @checked((string) request('min_rating') === '4.5')> ⭐ 4.5+</label>
+                        <label class="filter-option"><input type="radio" data-filter="min_rating" name="min_rating" value="4" @checked((string) request('min_rating') === '4')> ⭐ 4.0+</label>
+                    </div>
+
+                    {{-- Experience --}}
+                    <div class="filter-section">
+                        <div class="filter-section-title">Experience</div>
+                        @php $expSelected = (array) request('exp', []); @endphp
+                        <label class="filter-option"><input type="checkbox" data-filter="exp" value="1-3" @checked(in_array('1-3', $expSelected, true))> 1–3 years</label>
+                        <label class="filter-option"><input type="checkbox" data-filter="exp" value="3-7" @checked(in_array('3-7', $expSelected, true))> 3–7 years</label>
+                        <label class="filter-option"><input type="checkbox" data-filter="exp" value="7-15" @checked(in_array('7-15', $expSelected, true))> 7–15 years</label>
+                        <label class="filter-option"><input type="checkbox" data-filter="exp" value="15+" @checked(in_array('15+', $expSelected, true))> 15+ years</label>
+                    </div>
+
+                    {{-- Meeting duration --}}
+                    <div class="filter-section">
+                        <div class="filter-section-title">Meeting duration</div>
+                        <label class="filter-option"><input type="radio" data-filter="duration" name="duration" value="" @checked(!request()->filled('duration'))> Any</label>
+                        @foreach(\App\Models\ConsultationSession::BOOKING_DURATIONS as $minutes)
+                        <label class="filter-option"><input type="radio" data-filter="duration" name="duration" value="{{ $minutes }}" @checked((string) request('duration') === (string) $minutes)> {{ $minutes }} minutes</label>
+                        @endforeach
+                    </div>
+
+                    {{-- Mentorship model / session type hidden — session modes are unused --}}
+
+                    {{-- Availability --}}
+                    <div class="filter-section">
+                        <div class="filter-section-title">Availability</div>
+                        @php $availabilitySelected = (array) request('availability', []); @endphp
+                        <label class="filter-option"><input type="checkbox" data-filter="availability" value="today" @checked(in_array('today', $availabilitySelected, true))> Available Today</label>
+                        <label class="filter-option"><input type="checkbox" data-filter="availability" value="weekend" @checked(in_array('weekend', $availabilitySelected, true))> Weekends</label>
+                        <label class="filter-option"><input type="checkbox" data-filter="availability" value="evening" @checked(in_array('evening', $availabilitySelected, true))> Evenings (6–10 PM)</label>
+                    </div>
+                </aside>
+
+                {{-- RESULTS --}}
+                <div class="mentors-browse__results">
+                    {{-- Results header --}}
+                    <div class="search-results-header">
+                        <div class="mentors-browse__count" id="mentor-count-wrap">
+                            @if(($mentors->total() ?? 0) > 0)
+                                Showing <strong id="mentor-count-range">{{ $mentors->firstItem() }}–{{ $mentors->lastItem() }}</strong>
+                                of <strong id="mentor-count">{{ $mentors->total() }}</strong> mentors
+                            @else
+                                Showing <strong id="mentor-count">0</strong> mentors
+                            @endif
+                        </div>
+                        <select data-sort-select class="search-sort-select">
+                            <option value="best" @selected(request('sort', 'best') === 'best')>Best Match</option>
+                            <option value="rating" @selected(request('sort') === 'rating')>Highest Rated</option>
+                            <option value="rate_asc" @selected(request('sort') === 'rate_asc')>Lowest Price</option>
+                            <option value="rate_desc" @selected(request('sort') === 'rate_desc')>Highest Price</option>
+                            <option value="sessions" @selected(request('sort') === 'sessions')>Most Sessions</option>
+                        </select>
+                    </div>
+
+                    {{-- MENTOR GRID --}}
+                    <div id="mentors-grid" class="mentors-browse__grid">
+                        {{-- Initial load from server --}}
+                        @forelse($mentors ?? [] as $mentor)
+                        <article class="mentor-card">
+                            <div class="mentor-card-head">
+                                <div class="mentor-avatar-lg">
+                                    @if($mentor->avatar_url)<img src="{{ $mentor->avatar_url }}" alt="{{ $mentor->name }}">
+                                    @else{{ strtoupper(substr($mentor->name,0,1)) }}@endif
                                 </div>
-                                <div class="mentor-card-role">{{ $mentor->designation }}{{ $mentor->company ? ' · '.$mentor->company : '' }}</div>
+                                <div class="mentor-card-info">
+                                    <div class="mentor-card-name">
+                                        {{ $mentor->name }}
+                                        @if($mentor->isExpert())
+                                        <span class="tag tag-brand">Expert</span>
+                                        @endif
+                                    </div>
+                                    <div class="mentor-card-role">{{ $mentor->designation }}{{ $mentor->company ? ' · '.$mentor->company : '' }}</div>
+                                </div>
                             </div>
+                            <div class="mentor-card-bio">{{ Str::limit($mentor->bio_text, 85) }}</div>
+                            <div class="mentor-tags">
+                                @foreach(array_slice($mentor->expertise ?? [],0,4) as $tag)
+                                <span class="tag">{{ $tag }}</span>
+                                @endforeach
+                            </div>
+                            <div class="mentor-card-meta">
+                                <span class="mentor-rate">₹{{ $mentor->rate_per_minute }}/min</span>
+                                <span class="mentor-rating">⭐ {{ number_format($mentor->rating,1) }} ({{ $mentor->total_sessions }})</span>
+                            </div>
+                            <div class="mentor-card-actions">
+                                <a href="{{ $mentor->profile_url }}" class="btn btn-outline btn-sm">View Profile</a>
+                                <button class="btn btn-primary btn-sm" onclick="openBookingModal({{ $mentor->id }},'{{ addslashes($mentor->name) }}',{{ $mentor->rate_per_minute }})">Book Session</button>
+                            </div>
+                        </article>
+                        @empty
+                        <div class="empty-state mentors-browse__empty">
+                            <div class="empty-state-icon">🔍</div>
+                            <h3>No mentors found</h3>
+                            <p>Try adjusting your filters or search term.</p>
                         </div>
-                        <div class="mentor-card-bio">{{ Str::limit($mentor->bio_text, 85) }}</div>
-                        <div class="mentor-tags">
-                            @foreach(array_slice($mentor->expertise ?? [],0,4) as $tag)
-                            <span class="tag">{{ $tag }}</span>
-                            @endforeach
-                        </div>
-                        <div class="mentor-card-meta">
-                            <span class="mentor-rate">₹{{ $mentor->rate_per_minute }}/min</span>
-                            <span class="mentor-rating">⭐ {{ number_format($mentor->rating,1) }} ({{ $mentor->total_sessions }})</span>
-                        </div>
-                        <div class="mentor-card-actions">
-                            <a href="{{ $mentor->profile_url }}" class="btn btn-outline btn-sm">View Profile</a>
-                            <button class="btn btn-primary btn-sm" onclick="openBookingModal({{ $mentor->id }},'{{ addslashes($mentor->name) }}',{{ $mentor->rate_per_minute }})">Book Session</button>
-                        </div>
+                        @endforelse
                     </div>
-                    @empty
-                    <div class="empty-state" style="grid-column:1/-1">
-                        <div class="empty-state-icon">🔍</div>
-                        <h3>No mentors found</h3>
-                        <p>Try adjusting your filters or search term.</p>
-                    </div>
-                    @endforelse
-                </div>
 
-                {{-- Pagination --}}
-                <div id="pagination-wrap" class="pagination" style="margin-top:32px;justify-content:center;"
-                     data-page="{{ $mentors->currentPage() }}"
-                     data-current-page="{{ $mentors->currentPage() }}"
-                     data-last-page="{{ $mentors->lastPage() }}"
-                     data-total="{{ $mentors->total() }}"
-                     data-from="{{ $mentors->firstItem() ?? 0 }}"
-                     data-to="{{ $mentors->lastItem() ?? 0 }}"></div>
+                    {{-- Pagination --}}
+                    <div id="pagination-wrap" class="pagination mentors-browse__pagination"
+                         data-page="{{ $mentors->currentPage() }}"
+                         data-current-page="{{ $mentors->currentPage() }}"
+                         data-last-page="{{ $mentors->lastPage() }}"
+                         data-total="{{ $mentors->total() }}"
+                         data-from="{{ $mentors->firstItem() ?? 0 }}"
+                         data-to="{{ $mentors->lastItem() ?? 0 }}"></div>
+                </div>
             </div>
         </div>
     </div>

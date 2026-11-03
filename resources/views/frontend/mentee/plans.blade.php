@@ -214,7 +214,7 @@
                         <button type="button"
                                 class="btn btn-primary"
                                 style="width:100%;{{ $plan->is_featured ? 'background:'.$accent.';border-color:'.$accent.';' : '' }}"
-                                data-plan-id="{{ $plan->id }}"
+                                data-plan-id="{{ encrypt_id($plan->id) }}"
                                 data-plan-name="{{ e($plan->name) }}"
                                 data-billing="{{ $billingKey }}"
                                 onclick="subscribePlan(this)">

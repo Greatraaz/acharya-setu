@@ -35,7 +35,7 @@ class User extends Authenticatable
     const MENTEE_STEPS = 4;
  
     protected $fillable = [
-        'name', 'email', 'password', 'role', 'admin_role_id', 'slug',
+        'name', 'email', 'google_id', 'auth_provider', 'password', 'role', 'admin_role_id', 'slug',
         'wallet_balance', 'bio', 'expertise', 'field', 'college', 'year',
         'gender', 'rating', 'total_sessions', 'avatar_url', 'phone', 'bank_details', 'location',
         'linkedin', 'company', 'designation', 'experience_years',
@@ -77,7 +77,90 @@ class User extends Authenticatable
 
     public function getAuthPassword(): string
     {
-        return $this->password;
+        return (string) ($this->password ?? '');
+    }
+
+    public function usesGoogleAuth(): bool
+    {
+        return filled($this->google_id) || $this->auth_provider === 'google';
+    }
+
+    public function isGoogleOnly(): bool
+    {
+        return $this->auth_provider === 'google';
+    }
+
+    public function canUsePlatform(): bool
+    {
+        if (! $this->onboarding_completed) {
+            return false;
+        }
+
+        if ($this->isSessionHost()) {
+            return $this->mentor_status === self::MENTOR_STATUS_APPROVED && $this->is_active;
+        }
+
+        return (bool) $this->is_active;
+    }
+
+    public function canSkipOnboarding(): bool
+    {
+        if ($this->onboarding_completed || ! $this->isGoogleOnly()) {
+            return false;
+        }
+
+        if ($this->isSessionHost()) {
+            return in_array($this->mentor_status, [self::MENTOR_STATUS_PENDING, self::MENTOR_STATUS_REJECTED], true);
+        }
+
+        return true;
+    }
+
+    public function platformGateMessage(): string
+    {
+        if ($this->isSessionHost() && $this->mentor_status === self::MENTOR_STATUS_APPROVED && ! $this->onboarding_completed) {
+            return 'Complete your profile before taking sessions or using the dashboard.';
+        }
+
+        if ($this->isSessionHost() && $this->mentor_status !== self::MENTOR_STATUS_APPROVED) {
+            return 'Your account is waiting for admin confirmation.';
+        }
+
+        return 'Complete your profile before taking sessions or using the dashboard.';
+    }
+
+    public function postAuthRedirectUrl(): string
+    {
+        if ($this->isAdmin()) {
+            return route('admin.dashboard');
+        }
+
+        if ($this->isSessionHost()) {
+            if ($this->isGoogleOnly() && ! $this->onboarding_completed && in_array($this->mentor_status, [self::MENTOR_STATUS_PENDING, 'rejected'], true)) {
+                return route('mentor.onboarding.pending');
+            }
+            if (! $this->onboarding_completed) {
+                $step = max(1, (int) $this->onboarding_step + 1);
+
+                return route('mentor.onboarding', ['step' => min($step, 5)]);
+            }
+            if ($this->mentor_status === self::MENTOR_STATUS_PENDING) {
+                return route('mentor.onboarding.pending');
+            }
+
+            return route('mentor.dashboard');
+        }
+
+        if (! $this->onboarding_completed) {
+            if ($this->isGoogleOnly()) {
+                return route('home');
+            }
+            $step = max(1, (int) $this->onboarding_step + 1);
+
+            return route('mentee.onboarding', ['step' => min($step, 4)]);
+        }
+
+        return route('mentee.dashboard');
     }
 
     public function preferencesForResponse(): object

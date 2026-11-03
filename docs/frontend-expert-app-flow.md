@@ -1,22 +1,5 @@
 # Expert app — complete frontend flow
 
-**Product:** Vedrix  
-**Audience:** Mobile / app frontend developers  
-**Base URL:** `{{baseUrl}} = https://vedrix.online/api/v1`  
-**Auth:** `Authorization: Bearer {{userToken}}`  
-**Headers:** `Accept: application/json`
-
-There is **no** `/api/v1/expert` prefix. An expert is a session host. After login, if `user.role === "expert"`, call the **same** `/api/v1/mentor/*` APIs that mentors use for onboarding, availability, sessions, notes, and wallet.
-
-Experts do **not** get curriculum, assigned mentees, mentor requests, assessments, videos, or community. Hide those tabs.
-
-Related docs:
-
-- [`mentee-session-booking-flow.md`](./mentee-session-booking-flow.md) — mentee books an expert the same way they book a mentor (`mentor_id` is the expert’s user id)
-- [`frontend-coupons-session-earnings-api.md`](./frontend-coupons-session-earnings-api.md) — money fields, 80/20 split, coupons
-- [`agora-video-call-frontend.md`](./agora-video-call-frontend.md) — in-app video
-
----
 
 ## 1. What an expert is
 

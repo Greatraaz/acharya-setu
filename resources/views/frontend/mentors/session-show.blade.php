@@ -41,8 +41,8 @@
                                     <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
                                 @endif
                                 <button class="btn btn-outline" onclick="openMeetingLinkModal()">🔗 Meeting link</button>
-                                <button type="button" class="btn btn-outline" onclick="completeSession({{ $session->id }})">✓ Mark Complete</button>
-                                <button class="btn btn-ghost" style="color:var(--error);" onclick="openCancelSession({{ $session->id }})">Cancel</button>
+                                <button type="button" class="btn btn-outline" onclick="completeSession('{{ encrypt_id($session->id) }}')">✓ Mark Complete</button>
+                                <button class="btn btn-ghost" style="color:var(--error);" onclick="openCancelSession('{{ encrypt_id($session->id) }}')">Cancel</button>
                             @elseif($session->status === 'completed')
                                 <span style="font-size:13px;color:var(--success);font-weight:600;">✅ Completed</span>
                             @endif

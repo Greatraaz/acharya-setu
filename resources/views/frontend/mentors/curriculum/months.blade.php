@@ -80,7 +80,7 @@
             </div>
             @php
                 $monthEditPayload = [
-                    'id' => $month->id,
+                    'id' => encrypt_id($month->id),
                     'month_number' => $month->month_number,
                     'title' => $month->title,
                     'theme' => $month->theme,

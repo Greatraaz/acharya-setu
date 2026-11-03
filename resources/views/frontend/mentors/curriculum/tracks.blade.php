@@ -87,7 +87,7 @@
                     <select id="curriculum-mentee-filter" name="mentee_id" class="form-input form-select curriculum-tracks-toolbar__select" aria-label="Filter by mentee">
                         <option value="">All mentees</option>
                         @foreach($mentees as $m)
-                        <option value="{{ $m->id }}" @selected((string) request('mentee_id') === (string) $m->id)>{{ $m->name }}</option>
+                        <option value="{{ encrypt_id($m->id) }}" @selected((string) request('mentee_id') === (string) $m->id)>{{ $m->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -127,7 +127,7 @@
                 </div>
                 <div class="curriculum-track-card__actions">
                     <a href="{{ route('mentor.curriculum.months', $track) }}" class="btn btn-primary btn-sm">Manage months</a>
-                    <button type="button" class="btn btn-outline btn-sm" onclick='openEditTrack(@json($track))'>Edit</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick='openEditTrack(@json(\App\Support\UrlId::modelPayload($track)))'>Edit</button>
                     @if($track->mentee_id)
                     <a href="{{ route('mentor.journey.show', $track->mentee_id) }}" class="btn btn-ghost btn-sm">Progress</a>
                     @endif

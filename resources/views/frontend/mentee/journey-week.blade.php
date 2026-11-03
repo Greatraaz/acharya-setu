@@ -42,6 +42,7 @@
             <h3 class="journey-page__section-title">Tasks</h3>
             @forelse($week->tasks as $task)
             @php
+                $taskEid = encrypt_id($task->id);
                 $taskProgress = ($canViewProgress ?? false) ? ($taskProgressById[$task->id] ?? null) : null;
                 $done = ($canViewProgress ?? false) && (($taskProgress?->is_completed) || in_array($task->id, $completedTaskIds ?? [], true));
                 $awaiting = ($canViewProgress ?? false) && $taskProgress && $taskProgress->submission_status === 'submitted' && ! $taskProgress->is_completed;
@@ -104,26 +105,26 @@
                     @if($needsSubmission)
                     <div class="journey-page__task-submit" style="margin-top:12px;display:grid;gap:10px;">
                         @if(in_array($task->submission_type, ['text', 'reflection'], true))
-                            <textarea id="task-text-{{ $task->id }}" class="form-input" rows="3" placeholder="Write your submission…">{{ $taskProgress->submission_text ?? '' }}</textarea>
+                            <textarea id="task-text-{{ $taskEid }}" class="form-input" rows="3" placeholder="Write your submission…">{{ $taskProgress->submission_text ?? '' }}</textarea>
                         @elseif(in_array($task->submission_type, ['link', 'url'], true))
-                            <input type="url" id="task-url-{{ $task->id }}" class="form-input" placeholder="https://…" value="{{ $taskProgress->submission_url ?? '' }}">
+                            <input type="url" id="task-url-{{ $taskEid }}" class="form-input" placeholder="https://…" value="{{ $taskProgress->submission_url ?? '' }}">
                         @elseif(in_array($task->submission_type, ['file', 'pdf'], true))
-                            <input type="file" id="task-file-{{ $task->id }}" class="form-input">
+                            <input type="file" id="task-file-{{ $taskEid }}" class="form-input">
                             @if($taskProgress?->submission_url)
                                 <a href="{{ $taskProgress->submissionLink() }}" target="_blank" rel="noopener" style="font-size:12px;color:var(--brand);">Previous file</a>
                             @endif
                         @else
-                            <textarea id="task-text-{{ $task->id }}" class="form-input" rows="3" placeholder="Notes / response…">{{ $taskProgress->submission_text ?? '' }}</textarea>
-                            <input type="url" id="task-url-{{ $task->id }}" class="form-input" placeholder="Optional link https://…" value="{{ $taskProgress->submission_url ?? '' }}">
-                            <input type="file" id="task-file-{{ $task->id }}" class="form-input">
+                            <textarea id="task-text-{{ $taskEid }}" class="form-input" rows="3" placeholder="Notes / response…">{{ $taskProgress->submission_text ?? '' }}</textarea>
+                            <input type="url" id="task-url-{{ $taskEid }}" class="form-input" placeholder="Optional link https://…" value="{{ $taskProgress->submission_url ?? '' }}">
+                            <input type="file" id="task-file-{{ $taskEid }}" class="form-input">
                         @endif
-                        <button type="button" class="btn btn-primary btn-sm journey-page__item-action" onclick="submitTask({{ $task->id }}, '{{ $task->submission_type }}', this)">
+                        <button type="button" class="btn btn-primary btn-sm journey-page__item-action" onclick="submitTask('{{ $taskEid }}', '{{ $task->submission_type }}', this)">
                             {{ $rejected ? 'Resubmit for review' : 'Submit for review' }}
                         </button>
                     </div>
                     @else
                     <div style="margin-top:12px;">
-                        <button type="button" class="btn btn-primary btn-sm journey-page__item-action" onclick="completeTask({{ $task->id }}, this)">
+                        <button type="button" class="btn btn-primary btn-sm journey-page__item-action" onclick="completeTask('{{ $taskEid }}', this)">
                             {{ ($canViewProgress ?? false) ? 'Mark done' : 'Submit' }}
                         </button>
                     </div>
@@ -139,6 +140,7 @@
             <h3 class="journey-page__section-title">Practice MCQs</h3>
             @forelse($week->mcqs as $mcq)
             @php
+                $mcqEid = encrypt_id($mcq->id);
                 $attempt = ($canViewProgress ?? false) ? ($mcqAttempts[$mcq->id] ?? null) : null;
                 $mcqProgress = ($canViewProgress ?? false) ? ($mcqProgressById[$mcq->id] ?? null) : null;
                 $mcqApproved = $mcqProgress?->is_completed || $mcqProgress?->submission_status === 'approved';
@@ -154,7 +156,7 @@
                     @elseif($mcqRejected)<span class="session-status cancelled">Needs revision</span>
                     @endif
                 </div>
-                <div class="journey-page__mcq-options" data-mcq-options="{{ $mcq->id }}">
+                <div class="journey-page__mcq-options" data-mcq-options="{{ $mcqEid }}">
                     @foreach($options as $idx => $option)
                     @php
                         $isSelected = $attempt && (int) $attempt->selected_index === (int) $idx;
@@ -164,7 +166,7 @@
                     <button type="button"
                         class="btn btn-ghost journey-page__mcq-option {{ $isCorrectOption ? 'is-correct' : '' }} {{ $showSelected && ! $isCorrectOption ? 'is-selected' : '' }}"
                         @if($mcqApproved || $mcqAwaiting) disabled @endif
-                        onclick="answerMcq({{ $mcq->id }}, {{ (int)$idx }}, this)">
+                        onclick="answerMcq('{{ $mcqEid }}', {{ (int)$idx }}, this)">
                         <span class="journey-page__mcq-option-label">{{ chr(65 + (int)$idx) }}.</span>
                         <span class="journey-page__mcq-option-text">{{ is_array($option) ? ($option['text'] ?? json_encode($option)) : $option }}</span>
                         @if($isCorrectOption)
@@ -175,7 +177,7 @@
                     </button>
                     @endforeach
                 </div>
-                <div class="journey-page__mcq-result" data-mcq-result="{{ $mcq->id }}">
+                <div class="journey-page__mcq-result" data-mcq-result="{{ $mcqEid }}">
                     @if($mcqAwaiting)
                         <span class="journey-page__mcq-result--neutral">Answer submitted — waiting for mentor review</span>
                         @if($attempt)

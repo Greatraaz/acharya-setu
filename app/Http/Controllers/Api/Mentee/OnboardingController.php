@@ -38,6 +38,8 @@ class OnboardingController extends Controller
             'current_step'         => $user->onboarding_step ?? 0,
             'total_steps'          => 4,
             'onboarding_completed' => (bool) $user->onboarding_completed,
+            'can_skip_onboarding'  => $user->canSkipOnboarding(),
+            'can_use_platform'     => $user->canUsePlatform(),
         ]);
     }
 
@@ -338,6 +340,29 @@ class OnboardingController extends Controller
             ]) : null,
             'mentor_match_score'   => $result['match_score'],
             'user'                 => $user->fresh(),
+        ]);
+    }
+
+    public function skipLater(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user->canSkipOnboarding()) {
+            return response()->json([
+                'status'               => false,
+                'statuscode'           => 422,
+                'message'              => $user->platformGateMessage(),
+                'onboarding_completed' => (bool) $user->onboarding_completed,
+                'can_use_platform'     => $user->canUsePlatform(),
+            ], 422);
+        }
+
+        return response()->json([
+            'status'               => true,
+            'statuscode'           => 200,
+            'message'              => 'Complete your profile before booking sessions or using the dashboard.',
+            'onboarding_completed' => false,
+            'can_use_platform'     => false,
+            'can_skip_onboarding'  => true,
         ]);
     }
 

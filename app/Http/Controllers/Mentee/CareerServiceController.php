@@ -179,7 +179,7 @@ class CareerServiceController extends Controller
                 'requires_payment' => (bool) $payment,
                 'requires_payment_choice' => $needsChoice,
                 'data' => [
-                    'request' => $item?->toPublicArray(),
+                    'request' => \App\Support\UrlId::publicId($item?->toPublicArray()),
                     'payment' => $payment,
                     'payment_choice' => $choice,
                 ],

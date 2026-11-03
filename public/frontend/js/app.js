@@ -1350,11 +1350,11 @@
                if (rangeEl) {
                    rangeEl.textContent = `${data.from}–${data.to}`;
                } else {
-                   wrap.innerHTML = `Showing <strong id="mentor-count-range" style="color:var(--text);">${data.from}–${data.to}</strong> of <strong id="mentor-count" style="color:var(--text);">${total}</strong> mentors`;
+                   wrap.innerHTML = `Showing <strong id="mentor-count-range">${data.from}–${data.to}</strong> of <strong id="mentor-count">${total}</strong> mentors`;
                }
                if (totalEl) totalEl.textContent = total;
            } else {
-               wrap.innerHTML = `Showing <strong id="mentor-count" style="color:var(--text);">0</strong> mentors`;
+               wrap.innerHTML = `Showing <strong id="mentor-count">0</strong> mentors`;
            }
        }
 
@@ -1365,7 +1365,7 @@
 
            const rows = data.data || data.mentors || [];
            if (!rows.length) {
-               grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+               grid.innerHTML = `<div class="empty-state mentors-browse__empty">
            <div class="empty-state-icon">🔍</div>
            <h3>No mentors found</h3>
            <p>Try adjusting your filters or search term.</p>
@@ -1379,14 +1379,17 @@
                    const tags = Array.isArray(m.expertise) ? m.expertise : [];
                    const name = (m.name || "").replace(/'/g, "\\'");
                    const rate = m.rate_per_minute ?? 0;
+                   const rating = m.rating != null && m.rating !== "" ? Number(m.rating).toFixed(1) : "—";
+                   const expertTag = m.role === "expert" ? `<span class="tag tag-brand">Expert</span>` : "";
+                   const profileUrl = m.profile_url || `/mentors/${m.slug || m.id}`;
                    return `
-         <div class="mentor-card">
+         <article class="mentor-card">
            <div class="mentor-card-head">
              <div class="mentor-avatar-lg">
                ${m.avatar_url ? `<img src="${m.avatar_url}" alt="${m.name}">` : (m.name || "?").charAt(0).toUpperCase()}
              </div>
              <div class="mentor-card-info">
-               <div class="mentor-card-name">${m.name || ""}</div>
+               <div class="mentor-card-name">${m.name || ""} ${expertTag}</div>
                <div class="mentor-card-role">${m.designation || ""}${m.company ? " · " + m.company : ""}</div>
              </div>
            </div>
@@ -1396,13 +1399,13 @@
            </div>
            <div class="mentor-card-meta">
              <span class="mentor-rate">₹${rate}/min</span>
-             <span class="mentor-rating">⭐ ${m.rating || "—"} (${m.total_sessions || 0} sessions)</span>
+             <span class="mentor-rating">⭐ ${rating} (${m.total_sessions || 0})</span>
            </div>
            <div class="mentor-card-actions">
-             <a href="/mentors/${m.slug || m.id}" class="btn btn-outline btn-sm">View Profile</a>
+             <a href="${profileUrl}" class="btn btn-outline btn-sm">View Profile</a>
              <button class="btn btn-primary btn-sm" onclick="openBookingModal(${m.id},'${name}',${rate})">Book Session</button>
            </div>
-         </div>`;
+         </article>`;
                })
                .join("");
    

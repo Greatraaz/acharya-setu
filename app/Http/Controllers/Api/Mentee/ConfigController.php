@@ -114,6 +114,8 @@ class ConfigController extends Controller
 
                 'flags' => [
                     'onboarding_required'  => ! (bool) $user->onboarding_completed,
+                    'can_skip_onboarding'  => $user->canSkipOnboarding(),
+                    'can_use_platform'     => $user->canUsePlatform(),
                     'has_active_plan'      => (bool) $subscription,
                     'has_assigned_mentor'  => (bool) $user->assigned_mentor_id,
                     'can_book_with_wallet' => (float) $user->wallet_balance > 0,

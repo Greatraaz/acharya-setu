@@ -31,6 +31,14 @@ class MentorRequestController extends Controller
     {
         $mentee = $request->user();
 
+        if (! $mentee->onboarding_completed) {
+            return response()->json([
+                'status'     => false,
+                'statuscode' => 403,
+                'message'    => $mentee->platformGateMessage(),
+            ], 403);
+        }
+
         $data = $request->validate([
             'mentor_id' => [
                 'required',
@@ -52,6 +60,7 @@ class MentorRequestController extends Controller
         $mentor = User::where('id', $data['mentor_id'])
             ->where('role', 'mentor')
             ->where('is_active', true)
+            ->where('onboarding_completed', true)
             ->first();
 
         if (! $mentor || ! $mentor->isApproved()) {

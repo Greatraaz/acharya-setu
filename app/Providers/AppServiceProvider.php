@@ -5,11 +5,14 @@ namespace App\Providers;
 use App\Models\ConsultationSession;
 use App\Models\InsightEvent;
 use App\Observers\ConsultationSessionObserver;
+use App\Routing\DashboardUrlGenerator;
 use App\Services\PublicFileStorage;
+use App\Support\UrlId;
 use Carbon\Carbon;
 use App\Mail\RedactingLogTransport;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Log\LogManager;
+use Illuminate\Pagination\AbstractPaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -20,7 +23,22 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->extend('url', function ($url, $app) {
+            $generator = new DashboardUrlGenerator(
+                $app['router']->getRoutes(),
+                $url->getRequest(),
+                $app['config']['app.asset_url']
+            );
+
+            $generator->setSessionResolver(fn () => $app['session'] ?? null);
+            $generator->setKeyResolver(function () use ($app) {
+                $config = $app->make('config');
+
+                return [$config->get('app.key'), ...($config->get('app.previous_keys') ?? [])];
+            });
+
+            return $generator;
+        });
     }
 
     public function boot(): void
@@ -58,6 +76,15 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('events_webinar', fn ($value) => InsightEvent::findOrFail($value));
 
         ConsultationSession::observe(ConsultationSessionObserver::class);
+
+        $this->app->booted(function () {
+            AbstractPaginator::queryStringResolver(function () {
+                $query = request()->query();
+                $name = request()->route()?->getName();
+
+                return UrlId::shouldHide($name) ? UrlId::encodeParameters($query) : $query;
+            });
+        });
 
         if (! $this->app->runningInConsole()) {
             try {

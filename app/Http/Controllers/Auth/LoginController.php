@@ -48,6 +48,15 @@ class LoginController extends Controller
             config(['session.expire_on_close' => true]);
         }
 
+        $existing = User::query()->whereRaw('LOWER(email) = ?', [$request->email])->first();
+        if ($existing?->isGoogleOnly()) {
+            $msg = 'This account uses Google. Continue with Google to sign in.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            throw ValidationException::withMessages(['email' => $msg]);
+        }
+
         if (! Auth::guard('web')->attempt($request->only('email','password'), $remember)) {
             LoginThrottle::hit($request->email, $request->ip() ?: 'local');
             $msg = 'These credentials do not match our records.';
@@ -72,7 +81,7 @@ class LoginController extends Controller
         LoginThrottle::clear($request->email, $request->ip() ?: 'local');
         $request->session()->regenerate();
 
-        $redirect = $this->redirectAfterLogin($user);
+        $redirect = $user->postAuthRedirectUrl();
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -240,29 +249,4 @@ class LoginController extends Controller
         return redirect()->route('login')->with('success', 'Your account has been deleted.');
     }
 
-    // Determine where to redirect after login
-    private function redirectAfterLogin(User $user): string
-    {
-        if ($user->role === 'admin') {
-            return route('admin.dashboard');
-        }
-
-        if ($user->isSessionHost()) {
-            if (! $user->onboarding_completed) {
-                $step = max(1, $user->onboarding_step + 1);
-                return route('mentor.onboarding', ['step' => min($step, 5)]);
-            }
-            if ($user->mentor_status === 'pending') {
-                return route('mentor.onboarding.pending');
-            }
-            return route('mentor.dashboard');
-        }
-
-        // Mentee
-        if (! $user->onboarding_completed) {
-            $step = max(1, $user->onboarding_step + 1);
-            return route('mentee.onboarding', ['step' => min($step, 4)]);
-        }
-        return route('mentee.dashboard');
-    }
 }

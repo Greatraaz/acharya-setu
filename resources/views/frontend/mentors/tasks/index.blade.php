@@ -49,7 +49,7 @@
             <select name="mentee_id" class="form-input" style="max-width:260px;" onchange="this.form.submit()">
                 <option value="">All mentees</option>
                 @foreach($mentees as $m)
-                <option value="{{ $m->id }}" @selected((int)$menteeId === (int)$m->id)>{{ $m->name }}</option>
+                <option value="{{ encrypt_id($m->id) }}" @selected((int)$menteeId === (int)$m->id)>{{ $m->name }}</option>
                 @endforeach
             </select>
         </form>

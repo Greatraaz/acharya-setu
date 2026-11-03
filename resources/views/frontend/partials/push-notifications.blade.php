@@ -65,7 +65,8 @@
             return;
         }
         items.filter(function (item) {
-            return !item.is_read && item.id > lastSeenId;
+            var seq = parseInt(item.seq || item.id, 10) || 0;
+            return !item.is_read && seq > lastSeenId;
         }).slice(0, 3).forEach(function (item) {
             try {
                 var n = new Notification(item.title || 'Vedrix', {
@@ -84,7 +85,8 @@
     function remember(items) {
         if (!items || !items.length) return;
         var maxId = items.reduce(function (max, item) {
-            return item.id > max ? item.id : max;
+            var seq = parseInt(item.seq || item.id, 10) || 0;
+            return seq > max ? seq : max;
         }, lastSeenId);
         if (maxId > lastSeenId) {
             lastSeenId = maxId;

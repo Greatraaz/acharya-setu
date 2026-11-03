@@ -18,6 +18,7 @@ class MentorRequestService
         $mentor = User::where('id', $mentorId)
             ->where('role', 'mentor')
             ->where('is_active', true)
+            ->where('onboarding_completed', true)
             ->first();
 
         if (! $mentor || ! $mentor->isApproved()) {

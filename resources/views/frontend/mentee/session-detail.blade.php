@@ -32,7 +32,7 @@
                                 <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary">🎥 Join Session</a>
                             @endif
                             @if($session->status === 'upcoming')
-                                <button type="button" class="btn btn-outline" style="color:var(--error);" onclick="cancelSession({{ $session->id }}, {{ $session->canMenteeCancel() ? 'true' : 'false' }})">Cancel</button>
+                                <button type="button" class="btn btn-outline" style="color:var(--error);" onclick="cancelSession('{{ encrypt_id($session->id) }}', {{ $session->canMenteeCancel() ? 'true' : 'false' }})">Cancel</button>
                             @endif
                         </div>
                     </div>

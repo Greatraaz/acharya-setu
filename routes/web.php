@@ -17,6 +17,7 @@ use App\Http\Controllers\Frontend\DownloadCentreController as FrontendDownloadCe
 
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\SessionCallController;
@@ -222,6 +223,9 @@ Route::middleware('guest')->group(function () {
     Route::get( '/login', [LoginController::class, 'showForm'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])   ->name('login.post');
 
+    Route::get('/auth/google', [GoogleAuthController::class, 'login'])->name('auth.google');
+    Route::post('/auth/google', [GoogleAuthController::class, 'register'])->name('auth.google.register');
+
     // ── OTP (registration + login via phone) ─────────────────
     Route::post('/auth/send-otp',       [OtpController::class, 'send'])       ->name('otp.send');
     Route::post('/auth/verify-otp',     [OtpController::class, 'verify'])     ->name('otp.verify');
@@ -235,9 +239,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/reset-password',          [ForgotPasswordController::class, 'resetPassword'])->name('password.update');
 });
 
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
+
 Route::middleware('auth:web')->group(function () {
     Route::get('/notifications/feed', [PushNotificationController::class, 'feed'])->name('notifications.feed');
-    Route::post('/notifications/{id}/read', [PushNotificationController::class, 'markRead'])->name('notifications.read')->whereNumber('id');
+    Route::post('/notifications/{id}/read', [PushNotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [PushNotificationController::class, 'markAllRead'])->name('notifications.read-all');
 });
 
@@ -265,6 +271,7 @@ Route::middleware(['auth', 'role:mentor,expert'])->group(function () {
         Route::post('/step/3',  [MentorOnboardingController::class, 'saveStep3'])->name('.save3');
         Route::post('/step/4',  [MentorOnboardingController::class, 'saveStep4'])->name('.save4');
         Route::post('/submit',  [MentorOnboardingController::class, 'submit'])   ->name('.submit');
+        Route::post('/skip',    [MentorOnboardingController::class, 'skipLater'])->name('.skip');
         Route::get('/pending',  fn() => view('frontend.mentors.pending'))        ->name('.pending');
     });
 });
@@ -288,6 +295,7 @@ Route::middleware(['auth', 'role:mentee'])->group(function () {
         Route::post('/step/3',  [MenteeOnboardingController::class, 'saveStep3'])->name('.save3');
         Route::post('/step/4',  [MenteeOnboardingController::class, 'saveStep4'])->name('.save4');
         Route::post('/complete',[MenteeOnboardingController::class, 'complete'])  ->name('.complete');
+        Route::post('/skip',    [MenteeOnboardingController::class, 'skipLater'])->name('.skip');
     });
 });
 
@@ -306,8 +314,8 @@ Route::middleware(['auth', 'role:mentor,expert', 'mentor.approved'])
 
     Route::middleware('role:mentor')->group(function () {
         Route::get( '/requests',              [MentorMentorRequestController::class, 'index'])->name('requests');
-        Route::post('/requests/{id}/accept',  [MentorMentorRequestController::class, 'accept'])->name('requests.accept')->whereNumber('id');
-        Route::post('/requests/{id}/reject',  [MentorMentorRequestController::class, 'reject'])->name('requests.reject')->whereNumber('id');
+        Route::post('/requests/{id}/accept',  [MentorMentorRequestController::class, 'accept'])->name('requests.accept');
+        Route::post('/requests/{id}/reject',  [MentorMentorRequestController::class, 'reject'])->name('requests.reject');
     });
 
     // Sessions
@@ -347,17 +355,17 @@ Route::middleware(['auth', 'role:mentor,expert', 'mentor.approved'])
     Route::get('/journey',                        [MentorPortalController::class, 'journey'])->name('journey');
     Route::get('/journey/{mentee}',               [MentorPortalController::class, 'journeyShow'])->name('journey.show');
     Route::get('/submissions',                    [MentorPortalController::class, 'submissions'])->name('submissions');
-    Route::post('/submissions/{progress}/review', [MentorPortalController::class, 'reviewSubmission'])->name('submissions.review')->whereNumber('progress');
+    Route::post('/submissions/{progress}/review', [MentorPortalController::class, 'reviewSubmission'])->name('submissions.review');
 
     // Standalone mentee tasks (outside curriculum)
     Route::get('/tasks', [MentorMenteeTaskController::class, 'index'])->name('tasks.index');
     Route::get('/tasks/create', [MentorMenteeTaskController::class, 'create'])->name('tasks.create');
     Route::post('/tasks', [MentorMenteeTaskController::class, 'store'])->name('tasks.store');
-    Route::get('/tasks/{task}', [MentorMenteeTaskController::class, 'show'])->name('tasks.show')->whereNumber('task');
-    Route::get('/tasks/{task}/edit', [MentorMenteeTaskController::class, 'edit'])->name('tasks.edit')->whereNumber('task');
-    Route::put('/tasks/{task}', [MentorMenteeTaskController::class, 'update'])->name('tasks.update')->whereNumber('task');
-    Route::delete('/tasks/{task}', [MentorMenteeTaskController::class, 'destroy'])->name('tasks.destroy')->whereNumber('task');
-    Route::post('/tasks/submissions/{progress}/review', [MentorMenteeTaskController::class, 'review'])->name('tasks.review')->whereNumber('progress');
+    Route::get('/tasks/{task}', [MentorMenteeTaskController::class, 'show'])->name('tasks.show');
+    Route::get('/tasks/{task}/edit', [MentorMenteeTaskController::class, 'edit'])->name('tasks.edit');
+    Route::put('/tasks/{task}', [MentorMenteeTaskController::class, 'update'])->name('tasks.update');
+    Route::delete('/tasks/{task}', [MentorMenteeTaskController::class, 'destroy'])->name('tasks.destroy');
+    Route::post('/tasks/submissions/{progress}/review', [MentorMenteeTaskController::class, 'review'])->name('tasks.review');
 
     Route::get('/community',                                          [MentorPortalController::class, 'community'])->name('community');
     Route::get('/community/create',                                   [ChannelController::class, 'create'])->name('community.create');
@@ -385,10 +393,10 @@ Route::middleware(['auth', 'role:mentor,expert', 'mentor.approved'])
     Route::get('/videos',              [MentorMentorVideoController::class, 'index'])->name('videos.index');
     Route::get('/videos/create',       [MentorMentorVideoController::class, 'create'])->name('videos.create');
     Route::post('/videos',             [MentorMentorVideoController::class, 'store'])->name('videos.store');
-    Route::get('/videos/{video}',      [MentorMentorVideoController::class, 'show'])->name('videos.show')->whereNumber('video');
-    Route::get('/videos/{video}/edit', [MentorMentorVideoController::class, 'edit'])->name('videos.edit')->whereNumber('video');
-    Route::put('/videos/{video}',      [MentorMentorVideoController::class, 'update'])->name('videos.update')->whereNumber('video');
-    Route::delete('/videos/{video}',   [MentorMentorVideoController::class, 'destroy'])->name('videos.destroy')->whereNumber('video');
+    Route::get('/videos/{video}',      [MentorMentorVideoController::class, 'show'])->name('videos.show');
+    Route::get('/videos/{video}/edit', [MentorMentorVideoController::class, 'edit'])->name('videos.edit');
+    Route::put('/videos/{video}',      [MentorMentorVideoController::class, 'update'])->name('videos.update');
+    Route::delete('/videos/{video}',   [MentorMentorVideoController::class, 'destroy'])->name('videos.destroy');
 
     Route::get('/assessment-questions',                              [MentorAssessmentQuestionController::class, 'index'])->name('assessment-questions.index');
     Route::get('/assessment-questions/create',                       [MentorAssessmentQuestionController::class, 'create'])->name('assessment-questions.create');
@@ -405,8 +413,8 @@ Route::middleware(['auth', 'role:mentor,expert', 'mentor.approved'])
 
         Route::get('/templates/sample',                 [MentorCurriculumController::class, 'downloadTemplateSample'])->name('templates.sample');
         Route::post('/templates/import',                [MentorCurriculumController::class, 'importTemplates'])->name('templates.import');
-        Route::get('/templates/{template}',             [MentorCurriculumController::class, 'showTemplate'])->name('templates.show')->whereNumber('template');
-        Route::post('/templates/{template}/assign',     [MentorCurriculumController::class, 'assignTemplate'])->name('templates.assign')->whereNumber('template');
+        Route::get('/templates/{template}',             [MentorCurriculumController::class, 'showTemplate'])->name('templates.show');
+        Route::post('/templates/{template}/assign',     [MentorCurriculumController::class, 'assignTemplate'])->name('templates.assign');
 
         Route::get('/tracks/{track}/months',            [MentorCurriculumController::class, 'months'])->name('months');
         Route::post('/tracks/{track}/months',           [MentorCurriculumController::class, 'storeMonth'])->name('months.store');
@@ -450,7 +458,7 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     // Current / change mentor
     Route::get( '/mentor/change',              [MenteeMentorRequestController::class, 'change'])->name('mentor.change');
     Route::post('/mentor-requests',            [MenteeMentorRequestController::class, 'store'])->name('mentor-requests.store');
-    Route::delete('/mentor-requests/{id}',     [MenteeMentorRequestController::class, 'destroy'])->name('mentor-requests.destroy')->whereNumber('id');
+    Route::delete('/mentor-requests/{id}',     [MenteeMentorRequestController::class, 'destroy'])->name('mentor-requests.destroy');
 
     // Sessions
     Route::get('/sessions',           [MenteeSessionController::class, 'index']) ->name('sessions');
@@ -495,19 +503,19 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::get( '/mock-interviews', [MenteeMockInterviewController::class, 'index'])->name('mock-interviews.index');
     Route::get( '/mock-interviews/create', [MenteeMockInterviewController::class, 'create'])->name('mock-interviews.create');
     Route::post('/mock-interviews', [MenteeMockInterviewController::class, 'store'])->name('mock-interviews.store');
-    Route::get( '/mock-interviews/{mockInterview}', [MenteeMockInterviewController::class, 'show'])->name('mock-interviews.show')->whereNumber('mockInterview');
-    Route::post('/mock-interviews/{mockInterview}/pay', [MenteeMockInterviewController::class, 'pay'])->name('mock-interviews.pay')->whereNumber('mockInterview');
-    Route::post('/mock-interviews/{mockInterview}/verify', [MenteeMockInterviewController::class, 'verify'])->name('mock-interviews.verify')->whereNumber('mockInterview');
+    Route::get( '/mock-interviews/{mockInterview}', [MenteeMockInterviewController::class, 'show'])->name('mock-interviews.show');
+    Route::post('/mock-interviews/{mockInterview}/pay', [MenteeMockInterviewController::class, 'pay'])->name('mock-interviews.pay');
+    Route::post('/mock-interviews/{mockInterview}/verify', [MenteeMockInterviewController::class, 'verify'])->name('mock-interviews.verify');
 
     // Standalone tasks (outside curriculum)
     Route::get('/tasks', [MenteeMenteeTaskController::class, 'index'])->name('tasks.index');
-    Route::get('/tasks/{task}', [MenteeMenteeTaskController::class, 'show'])->name('tasks.show')->whereNumber('task');
-    Route::post('/tasks/{task}/submit', [MenteeMenteeTaskController::class, 'submit'])->name('tasks.submit')->whereNumber('task');
+    Route::get('/tasks/{task}', [MenteeMenteeTaskController::class, 'show'])->name('tasks.show');
+    Route::post('/tasks/{task}/submit', [MenteeMenteeTaskController::class, 'submit'])->name('tasks.submit');
 
     // Mentor-shared videos (not curriculum)
     Route::get( '/mentor-videos',                    [MenteeMentorVideoController::class, 'index'])->name('mentor-videos.index');
-    Route::get( '/mentor-videos/{video}',            [MenteeMentorVideoController::class, 'show'])->name('mentor-videos.show')->whereNumber('video');
-    Route::post('/mentor-videos/files/{file}/watched', [MenteeMentorVideoController::class, 'markWatched'])->name('mentor-videos.watched')->whereNumber('file');
+    Route::get( '/mentor-videos/{video}',            [MenteeMentorVideoController::class, 'show'])->name('mentor-videos.show');
+    Route::post('/mentor-videos/files/{file}/watched', [MenteeMentorVideoController::class, 'markWatched'])->name('mentor-videos.watched');
 
     Route::post('/subscriptions/{subscription}/invoice', [MenteeInvoiceController::class, 'generate'])->name('subscriptions.invoice');
     Route::get( '/invoices/{invoice}',          [MenteeInvoiceController::class, 'show'])     ->name('invoices.show');
@@ -595,18 +603,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/sessions/{id}/notes', [MentorSessionController::class, 'notes'])->name('sessions.notes.show');
 
     // Video call (Agora) — works for both roles
-    Route::get('/sessions/{id}/call', [SessionCallController::class, 'show'])->name('sessions.call')->whereNumber('id');
-    Route::get('/sessions/{id}/video-token', [SessionCallController::class, 'token'])->name('sessions.video-token')->whereNumber('id');
-    Route::post('/sessions/{id}/call/end', [SessionCallController::class, 'end'])->name('sessions.call.end')->whereNumber('id');
-    Route::get('/sessions/{id}/my-note', [SessionCallController::class, 'myNote'])->name('sessions.my-note.show')->whereNumber('id');
-    Route::put('/sessions/{id}/my-note', [SessionCallController::class, 'saveMyNote'])->name('sessions.my-note.save')->whereNumber('id');
+    Route::get('/sessions/{id}/call', [SessionCallController::class, 'show'])->name('sessions.call');
+    Route::get('/sessions/{id}/video-token', [SessionCallController::class, 'token'])->name('sessions.video-token');
+    Route::post('/sessions/{id}/call/end', [SessionCallController::class, 'end'])->name('sessions.call.end');
+    Route::get('/sessions/{id}/my-note', [SessionCallController::class, 'myNote'])->name('sessions.my-note.show');
+    Route::put('/sessions/{id}/my-note', [SessionCallController::class, 'saveMyNote'])->name('sessions.my-note.save');
 
     // Mock interview Agora call — mentee + admin
-    Route::get('/mock-interviews/{id}/call', [MockInterviewCallController::class, 'show'])->name('mock-interviews.call')->whereNumber('id');
-    Route::get('/mock-interviews/{id}/video-token', [MockInterviewCallController::class, 'token'])->name('mock-interviews.video-token')->whereNumber('id');
-    Route::post('/mock-interviews/{id}/call/end', [MockInterviewCallController::class, 'end'])->name('mock-interviews.call.end')->whereNumber('id');
-    Route::get('/mock-interviews/{id}/notes', [MockInterviewCallController::class, 'myNote'])->name('mock-interviews.notes.show')->whereNumber('id');
-    Route::put('/mock-interviews/{id}/notes', [MockInterviewCallController::class, 'saveMyNote'])->name('mock-interviews.notes.save')->whereNumber('id');
+    Route::get('/mock-interviews/{id}/call', [MockInterviewCallController::class, 'show'])->name('mock-interviews.call');
+    Route::get('/mock-interviews/{id}/video-token', [MockInterviewCallController::class, 'token'])->name('mock-interviews.video-token');
+    Route::post('/mock-interviews/{id}/call/end', [MockInterviewCallController::class, 'end'])->name('mock-interviews.call.end');
+    Route::get('/mock-interviews/{id}/notes', [MockInterviewCallController::class, 'myNote'])->name('mock-interviews.notes.show');
+    Route::put('/mock-interviews/{id}/notes', [MockInterviewCallController::class, 'saveMyNote'])->name('mock-interviews.notes.save');
 });
 
 /*

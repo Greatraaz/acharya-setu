@@ -103,7 +103,7 @@
                                 @endif
                             </div>
                             <div class="curr-task-actions">
-                                <button type="button" class="curr-btn-edit" onclick='openEditTask(@json($task))'>Edit</button>
+                                <button type="button" class="curr-btn-edit" onclick='openEditTask(@json(\App\Support\UrlId::modelPayload($task)))'>Edit</button>
                                 <form method="POST" action="{{ route('mentor.curriculum.tasks.destroy', $task) }}" onsubmit="return confirm('Delete task?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="curr-btn-del">Del</button>
@@ -114,7 +114,7 @@
                         <p style="font-size:13px;color:var(--text-3);text-align:center;padding:24px 0;">No tasks yet. Add the first task for this week.</p>
                         @endforelse
                     </div>
-                    <button type="button" class="curr-add-dashed" onclick="openAddTask({{ $week->id }}, {{ $week->mentee_id }})">+ Add Task</button>
+                    <button type="button" class="curr-add-dashed" onclick="openAddTask('{{ encrypt_id($week->id) }}', {{ $week->mentee_id }})">+ Add Task</button>
                 </div>
 
                 {{-- MCQ Topics --}}
@@ -128,7 +128,7 @@
                                 @if($topic->description)<div style="font-size:12px;color:var(--text-2);margin-top:2px;">{{ $topic->description }}</div>@endif
                             </div>
                             <div style="display:flex;gap:6px;">
-                                <button type="button" class="btn btn-outline btn-sm" onclick='openEditMcqTopic({{ $week->id }}, @json($topic))'>Edit</button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick='openEditMcqTopic("{{ encrypt_id($week->id) }}", @json(\App\Support\UrlId::modelPayload($topic)))'>Edit</button>
                                 <form method="POST" action="{{ route('mentor.curriculum.mcqs.destroy', [$week, $topic]) }}" onsubmit="return confirm('Delete topic and all MCQs?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--error);">Del</button>
@@ -162,7 +162,7 @@
                     @empty
                     <p style="font-size:13px;color:var(--text-3);text-align:center;padding:20px 0;">No MCQ topics yet.</p>
                     @endforelse
-                    <button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="openAddMcqTopic({{ $week->id }}, {{ $week->mentee_id }})">+ Add MCQ topic</button>
+                    <button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="openAddMcqTopic('{{ encrypt_id($week->id) }}', {{ $week->mentee_id }})">+ Add MCQ topic</button>
                 </div>
 
                 {{-- Materials --}}
@@ -179,7 +179,7 @@
                             @if($material->description)<p style="font-size:12px;color:var(--text-2);margin:4px 0 0;">{{ Str::limit($material->description, 100) }}</p>@endif
                         </div>
                         <div class="curr-task-actions">
-                            <button type="button" class="curr-btn-edit" onclick='openEditMaterial(@json($material))'>Edit</button>
+                            <button type="button" class="curr-btn-edit" onclick='openEditMaterial(@json(\App\Support\UrlId::modelPayload($material)))'>Edit</button>
                             <form method="POST" action="{{ route('mentor.curriculum.materials.destroy', $material) }}" onsubmit="return confirm('Delete material?')" style="margin:0;">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="curr-btn-del">Del</button>
@@ -189,7 +189,7 @@
                     @empty
                     <p style="font-size:13px;color:var(--text-3);text-align:center;padding:20px 0;">No supporting materials yet.</p>
                     @endforelse
-                    <button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="openAddMaterial({{ $week->id }}, {{ $week->mentee_id }})">+ Add material</button>
+                    <button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="openAddMaterial('{{ encrypt_id($week->id) }}', {{ $week->mentee_id }})">+ Add material</button>
                 </div>
 
                 {{-- Settings --}}

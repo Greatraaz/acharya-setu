@@ -125,7 +125,7 @@
                         <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">🎥 Join</a>
                     @endif
                     @if($statusKey === 'upcoming')
-                        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="cancelSession({{ $session->id }}, {{ $canCancel ? 'true' : 'false' }})">Cancel</button>
+                        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="cancelSession('{{ encrypt_id($session->id) }}', {{ $canCancel ? 'true' : 'false' }})">Cancel</button>
                     @endif
                     @if($statusKey === 'completed' && ($session->can_review ?? true))
                         <a href="{{ route('mentee.sessions.review', $session->id) }}" class="btn btn-ghost btn-sm">⭐ Review</a>

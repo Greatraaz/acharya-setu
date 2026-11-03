@@ -136,11 +136,11 @@
                             <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">🎥 Start Session</a>
                         @endif
                         <button type="button" class="btn btn-outline btn-sm"
-                                onclick="addMeetingLink({{ $session->id }}, {{ json_encode($session->meeting_link) }})">
+                                onclick="addMeetingLink('{{ encrypt_id($session->id) }}', {{ json_encode($session->meeting_link) }})">
                             🔗 {{ $session->meeting_link ? 'Edit Link' : 'Add Link' }}
                         </button>
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="completeSession({{ $session->id }})">Mark complete</button>
-                        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="openCancelSession({{ $session->id }})">Cancel</button>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="completeSession('{{ encrypt_id($session->id) }}')">Mark complete</button>
+                        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="openCancelSession('{{ encrypt_id($session->id) }}')">Cancel</button>
                     @endif
                 </div>
             </div>

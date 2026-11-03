@@ -63,6 +63,7 @@ class AvailabilityController extends Controller
     {
         $mentor = \App\Models\User::sessionHosts()
             ->where('mentor_status', 'approved')
+            ->where('onboarding_completed', true)
             ->find($mentorId);
 
         if (! $mentor) {

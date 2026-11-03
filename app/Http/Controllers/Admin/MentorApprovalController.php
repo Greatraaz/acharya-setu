@@ -68,13 +68,16 @@ class MentorApprovalController extends Controller
             'users', 'success'
         );
 
+        $needsProfile = ! $mentor->onboarding_completed;
         app(\App\Services\NotificationService::class)->send(
             $mentor,
             'mentor_approved',
             'You are approved',
-            'Your mentor profile is live. You can start accepting mentees.',
+            $needsProfile
+                ? 'Your account is confirmed. Complete your profile before taking sessions.'
+                : 'Your mentor profile is live. You can start accepting mentees.',
             [],
-            route('mentor.dashboard')
+            $needsProfile ? route('mentor.onboarding', ['step' => 1]) : route('mentor.dashboard')
         );
  
         return redirect()->back()->with('success', "{$mentor->name} has been approved as a mentor.");

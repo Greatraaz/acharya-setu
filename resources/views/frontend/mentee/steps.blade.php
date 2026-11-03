@@ -431,6 +431,9 @@
         <img src="{{ asset('images/logo.png') }}" alt="Vedrix">
         <h1 style="font-size:22px; font-weight:800; margin-bottom:4px;">Set Up Your Profile</h1>
         <p style="font-size:13px; color:var(--text-2);">Step {{ $step }} of 4 — Takes less than 3 minutes</p>
+        @if(! auth()->user()?->canSkipOnboarding() && auth()->user()?->isGoogleOnly())
+            <p style="font-size:13px;color:var(--brand);margin-top:8px;font-weight:600;">Finish your profile before booking sessions or using the dashboard.</p>
+        @endif
     </div>
 
     {{-- ── STEP PROGRESS BAR ──────────────────────────────── --}}
@@ -744,6 +747,13 @@
         @endif
 
     </div>{{-- /card --}}
+    @if(auth()->user()?->canSkipOnboarding())
+    <form action="{{ route('mentee.onboarding.skip') }}" method="POST" style="text-align:center;margin-top:18px;">
+        @csrf
+        <button type="submit" class="btn btn-ghost">I'll complete this later</button>
+        <p style="font-size:12px;color:var(--text-3);margin-top:8px;">You'll need to finish your profile before booking sessions.</p>
+    </form>
+    @endif
 </div>
 </div>
 @endsection
