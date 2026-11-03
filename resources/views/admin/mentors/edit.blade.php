@@ -65,6 +65,11 @@
                             <input type="text" name="phone" value="{{ old('phone', $mentor->phone) }}"
                                    class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Location</label>
+                            <input type="text" name="location" value="{{ old('location', $mentor->location) }}"
+                                   class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" placeholder="City, Country">
+                        </div>
                     </div>
 
                     <div class="flex gap-5 items-start pt-1">
@@ -127,6 +132,11 @@
                             <input type="url" name="linkedin" value="{{ old('linkedin', $mentor->linkedin) }}"
                                    class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-gray-400" placeholder="https://linkedin.com/in/…">
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Education stream</label>
+                            <input type="text" name="education_stream" value="{{ old('education_stream', $mentor->education_stream) }}"
+                                   class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" placeholder="e.g. btech, mba">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -157,7 +167,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Skills / Expertise Tags</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Skills / Expertise Tags <span class="text-red-400">*</span></label>
                         <div id="expertise-chips" class="flex flex-wrap gap-2 mb-2 min-h-[32px]">
                             @foreach(old('expertise', $mentor->expertise ?? []) as $sk)
                             <span class="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-indigo-100" data-field-name="expertise">
@@ -170,6 +180,36 @@
                                    class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all placeholder-gray-400">
                             <button type="button" onclick="addChips('expertise-input','expertise-chips','expertise')"
                                     class="px-4 text-sm font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100 transition-colors flex-shrink-0">Add</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Mentor strengths</label>
+                        @php
+                            $strengthOptions = [
+                                'Career Guidance & Planning',
+                                'Technical Interview Prep',
+                                'Resume & LinkedIn Review',
+                                'Mock Interviews',
+                                'Goal Setting & Accountability',
+                                'Industry Insights & Networks',
+                                'MBA / Higher Education Guidance',
+                                'Study Abroad Counseling',
+                                'Salary & Offer Negotiation',
+                                'Startup / Entrepreneurship',
+                            ];
+                            $selectedStrengths = array_values((array) old('strengths', $mentor->strengths ?? []));
+                            $strengthOptions = array_values(array_unique([...$strengthOptions, ...$selectedStrengths]));
+                        @endphp
+                        <div class="grid grid-cols-2 gap-2">
+                            @foreach($strengthOptions as $strength)
+                            <label class="flex items-center gap-2.5 px-3 py-2.5 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" name="strengths[]" value="{{ $strength }}"
+                                       {{ in_array($strength, $selectedStrengths, true) ? 'checked' : '' }}
+                                       class="w-4 h-4 rounded text-indigo-600">
+                                <span class="text-sm text-gray-700">{{ $strength }}</span>
+                            </label>
+                            @endforeach
                         </div>
                     </div>
 
@@ -204,22 +244,37 @@
                         <div class="text-sm text-gray-500 pb-2.5">= <span id="hourly-rate" class="font-semibold text-gray-800">₹{{ $mentor->rate_per_minute * 60 }}</span>/hour</div>
                     </div>
 
-                    @if(false)
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Session Modes</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            @foreach(['video'=>['📹','Video calls'],'audio'=>['🎙️','Audio only'],'chat'=>['💬','Text / chat'],'in_person'=>['🤝','In-person']] as $val=>[$icon,$label])
-                            <label class="flex items-center gap-3 px-4 py-2.5 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
-                                <input type="checkbox" name="preferences[]" value="{{ $val }}"
-                                       {{ in_array($val, old('preferences', (array)($mentor->preferences ?? ['video']))) ? 'checked' : '' }}
-                                       class="w-4 h-4 rounded text-indigo-600">
-                                <span class="text-sm">{{ $icon }}</span>
-                                <span class="text-sm font-medium text-gray-700">{{ $label }}</span>
-                            </label>
-                            @endforeach
+                    @php
+                        $mentorPrefs = old('preferences', $mentor->preferences ?? []);
+                        $preferredTime = $mentorPrefs['preferred_time'] ?? '';
+                        $sessionLength = $mentorPrefs['session_length'] ?? '';
+                    @endphp
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Preferred time</label>
+                            <div class="relative">
+                                <select name="preferences[preferred_time]" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 appearance-none cursor-pointer">
+                                    <option value="">Select…</option>
+                                    @foreach(['morning'=>'Morning','afternoon'=>'Afternoon','evening'=>'Evening','weekend'=>'Weekends','flexible'=>'Flexible'] as $val=>$label)
+                                    <option value="{{ $val }}" {{ (string) $preferredTime === (string) $val ? 'selected' : '' }}>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Preferred session length</label>
+                            <div class="relative">
+                                <select name="preferences[session_length]" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 appearance-none cursor-pointer">
+                                    <option value="">Select…</option>
+                                    @foreach(\App\Models\ConsultationSession::BOOKING_DURATIONS as $mins)
+                                    <option value="{{ $mins }}" {{ (string) $sessionLength === (string) $mins ? 'selected' : '' }}>{{ $mins }} minutes</option>
+                                    @endforeach
+                                </select>
+                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg></span>
+                            </div>
                         </div>
                     </div>
-                    @endif
                 </div>
             </div>
         </div>
@@ -246,7 +301,7 @@
             </div>
 
             {{-- Active toggle --}}
-            <div class="bg-white border border-gray-200 rounded-2xl p-5">
+            <div class="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-semibold text-gray-800">Account Active</p>
@@ -255,6 +310,17 @@
                     <label class="toggle-switch">
                         <input type="hidden" name="is_active" value="0">
                         <input type="checkbox" name="is_active" value="1" {{ old('is_active', $mentor->is_active) ? 'checked' : '' }}>
+                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </label>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-800">Onboarding Complete</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Required before public listing / sessions</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="hidden" name="onboarding_completed" value="0">
+                        <input type="checkbox" name="onboarding_completed" value="1" {{ old('onboarding_completed', $mentor->onboarding_completed) ? 'checked' : '' }}>
                         <div class="toggle-track"><div class="toggle-thumb"></div></div>
                     </label>
                 </div>

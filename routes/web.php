@@ -82,7 +82,6 @@ use App\Http\Controllers\Admin\CurriculumController;
 use App\Http\Controllers\Admin\JourneyController as AdminJourneyController;
 use App\Http\Controllers\Admin\AdminOnboardingController;
 use App\Http\Controllers\Admin\MentorApprovalController;
-use App\Http\Controllers\Admin\MentorProfileController as AdminMentorProfileController;
 use App\Http\Controllers\Admin\AssessmentController;
 use App\Http\Controllers\Admin\AssessmentQuestionController;
 use App\Http\Controllers\Admin\ActivityLogController;

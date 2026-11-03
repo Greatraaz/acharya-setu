@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ConsultationSession;
 use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\MenteeOnboardingService;
 use App\Services\PublicFileStorage;
 use App\Support\IndianPhone;
+use App\Support\MentorIndustry;
 use App\Support\RichText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -92,63 +94,89 @@ class AdminOnboardingController extends Controller
     public function updateMentor(Request $request, User $mentor)
     {
         abort_unless($mentor->isMentor(), 403);
- 
+
+        $industryOptions = array_values(array_unique(array_filter([
+            ...MentorIndustry::all(),
+            $mentor->field,
+        ])));
+
         $data = $request->validate([
-            'name'             => 'required|string|max:100',
-            'email'            => 'required|email|unique:users,email,' . $mentor->id,
-            'phone'            => IndianPhone::rules(),
-            'gender'           => 'nullable|in:male,female,other,prefer_not_to_say',
-            'avatar'           => 'nullable|image|max:2048',
-            'designation'      => 'required|string|max:150',
-            'company'          => 'nullable|string|max:150',
-            'experience_years' => 'required|integer|min:0|max:50',
-            'linkedin'         => 'nullable|url',
-            'field'            => 'required|string|max:100',
-            'expertise'        => 'nullable|array',
-            'expertise.*'      => 'string|max:50',
-            'bio'              => RichText::rules(30),
-            'rate_per_minute'  => 'required|numeric|min:0',
-            'preferences'      => 'nullable|array',
-            'mentor_status'    => 'required|in:pending,approved,rejected,suspended',
-            'is_active'        => 'nullable|boolean',
-            'new_password'     => ['nullable', Password::min(8)],
+            'name'                           => 'required|string|max:100',
+            'email'                          => ['required', 'email', Rule::unique('users', 'email')->ignore($mentor->id)],
+            'phone'                          => IndianPhone::rules(),
+            'gender'                         => 'nullable|in:male,female,other,prefer_not_to_say',
+            'avatar'                         => 'nullable|image|max:2048',
+            'location'                       => 'nullable|string|max:150',
+            'designation'                    => 'required|string|max:150',
+            'company'                        => 'nullable|string|max:150',
+            'experience_years'               => 'required|integer|min:0|max:50',
+            'linkedin'                       => 'nullable|url',
+            'field'                          => ['required', 'string', Rule::in($industryOptions)],
+            'education_stream'               => 'nullable|string|max:100',
+            'expertise'                      => 'required|array|min:1',
+            'expertise.*'                    => 'string|max:60',
+            'strengths'                      => 'nullable|array',
+            'strengths.*'                    => 'string|max:100',
+            'bio'                            => RichText::rules(30),
+            'rate_per_minute'                => 'required|numeric|min:0|max:1000',
+            'preferences'                    => 'nullable|array',
+            'preferences.preferred_time'     => 'nullable|string|in:morning,afternoon,evening,weekend,flexible',
+            'preferences.session_length'     => 'nullable|integer|in:'.implode(',', ConsultationSession::BOOKING_DURATIONS),
+            'mentor_status'                  => 'required|in:pending,approved,rejected,suspended',
+            'is_active'                      => 'nullable|boolean',
+            'onboarding_completed'           => 'nullable|boolean',
+            'new_password'                   => ['nullable', Password::min(8)],
         ]);
 
         if (array_key_exists('phone', $data)) {
             $data['phone'] = IndianPhone::normalize($data['phone']);
         }
- 
+
         if ($request->hasFile('avatar')) {
             PublicFileStorage::deleteByUrl($mentor->avatar_url);
             $data['avatar_url'] = PublicFileStorage::store($request->file('avatar'), 'avatars');
         }
- 
-        if (!empty($data['new_password'])) {
+
+        if (! empty($data['new_password'])) {
             $data['password'] = Hash::make($data['new_password']);
         }
- 
-        unset($data['new_password']);
- 
-        // Handle approval state transitions
+
+        unset($data['new_password'], $data['avatar']);
+
+        $prefs = $data['preferences'] ?? [];
+        $data['preferences'] = array_filter([
+            'preferred_time' => $prefs['preferred_time'] ?? null,
+            'session_length' => isset($prefs['session_length']) ? (int) $prefs['session_length'] : null,
+        ], fn ($value) => $value !== null && $value !== '');
+
+        $data['strengths'] = array_values(array_filter($data['strengths'] ?? []));
+        $data['expertise'] = array_values(array_filter($data['expertise'] ?? []));
+        $data['onboarding_completed'] = $request->boolean('onboarding_completed');
+        if ($data['onboarding_completed']) {
+            $data['onboarding_step'] = 5;
+        }
+
         $oldStatus = $mentor->mentor_status;
         if ($data['mentor_status'] === 'approved' && $oldStatus !== 'approved') {
             $data['approved_by'] = auth()->id();
             $data['approved_at'] = now();
-            $data['is_active']   = true;
-        } elseif ($data['mentor_status'] !== 'approved') {
+            $data['is_active'] = true;
+            $data['rejection_reason'] = null;
+        } else {
             $data['is_active'] = $request->boolean('is_active');
         }
- 
+
         $mentor->update($data);
- 
+
         ActivityLogger::record(
             'mentor_updated_by_admin',
             auth()->user()->name . " updated mentor profile: {$mentor->name}",
-            'users', 'info'
+            'users',
+            'info'
         );
- 
+
         return redirect()->route('admin.mentors.review', $mentor)
-            ->with('success', "Mentor profile updated.");
+            ->with('success', 'Mentor profile updated.');
     }
  
     // ── EXPERT ────────────────────────────────────────────────

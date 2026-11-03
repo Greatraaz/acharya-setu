@@ -87,6 +87,17 @@ Full mentor profile review + quick approve/reject
                     </div>
                     @endif
 
+                    @if(!empty($mentor->strengths))
+                    <div>
+                        <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Strengths</p>
+                        <div class="flex flex-wrap gap-1.5">
+                            @foreach((array)$mentor->strengths as $strength)
+                            <span class="text-xs bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-1 rounded-full font-medium">{{ $strength }}</span>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
                     @if($mentor->bio)
                     <div>
                         <p class="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Bio</p>
@@ -171,6 +182,10 @@ Full mentor profile review + quick approve/reject
                     <h3 class="text-sm font-semibold text-gray-800">Quick Actions</h3>
                 </div>
                 <div class="p-4 space-y-2">
+                    <a href="{{ route('admin.mentor.edit', $mentor) }}"
+                       class="flex items-center justify-center w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+                        Edit Profile
+                    </a>
                     @if($mentor->mentor_status === 'pending')
                     <form method="POST" action="{{ route('admin.mentors.approve', $mentor) }}">
                         @csrf

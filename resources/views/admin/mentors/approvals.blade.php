@@ -142,6 +142,10 @@ FILE: resources/views/admin/mentors/approvals.blade.php
                                    class="text-xs font-medium px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg transition-colors">
                                     Review
                                 </a>
+                                <a href="{{ route('admin.mentor.edit', $mentor) }}"
+                                   class="text-xs font-medium px-3 py-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors">
+                                    Edit
+                                </a>
                                 @if($mentor->mentor_status === 'pending')
                                 <form method="POST" action="{{ route('admin.mentors.approve', $mentor) }}">
                                     @csrf
