@@ -1383,28 +1383,37 @@
                    const rating = m.rating != null && m.rating !== "" ? Number(m.rating).toFixed(1) : "—";
                    const expertTag = m.role === "expert" ? `<span class="tag tag-brand">Expert</span>` : "";
                    const profileUrl = m.profile_url || `/mentors/${m.slug || m.id}`;
+                   const roleLabel = [m.designation, m.company].filter(Boolean).join(" · ");
+                   const roleBadge = roleLabel
+                       ? `<span class="mentor-role-badge">${roleLabel}</span>`
+                       : "";
+                   const avatar = m.avatar_url
+                       ? `<img src="${m.avatar_url}" alt="${m.name || ""}">`
+                       : (m.name || "?").charAt(0).toUpperCase();
+                   // Keep AJAX cards identical to the server-rendered grid markup.
                    return `
          <article class="mentor-card">
            <div class="mentor-card-head">
              <div class="mentor-avatar-lg">
-               ${m.avatar_url ? `<img src="${m.avatar_url}" alt="${m.name}">` : (m.name || "?").charAt(0).toUpperCase()}
+               ${avatar}
+               ${roleBadge}
              </div>
+           </div>
+           <div class="px-20">
              <div class="mentor-card-info">
                <div class="mentor-card-name">${m.name || ""} ${expertTag}</div>
-               <div class="mentor-card-role">${m.designation || ""}${m.company ? " · " + m.company : ""}</div>
              </div>
-           </div>
-           <div class="mentor-card-bio">${(function () { const t = (m.bio_text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || (m.bio || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); return t.substring(0, 90) + (t.length > 90 ? "…" : ""); })()}</div>
-           <div class="mentor-tags">
-             ${tags.slice(0, 4).map((e) => `<span class="tag">${e}</span>`).join("")}
-           </div>
-           <div class="mentor-card-meta">
-             <span class="mentor-rate">₹${rate}/min</span>
-             <span class="mentor-rating">⭐ ${rating} (${m.total_sessions || 0})</span>
-           </div>
-           <div class="mentor-card-actions">
-             <a href="${profileUrl}" class="btn btn-outline btn-sm">View Profile</a>
-             <button class="btn btn-primary btn-sm" onclick="openBookingModal(${m.id},'${name}',${rate})">Book Session</button>
+             <div class="mentor-tags">
+               ${tags.slice(0, 4).map((e) => `<span class="tag">${e}</span>`).join("")}
+             </div>
+             <div class="mentor-card-meta">
+               <span class="mentor-rate">₹${rate}/min</span>
+               <span class="mentor-rating">⭐ ${rating} (${m.total_sessions || 0})</span>
+             </div>
+             <div class="mentor-card-actions">
+               <a href="${profileUrl}" class="btn btn-outline btn-sm">View Profile</a>
+               <button class="btn btn-primary btn-sm" onclick="openBookingModal(${m.id},'${name}',${rate})">Book Session</button>
+             </div>
            </div>
          </article>`;
                })

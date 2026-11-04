@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\GoogleAccountService;
 use App\Support\LoginThrottle;
 use Illuminate\Http\RedirectResponse;
@@ -98,7 +99,7 @@ class GoogleAuthController extends Controller
 
         return redirect()
             ->to($user->postAuthRedirectUrl())
-            ->with('success', 'Signed in with Google. Complete your profile before taking sessions.');
+            ->with('success', $this->postGoogleMessage($user, wasNew: true));
     }
 
     private function start(Request $request, string $intent): RedirectResponse
@@ -164,14 +165,26 @@ class GoogleAuthController extends Controller
         Auth::guard('web')->login($user, true);
         $request->session()->regenerate();
 
-        $isNew = $user->wasRecentlyCreated;
-        $message = $isNew
-            ? 'Signed in with Google. Complete your profile before taking sessions.'
-            : 'Welcome back!';
-
         return redirect()
             ->to($user->postAuthRedirectUrl())
-            ->with('success', $message);
+            ->with('success', $this->postGoogleMessage($user, wasNew: (bool) $user->wasRecentlyCreated));
+    }
+
+    private function postGoogleMessage(User $user, bool $wasNew): string
+    {
+        if ($user->isSessionHost() && $user->mentor_status === User::MENTOR_STATUS_PENDING) {
+            $label = $user->isExpert() ? 'expert' : 'mentor';
+
+            return $wasNew
+                ? "Your {$label} account was created with Google. Approval is pending — please wait for admin confirmation."
+                : "Welcome back. Your {$label} application is still pending admin approval.";
+        }
+
+        if ($wasNew) {
+            return 'Signed in with Google. Complete your profile before taking sessions.';
+        }
+
+        return 'Welcome back!';
     }
 
     private function needsRoleSelection(string $message): bool

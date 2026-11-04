@@ -28,9 +28,13 @@
 </div>
 @endif
 
-<form method="POST" action="{{ route('admin.mentor.update', $mentor) }}" enctype="multipart/form-data" class="max-w-5xl"
-      onsubmit="if (window.tinymce) tinymce.triggerSave();">
+<form id="mentor-edit-form" method="POST" action="{{ route('admin.mentor.update', $mentor) }}" enctype="multipart/form-data" class="max-w-5xl"
+      onsubmit="if (window.tinymce) tinymce.triggerSave(); syncHiddenInputs('expertise');">
     @csrf @method('PUT')
+    {{-- Server-side fallback so expertise submits even if chip JS fails --}}
+    @foreach(old('expertise', $mentor->expertise ?? []) as $sk)
+    <input type="hidden" name="expertise[]" value="{{ $sk }}" data-field="expertise">
+    @endforeach
 
     <div class="grid grid-cols-3 gap-6">
         <div class="col-span-2 space-y-5">
@@ -384,19 +388,23 @@ function addChips(inputId, containerId, fieldName) {
 }
 function removeChip(btn, fieldName) { btn.closest('span').remove(); syncHiddenInputs(fieldName); }
 function syncHiddenInputs(fieldName) {
-    document.querySelectorAll(`input[data-field="${fieldName}"]`).forEach(i => i.remove());
-    document.querySelectorAll(`[data-field-name="${fieldName}"]`).forEach(span => {
+    const form = document.getElementById('mentor-edit-form');
+    if (!form) return;
+    form.querySelectorAll(`input[data-field="${fieldName}"]`).forEach(i => i.remove());
+    document.querySelectorAll(`#expertise-chips [data-field-name="${fieldName}"]`).forEach(span => {
+        const text = (span.childNodes[0]?.textContent || span.textContent || '').replace('×', '').trim();
+        if (!text) return;
         const inp = document.createElement('input');
-        inp.type = 'hidden'; inp.name = fieldName + '[]';
-        inp.value = span.childNodes[0].textContent.trim();
+        inp.type = 'hidden';
+        inp.name = fieldName + '[]';
+        inp.value = text;
         inp.dataset.field = fieldName;
-        document.querySelector('form').appendChild(inp);
+        form.appendChild(inp);
     });
 }
 document.getElementById('expertise-input')?.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addChips('expertise-input','expertise-chips','expertise'); }
 });
-// Init existing chips
 document.querySelectorAll('#expertise-chips span').forEach(s => s.dataset.fieldName = 'expertise');
 syncHiddenInputs('expertise');
 </script>
