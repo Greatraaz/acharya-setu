@@ -653,6 +653,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin', 'admin
     // ── Bulk email ────────────────────────────────────────────
     Route::get('/bulk-emails',             [BulkEmailController::class, 'create'])->name('bulk-emails.create');
     Route::post('/bulk-emails',            [BulkEmailController::class, 'store'])->name('bulk-emails.store');
+    Route::post('/bulk-emails/generate',   [BulkEmailController::class, 'generate'])->name('bulk-emails.generate');
     Route::get('/bulk-emails/preview',     [BulkEmailController::class, 'preview'])->name('bulk-emails.preview');
     Route::get('/bulk-emails/search',      [BulkEmailController::class, 'search'])->name('bulk-emails.search');
 

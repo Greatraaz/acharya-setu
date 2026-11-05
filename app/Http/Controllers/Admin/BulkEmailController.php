@@ -7,12 +7,14 @@ use App\Jobs\SendAdminBulkEmailJob;
 use App\Models\ActivityLog;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use App\Services\AiEmailTemplateService;
 use App\Services\DynamicMailer;
 use App\Support\BulkEmailAudience;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use RuntimeException;
 
 class BulkEmailController extends Controller
 {
@@ -35,6 +37,43 @@ class BulkEmailController extends Controller
             'recent' => $recent,
             'emailLogo' => asset('frontend/images/logo-dark.png'),
             'appName' => (string) (\App\Models\AppSetting::get('app_name') ?: config('app.name', 'Vedrix')),
+            'aiConfigured' => app(AiEmailTemplateService::class)->isConfigured(),
+        ]);
+    }
+
+    public function generate(Request $request, AiEmailTemplateService $ai): JsonResponse
+    {
+        $data = $request->validate([
+            'subject' => ['required', 'string', 'max:180'],
+            'audience' => ['nullable', 'in:'.implode(',', BulkEmailAudience::options())],
+            'tone' => ['nullable', 'in:professional,friendly,urgent'],
+        ], [
+            'subject.required' => 'Enter a subject or topic to generate a template.',
+        ]);
+
+        try {
+            $template = $ai->generateBulkEmail(
+                $data['subject'],
+                (string) ($data['audience'] ?? 'all'),
+                (string) ($data['tone'] ?? 'professional')
+            );
+        } catch (RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            report($e);
+            $message = trim($e->getMessage());
+            if ($message === '' || strlen($message) > 280) {
+                $message = 'Could not generate a template right now. Try again.';
+            }
+
+            return response()->json(['message' => $message], 503);
+        }
+
+        return response()->json([
+            'subject' => $template['subject'],
+            'body' => $template['body'],
+            'provider' => $template['provider'],
+            'ai_configured' => $ai->isConfigured(),
         ]);
     }
 

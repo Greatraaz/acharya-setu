@@ -130,6 +130,38 @@
                            class="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
 
+                <div class="rounded-xl border border-indigo-100 bg-indigo-50/60 px-3.5 py-3 space-y-2.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <p class="text-xs font-semibold text-indigo-800">AI message template</p>
+                            <p class="text-[11px] text-indigo-600/80 mt-0.5">
+                                Type a subject, then generate a ready-to-edit email body.
+                                @if(!empty($aiConfigured))
+                                    Uses OpenAI.
+                                @else
+                                    Local draft mode (add <code class="bg-white/70 px-1 rounded">OPENAI_API_KEY</code> for smarter copy).
+                                @endif
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <select id="ai-tone"
+                                    class="text-xs border border-indigo-200 bg-white rounded-lg px-2.5 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="professional">Professional</option>
+                                <option value="friendly">Friendly</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                            <button type="button" id="ai-generate-btn"
+                                    class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium px-3.5 py-2 rounded-lg transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                <span id="ai-generate-label">Generate with AI</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p id="ai-generate-status" class="hidden text-[11px] text-indigo-700"></p>
+                </div>
+
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1.5" for="body">Message *</label>
                     <textarea id="body" name="body" rows="12" class="tinymce-email w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5">{{ old('body') }}</textarea>
@@ -421,6 +453,96 @@ document.getElementById('subject')?.addEventListener('input', updateEmailPreview
             e.preventDefault();
         }
     });
+
+    const generateUrl = @json(route('admin.bulk-emails.generate'));
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+        || form.querySelector('input[name="_token"]')?.value
+        || '';
+    const aiBtn = document.getElementById('ai-generate-btn');
+    const aiLabel = document.getElementById('ai-generate-label');
+    const aiStatus = document.getElementById('ai-generate-status');
+    const aiTone = document.getElementById('ai-tone');
+    const subjectEl = document.getElementById('subject');
+
+    function setAiStatus(message, isError) {
+        if (!aiStatus) return;
+        if (!message) {
+            aiStatus.classList.add('hidden');
+            aiStatus.textContent = '';
+            return;
+        }
+        aiStatus.textContent = message;
+        aiStatus.classList.remove('hidden');
+        aiStatus.classList.toggle('text-red-600', !!isError);
+        aiStatus.classList.toggle('text-indigo-700', !isError);
+    }
+
+    async function generateAiTemplate() {
+        const subject = (subjectEl?.value || '').trim();
+        if (!subject) {
+            setAiStatus('Enter a subject or topic first.', true);
+            subjectEl?.focus();
+            return;
+        }
+
+        const hasExisting = (() => {
+            if (window.tinymce && tinymce.get('body')) {
+                return (tinymce.get('body').getContent({ format: 'text' }) || '').trim().length > 0;
+            }
+            return ((document.getElementById('body')?.value || '').replace(/<[^>]*>/g, ' ').trim().length > 0);
+        })();
+
+        if (hasExisting && !confirm('Replace the current message with an AI-generated template?')) {
+            return;
+        }
+
+        aiBtn.disabled = true;
+        aiLabel.textContent = 'Generating…';
+        setAiStatus('Writing a template from your subject…');
+
+        try {
+            const res = await fetch(generateUrl, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    subject,
+                    audience: audience(),
+                    tone: aiTone?.value || 'professional',
+                }),
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.message || data.errors?.subject?.[0] || 'Could not generate a template.');
+            }
+
+            if (data.subject && subjectEl) {
+                subjectEl.value = data.subject;
+            }
+
+            if (window.tinymce && tinymce.get('body')) {
+                tinymce.get('body').setContent(data.body || '');
+            } else if (document.getElementById('body')) {
+                document.getElementById('body').value = data.body || '';
+            }
+
+            updateEmailPreview();
+            const mode = data.provider === 'openai' ? 'AI template ready — edit before sending.' : 'Draft template ready — edit before sending.';
+            setAiStatus(mode);
+        } catch (err) {
+            setAiStatus(err?.message || 'Could not generate a template.', true);
+        } finally {
+            aiBtn.disabled = false;
+            aiLabel.textContent = 'Generate with AI';
+        }
+    }
+
+    aiBtn?.addEventListener('click', generateAiTemplate);
 
     paintAudienceCards();
     refreshCount();
