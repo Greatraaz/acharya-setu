@@ -104,7 +104,7 @@
 </div>
 
 <div id="add-catalog-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <div class="flex items-center justify-between mb-5 gap-3">
             <h3 class="text-base font-bold text-gray-900">New Global Stream</h3>
             <button type="button" onclick="document.getElementById('add-catalog-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 flex-shrink-0">
@@ -113,10 +113,19 @@
         </div>
         <form method="POST" action="{{ route('admin.curriculum.catalog.store') }}" class="space-y-4">
             @csrf
-            <div>
+            @include('admin.curriculum.partials.voice-studio', [
+                'voiceTitle' => 'Voice fill',
+                'voiceHint' => 'Dictate stream name and description.',
+                'voiceSteps' => [
+                    ['key' => 'name', 'label' => 'Stream name', 'prompt' => 'Say the stream name.', 'type' => 'text'],
+                    ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe this global stream, or say skip.', 'type' => 'text', 'append' => true],
+                ],
+            ])
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Stream Name <span class="text-red-500">*</span></label>
-                <input type="text" name="name" required placeholder="e.g. DevOps, Product Management"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                <input type="text" name="name" required placeholder="e.g. DevOps, Product Management" data-voice-field="name"
+                       class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'name', 'label' => 'Dictate stream name'])
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -129,10 +138,11 @@
                     <input type="color" name="color" value="#7c3aed" class="h-10 w-full rounded-lg border border-gray-200 cursor-pointer p-0.5">
                 </div>
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-                <textarea name="description" rows="2" placeholder="Short description shown on onboarding"
-                          class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"></textarea>
+                <textarea name="description" rows="2" placeholder="Short description shown on onboarding" data-voice-field="description"
+                          class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"></textarea>
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'description', 'label' => 'Dictate description'])
             </div>
             <label class="flex items-center gap-2 cursor-pointer">
                 <input type="hidden" name="is_active" value="0">
@@ -153,7 +163,7 @@
 </div>
 
 <div id="edit-catalog-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <div class="flex items-center justify-between mb-5 gap-3">
             <h3 class="text-base font-bold text-gray-900">Edit Global Stream</h3>
             <button type="button" onclick="document.getElementById('edit-catalog-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 flex-shrink-0">
@@ -163,10 +173,19 @@
         <form id="edit-catalog-form" method="POST" class="space-y-4">
             @csrf
             @method('PUT')
-            <div>
+            @include('admin.curriculum.partials.voice-studio', [
+                'voiceTitle' => 'Voice fill',
+                'voiceHint' => 'Dictate stream name and description.',
+                'voiceSteps' => [
+                    ['key' => 'name', 'label' => 'Stream name', 'prompt' => 'Say the stream name.', 'type' => 'text'],
+                    ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe this global stream, or say skip.', 'type' => 'text', 'append' => true],
+                ],
+            ])
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Stream Name <span class="text-red-500">*</span></label>
-                <input type="text" name="name" required
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                <input type="text" name="name" required data-voice-field="name"
+                       class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'name', 'label' => 'Dictate stream name'])
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -179,10 +198,11 @@
                     <input type="color" name="color" value="#7c3aed" class="h-10 w-full rounded-lg border border-gray-200 cursor-pointer p-0.5">
                 </div>
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-                <textarea name="description" rows="2"
-                          class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"></textarea>
+                <textarea name="description" rows="2" data-voice-field="description"
+                          class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"></textarea>
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'description', 'label' => 'Dictate description'])
             </div>
             <label class="flex items-center gap-2 cursor-pointer">
                 <input type="hidden" name="is_active" value="0">
@@ -202,6 +222,8 @@
     </div>
 </div>
 
+@push('scripts')
+<script src="{{ asset('admin/js/voice-dictation.js') }}?v={{ @filemtime(public_path('admin/js/voice-dictation.js')) }}"></script>
 <script>
 function openEditCatalog(stream) {
     const form = document.getElementById('edit-catalog-form');
@@ -216,4 +238,5 @@ function openEditCatalog(stream) {
     document.getElementById('edit-catalog-modal').classList.remove('hidden');
 }
 </script>
+@endpush
 @endsection

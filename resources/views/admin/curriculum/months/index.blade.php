@@ -186,42 +186,60 @@
             @csrf
             <span id="month-method-field"></span>
             <input type="hidden" name="mentee_id" id="month-mentee-id" value="{{ $stream->mentee_id }}">
+
+            @include('admin.curriculum.partials.voice-studio', [
+                'voiceTitle' => 'Voice fill',
+                'voiceHint' => 'Dictate month title, theme, description, and outcomes.',
+                'voiceSteps' => [
+                    ['key' => 'title', 'label' => 'Title', 'prompt' => 'Say the month title.', 'type' => 'text'],
+                    ['key' => 'theme', 'label' => 'Theme', 'prompt' => 'Say the theme, or say skip.', 'type' => 'text'],
+                    ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe what the mentee will accomplish this month.', 'type' => 'text', 'append' => true],
+                    ['key' => 'learning_outcomes', 'label' => 'Learning outcomes', 'prompt' => 'Say one learning outcome. You can add more with the field mic.', 'type' => 'text', 'newline' => true],
+                    ['key' => 'milestone_badge', 'label' => 'Milestone badge', 'prompt' => 'Say the milestone badge name, or say skip.', 'type' => 'text'],
+                ],
+            ])
+
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Month Number <span class="text-red-500">*</span></label>
-                    <select name="month_number" id="modal-month-number" required
+                    <select name="month_number" id="modal-month-number" required data-voice-field="month_number"
                             class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white">
                         @for($i=1;$i<=6;$i++)
                         <option value="{{ $i }}" {{ $configured->has($i) ? 'disabled' : '' }}>Month {{ $i }}{{ $configured->has($i) ? ' (exists)' : '' }}</option>
                         @endfor
                     </select>
                 </div>
-                <div>
+                <div class="tpl-voice-field">
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Theme</label>
-                    <input type="text" name="theme" placeholder="Foundation, Deep Dive…"
-                           class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                    <input type="text" name="theme" placeholder="Foundation, Deep Dive…" data-voice-field="theme"
+                           class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'theme', 'label' => 'Dictate theme'])
                 </div>
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Title <span class="text-red-500">*</span></label>
-                <input type="text" name="title" required placeholder="e.g. Foundations of Product Thinking"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                <input type="text" name="title" required placeholder="e.g. Foundations of Product Thinking" data-voice-field="title"
+                       class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'title', 'label' => 'Dictate title'])
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-                <textarea name="description" rows="2" placeholder="What will the mentee accomplish this month?"
-                          class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"></textarea>
+                <textarea name="description" rows="2" placeholder="What will the mentee accomplish this month?" data-voice-field="description"
+                          class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"></textarea>
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'description', 'label' => 'Dictate description'])
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Learning Outcomes</label>
-                <textarea name="learning_outcomes" rows="4" placeholder="One outcome per line:&#10;Understand REST APIs&#10;Build a CRUD app&#10;Deploy to production"
-                          class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none font-mono"></textarea>
+                <textarea name="learning_outcomes" rows="4" placeholder="One outcome per line:&#10;Understand REST APIs&#10;Build a CRUD app&#10;Deploy to production" data-voice-field="learning_outcomes"
+                          class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none font-mono"></textarea>
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'learning_outcomes', 'label' => 'Dictate learning outcomes'])
                 <p class="text-xs text-gray-400 mt-1">One per line — shown as bullet points to mentees.</p>
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Milestone Badge Name</label>
-                <input type="text" name="milestone_badge" placeholder="e.g. Foundation Builder, Code Craftsman"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                <input type="text" name="milestone_badge" placeholder="e.g. Foundation Builder, Code Craftsman" data-voice-field="milestone_badge"
+                       class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'milestone_badge', 'label' => 'Dictate milestone badge'])
                 <p class="text-xs text-gray-400 mt-1">Earned on 100% completion of this month.</p>
             </div>
             <label class="flex items-center gap-2 cursor-pointer">
@@ -238,6 +256,8 @@
     </div>
 </div>
 
+@push('scripts')
+<script src="{{ asset('admin/js/voice-dictation.js') }}?v={{ @filemtime(public_path('admin/js/voice-dictation.js')) }}"></script>
 <script>
 const monthStoreUrl  = @json(route('admin.curriculum.months.store', $stream));
 const monthUpdateUrl = @json(url('/admin/curriculum/months'));
@@ -303,5 +323,6 @@ function openEditMonth(month) {
     document.getElementById('add-month-modal').classList.remove('hidden');
 }
 </script>
+@endpush
 
 @endsection

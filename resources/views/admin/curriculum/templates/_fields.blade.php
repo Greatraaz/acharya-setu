@@ -1,13 +1,29 @@
+@php
+    $voiceSteps = [
+        ['key' => 'expertise_field', 'label' => 'Industry / domain', 'prompt' => 'Say the industry or domain for this template.', 'type' => 'select'],
+        ['key' => 'name', 'label' => 'Template name', 'prompt' => 'Say the template name.', 'type' => 'text'],
+        ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe this starter plan for mentors.', 'type' => 'text', 'append' => true],
+        ['key' => 'expertise_tags', 'label' => 'Skills', 'prompt' => 'List skills, separated by commas. Or say skip.', 'type' => 'text'],
+    ];
+@endphp
+
+@include('admin.curriculum.partials.voice-studio', [
+    'voiceTitle' => 'Voice fill',
+    'voiceHint' => 'Speak to fill the fields below — same form, faster entry. Works best in Chrome/Edge.',
+    'voiceSteps' => $voiceSteps,
+])
+
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    <div>
+    <div class="tpl-voice-field">
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Template name <span class="text-red-400">*</span></label>
         <input type="text" name="name" required maxlength="100" placeholder="e.g. Engineering & Technology Path"
-               class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
+               data-voice-field="name" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
+        @include('admin.curriculum.partials.voice-mic', ['for' => 'name', 'label' => 'Dictate template name'])
     </div>
     <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Industry / domain <span class="text-red-400">*</span></label>
         <div class="relative">
-            <select name="expertise_field" required
+            <select name="expertise_field" required data-voice-field="expertise_field"
                     class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white appearance-none cursor-pointer transition-all">
                 <option value="">— Select industry —</option>
                 @foreach($industries as $industry)
@@ -18,13 +34,13 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
             </span>
         </div>
-        <p class="text-xs text-gray-400 mt-1.5">Same list mentors pick during onboarding.</p>
+        <p class="text-xs text-gray-400 mt-1.5">Same list mentors pick during onboarding. In guided voice, say the industry name.</p>
     </div>
 </div>
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Icon (emoji)</label>
-        <input type="text" name="icon" maxlength="4" placeholder="💻"
+        <input type="text" name="icon" maxlength="4" placeholder="💻" data-voice-field="icon"
                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 text-center text-2xl transition-all">
     </div>
     <div>
@@ -33,15 +49,17 @@
         <p class="text-xs text-gray-400 mt-1.5">Tints the icon, month timeline, and week badges.</p>
     </div>
 </div>
-<div>
+<div class="tpl-voice-field">
     <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
     <textarea name="description" rows="3" placeholder="Shown to mentors when they pick a starter plan"
-              class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none transition-all"></textarea>
+              data-voice-field="description" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none transition-all"></textarea>
+    @include('admin.curriculum.partials.voice-mic', ['for' => 'description', 'label' => 'Dictate description'])
 </div>
-<div>
+<div class="tpl-voice-field">
     <label class="block text-sm font-medium text-gray-700 mb-1.5">Skills (optional)</label>
     <input type="text" name="expertise_tags" placeholder="System Design, Product Sense, Financial Modelling"
-           class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
+           data-voice-field="expertise_tags" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
+    @include('admin.curriculum.partials.voice-mic', ['for' => 'expertise_tags', 'label' => 'Dictate skills'])
     <p class="text-xs text-gray-400 mt-1.5">Comma-separated. For admin reference — visibility is by industry.</p>
 </div>
 <label class="flex items-center justify-between gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50/60 cursor-pointer">

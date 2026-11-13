@@ -200,23 +200,35 @@
             <div id="panel-settings-{{ $week->id }}" class="p-4 sm:p-5 hidden">
                 <form method="POST" action="{{ route('admin.curriculum.weeks.update', $week) }}" class="space-y-4">
                     @csrf @method('PUT')
+                    @include('admin.curriculum.partials.voice-studio', [
+                        'voiceTitle' => 'Voice fill',
+                        'voiceHint' => 'Update this week by speaking.',
+                        'voiceSteps' => [
+                            ['key' => 'title', 'label' => 'Title', 'prompt' => 'Say the week title.', 'type' => 'text'],
+                            ['key' => 'focus', 'label' => 'Focus', 'prompt' => 'Say the focus statement, or say skip.', 'type' => 'text'],
+                            ['key' => 'mentor_guide', 'label' => 'Mentor guide', 'prompt' => 'Dictate mentor guidance for this week, or say skip.', 'type' => 'text', 'append' => true],
+                        ],
+                    ])
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Week Number</label>
                             <input type="number" name="week_number" value="{{ $week->week_number }}" min="1" max="5" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
                         </div>
-                        <div>
+                        <div class="tpl-voice-field">
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
-                            <input type="text" name="title" value="{{ $week->title }}" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                            <input type="text" name="title" value="{{ $week->title }}" data-voice-field="title" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                            @include('admin.curriculum.partials.voice-mic', ['for' => 'title', 'label' => 'Dictate title'])
                         </div>
                     </div>
-                    <div>
+                    <div class="tpl-voice-field">
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Focus Statement</label>
-                        <input type="text" name="focus" value="{{ $week->focus }}" placeholder="What is the core focus of this week?" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                        <input type="text" name="focus" value="{{ $week->focus }}" placeholder="What is the core focus of this week?" data-voice-field="focus" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                        @include('admin.curriculum.partials.voice-mic', ['for' => 'focus', 'label' => 'Dictate focus'])
                     </div>
-                    <div>
+                    <div class="tpl-voice-field">
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentor Guide (private)</label>
-                        <textarea name="mentor_guide" rows="3" placeholder="Guidance for the mentor on running this week…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none">{{ $week->mentor_guide }}</textarea>
+                        <textarea name="mentor_guide" rows="3" placeholder="Guidance for the mentor on running this week…" data-voice-field="mentor_guide" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none">{{ $week->mentor_guide }}</textarea>
+                        @include('admin.curriculum.partials.voice-mic', ['for' => 'mentor_guide', 'label' => 'Dictate mentor guide'])
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Intro Video URL</label>
@@ -254,6 +266,15 @@
         <h3 class="text-base font-bold text-gray-900 mb-5">Add Week to Month {{ $month->month_number }}</h3>
         <form method="POST" action="{{ route('admin.curriculum.weeks.store', $month) }}" class="space-y-4">
             @csrf
+            @include('admin.curriculum.partials.voice-studio', [
+                'voiceTitle' => 'Voice fill',
+                'voiceHint' => 'Dictate week title, focus, and mentor guide.',
+                'voiceSteps' => [
+                    ['key' => 'title', 'label' => 'Title', 'prompt' => 'Say the week title.', 'type' => 'text'],
+                    ['key' => 'focus', 'label' => 'Focus', 'prompt' => 'Say the focus statement, or say skip.', 'type' => 'text'],
+                    ['key' => 'mentor_guide', 'label' => 'Mentor guide', 'prompt' => 'Dictate mentor guidance for this week, or say skip.', 'type' => 'text', 'append' => true],
+                ],
+            ])
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Week Number <span class="text-red-500">*</span></label>
@@ -267,18 +288,21 @@
                         @endfor
                     </select>
                 </div>
-                <div>
+                <div class="tpl-voice-field">
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Title <span class="text-red-500">*</span></label>
-                    <input type="text" name="title" required value="{{ old('title') }}" placeholder="Week title…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                    <input type="text" name="title" required value="{{ old('title') }}" placeholder="Week title…" data-voice-field="title" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'title', 'label' => 'Dictate title'])
                 </div>
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Focus Statement</label>
-                <input type="text" name="focus" value="{{ old('focus') }}" placeholder="Core focus of this week…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                <input type="text" name="focus" value="{{ old('focus') }}" placeholder="Core focus of this week…" data-voice-field="focus" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'focus', 'label' => 'Dictate focus'])
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentor Guide (private)</label>
-                <textarea name="mentor_guide" rows="3" placeholder="Guidance for the mentor on running this week…" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none">{{ old('mentor_guide') }}</textarea>
+                <textarea name="mentor_guide" rows="3" placeholder="Guidance for the mentor on running this week…" data-voice-field="mentor_guide" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none">{{ old('mentor_guide') }}</textarea>
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'mentor_guide', 'label' => 'Dictate mentor guide'])
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Intro Video URL</label>
@@ -304,18 +328,30 @@
         <form id="task-form" method="POST" class="space-y-4">
             @csrf
             <span id="task-method-field"></span>
-            <div>
+            @include('admin.curriculum.partials.voice-studio', [
+                'voiceTitle' => 'Voice fill',
+                'voiceHint' => 'Dictate task title and description. Say the type name for Type.',
+                'voiceSteps' => [
+                    ['key' => 'title', 'label' => 'Title', 'prompt' => 'Say the task title.', 'type' => 'text'],
+                    ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe the task, or say skip.', 'type' => 'text', 'append' => true],
+                    ['key' => 'type', 'label' => 'Type', 'prompt' => 'Say the task type, for example task, reading, or video. Or say skip.', 'type' => 'select'],
+                    ['key' => 'submission_type', 'label' => 'Submission type', 'prompt' => 'Say the submission type, for example none, text, or file. Or say skip.', 'type' => 'select'],
+                ],
+            ])
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Title <span class="text-red-500">*</span></label>
-                <input type="text" name="title" id="task-title" required class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                <input type="text" name="title" id="task-title" required data-voice-field="title" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'title', 'label' => 'Dictate title'])
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-                <textarea name="description" id="task-description" rows="3" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"></textarea>
+                <textarea name="description" id="task-description" rows="3" data-voice-field="description" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"></textarea>
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'description', 'label' => 'Dictate description'])
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Type</label>
-                    <select name="type" id="task-type" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white">
+                    <select name="type" id="task-type" data-voice-field="type" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white">
                         @foreach(\App\Models\CurriculumTask::TYPES as $val => $label)
                         <option value="{{ $val }}">{{ \App\Models\CurriculumTask::TYPE_ICONS[$val] }} {{ $label }}</option>
                         @endforeach
@@ -323,7 +359,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Submission Type</label>
-                    <select name="submission_type" id="task-submission-type" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white">
+                    <select name="submission_type" id="task-submission-type" data-voice-field="submission_type" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white">
                         @foreach(\App\Models\CurriculumTask::SUBMISSION_TYPES as $val => $label)
                         <option value="{{ $val }}">{{ $label }}</option>
                         @endforeach
@@ -365,33 +401,57 @@
         <form id="mcq-form" method="POST" class="space-y-4">
             @csrf
             <span id="mcq-method-field"></span>
-            <div>
+            @include('admin.curriculum.partials.voice-studio', [
+                'voiceTitle' => 'Voice fill',
+                'voiceHint' => 'Dictate question, options A–D, and explanation.',
+                'voiceSteps' => [
+                    ['key' => 'topic', 'label' => 'Topic', 'prompt' => 'Say the topic, or say skip.', 'type' => 'text'],
+                    ['key' => 'question', 'label' => 'Question', 'prompt' => 'Say the full MCQ question.', 'type' => 'text', 'append' => true],
+                    ['key' => 'option_0', 'label' => 'Option A', 'prompt' => 'Say option A.', 'type' => 'text'],
+                    ['key' => 'option_1', 'label' => 'Option B', 'prompt' => 'Say option B.', 'type' => 'text'],
+                    ['key' => 'option_2', 'label' => 'Option C', 'prompt' => 'Say option C.', 'type' => 'text'],
+                    ['key' => 'option_3', 'label' => 'Option D', 'prompt' => 'Say option D.', 'type' => 'text'],
+                    ['key' => 'explanation', 'label' => 'Explanation', 'prompt' => 'Say the explanation, or say skip.', 'type' => 'text', 'append' => true],
+                    ['key' => 'difficulty', 'label' => 'Difficulty', 'prompt' => 'Say easy, medium, or hard. Or say skip.', 'type' => 'select'],
+                ],
+            ])
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Topic</label>
-                <input type="text" name="topic" id="mcq-topic" placeholder="e.g. SQL basics" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                <input type="text" name="topic" id="mcq-topic" placeholder="e.g. SQL basics" data-voice-field="topic" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'topic', 'label' => 'Dictate topic'])
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Question <span class="text-red-500">*</span></label>
-                <textarea name="question" id="mcq-question" required rows="3" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"></textarea>
+                <textarea name="question" id="mcq-question" required rows="3" data-voice-field="question" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"></textarea>
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'question', 'label' => 'Dictate question'])
             </div>
             <div id="mcq-options-container" class="space-y-2">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Options</label>
                 @for($i = 0; $i < 4; $i++)
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 tpl-voice-field">
                     <span class="w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-600 flex items-center justify-center flex-shrink-0">{{ chr(65+$i) }}</span>
-                    <input type="text" name="options[]" class="flex-1 border border-gray-200 rounded-xl px-3.5 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="Option {{ chr(65+$i) }}">
+                    <input type="text" name="options[]" data-voice-field="option_{{ $i }}" class="tpl-voice-input flex-1 border border-gray-200 rounded-xl px-3.5 py-2 pr-12 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="Option {{ chr(65+$i) }}">
+                    <button type="button"
+                            class="tpl-mic-btn inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-indigo-600 hover:border-indigo-200 flex-shrink-0"
+                            data-dictate-for="option_{{ $i }}"
+                            title="Dictate option {{ chr(65+$i) }}"
+                            aria-label="Dictate option {{ chr(65+$i) }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/></svg>
+                    </button>
                     <input type="radio" name="correct_index" value="{{ $i }}" class="w-4 h-4 text-indigo-600" {{ $i===0?'checked':'' }}>
                     <span class="text-xs text-gray-400">Correct</span>
                 </div>
                 @endfor
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Explanation (shown after answer)</label>
-                <textarea name="explanation" id="mcq-explanation" rows="2" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"></textarea>
+                <textarea name="explanation" id="mcq-explanation" rows="2" data-voice-field="explanation" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-none"></textarea>
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'explanation', 'label' => 'Dictate explanation'])
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Difficulty</label>
-                    <select name="difficulty" id="mcq-difficulty" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white">
+                    <select name="difficulty" id="mcq-difficulty" data-voice-field="difficulty" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white">
                         <option value="easy">🟢 Easy</option>
                         <option value="medium" selected>🟡 Medium</option>
                         <option value="hard">🔴 Hard</option>
@@ -419,6 +479,8 @@
     </div>
 </div>
 
+@push('scripts')
+<script src="{{ asset('admin/js/voice-dictation.js') }}?v={{ @filemtime(public_path('admin/js/voice-dictation.js')) }}"></script>
 <script>
 // Week accordion
 const openWeeks = new Set();
@@ -545,5 +607,6 @@ function openEditMcq(mcq) {
     document.getElementById('mcq-modal').classList.remove('hidden');
 }
 </script>
+@endpush
 
 @endsection

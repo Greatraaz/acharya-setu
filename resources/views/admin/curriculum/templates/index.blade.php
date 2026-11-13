@@ -32,10 +32,20 @@
 
     {{-- Header --}}
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <p class="text-sm text-gray-500 max-w-2xl">
-            One starter plan per mentor industry (same domain list as onboarding). Mentors only see the template for their industry, then clone and tailor it for each mentee.
-        </p>
-        <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center w-full lg:w-auto">
+        <div class="max-w-2xl">
+            <p class="text-sm text-gray-600 leading-relaxed">
+                One starter plan per mentor industry. Mentors only see their industry template, then clone and tailor it for each mentee.
+            </p>
+            <p class="text-xs text-gray-400 mt-1.5">
+                Tip: use <span class="font-semibold text-indigo-600">Voice Assistant</span> to create by speaking, or open a card’s <span class="font-semibold text-gray-600">Build</span> to add months, weeks, and tasks.
+            </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto lg:justify-end">
+            <button type="button" data-open-modal="add-template-modal"
+                    class="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                New Template
+            </button>
             <a href="{{ route('admin.curriculum.templates.sample') }}"
                class="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2.5 rounded-xl transition-colors whitespace-nowrap">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -46,11 +56,44 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L9 8m4-4v12"/></svg>
                 Import Excel
             </button>
-            <button type="button" data-open-modal="add-template-modal"
-                    class="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                New Template
-            </button>
+        </div>
+    </div>
+
+    {{-- Voice Assistant entry --}}
+    <div class="relative overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-violet-50 shadow-sm">
+        <div class="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-indigo-200/30 blur-2xl pointer-events-none"></div>
+        <div class="absolute -left-6 -bottom-10 h-28 w-28 rounded-full bg-violet-200/30 blur-2xl pointer-events-none"></div>
+        <div class="relative p-4 sm:p-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-start gap-3 min-w-0">
+                <span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h2 class="text-base font-semibold text-slate-900">Voice Assistant with Adarsh</h2>
+                        <span class="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">New</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-1 leading-relaxed max-w-2xl">
+                        Create a starter template by speaking, or watch a short walkthrough of template, months, weeks, tasks, and MCQs.
+                    </p>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
+                <button type="button" data-open-voice-studio
+                        class="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 px-4 py-2.5 rounded-xl transition-all shadow-sm shadow-indigo-500/20 whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
+                    </svg>
+                    Speak to create
+                </button>
+                <button type="button" data-open-voice-guide
+                        class="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-50 px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5-9-5.5z"/></svg>
+                    Watch guide
+                </button>
+            </div>
         </div>
     </div>
 
@@ -108,19 +151,22 @@
     {{-- Toolbar --}}
     <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div class="admin-filter-search min-w-0 flex-1 lg:max-w-sm">
-                <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
+            <div class="admin-filter-search min-w-0 flex-1 lg:max-w-md">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Search templates</label>
                 <div class="relative">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                    <input type="text" id="template-search" placeholder="Industry, template name, skills…"
+                    <input type="text" id="template-search" placeholder="Search by industry, name, or skills…"
                            class="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
                 </div>
             </div>
-            <div class="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-                <button type="button" data-filter="all" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold bg-white text-gray-900 shadow-sm">All</button>
-                <button type="button" data-filter="active" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-700">Active</button>
-                <button type="button" data-filter="incomplete" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-700">Needs build</button>
-                <button type="button" data-filter="empty" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-700">Empty industries</button>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1 lg:text-right">Filter</label>
+                <div class="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+                    <button type="button" data-filter="all" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold bg-white text-gray-900 shadow-sm">All</button>
+                    <button type="button" data-filter="active" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-700">Active</button>
+                    <button type="button" data-filter="incomplete" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-700">Needs build</button>
+                    <button type="button" data-filter="empty" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-700">Empty industries</button>
+                </div>
             </div>
         </div>
     </div>
@@ -190,20 +236,22 @@
                         </div>
                     </div>
 
-                    <div class="mt-auto pt-4 flex items-center gap-1.5 border-t border-gray-100">
+                    <div class="mt-auto pt-4 flex items-center gap-2 border-t border-gray-100">
                         <a href="{{ route('admin.curriculum.months', $template) }}"
-                           class="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
-                            Build
+                           class="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors"
+                           title="Add months, weeks, tasks, and MCQs">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.18-5.18m0 0a2.25 2.25 0 013.18-3.18l1.06 1.06m-4.24 2.12L6.64 12m4.78 3.17l5.18 5.18a2.25 2.25 0 003.18-3.18l-1.06-1.06m-4.24-2.12L17.36 12"/></svg>
+                            {{ $monthsDone >= 6 ? 'Open build' : 'Build months' }}
                         </a>
                         <button type="button"
-                                class="text-xs font-medium px-2.5 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                                class="text-xs font-medium px-3 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl transition-colors"
                                 onclick='openEditTemplate(@json($template))'>
                             Edit
                         </button>
                         <form method="POST" action="{{ route('admin.curriculum.templates.destroy', $template) }}" class="inline"
                               onsubmit="return confirm('Delete “{{ addslashes($template->name) }}”? Mentors will no longer see it. Existing mentee copies stay.')">
                             @csrf @method('DELETE')
-                            <button type="submit" class="text-xs font-medium px-2.5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors">
+                            <button type="submit" class="text-xs font-medium px-3 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-colors" title="Delete template">
                                 Delete
                             </button>
                         </form>
@@ -361,9 +409,15 @@
         </form>
     </div>
 </div>
+
+@include('admin.curriculum.partials.voice-assistant-guide')
+@include('admin.curriculum.partials.voice-assistant-studio')
 @endsection
 
 @push('scripts')
+<script src="{{ asset('admin/js/voice-dictation.js') }}?v={{ @filemtime(public_path('admin/js/voice-dictation.js')) }}"></script>
+<script src="{{ asset('admin/js/voice-assistant-guide.js') }}?v={{ @filemtime(public_path('admin/js/voice-assistant-guide.js')) }}"></script>
+<script src="{{ asset('admin/js/voice-assistant-studio.js') }}?v={{ @filemtime(public_path('admin/js/voice-assistant-studio.js')) }}"></script>
 <script>
 (function () {
     function openModal(id) {
@@ -459,6 +513,7 @@
     });
 
     searchInput?.addEventListener('input', applyFilters);
+    applyFilters();
 })();
 </script>
 @endpush

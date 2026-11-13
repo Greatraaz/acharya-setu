@@ -200,7 +200,7 @@
 
 {{-- Add Stream Modal --}}
 <div id="add-stream-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-5">
             <h3 class="text-base font-bold text-gray-900">New Education Stream</h3>
             <button onclick="document.getElementById('add-stream-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
@@ -209,6 +209,14 @@
         </div>
         <form method="POST" action="{{ route('admin.curriculum.streams.store') }}" class="space-y-4">
             @csrf
+            @include('admin.curriculum.partials.voice-studio', [
+                'voiceTitle' => 'Voice fill',
+                'voiceHint' => 'Dictate stream name and description.',
+                'voiceSteps' => [
+                    ['key' => 'name', 'label' => 'Stream name', 'prompt' => 'Say the stream name.', 'type' => 'text'],
+                    ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe what mentees will learn, or say skip.', 'type' => 'text', 'append' => true],
+                ],
+            ])
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentee <span class="text-red-500">*</span></label>
                 <select name="mentee_id" required
@@ -221,10 +229,11 @@
                     @endforeach
                 </select>
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Stream Name <span class="text-red-500">*</span></label>
-                <input type="text" name="name" required placeholder="e.g. Full Stack Development, Product Design"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                <input type="text" name="name" required placeholder="e.g. Full Stack Development, Product Design" data-voice-field="name"
+                       class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'name', 'label' => 'Dictate stream name'])
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
@@ -240,10 +249,11 @@
                     </div>
                 </div>
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-                <textarea name="description" rows="2" placeholder="What will mentees learn in this stream?"
-                          class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"></textarea>
+                <textarea name="description" rows="2" placeholder="What will mentees learn in this stream?" data-voice-field="description"
+                          class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"></textarea>
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'description', 'label' => 'Dictate description'])
             </div>
             <div class="flex gap-3 pt-2">
                 <button type="submit" class="flex-1 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
@@ -260,7 +270,7 @@
 
 {{-- Edit Stream Modal --}}
 <div id="edit-stream-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-5">
             <h3 class="text-base font-bold text-gray-900">Edit Education Stream</h3>
             <button type="button" onclick="document.getElementById('edit-stream-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
@@ -270,6 +280,14 @@
         <form id="edit-stream-form" method="POST" class="space-y-4">
             @csrf
             @method('PUT')
+            @include('admin.curriculum.partials.voice-studio', [
+                'voiceTitle' => 'Voice fill',
+                'voiceHint' => 'Dictate stream name and description.',
+                'voiceSteps' => [
+                    ['key' => 'name', 'label' => 'Stream name', 'prompt' => 'Say the stream name.', 'type' => 'text'],
+                    ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe what mentees will learn, or say skip.', 'type' => 'text', 'append' => true],
+                ],
+            ])
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentee <span class="text-red-500">*</span></label>
                 <select name="mentee_id" required
@@ -280,10 +298,11 @@
                     @endforeach
                 </select>
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Stream Name <span class="text-red-500">*</span></label>
-                <input type="text" name="name" required
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                <input type="text" name="name" required data-voice-field="name"
+                       class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'name', 'label' => 'Dictate stream name'])
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
@@ -296,10 +315,11 @@
                     <input type="color" name="color" value="#7c3aed" class="h-10 w-full rounded-lg border border-gray-200 cursor-pointer p-0.5">
                 </div>
             </div>
-            <div>
+            <div class="tpl-voice-field">
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-                <textarea name="description" rows="2"
-                          class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"></textarea>
+                <textarea name="description" rows="2" data-voice-field="description"
+                          class="tpl-voice-input w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 resize-none"></textarea>
+                @include('admin.curriculum.partials.voice-mic', ['for' => 'description', 'label' => 'Dictate description'])
             </div>
             <label class="flex items-center gap-2 cursor-pointer">
                 <input type="hidden" name="is_active" value="0">
@@ -319,6 +339,8 @@
     </div>
 </div>
 
+@push('scripts')
+<script src="{{ asset('admin/js/voice-dictation.js') }}?v={{ @filemtime(public_path('admin/js/voice-dictation.js')) }}"></script>
 <script>
 function openEditStream(stream) {
     const form = document.getElementById('edit-stream-form');
@@ -332,5 +354,6 @@ function openEditStream(stream) {
     document.getElementById('edit-stream-modal').classList.remove('hidden');
 }
 </script>
+@endpush
 
 @endsection
