@@ -48,46 +48,61 @@ class LoginController extends Controller
             config(['session.expire_on_close' => true]);
         }
 
-        $existing = User::query()->whereRaw('LOWER(email) = ?', [$request->email])->first();
-        if ($existing?->isGoogleOnly()) {
-            $msg = 'This account uses Google. Continue with Google to sign in.';
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['message' => $msg], 422);
+        $wantsJson = $request->ajax() || $request->wantsJson();
+        $fail = function (string $field, string $msg, int $status = 422) use ($request, $wantsJson) {
+            if ($wantsJson) {
+                return response()->json([
+                    'message' => $msg,
+                    'errors'  => [$field => [$msg]],
+                ], $status);
             }
-            throw ValidationException::withMessages(['email' => $msg]);
-        }
 
-        if (! Auth::guard('web')->attempt($request->only('email','password'), $remember)) {
+            throw ValidationException::withMessages([$field => $msg]);
+        };
+
+        $user = User::query()->whereRaw('LOWER(email) = ?', [$request->email])->first();
+        if (! $user) {
             LoginThrottle::hit($request->email, $request->ip() ?: 'local');
-            $msg = 'These credentials do not match our records.';
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['message' => $msg], 422);
-            }
-            throw ValidationException::withMessages(['email' => $msg]);
+
+            return $fail('email', 'No account found with this email.');
         }
 
-        $user = Auth::guard('web')->user();
-        if (! $user || LoginThrottle::isDisabled($user)) {
-            Auth::guard('web')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-            $msg = 'This account has been disabled.';
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['message' => $msg], 403);
-            }
-            throw ValidationException::withMessages(['email' => $msg]);
+        if (LoginThrottle::isDisabled($user)) {
+            return $fail('email', 'This account has been disabled.', 403);
         }
+
+        $passwordOk = filled($user->password)
+            && Hash::check((string) $request->password, (string) $user->password);
+
+        if (! $passwordOk) {
+            LoginThrottle::hit($request->email, $request->ip() ?: 'local');
+
+            // Google-only (never set a password) — guide them to Google / Forgot password.
+            if ($user->isGoogleOnly()) {
+                return $fail(
+                    'email',
+                    'This account uses Google. Continue with Google, or use Forgot password to set a password for email sign-in.'
+                );
+            }
+
+            return $fail('password', 'Password is incorrect.');
+        }
+
+        // Password matched — allow email login even if account was created with Google.
+        $user->enablePasswordLogin();
+
+        Auth::guard('web')->login($user, $remember);
 
         LoginThrottle::clear($request->email, $request->ip() ?: 'local');
         $request->session()->regenerate();
 
         $redirect = $user->postAuthRedirectUrl();
 
-        if ($request->ajax() || $request->wantsJson()) {
+        if ($wantsJson) {
             return response()->json([
                 'message'  => 'Welcome back!',
                 'redirect' => $redirect,
-                'user'     => $user->only('id','name','email','role'),
+                'user'     => $user->only('id', 'name', 'email', 'role'),
             ]);
         }
 
@@ -223,6 +238,7 @@ class LoginController extends Controller
         }
 
         $user->update(['password' => Hash::make($request->password)]);
+        $user->enablePasswordLogin();
 
         if ($request->ajax()) return response()->json(['message' => 'Password changed.']);
         return back()->with('success','Password changed successfully.');

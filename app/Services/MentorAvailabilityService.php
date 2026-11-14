@@ -364,25 +364,34 @@ class MentorAvailabilityService
             return;
         }
 
-        MentorAvailability::where('mentor_id', $mentor->id)->delete();
-
+        $now = now();
+        $rows = [];
         foreach (self::DAY_KEYS as $day) {
             $row = $weekly[$day] ?? null;
             if (! is_array($row) || empty($row['enabled'])) {
                 continue;
             }
 
-            $ranges = $this->extractRanges($row);
-            foreach ($ranges as $range) {
-                MentorAvailability::create([
+            foreach ($this->extractRanges($row) as $range) {
+                $rows[] = [
                     'mentor_id'    => $mentor->id,
                     'day_of_week'  => ucfirst($day),
                     'start_time'   => $range['from'],
                     'end_time'     => $range['to'],
-                    'is_available' => true,
-                ]);
+                    'is_available' => 1,
+                    'created_at'   => $now,
+                    'updated_at'   => $now,
+                ];
             }
         }
+
+        // One delete + one bulk insert instead of N model creates (was making Save feel stuck).
+        \Illuminate\Support\Facades\DB::transaction(function () use ($mentor, $rows) {
+            MentorAvailability::where('mentor_id', $mentor->id)->delete();
+            if ($rows !== []) {
+                MentorAvailability::insert($rows);
+            }
+        });
     }
 
     /**

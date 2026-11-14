@@ -157,11 +157,27 @@ class AvailabilityController extends Controller
             ];
         }
         $this->availabilityService->assertBookedWindowsRemain($mentor, $kept);
-        MentorAvailability::where('mentor_id', $mentor->id)->delete();
 
+        $now = now();
+        $rows = [];
         foreach ($d['slots'] as $slot) {
-            MentorAvailability::create(array_merge($slot, ['mentor_id' => $mentor->id]));
+            $rows[] = [
+                'mentor_id'    => $mentor->id,
+                'day_of_week'  => $slot['day_of_week'],
+                'start_time'   => $slot['start_time'],
+                'end_time'     => $slot['end_time'],
+                'is_available' => ($slot['is_available'] ?? true) ? 1 : 0,
+                'created_at'   => $now,
+                'updated_at'   => $now,
+            ];
         }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($mentor, $rows) {
+            MentorAvailability::where('mentor_id', $mentor->id)->delete();
+            if ($rows !== []) {
+                MentorAvailability::insert($rows);
+            }
+        });
 
         $this->availabilityService->syncPreferencesFromTable($mentor);
 

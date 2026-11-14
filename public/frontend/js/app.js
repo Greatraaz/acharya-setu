@@ -135,10 +135,16 @@
                return data;
            })
            .catch((err) => {
+               // Always clear loading UI first so errors aren't trapped under the spinner.
+               if (loader) hideLoader();
+               if (btn) setButtonLoading(btn, false);
                console.error("[AjaxPost Error]", err);
-               if (onError) onError(err);
-               else showToast("error", err.message || "Something went wrong.");
-               throw err;
+               if (onError) {
+                   onError(err);
+                   return null; // handled — avoid uncaught promise rejection
+               }
+               showToast("error", err.message || "Something went wrong.");
+               return null;
            })
            .finally(() => {
                if (loader) hideLoader();
@@ -1648,11 +1654,21 @@
                const btn = form.querySelector('[type="submit"]');
                const redirectTo = form.dataset.redirect;
                const successMsg = form.dataset.success || "Saved successfully.";
+               const useLoader = form.dataset.ajaxLoader !== "0";
+
+               // Clear previous inline / banner errors before retrying.
+               form.querySelectorAll(".form-error").forEach((el) => { el.textContent = ""; });
+               form.querySelectorAll(".form-input.error, .form-select.error").forEach((el) => el.classList.remove("error"));
+               const banner = form.querySelector("[data-ajax-error-banner]");
+               if (banner) {
+                   banner.hidden = true;
+                   banner.textContent = "";
+               }
    
                AjaxPost(url, new FormData(form), {
                    method: method.toUpperCase(),
                    btn,
-                   loader: true,
+                   loader: useLoader,
                    onSuccess: (data) => {
                        showToast("success", data.message || successMsg);
                        const target = data.redirect || redirectTo;
@@ -1660,24 +1676,36 @@
                        if (form.dataset.resetOnSuccess !== undefined) form.reset();
                    },
                    onError: (err) => {
-                       showToast("error", err.message || "Please check the form and try again.");
-                       // Field errors
-                       if (err.errors) {
-                           Object.entries(err.errors).forEach(([field, messages]) => {
-                               const inp = form.querySelector(`[name="${field}"]`);
-                               if (inp) {
-                                   inp.classList.add("error");
-                                   let errEl = form.querySelector(`[data-error-for="${field}"]`);
-                                   if (!errEl) {
-                                       errEl = document.createElement("div");
-                                       errEl.className = "form-error";
-                                       errEl.dataset.errorFor = field;
-                                       inp.parentNode.insertBefore(errEl, inp.nextSibling);
-                                   }
-                                   errEl.textContent = messages[0];
-                               }
-                           });
+                       const msg = err.message || "Please check the form and try again.";
+                       showToast("error", msg);
+                       if (banner) {
+                           banner.hidden = false;
+                           banner.textContent = msg;
                        }
+                       // Field errors (and map credential failures onto email/password)
+                       const fieldErrors = { ...(err.errors || {}) };
+                       if (!Object.keys(fieldErrors).length) {
+                           const lower = String(msg).toLowerCase();
+                           if (lower.includes("password")) fieldErrors.password = [msg];
+                           else if (lower.includes("email") || lower.includes("account") || lower.includes("google") || lower.includes("credentials")) {
+                               fieldErrors.email = [msg];
+                           }
+                       }
+                       Object.entries(fieldErrors).forEach(([field, messages]) => {
+                           const inp = form.querySelector(`[name="${field}"]`);
+                           if (inp) {
+                               inp.classList.add("error");
+                               let errEl = form.querySelector(`[data-error-for="${field}"]`);
+                               if (!errEl) {
+                                   errEl = document.createElement("div");
+                                   errEl.className = "form-error";
+                                   errEl.dataset.errorFor = field;
+                                   const anchor = inp.closest(".password-field") || inp;
+                                   anchor.parentNode.insertBefore(errEl, anchor.nextSibling);
+                               }
+                               errEl.textContent = Array.isArray(messages) ? messages[0] : messages;
+                           }
+                       });
                    },
                });
            });

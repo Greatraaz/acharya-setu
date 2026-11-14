@@ -157,7 +157,6 @@ class AvailabilityController extends Controller
         $prefs['weekly_schedule'] = $schedule;
         $prefs['weekly_slots'] = $weeklySlots;
         $user->update(['preferences' => $prefs]);
-        $user->refresh();
 
         $this->availabilityService->syncTableFromPreferences($user);
 

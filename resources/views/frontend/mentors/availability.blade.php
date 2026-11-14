@@ -35,6 +35,7 @@
 
                 <form id="weekly-schedule-form" action="{{ route('mentor.availability.update') }}" method="POST"
                       data-ajax-form="{{ route('mentor.availability.update') }}"
+                      data-ajax-loader="0"
                       data-success="Availability saved successfully!">
                     @csrf
 

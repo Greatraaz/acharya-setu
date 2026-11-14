@@ -1602,7 +1602,8 @@
        position: fixed;
        top: 80px;
        right: 20px;
-       z-index: 3000;
+       /* Above full-screen loader (5000) so auth/login errors stay visible */
+       z-index: 6000;
        display: flex;
        flex-direction: column;
        gap: 10px;

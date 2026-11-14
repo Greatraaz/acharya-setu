@@ -61,12 +61,17 @@
 
             {{-- Email tab --}}
             <div id="tab-email" class="tab-content active">
-                <form action="{{ route('login') }}" method="POST" id="email-login-form" data-ajax-form="{{ route('login') }}" data-success="Welcome back!">
+                <form action="{{ route('login') }}" method="POST" id="email-login-form"
+                      data-ajax-form="{{ route('login') }}"
+                      data-success="Welcome back!"
+                      data-ajax-loader="0">
                     @csrf
+                    <div class="alert alert-error" data-ajax-error-banner hidden style="margin-bottom:16px;"></div>
                     <div class="form-group">
                         <label class="form-label">Email Address</label>
                         <input type="email" name="email" class="form-input" placeholder="rohit@example.com"
                                value="{{ old('email') }}" autocomplete="email" required>
+                        <div class="form-error" data-error-for="email"></div>
                     </div>
                     <div class="form-group">
                         <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
@@ -77,6 +82,7 @@
                             <input type="password" name="password" class="form-input" placeholder="Your password" autocomplete="current-password" required>
                             @include('frontend.partials.password-toggle')
                         </div>
+                        <div class="form-error" data-error-for="password"></div>
                     </div>
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
                         <input type="checkbox" name="remember" id="remember" value="1" style="accent-color:var(--brand);">

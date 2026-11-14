@@ -193,23 +193,38 @@ class AuthController extends Controller
 
         $user = User::where('email', $email)->first();
 
-        if ($user?->isGoogleOnly()) {
-            return response()->json([
-                'success' => false,
-                'status'  => false,
-                'error'   => 'This account uses Google. Continue with Google to sign in.',
-            ], 422);
-        }
-
-        if (! $user || ! Hash::check($validated['password'], $user->password)) {
+        if (! $user) {
             LoginThrottle::hit($email, $ip);
 
             return response()->json([
                 'success' => false,
                 'status'  => false,
-                'error'   => 'Invalid email or password.',
+                'error'   => 'No account found with this email.',
             ], 401);
         }
+
+        $passwordOk = filled($user->password)
+            && Hash::check($validated['password'], $user->password);
+
+        if (! $passwordOk) {
+            LoginThrottle::hit($email, $ip);
+
+            if ($user->isGoogleOnly()) {
+                return response()->json([
+                    'success' => false,
+                    'status'  => false,
+                    'error'   => 'This account uses Google. Continue with Google, or set a password via Forgot password.',
+                ], 422);
+            }
+
+            return response()->json([
+                'success' => false,
+                'status'  => false,
+                'error'   => 'Password is incorrect.',
+            ], 401);
+        }
+
+        $user->enablePasswordLogin();
 
         if (LoginThrottle::isDisabled($user)) {
             return response()->json([
@@ -508,6 +523,8 @@ class AuthController extends Controller
         }
 
         $request->user()->update(['password' => Hash::make($validated['new_password'])]);
+        $request->user()->enablePasswordLogin();
+
         return response()->json([
             'success' => true,
             'status'  => true,

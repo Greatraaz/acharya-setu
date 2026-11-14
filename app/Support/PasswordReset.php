@@ -59,6 +59,8 @@ class PasswordReset
         $user->forceFill([
             'password'       => Hash::make($password),
             'remember_token' => \Illuminate\Support\Str::random(60),
+            // Google accounts that set a password may also use email login.
+            'auth_provider'  => 'password',
         ])->save();
 
         $user->tokens()->delete();

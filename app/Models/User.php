@@ -85,9 +85,22 @@ class User extends Authenticatable
         return filled($this->google_id) || $this->auth_provider === 'google';
     }
 
+    /**
+     * Created via Google and has not yet chosen a password for email login.
+     * Once they set a password (forgot/reset/change), auth_provider becomes "password"
+     * while google_id stays — both Google and password sign-in work.
+     */
     public function isGoogleOnly(): bool
     {
         return $this->auth_provider === 'google';
+    }
+
+    /** Mark that this user may sign in with email + password (keeps Google link). */
+    public function enablePasswordLogin(): void
+    {
+        if ($this->auth_provider === 'google') {
+            $this->forceFill(['auth_provider' => 'password'])->save();
+        }
     }
 
     public function canUsePlatform(): bool
