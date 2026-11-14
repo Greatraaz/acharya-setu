@@ -67,162 +67,371 @@
         },
     };
 
+    // One step = one field highlight + one matching spoken line (kept in sync).
     var STEPS = [
         {
             title: 'Hello, I am Adarsh',
             kicker: 'Adarsh · Curriculum guide',
-            body: 'I will walk you through the full curriculum builder — template, months, weeks, tasks, and MCQs — using the same forms you fill manually.',
-            caption: 'Hello. I am Adarsh. Today I will show every curriculum form, field by field, just like a teammate sitting with you.',
-            speak: 'Hello. I am Adarsh. Today I will show every curriculum form, field by field, just like a teammate sitting with you.',
+            body: 'I will walk you through template, months, weeks, tasks, and MCQs — one field at a time.',
+            caption: 'Hello. I am Adarsh. I will explain each curriculum field, one by one, while highlighting it on the form.',
+            speak: 'Hello. I am Adarsh. I will explain each curriculum field, one by one, while highlighting it on the form.',
             form: 'template',
             highlight: null,
             filled: {},
-            fieldNote: 'We start with the starter template form',
-            durationSec: 12,
+            fieldNote: 'Starter template form',
         },
         {
-            title: 'Template: Industry',
+            title: 'Template name',
             kicker: 'Template form · Required',
-            body: 'Industry or domain decides which mentors can see this starter plan. Pick the same industry mentors choose during onboarding.',
-            caption: 'On the template form, first choose Industry or domain. Mentors only see the template that matches their industry.',
-            speak: 'On the template form, first choose Industry or domain. Mentors only see the template that matches their industry.',
-            form: 'template',
-            highlight: 'expertise_field',
-            filled: { expertise_field: true },
-            fieldNote: 'Highlighting Industry / domain',
-            durationSec: 11,
-        },
-        {
-            title: 'Template: Name',
-            kicker: 'Template form · Required',
-            body: 'Template name should be short and clear. Mentors will recognize it when they clone the plan for a mentee.',
-            caption: 'Next is Template name. Keep it friendly and clear, like Engineering and Technology Path. You can speak it or type it.',
-            speak: 'Next is Template name. Keep it friendly and clear, like Engineering and Technology Path. You can speak it or type it.',
+            body: 'Give the starter plan a short, clear name mentors will recognize. If that name is already used, pick another.',
+            caption: 'First field: Template name. Keep it clear, like Engineering and Technology Path. If the name is already taken, choose a different one.',
+            speak: 'First field: Template name. Keep it clear, like Engineering and Technology Path. If the name is already taken, choose a different one.',
             form: 'template',
             highlight: 'name',
-            filled: { expertise_field: true, name: true },
+            filled: { name: true },
             fieldNote: 'Highlighting Template name',
-            durationSec: 12,
         },
         {
-            title: 'Template: Description & Skills',
+            title: 'Industry / domain',
+            kicker: 'Template form · Required',
+            body: 'Choose the industry next. Mentors only see templates that match their industry.',
+            caption: 'Next field: Industry or domain. Choose the industry so the right mentors can see this template.',
+            speak: 'Next field: Industry or domain. Choose the industry so the right mentors can see this template.',
+            form: 'template',
+            highlight: 'expertise_field',
+            filled: { name: true, expertise_field: true },
+            fieldNote: 'Highlighting Industry / domain',
+        },
+        {
+            title: 'Icon',
             kicker: 'Template form · Optional',
-            body: 'Description helps mentors understand the plan. Skills are optional admin tags. Then save and open Build to add months.',
-            caption: 'Description and Skills are optional. Fill them by voice, or say skip. Then create the template and click Build.',
-            speak: 'Description and Skills are optional. Fill them by voice, or say skip. Then create the template and click Build.',
+            body: 'Pick a simple emoji icon for the template card.',
+            caption: 'This is the Icon field. You can add an emoji so the template is easy to spot.',
+            speak: 'This is the Icon field. You can add an emoji so the template is easy to spot.',
+            form: 'template',
+            highlight: 'icon',
+            filled: { name: true, expertise_field: true, icon: true },
+            fieldNote: 'Highlighting Icon',
+        },
+        {
+            title: 'Accent color',
+            kicker: 'Template form · Optional',
+            body: 'Accent color styles the template card in lists.',
+            caption: 'This is Accent color. Choose a color for the template card.',
+            speak: 'This is Accent color. Choose a color for the template card.',
+            form: 'template',
+            highlight: 'color',
+            filled: { name: true, expertise_field: true, icon: true, color: true },
+            fieldNote: 'Highlighting Accent color',
+        },
+        {
+            title: 'Description',
+            kicker: 'Template form · Optional',
+            body: 'A short description helps mentors understand the plan before they assign it.',
+            caption: 'This is Description. Explain what the starter plan covers, or say skip.',
+            speak: 'This is Description. Explain what the starter plan covers, or say skip.',
             form: 'template',
             highlight: 'description',
-            filled: { expertise_field: true, name: true, description: true, expertise_tags: true, icon: true, color: true, is_active: true },
+            filled: { name: true, expertise_field: true, icon: true, color: true, description: true },
             fieldNote: 'Highlighting Description',
-            durationSec: 11,
         },
         {
-            title: 'Month form',
-            kicker: 'Build · Add month',
-            body: 'Inside Build, add months one by one. Month number, title, theme, description, learning outcomes, and milestone badge all support voice fill.',
-            caption: 'Now the Month form. Choose the month number, then speak the title, theme, description, learning outcomes, and badge name.',
-            speak: 'Now the Month form. Choose the month number, then speak the title, theme, description, learning outcomes, and badge name.',
+            title: 'Skills',
+            kicker: 'Template form · Optional',
+            body: 'Skills are optional tags for admin reference.',
+            caption: 'This is Skills. Add optional skill tags, or say skip.',
+            speak: 'This is Skills. Add optional skill tags, or say skip.',
+            form: 'template',
+            highlight: 'expertise_tags',
+            filled: { name: true, expertise_field: true, icon: true, color: true, description: true, expertise_tags: true, is_active: true },
+            fieldNote: 'Highlighting Skills',
+        },
+        {
+            title: 'Month number',
+            kicker: 'Month form · Required',
+            body: 'After creating the template, open Build and add months.',
+            caption: 'Now the Month form. First choose the Month number, for example Month 1.',
+            speak: 'Now the Month form. First choose the Month number, for example Month 1.',
+            form: 'month',
+            highlight: 'month_number',
+            filled: { month_number: true },
+            fieldNote: 'Highlighting Month number',
+        },
+        {
+            title: 'Month theme',
+            kicker: 'Month form · Optional',
+            body: 'Theme is a short label like Foundation or Deep Dive.',
+            caption: 'This is Theme. Say a short theme name, like Foundation.',
+            speak: 'This is Theme. Say a short theme name, like Foundation.',
+            form: 'month',
+            highlight: 'theme',
+            filled: { month_number: true, theme: true },
+            fieldNote: 'Highlighting Theme',
+        },
+        {
+            title: 'Month title',
+            kicker: 'Month form · Required',
+            body: 'Title is the main heading mentees see for the month.',
+            caption: 'This is Month title. Speak a clear title for the month.',
+            speak: 'This is Month title. Speak a clear title for the month.',
             form: 'month',
             highlight: 'title',
             filled: { month_number: true, theme: true, title: true },
-            fieldNote: 'Month form preview',
-            durationSec: 12,
+            fieldNote: 'Highlighting Month title',
         },
         {
-            title: 'Month: Outcomes & Badge',
-            kicker: 'Build · Month details',
-            body: 'Learning outcomes are one per line for mentees. The milestone badge is earned when the month is fully completed.',
-            caption: 'For learning outcomes, say one line at a time. The milestone badge is the reward name mentees earn at one hundred percent.',
-            speak: 'For learning outcomes, say one line at a time. The milestone badge is the reward name mentees earn at one hundred percent.',
+            title: 'Month description',
+            kicker: 'Month form · Optional',
+            body: 'Describe what the mentee should accomplish this month.',
+            caption: 'This is Month description. Explain what the mentee will accomplish this month.',
+            speak: 'This is Month description. Explain what the mentee will accomplish this month.',
+            form: 'month',
+            highlight: 'description',
+            filled: { month_number: true, theme: true, title: true, description: true },
+            fieldNote: 'Highlighting Month description',
+        },
+        {
+            title: 'Learning outcomes',
+            kicker: 'Month form · Optional',
+            body: 'Learning outcomes appear as bullet points. Enter one outcome per line.',
+            caption: 'This is Learning outcomes. Say one outcome at a time, one per line.',
+            speak: 'This is Learning outcomes. Say one outcome at a time, one per line.',
             form: 'month',
             highlight: 'learning_outcomes',
-            filled: { month_number: true, theme: true, title: true, description: true, learning_outcomes: true, milestone_badge: true },
-            fieldNote: 'Highlighting Learning Outcomes',
-            durationSec: 12,
+            filled: { month_number: true, theme: true, title: true, description: true, learning_outcomes: true },
+            fieldNote: 'Highlighting Learning outcomes',
         },
         {
-            title: 'Week form',
-            kicker: 'Build · Add week',
-            body: 'Each month has weeks. Fill week number, title, focus statement, private mentor guide, and optional intro video URL.',
-            caption: 'Next is the Week form. Speak the week title and focus. Mentor guide is private coaching notes for the mentor only.',
-            speak: 'Next is the Week form. Speak the week title and focus. Mentor guide is private coaching notes for the mentor only.',
+            title: 'Milestone badge',
+            kicker: 'Month form · Optional',
+            body: 'The badge name is awarded when the month is fully completed.',
+            caption: 'This is Milestone badge. Say the reward name mentees earn at one hundred percent.',
+            speak: 'This is Milestone badge. Say the reward name mentees earn at one hundred percent.',
+            form: 'month',
+            highlight: 'milestone_badge',
+            filled: { month_number: true, theme: true, title: true, description: true, learning_outcomes: true, milestone_badge: true },
+            fieldNote: 'Highlighting Milestone badge',
+        },
+        {
+            title: 'Week number',
+            kicker: 'Week form · Required',
+            body: 'Inside a month, add weeks for the weekly plan.',
+            caption: 'Now the Week form. First choose the Week number.',
+            speak: 'Now the Week form. First choose the Week number.',
+            form: 'week',
+            highlight: 'week_number',
+            filled: { week_number: true },
+            fieldNote: 'Highlighting Week number',
+        },
+        {
+            title: 'Week title',
+            kicker: 'Week form · Required',
+            body: 'Week title is the weekly heading mentees see.',
+            caption: 'This is Week title. Speak the title for this week.',
+            speak: 'This is Week title. Speak the title for this week.',
             form: 'week',
             highlight: 'title',
-            filled: { week_number: true, title: true, focus: true },
-            fieldNote: 'Week form preview',
-            durationSec: 12,
+            filled: { week_number: true, title: true },
+            fieldNote: 'Highlighting Week title',
         },
         {
-            title: 'Week: Mentor guide',
-            kicker: 'Build · Week details',
-            body: 'Use Guided voice or the field mic beside Mentor Guide. Then save the week and open it to add tasks.',
-            caption: 'You can dictate the mentor guide, add an intro video link if needed, then save and open the week to add tasks.',
-            speak: 'You can dictate the mentor guide, add an intro video link if needed, then save and open the week to add tasks.',
+            title: 'Week focus',
+            kicker: 'Week form · Optional',
+            body: 'Focus is a short statement of what this week is about.',
+            caption: 'This is Focus. Say the main focus for the week in one short line.',
+            speak: 'This is Focus. Say the main focus for the week in one short line.',
+            form: 'week',
+            highlight: 'focus',
+            filled: { week_number: true, title: true, focus: true },
+            fieldNote: 'Highlighting Focus',
+        },
+        {
+            title: 'Mentor guide',
+            kicker: 'Week form · Private',
+            body: 'Mentor guide is private coaching notes. Mentees do not see this.',
+            caption: 'This is Mentor guide. Dictate private coaching notes for the mentor only.',
+            speak: 'This is Mentor guide. Dictate private coaching notes for the mentor only.',
             form: 'week',
             highlight: 'mentor_guide',
-            filled: { week_number: true, title: true, focus: true, mentor_guide: true, video_url: true },
-            fieldNote: 'Highlighting Mentor Guide',
-            durationSec: 11,
+            filled: { week_number: true, title: true, focus: true, mentor_guide: true },
+            fieldNote: 'Highlighting Mentor guide',
         },
         {
-            title: 'Task form',
-            kicker: 'Build · Add task',
-            body: 'Tasks are what mentees complete each week. Fill title, description, type, submission type, and estimated minutes.',
-            caption: 'This is the Task form. Speak the title and description. Then choose type and submission type from the dropdowns.',
-            speak: 'This is the Task form. Speak the title and description. Then choose type and submission type from the dropdowns.',
+            title: 'Intro video URL',
+            kicker: 'Week form · Optional',
+            body: 'Optional intro video link for the week.',
+            caption: 'This is Intro video URL. Paste a video link if you have one, or leave it blank.',
+            speak: 'This is Intro video U R L. Paste a video link if you have one, or leave it blank.',
+            form: 'week',
+            highlight: 'video_url',
+            filled: { week_number: true, title: true, focus: true, mentor_guide: true, video_url: true },
+            fieldNote: 'Highlighting Intro video URL',
+        },
+        {
+            title: 'Task title',
+            kicker: 'Task form · Required',
+            body: 'Tasks are what mentees complete each week.',
+            caption: 'Now the Task form. First fill Task title.',
+            speak: 'Now the Task form. First fill Task title.',
             form: 'task',
             highlight: 'title',
-            filled: { title: true, description: true },
-            fieldNote: 'Task form preview',
-            durationSec: 12,
+            filled: { title: true },
+            fieldNote: 'Highlighting Task title',
         },
         {
-            title: 'Task: Type & submission',
-            kicker: 'Build · Task details',
-            body: 'Type can be task, reading, video, or practice. Submission can be none, text, file, or link. Mark required if mentees must complete it.',
-            caption: 'Say the task type, for example task or reading. Then say the submission type, like text or file. Save when ready.',
-            speak: 'Say the task type, for example task or reading. Then say the submission type, like text or file. Save when ready.',
+            title: 'Task description',
+            kicker: 'Task form · Optional',
+            body: 'Describe what the mentee should do.',
+            caption: 'This is Task description. Explain the task clearly.',
+            speak: 'This is Task description. Explain the task clearly.',
+            form: 'task',
+            highlight: 'description',
+            filled: { title: true, description: true },
+            fieldNote: 'Highlighting Task description',
+        },
+        {
+            title: 'Task type',
+            kicker: 'Task form · Required',
+            body: 'Type can be task, reading, video, or practice.',
+            caption: 'This is Type. Choose task, reading, video, or practice.',
+            speak: 'This is Type. Choose task, reading, video, or practice.',
             form: 'task',
             highlight: 'type',
-            filled: { title: true, description: true, type: true, submission_type: true, estimated_minutes: true, is_required: true },
+            filled: { title: true, description: true, type: true },
             fieldNote: 'Highlighting Type',
-            durationSec: 12,
         },
         {
-            title: 'MCQ form',
-            kicker: 'Build · Add quiz question',
-            body: 'MCQs check understanding. Fill topic, question, options A to D, explanation, and difficulty. Voice fill works on each option.',
-            caption: 'Finally, the MCQ form. Speak the question and each option. You can also dictate the explanation and choose difficulty.',
-            speak: 'Finally, the MCQ form. Speak the question and each option. You can also dictate the explanation and choose difficulty.',
+            title: 'Submission type',
+            kicker: 'Task form · Required',
+            body: 'Submission can be none, text, file, or link.',
+            caption: 'This is Submission type. Choose none, text, file, or link.',
+            speak: 'This is Submission type. Choose none, text, file, or link.',
+            form: 'task',
+            highlight: 'submission_type',
+            filled: { title: true, description: true, type: true, submission_type: true },
+            fieldNote: 'Highlighting Submission type',
+        },
+        {
+            title: 'Estimated minutes',
+            kicker: 'Task form · Optional',
+            body: 'How long the task should take.',
+            caption: 'This is Estimated minutes. Say how many minutes the task should take.',
+            speak: 'This is Estimated minutes. Say how many minutes the task should take.',
+            form: 'task',
+            highlight: 'estimated_minutes',
+            filled: { title: true, description: true, type: true, submission_type: true, estimated_minutes: true },
+            fieldNote: 'Highlighting Est. Minutes',
+        },
+        {
+            title: 'Required toggle',
+            kicker: 'Task form',
+            body: 'Mark whether the mentee must complete this task.',
+            caption: 'This is the Required toggle. Turn it on if the mentee must complete this task.',
+            speak: 'This is the Required toggle. Turn it on if the mentee must complete this task.',
+            form: 'task',
+            highlight: 'is_required',
+            filled: { title: true, description: true, type: true, submission_type: true, estimated_minutes: true, is_required: true },
+            fieldNote: 'Highlighting Required',
+        },
+        {
+            title: 'MCQ topic',
+            kicker: 'MCQ form',
+            body: 'MCQs check understanding for the week.',
+            caption: 'Now the MCQ form. First fill Topic.',
+            speak: 'Now the M C Q form. First fill Topic.',
+            form: 'mcq',
+            highlight: 'topic',
+            filled: { topic: true },
+            fieldNote: 'Highlighting Topic',
+        },
+        {
+            title: 'MCQ question',
+            kicker: 'MCQ form · Required',
+            body: 'Write the full quiz question.',
+            caption: 'This is Question. Speak the full quiz question.',
+            speak: 'This is Question. Speak the full quiz question.',
             form: 'mcq',
             highlight: 'question',
+            filled: { topic: true, question: true },
+            fieldNote: 'Highlighting Question',
+        },
+        {
+            title: 'Option A',
+            kicker: 'MCQ form · Required',
+            body: 'Fill each answer choice. Start with Option A.',
+            caption: 'This is Option A. Speak the first answer choice.',
+            speak: 'This is Option A. Speak the first answer choice.',
+            form: 'mcq',
+            highlight: 'option_0',
+            filled: { topic: true, question: true, option_0: true },
+            fieldNote: 'Highlighting Option A',
+        },
+        {
+            title: 'Option B',
+            kicker: 'MCQ form · Required',
+            body: 'Next answer choice.',
+            caption: 'This is Option B. Speak the second answer choice.',
+            speak: 'This is Option B. Speak the second answer choice.',
+            form: 'mcq',
+            highlight: 'option_1',
             filled: { topic: true, question: true, option_0: true, option_1: true },
-            fieldNote: 'MCQ form preview',
-            durationSec: 12,
+            fieldNote: 'Highlighting Option B',
+        },
+        {
+            title: 'Option C',
+            kicker: 'MCQ form · Required',
+            body: 'Third answer choice.',
+            caption: 'This is Option C. Speak the third answer choice.',
+            speak: 'This is Option C. Speak the third answer choice.',
+            form: 'mcq',
+            highlight: 'option_2',
+            filled: { topic: true, question: true, option_0: true, option_1: true, option_2: true },
+            fieldNote: 'Highlighting Option C',
+        },
+        {
+            title: 'Option D',
+            kicker: 'MCQ form · Required',
+            body: 'Fourth answer choice.',
+            caption: 'This is Option D. Speak the fourth answer choice.',
+            speak: 'This is Option D. Speak the fourth answer choice.',
+            form: 'mcq',
+            highlight: 'option_3',
+            filled: { topic: true, question: true, option_0: true, option_1: true, option_2: true, option_3: true },
+            fieldNote: 'Highlighting Option D',
+        },
+        {
+            title: 'MCQ explanation',
+            kicker: 'MCQ form · Optional',
+            body: 'Explain why the correct answer is right.',
+            caption: 'This is Explanation. Say why the correct answer is right.',
+            speak: 'This is Explanation. Say why the correct answer is right.',
+            form: 'mcq',
+            highlight: 'explanation',
+            filled: { topic: true, question: true, option_0: true, option_1: true, option_2: true, option_3: true, explanation: true, difficulty: true },
+            fieldNote: 'Highlighting Explanation',
         },
         {
             title: 'You are ready',
             kicker: 'Full curriculum flow',
-            body: 'Template → Months → Weeks → Tasks → MCQs. Use Guided voice for the whole form, or the mic on one field. Review, then save.',
-            caption: 'That is the full flow. Build the template, then months, weeks, tasks, and MCQs. Speak clearly, review the fields, and save.',
-            speak: 'That is the full flow. Build the template, then months, weeks, tasks, and MCQs. Speak clearly, review the fields, and save.',
+            body: 'Template → Months → Weeks → Tasks → MCQs. Use Guided voice or field mics, review, then save.',
+            caption: 'That is the full flow. Build template, months, weeks, tasks, and MCQs. Review each field, then save.',
+            speak: 'That is the full flow. Build template, months, weeks, tasks, and MCQs. Review each field, then save.',
             form: 'template',
             highlight: null,
             filled: { expertise_field: true, name: true, description: true, expertise_tags: true, icon: true, color: true, is_active: true },
             fieldNote: 'All set — start whenever you are ready',
-            durationSec: 12,
         },
     ];
 
     function estimateSpeechSec(text) {
         var words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
-        // Speech rate ~0.94 ≈ 2.1–2.3 words/sec; add buffer so lines never cut off.
-        return Math.max(8, Math.ceil(words / 2.05) + 2);
+        // Speak rate ~0.92; keep enough room so lines never cut off.
+        return Math.max(5, Math.ceil(words / 2.0) + 2);
     }
 
-    // Ensure every step lasts at least as long as its spoken sentence.
+    // Duration drives the progress bar; advancement is gated on speech finishing.
     STEPS.forEach(function (step) {
-        step.durationSec = Math.max(step.durationSec || 0, estimateSpeechSec(step.speak || step.caption));
+        step.durationSec = estimateSpeechSec(step.speak || step.caption);
     });
 
     function $(sel, root) {
@@ -376,6 +585,9 @@
         var voicesPromise = null;
         var speechDoneFor = -1;
         var speechHoldUntil = 0;
+        var advanceTimer = null;
+        var stepStartedAt = 0;
+        var speechKeepAliveId = null;
 
         function isSpeechBusy() {
             try {
@@ -385,9 +597,69 @@
             }
         }
 
+        function clearAdvanceTimer() {
+            if (advanceTimer) {
+                clearTimeout(advanceTimer);
+                advanceTimer = null;
+            }
+        }
+
+        function startSpeechKeepAlive() {
+            stopSpeechKeepAlive();
+            // Chrome often auto-pauses speechSynthesis mid-utterance; nudge it awake.
+            speechKeepAliveId = setInterval(function () {
+                if (!playing || !window.speechSynthesis) return;
+                try {
+                    if (window.speechSynthesis.paused || window.speechSynthesis.speaking) {
+                        window.speechSynthesis.resume();
+                    }
+                } catch (e) {}
+            }, 250);
+        }
+
+        function stopSpeechKeepAlive() {
+            if (speechKeepAliveId) {
+                clearInterval(speechKeepAliveId);
+                speechKeepAliveId = null;
+            }
+        }
+
+        function goToStep(nextIndex, shouldSpeak) {
+            nextIndex = Math.max(0, Math.min(STEPS.length - 1, nextIndex));
+            index = nextIndex;
+            positionSec = stepStartSec(index);
+            spokenIndex = -1;
+            speechDoneFor = -1;
+            clearAdvanceTimer();
+            renderStepContent();
+            syncInteractiveUi();
+            if (shouldSpeak && playing) speakCurrentStep();
+        }
+
+        function advanceAfterSpeech(fromIndex) {
+            if (!playing || fromIndex !== index) return;
+            if (index >= STEPS.length - 1) {
+                onEnded();
+                return;
+            }
+            // Move highlight + caption together with the next spoken line.
+            goToStep(index + 1, true);
+        }
+
         function markSpeechDone(stepIndex, token) {
             if (token !== speakToken) return;
-            if (stepIndex === index) speechDoneFor = stepIndex;
+            if (stepIndex !== index) return;
+            if (speechDoneFor === stepIndex) return;
+            speechDoneFor = stepIndex;
+            // Snap progress to end of this step, then continue to the next field.
+            positionSec = stepStartSec(index + 1);
+            syncInteractiveUi();
+            clearAdvanceTimer();
+            advanceTimer = setTimeout(function () {
+                advanceTimer = null;
+                if (!playing || speakToken !== token || index !== stepIndex) return;
+                advanceAfterSpeech(stepIndex);
+            }, 450);
         }
 
         function lang() {
@@ -407,7 +679,18 @@
         function stopSpeech() {
             speakToken += 1;
             speechHoldUntil = 0;
+            clearAdvanceTimer();
             try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+            // Chrome can stay stuck in a paused/muted state after cancel.
+            try { window.speechSynthesis && window.speechSynthesis.resume(); } catch (e) {}
+        }
+
+        function unlockSpeechEngine() {
+            if (!window.speechSynthesis) return;
+            try {
+                // Resume in the user-gesture stack so Chrome unmutes after pause/cancel.
+                window.speechSynthesis.resume();
+            } catch (e) {}
         }
 
         function ensureVoicesReady() {
@@ -442,73 +725,98 @@
         }
 
         function queueUtterance(text, token, stepIndex) {
-            var u = new SpeechSynthesisUtterance(text);
-            u.lang = lang();
-            u.rate = 0.92;
-            var voice = pickVoice(u.lang);
-            if (voice) u.voice = voice;
-
+            var voice = pickVoice(lang());
             var started = false;
-            u.onstart = function () { started = true; };
-            u.onend = function () { markSpeechDone(stepIndex, token); };
-            u.onerror = function () { markSpeechDone(stepIndex, token); };
+            var settling = false;
 
-            try {
-                // Chrome can stay "paused" and silently drop the first speak.
-                window.speechSynthesis.resume();
-                window.speechSynthesis.speak(u);
-                window.speechSynthesis.resume();
-            } catch (e) {
+            function finish(fromError) {
+                if (settling) return;
+                if (token !== speakToken || stepIndex !== index) return;
+                settling = true;
                 markSpeechDone(stepIndex, token);
             }
 
-            // If the first cold-start utterance was eaten, retry once.
-            setTimeout(function () {
+            function speakOnce(isRetry) {
                 if (token !== speakToken || stepIndex !== index || !playing) return;
-                if (started || window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
+                var u = new SpeechSynthesisUtterance(text);
+                u.lang = lang();
+                u.rate = 0.92;
+                u.volume = 1;
+                if (voice) u.voice = voice;
 
-                var retry = new SpeechSynthesisUtterance(text);
-                retry.lang = u.lang;
-                retry.rate = u.rate;
-                if (voice) retry.voice = voice;
-                retry.onend = function () { markSpeechDone(stepIndex, token); };
-                retry.onerror = function () { markSpeechDone(stepIndex, token); };
+                u.onstart = function () {
+                    started = true;
+                    try { window.speechSynthesis.resume(); } catch (e) {}
+                };
+                u.onend = function () { finish(false); };
+                u.onerror = function (ev) {
+                    // Ignore cancel/interrupt from our own retry handoff — do not advance early.
+                    var err = (ev && ev.error) || '';
+                    if (err === 'interrupted' || err === 'canceled' || err === 'cancelled') return;
+                    if (!started && !isRetry) return;
+                    finish(true);
+                };
+
                 try {
-                    window.speechSynthesis.cancel();
+                    // Chrome can stay "paused" and silently drop speak() after pause/cancel.
                     window.speechSynthesis.resume();
-                    window.speechSynthesis.speak(retry);
+                    window.speechSynthesis.speak(u);
                     window.speechSynthesis.resume();
                 } catch (e) {
-                    markSpeechDone(stepIndex, token);
+                    finish(true);
                 }
-            }, 280);
+            }
+
+            speakOnce(false);
+
+            // Retry if the utterance never starts (common after pause → play).
+            function retryIfSilent(delay) {
+                setTimeout(function () {
+                    if (token !== speakToken || stepIndex !== index || !playing || settling) return;
+                    if (started || window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
+                    try {
+                        window.speechSynthesis.cancel();
+                        window.speechSynthesis.resume();
+                    } catch (e) {}
+                    speakOnce(true);
+                }, delay);
+            }
+            retryIfSilent(320);
+            retryIfSilent(900);
         }
 
         function speakCurrentStep() {
-            if (!window.speechSynthesis) {
-                speechDoneFor = index;
-                return;
-            }
             var step = STEPS[index];
             if (!step) return;
 
             var stepIndex = index;
-            var text = step.speak;
+            var text = String(step.speak || step.caption || '').trim();
             spokenIndex = stepIndex;
             speechDoneFor = -1;
-            speechHoldUntil = Date.now() + (estimateSpeechSec(text) * 1000) + 1500;
+            stepStartedAt = Date.now();
+            speechHoldUntil = stepStartedAt + (estimateSpeechSec(text) * 1000) + 3000;
+            clearAdvanceTimer();
+            // Highlight + caption are already on this step; snap progress to its start.
+            positionSec = stepStartSec(stepIndex);
+            renderStepContent();
+            syncInteractiveUi();
 
             // Bump token and cancel any previous speech, then wait briefly.
             // Immediate cancel()+speak() is a known Chrome cold-start failure.
             var token = ++speakToken;
+            if (!window.speechSynthesis || !text) {
+                markSpeechDone(stepIndex, token);
+                return;
+            }
             try { window.speechSynthesis.cancel(); } catch (e) {}
+            try { window.speechSynthesis.resume(); } catch (e) {}
 
             ensureVoicesReady().then(function () {
                 if (token !== speakToken || stepIndex !== index || !playing) return;
                 setTimeout(function () {
                     if (token !== speakToken || stepIndex !== index || !playing) return;
                     queueUtterance(text, token, stepIndex);
-                }, 90);
+                }, 140);
             });
         }
 
@@ -562,6 +870,8 @@
 
         function onEnded() {
             ended = true;
+            clearAdvanceTimer();
+            stopSpeechKeepAlive();
             positionSec = totalSec();
             index = STEPS.length - 1;
             stopTicker();
@@ -578,25 +888,26 @@
             lastTickAt = now;
             if (delta < 0 || delta > 1) delta = 0.1;
 
-            positionSec = Math.min(totalSec(), positionSec + delta);
-            var nextIndex = stepIndexAtSec(Math.min(positionSec, Math.max(0, totalSec() - 0.01)));
+            // Progress within the current field only; step changes when speech ends.
+            var start = stepStartSec(index);
+            var dur = (STEPS[index] && STEPS[index].durationSec) || 6;
+            var elapsed = stepStartedAt ? ((now - stepStartedAt) / 1000) : 0;
+            var local = Math.min(dur * 0.96, Math.max(0, elapsed));
+            positionSec = Math.min(totalSec(), start + local);
 
-            // Never cut a sentence short — hold on this step until speech finishes.
-            if (nextIndex !== index) {
-                var speechStillGoing = isSpeechBusy() || (speechDoneFor !== index && now < speechHoldUntil);
-                if (speechStillGoing) {
-                    positionSec = Math.max(positionSec, stepStartSec(index + 1) - 0.05);
-                    // Stretch timeline while we wait so progress does not jump backwards.
-                    syncInteractiveUi();
-                    return;
+            // Keep audio alive if Chrome auto-paused mid line.
+            try {
+                if (window.speechSynthesis && window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
                 }
-                index = nextIndex;
-                renderStepContent();
-                speakCurrentStep();
+            } catch (e) {}
+
+            // Safety net: if Chrome never fires onend, advance after hold window.
+            if (speechDoneFor !== index && now > speechHoldUntil && !isSpeechBusy()) {
+                markSpeechDone(index, speakToken);
             }
 
             syncInteractiveUi();
-            if (positionSec >= totalSec() && (speechDoneFor === index || !isSpeechBusy())) onEnded();
         }
 
         function playInteractive() {
@@ -606,53 +917,97 @@
                 index = 0;
                 spokenIndex = -1;
             }
+            // Unlock inside the click gesture so Chrome is not muted after pause.
+            unlockSpeechEngine();
             setPlayingUi(true);
             ended = false;
             stopTicker();
+            startSpeechKeepAlive();
 
-            // Wait for voices, then start clock + first sentence together.
-            // Starting the ticker earlier made the first line appear while audio was still silent.
+            // Force current line to speak again after pause (spokenIndex was cleared).
+            spokenIndex = -1;
+            speechDoneFor = -1;
+
+            // Wait for voices, then start clock + current sentence together.
             ensureVoicesReady().then(function () {
                 if (!playing) return;
                 lastTickAt = Date.now();
+                stepStartedAt = Date.now();
                 tickId = setInterval(tick, 100);
                 applyStepFromPosition(true);
+                // Extra safety: if applyStep skipped speak, force it.
+                if (spokenIndex !== index) speakCurrentStep();
             });
         }
 
         function pauseInteractive() {
             setPlayingUi(false);
             stopTicker();
+            stopSpeechKeepAlive();
             stopSpeech();
+            // So resume always re-speaks the current step instead of staying mute.
+            spokenIndex = -1;
+            speechDoneFor = -1;
             syncInteractiveUi();
         }
 
         function seekInteractive(sec, keepPlaying) {
             var total = totalSec();
             positionSec = Math.max(0, Math.min(total, sec));
-            ended = positionSec >= total;
+            ended = positionSec >= total - 0.05;
             var wasPlaying = keepPlaying != null ? keepPlaying : playing;
+            var nextIndex = stepIndexAtSec(Math.min(positionSec, Math.max(0, total - 0.01)));
 
             stopTicker();
             stopSpeech();
             spokenIndex = -1;
-            applyStepFromPosition(false);
+            speechDoneFor = -1;
+            index = nextIndex;
+            // Snap to the start of that field so highlight + voice stay aligned.
+            positionSec = stepStartSec(index);
+            renderStepContent();
+            syncInteractiveUi();
 
             if (ended) {
+                stopSpeechKeepAlive();
                 setPlayingUi(false);
-                syncInteractiveUi();
                 return;
             }
 
-            if (wasPlaying) playInteractive();
-            else {
+            if (wasPlaying) {
+                unlockSpeechEngine();
+                setPlayingUi(true);
+                startSpeechKeepAlive();
+                lastTickAt = Date.now();
+                stepStartedAt = Date.now();
+                tickId = setInterval(tick, 100);
+                speakCurrentStep();
+            } else {
+                stopSpeechKeepAlive();
                 setPlayingUi(false);
-                syncInteractiveUi();
             }
         }
 
         function skipBy(deltaSec) {
-            seekInteractive(positionSec + deltaSec, playing || !ended);
+            // Jump by whole fields so highlight + voice stay paired.
+            var dir = deltaSec >= 0 ? 1 : -1;
+            var next = Math.max(0, Math.min(STEPS.length - 1, index + dir));
+            var wasPlaying = playing;
+            stopTicker();
+            stopSpeech();
+            ended = false;
+            goToStep(next, false);
+            if (wasPlaying) {
+                unlockSpeechEngine();
+                setPlayingUi(true);
+                startSpeechKeepAlive();
+                lastTickAt = Date.now();
+                stepStartedAt = Date.now();
+                tickId = setInterval(tick, 100);
+                speakCurrentStep();
+            } else {
+                stopSpeechKeepAlive();
+            }
         }
 
         function playVideo() {
@@ -708,18 +1063,8 @@
         }
 
         function primeSpeechEngine() {
-            if (!window.speechSynthesis) return;
             ensureVoicesReady();
-            try {
-                // Unlock Chrome speech inside the user-click gesture (fixes silent first line).
-                var warm = new SpeechSynthesisUtterance(' ');
-                warm.volume = 0;
-                warm.rate = 2;
-                warm.lang = lang();
-                window.speechSynthesis.speak(warm);
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.resume();
-            } catch (e) {}
+            unlockSpeechEngine();
         }
 
         function openModal() {
@@ -764,8 +1109,13 @@
                 else playVideo();
                 return;
             }
-            if (playing) pauseInteractive();
-            else playInteractive();
+            if (playing) {
+                pauseInteractive();
+            } else {
+                // Must unlock speech in this same click, before async play work.
+                unlockSpeechEngine();
+                playInteractive();
+            }
         });
 
         replayBtn && replayBtn.addEventListener('click', function (e) {
@@ -777,9 +1127,9 @@
                 return;
             }
             ended = false;
-            positionSec = 0;
-            index = 0;
-            spokenIndex = -1;
+            stopSpeech();
+            goToStep(0, false);
+            unlockSpeechEngine();
             playInteractive();
         });
 
@@ -845,7 +1195,14 @@
         }
 
         langSelect && langSelect.addEventListener('change', function () {
-            if (!hasVideo && playing) speakCurrentStep();
+            if (hasVideo) return;
+            if (playing) {
+                unlockSpeechEngine();
+                speakCurrentStep();
+            } else {
+                // Keep caption language in sync even when paused.
+                renderStepContent();
+            }
         });
 
         skipNext && skipNext.addEventListener('change', function () {

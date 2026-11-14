@@ -104,7 +104,7 @@
 
                 <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-1.5">
-                        <button type="button" data-guide-back class="inline-flex items-center justify-center w-9 h-9 rounded-full text-white hover:bg-white/10 transition-colors" aria-label="Back 10 seconds" title="Back">
+                        <button type="button" data-guide-back class="inline-flex items-center justify-center w-9 h-9 rounded-full text-white hover:bg-white/10 transition-colors" aria-label="Previous field" title="Previous field">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/>
                             </svg>
@@ -113,7 +113,7 @@
                             <svg data-guide-play-icon xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="currentColor" viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5-9-5.5z"/></svg>
                             <svg data-guide-pause-icon xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 16 16"><path d="M5 2h2.5v12H5V2zm3.5 0H11v12H8.5V2z"/></svg>
                         </button>
-                        <button type="button" data-guide-forward class="inline-flex items-center justify-center w-9 h-9 rounded-full text-white hover:bg-white/10 transition-colors" aria-label="Forward 10 seconds" title="Forward">
+                        <button type="button" data-guide-forward class="inline-flex items-center justify-center w-9 h-9 rounded-full text-white hover:bg-white/10 transition-colors" aria-label="Next field" title="Next field">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3"/>
                             </svg>
@@ -267,22 +267,30 @@
     }
     .va-field__mic {
         position: absolute;
-        right: .45rem;
-        top: .4rem;
-        width: 28px;
-        height: 28px;
-        border-radius: 999px;
+        right: .55rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: #eef2ff;
-        color: #4338ca;
-        border: 1px solid #c7d2fe;
+        background: transparent;
+        color: #9ca3af;
+        border: none;
+        pointer-events: none;
+        line-height: 0;
+    }
+    .va-field__mic svg {
+        width: 1rem;
+        height: 1rem;
+        display: block;
     }
     .va-field.is-active .va-field__mic {
-        background: #4f46e5;
-        color: #fff;
-        border-color: #6366f1;
+        background: transparent;
+        color: #4f46e5;
+        border: none;
     }
     .va-field__hint {
         margin-top: .3rem;

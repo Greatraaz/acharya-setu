@@ -168,7 +168,20 @@ class CurriculumController extends Controller
             })
             ->values();
 
-        return view('admin.curriculum.templates.index', compact('templates', 'industries', 'grouped', 'unassigned'));
+        $existingTemplateNames = EducationStream::query()
+            ->where('is_template', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->filter()
+            ->values();
+
+        return view('admin.curriculum.templates.index', compact(
+            'templates',
+            'industries',
+            'grouped',
+            'unassigned',
+            'existingTemplateNames'
+        ));
     }
 
     public function storeTemplate(Request $request)
@@ -716,6 +729,8 @@ class CurriculumController extends Controller
             'expertise_tags'   => 'nullable|string',
             'is_active'        => 'nullable|boolean',
             'sort_order'       => 'nullable|integer',
+        ], [
+            'name.unique' => 'This template name is already taken. Please choose another name.',
         ]);
     }
 

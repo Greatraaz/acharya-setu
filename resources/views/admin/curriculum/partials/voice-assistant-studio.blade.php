@@ -3,13 +3,15 @@
     $vaStoreUrl = $vaStoreUrl ?? route('admin.curriculum.templates.store');
     $vaTitle = $vaTitle ?? 'Create with Adarsh';
     $vaSubtitle = $vaSubtitle ?? 'Speak or type — Adarsh will walk you through each form field';
+    $vaExistingNames = $existingTemplateNames ?? collect();
 @endphp
 
 <div id="voice-assistant-studio"
      class="va-studio fixed inset-0 z-[95] hidden"
      data-voice-studio-shell
      data-store-url="{{ $vaStoreUrl }}"
-     data-industries='@json($vaIndustries)'>
+     data-industries='@json($vaIndustries)'
+     data-existing-names='@json($vaExistingNames)'>
     <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" data-va-backdrop></div>
 
     <div class="relative h-full w-full flex items-stretch justify-center p-3 sm:p-5 lg:p-6">

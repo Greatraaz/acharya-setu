@@ -124,7 +124,8 @@
         background: #eef2ff;
         color: #3730a3;
     }
-    .tpl-mic-btn.is-recording {
+    /* Big "Voice fill" bar mic keeps a filled button look. */
+    .tpl-voice-studio__mic.tpl-mic-btn.is-recording {
         background: #dc2626 !important;
         border-color: #dc2626 !important;
         color: #fff !important;
@@ -134,31 +135,79 @@
         0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, .35); }
         50% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
     }
-    .tpl-voice-field { position: relative; }
-    .tpl-voice-field .tpl-field-mic {
-        position: absolute;
-        right: .55rem;
-        top: 2.15rem;
-        z-index: 2;
+    /*
+     * Field + mic share one grid cell so the icon is truly vertically centered
+     * in the input/textarea (works with labels/hints above or below).
+     * Skip .flex rows (e.g. MCQ options) — those already center via flexbox.
+     */
+    .tpl-voice-field:not(.flex) {
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: stretch;
     }
-    .tpl-voice-field textarea ~ .tpl-field-mic { top: 2.35rem; }
-    .tpl-voice-field input.tpl-voice-input,
-    .tpl-voice-field textarea.tpl-voice-input { padding-right: 2.85rem; }
+    .tpl-voice-field:not(.flex) > label,
+    .tpl-voice-field:not(.flex) > .form-label {
+        grid-column: 1;
+    }
+    .tpl-voice-field:not(.flex) > input.tpl-voice-input,
+    .tpl-voice-field:not(.flex) > textarea.tpl-voice-input,
+    .tpl-voice-field:not(.flex) > .form-input.tpl-voice-input,
+    .tpl-voice-field:not(.flex) > .form-textarea.tpl-voice-input {
+        grid-column: 1;
+        grid-row: 2;
+        padding-right: 2.5rem;
+        width: 100%;
+    }
+    .tpl-voice-field:not(.flex) > .form-hint,
+    .tpl-voice-field:not(.flex) > p,
+    .tpl-voice-field:not(.flex) > .text-xs {
+        grid-column: 1;
+    }
 
-    .tpl-field-mic {
-        width: 2rem;
-        height: 2rem;
-        border-radius: .65rem;
-        border: 1px solid #e5e7eb;
-        background: #fff;
-        color: #6b7280;
-        transition: color .15s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    /* Icon-only field mic — no box; centered in the control cell. */
+    .tpl-voice-field:not(.flex) > .tpl-field-mic {
+        grid-column: 1;
+        grid-row: 2;
+        position: relative;
+        z-index: 2;
+        justify-self: end;
+        align-self: center;
+        margin-right: .55rem;
+        width: 1.5rem;
+        height: 1.5rem;
+        top: auto;
+        right: auto;
+        bottom: auto;
+        padding: 0;
+        border: none !important;
+        border-radius: 0;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: #9ca3af;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: color .15s ease, opacity .15s ease;
+        line-height: 0;
+    }
+    .tpl-field-mic svg {
+        width: 1rem;
+        height: 1rem;
+        display: block;
+        pointer-events: none;
     }
     .tpl-field-mic:hover {
         color: #4f46e5;
-        border-color: #c7d2fe;
-        background: #eef2ff;
-        box-shadow: 0 4px 10px rgba(79, 70, 229, .08);
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .tpl-field-mic.tpl-mic-btn.is-recording {
+        background: transparent !important;
+        border: none !important;
+        color: #dc2626 !important;
+        box-shadow: none !important;
+        animation: none;
     }
 
     @media (max-width: 640px) {

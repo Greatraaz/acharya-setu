@@ -1,10 +1,11 @@
 @php
     $voiceSteps = [
-        ['key' => 'expertise_field', 'label' => 'Industry / domain', 'prompt' => 'Say the industry or domain for this template.', 'type' => 'select'],
         ['key' => 'name', 'label' => 'Template name', 'prompt' => 'Say the template name.', 'type' => 'text'],
+        ['key' => 'expertise_field', 'label' => 'Industry / domain', 'prompt' => 'Say the industry or domain for this template.', 'type' => 'select'],
         ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe this starter plan for mentors.', 'type' => 'text', 'append' => true],
         ['key' => 'expertise_tags', 'label' => 'Skills', 'prompt' => 'List skills, separated by commas. Or say skip.', 'type' => 'text'],
     ];
+    $existingTemplateNames = $existingTemplateNames ?? collect();
 @endphp
 
 @include('admin.curriculum.partials.voice-studio', [
@@ -17,7 +18,11 @@
     <div class="tpl-voice-field">
         <label class="block text-sm font-medium text-gray-700 mb-1.5">Template name <span class="text-red-400">*</span></label>
         <input type="text" name="name" required maxlength="100" placeholder="e.g. Engineering & Technology Path"
-               data-voice-field="name" class="tpl-voice-input w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
+               data-voice-field="name"
+               data-template-name-input
+               data-taken-names='@json($existingTemplateNames)'
+               class="tpl-voice-input w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
+        <p data-template-name-error class="hidden mt-1.5 text-xs font-medium text-red-600" role="alert">This template name is already taken. Please choose another.</p>
         @include('admin.curriculum.partials.voice-mic', ['for' => 'name', 'label' => 'Dictate template name'])
     </div>
     <div>

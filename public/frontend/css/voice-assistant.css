@@ -244,39 +244,71 @@ body.vj-site-app .tpl-voice-studio__lang:focus {
     box-shadow: 0 0 0 3px var(--input-focus);
 }
 
-body.vj-site-app .tpl-voice-field .tpl-field-mic {
-    top: calc(1.15rem + 8px);
+body.vj-site-app .tpl-voice-field:not(.flex) {
+    display: grid;
+    grid-template-columns: 1fr;
 }
 
-body.vj-site-app .tpl-voice-field textarea.tpl-voice-input ~ .tpl-field-mic {
-    top: calc(1.15rem + 12px);
+body.vj-site-app .tpl-voice-field:not(.flex) > input.tpl-voice-input,
+body.vj-site-app .tpl-voice-field:not(.flex) > textarea.tpl-voice-input,
+body.vj-site-app .tpl-voice-field:not(.flex) > .form-input.tpl-voice-input,
+body.vj-site-app .tpl-voice-field:not(.flex) > .form-textarea.tpl-voice-input {
+    grid-column: 1;
+    grid-row: 2;
+    padding-right: 2.5rem;
+}
+
+body.vj-site-app .tpl-voice-field:not(.flex) > .tpl-field-mic {
+    grid-column: 1;
+    grid-row: 2;
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    justify-self: end;
+    align-self: center;
+    margin-right: .55rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--va-text-3, var(--va-text-2));
 }
 
 body.vj-site-app .tpl-field-mic {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--input-border);
-    background: var(--va-surface);
-    color: var(--va-text-2);
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--va-text-3, var(--va-text-2));
     padding: 0;
     line-height: 0;
 }
 
 body.vj-site-app .tpl-field-mic svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     display: block;
 }
 
 body.vj-site-app .tpl-field-mic:hover {
     color: var(--va-accent-text);
-    border-color: color-mix(in srgb, var(--brand) 45%, transparent);
-    background: var(--va-accent-soft);
-    box-shadow: none;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
 }
 
-body.vj-site-app .tpl-mic-btn.is-recording {
+body.vj-site-app .tpl-field-mic.tpl-mic-btn.is-recording {
+    background: transparent !important;
+    border: none !important;
+    color: var(--error) !important;
+    box-shadow: none !important;
+}
+
+body.vj-site-app .tpl-voice-studio__mic.tpl-mic-btn.is-recording {
     background: var(--error) !important;
     border-color: var(--error) !important;
     color: #fff !important;
@@ -727,15 +759,16 @@ body.vj-site-app #voice-assistant-guide-modal .va-field.is-active .va-field__inp
 }
 
 body.vj-site-app #voice-assistant-guide-modal .va-field__mic {
-    background: var(--va-surface) !important;
-    color: var(--va-accent-text) !important;
-    border-color: var(--va-border) !important;
+    background: transparent !important;
+    color: var(--va-text-3, var(--va-text-2)) !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 body.vj-site-app #voice-assistant-guide-modal .va-field.is-active .va-field__mic {
-    background: var(--brand) !important;
-    color: #111 !important;
-    border-color: var(--brand) !important;
+    background: transparent !important;
+    color: var(--va-accent-text, var(--brand)) !important;
+    border: none !important;
 }
 
 body.vj-site-app #voice-assistant-guide-modal .va-field__hint,

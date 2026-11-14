@@ -449,13 +449,27 @@
         const modal = document.getElementById('add-template-modal');
         const select = modal.querySelector('[name=expertise_field]');
         if (select) select.value = industry || '';
+        const addName = modal.querySelector('[data-template-name-input]');
+        if (addName && window.VedrixTemplateNameGuard) {
+            window.VedrixTemplateNameGuard.setCurrentName(addName, '');
+        } else if (addName) {
+            addName.setAttribute('data-current-name', '');
+        }
         openModal('add-template-modal');
     };
 
     window.openEditTemplate = function (template) {
         const form = document.getElementById('edit-template-form');
         form.action = '{{ url('/admin/curriculum/templates') }}/' + template.id;
-        form.querySelector('[name=name]').value = template.name || '';
+        const nameInput = form.querySelector('[name=name]');
+        if (nameInput) {
+            nameInput.value = template.name || '';
+            if (window.VedrixTemplateNameGuard) {
+                window.VedrixTemplateNameGuard.setCurrentName(nameInput, template.name || '');
+            } else {
+                nameInput.setAttribute('data-current-name', template.name || '');
+            }
+        }
         form.querySelector('[name=icon]').value = template.icon || '';
         form.querySelector('[name=color]').value = template.color || '#4f46e5';
         form.querySelector('[name=description]').value = template.description || '';
@@ -466,6 +480,19 @@
         });
         openModal('edit-template-modal');
     };
+
+    // Create modal should not inherit an edit "current name" ignore.
+    const addTemplateBtnHandlers = document.querySelectorAll('[data-open-modal="add-template-modal"]');
+    addTemplateBtnHandlers.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const addName = document.querySelector('#add-template-modal [data-template-name-input]');
+            if (addName && window.VedrixTemplateNameGuard) {
+                window.VedrixTemplateNameGuard.setCurrentName(addName, '');
+            } else if (addName) {
+                addName.setAttribute('data-current-name', '');
+            }
+        });
+    });
 
     let activeFilter = 'all';
     const searchInput = document.getElementById('template-search');

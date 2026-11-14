@@ -432,7 +432,7 @@
                     <span class="w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-600 flex items-center justify-center flex-shrink-0">{{ chr(65+$i) }}</span>
                     <input type="text" name="options[]" data-voice-field="option_{{ $i }}" class="tpl-voice-input flex-1 border border-gray-200 rounded-xl px-3.5 py-2 pr-12 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" placeholder="Option {{ chr(65+$i) }}">
                     <button type="button"
-                            class="tpl-mic-btn inline-flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-indigo-600 hover:border-indigo-200 flex-shrink-0"
+                            class="tpl-mic-btn inline-flex items-center justify-center w-8 h-8 flex-shrink-0 border-0 bg-transparent shadow-none text-gray-400 hover:text-indigo-600"
                             data-dictate-for="option_{{ $i }}"
                             title="Dictate option {{ chr(65+$i) }}"
                             aria-label="Dictate option {{ chr(65+$i) }}">

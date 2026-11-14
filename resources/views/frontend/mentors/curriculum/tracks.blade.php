@@ -249,6 +249,7 @@
 @include('admin.curriculum.partials.voice-assistant-guide')
 @include('admin.curriculum.partials.voice-assistant-studio', [
     'industries' => $industries ?? \App\Support\MentorIndustry::all(),
+    'existingTemplateNames' => $existingTemplateNames ?? collect(),
     'vaStoreUrl' => route('mentor.curriculum.templates.store'),
     'vaTitle' => 'Create with Adarsh',
     'vaSubtitle' => 'Speak or type — Adarsh will create a starter template for your industry',

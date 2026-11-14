@@ -307,6 +307,7 @@
         shell.dataset.ready = '1';
 
         var industries = parseJsonAttr(shell, 'data-industries', []);
+        var existingNames = parseJsonAttr(shell, 'data-existing-names', []);
         var chatEl = $('[data-va-chat]', shell);
         var chipsEl = $('[data-va-chips]', shell);
         var inputEl = $('[data-va-input]', shell);
@@ -339,12 +340,53 @@
         var recognition = null;
         var listening = false;
 
+        function nameIsTaken(candidate) {
+            var needle = normalize(candidate);
+            if (!needle) return false;
+            return (existingNames || []).some(function (n) {
+                return normalize(n) === needle;
+            });
+        }
+
         var steps = [
+            {
+                key: 'name',
+                label: 'Template name',
+                required: true,
+                ask: 'Hello! I am Adarsh. Let’s create a starter template together. First — what should we name this starter template?',
+                explain: 'Keep the name short and clear, like “Engineering & Technology Path”, so mentors recognize it quickly. If that name is already taken, choose another.',
+                hint: 'Speak the template name, or choose a suggestion.',
+                chips: function () {
+                    var list = NAME_SUGGESTIONS[answers.expertise_field]
+                        || NAME_SUGGESTIONS['Engineering & Technology']
+                        || ['Career Mentorship Path', 'Starter Growth Track'];
+                    return list.filter(function (n) { return !nameIsTaken(n); }).slice(0, 4);
+                },
+                validate: function (text) {
+                    var raw = String(text || '').trim();
+                    if (raw.length < 3) return { ok: false, message: 'Please give a name with at least 3 characters.' };
+                    var cleaned = cleanTemplateName(raw, answers.expertise_field);
+                    if (!cleaned || cleaned.length < 3) {
+                        return { ok: false, message: 'Please give a clearer template name.' };
+                    }
+                    if (nameIsTaken(cleaned)) {
+                        return {
+                            ok: false,
+                            message: 'That template name is already taken. Please choose a different name.',
+                        };
+                    }
+                    return {
+                        ok: true,
+                        value: cleaned,
+                        corrected: cleaned !== raw,
+                    };
+                },
+            },
             {
                 key: 'expertise_field',
                 label: 'Industry / domain',
                 required: true,
-                ask: 'Hello! I am Adarsh. Let’s create a starter template together. First — which industry or domain is this for?',
+                ask: 'Nice. Which industry or domain is this template for?',
                 explain: 'Pick one industry from the mentor list. Mentors in that industry will see this template. For example: Engineering and Technology.',
                 hint: 'Say an industry name, or tap a suggestion chip.',
                 chips: function () { return industries.slice(0, 8); },
@@ -361,30 +403,6 @@
                         ok: true,
                         value: matched,
                         corrected: normalize(autocorrectSpeech(said)) !== normalize(matched),
-                    };
-                },
-            },
-            {
-                key: 'name',
-                label: 'Template name',
-                required: true,
-                ask: 'Nice choice. What should we name this starter template?',
-                explain: 'Keep the name short and clear, like “Engineering & Technology Path”, so mentors recognize it quickly.',
-                hint: 'Speak the template name, or choose a suggestion.',
-                chips: function () {
-                    return NAME_SUGGESTIONS[answers.expertise_field] || ['Career Mentorship Path', 'Starter Growth Track'];
-                },
-                validate: function (text) {
-                    var raw = String(text || '').trim();
-                    if (raw.length < 3) return { ok: false, message: 'Please give a name with at least 3 characters.' };
-                    var cleaned = cleanTemplateName(raw, answers.expertise_field);
-                    if (!cleaned || cleaned.length < 3) {
-                        return { ok: false, message: 'Please give a clearer template name.' };
-                    }
-                    return {
-                        ok: true,
-                        value: cleaned,
-                        corrected: cleaned !== raw,
                     };
                 },
             },
@@ -521,16 +539,29 @@
             if (hintEl) hintEl.textContent = step.hint || 'Speak or type your answer.';
             if (skipBtn) skipBtn.classList.toggle('invisible', !!step.required);
 
+            // Mentors usually have one industry — confirm it and move on.
+            if (step.key === 'expertise_field' && industries.length === 1) {
+                answers.expertise_field = industries[0];
+                if (!opts.silentAsk) {
+                    appendBubble('ai', 'Your industry is set to <strong>' + escapeHtml(industries[0]) + '</strong>.');
+                }
+                if (!opts.silentSpeak) speak('Your industry is set to ' + industries[0] + '.');
+                stepIndex += 1;
+                updateProgress();
+                setTimeout(function () { askCurrent(); }, 420);
+                return;
+            }
+
             var text = step.ask;
             if (step.key === 'confirm') {
                 text = 'Here is your summary:<br><br>' +
-                    '<strong>Industry:</strong> ' + escapeHtml(answers.expertise_field) + '<br>' +
                     '<strong>Name:</strong> ' + escapeHtml(answers.name) + '<br>' +
+                    '<strong>Industry:</strong> ' + escapeHtml(answers.expertise_field) + '<br>' +
                     '<strong>Description:</strong> ' + escapeHtml(answers.description || '—') + '<br>' +
                     '<strong>Skills:</strong> ' + escapeHtml(answers.expertise_tags || '—') +
                     '<br><br>Say <strong>create template</strong> to save, or <strong>restart</strong>.';
                 appendBubble('ai', text);
-                speak('Here is your summary. Industry: ' + answers.expertise_field + '. Name: ' + answers.name + '. Say create template to save, or restart.');
+                speak('Here is your summary. Name: ' + answers.name + '. Industry: ' + answers.expertise_field + '. Say create template to save, or restart.');
                 return;
             }
 
@@ -831,7 +862,72 @@
         }
     }
 
+    function parseTakenNames(input) {
+        try {
+            var raw = input.getAttribute('data-taken-names');
+            if (!raw) return [];
+            var list = JSON.parse(raw);
+            return Array.isArray(list) ? list : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function bindTemplateNameInputs() {
+        document.querySelectorAll('[data-template-name-input]').forEach(function (input) {
+            if (input.dataset.nameGuardBound === '1') return;
+            input.dataset.nameGuardBound = '1';
+
+            var errorEl = input.parentElement
+                ? input.parentElement.querySelector('[data-template-name-error]')
+                : null;
+
+            function currentAllowed() {
+                return normalize(input.getAttribute('data-current-name') || '');
+            }
+
+            function isTaken(value) {
+                var needle = normalize(value);
+                if (!needle) return false;
+                if (needle === currentAllowed()) return false;
+                return parseTakenNames(input).some(function (n) {
+                    return normalize(n) === needle;
+                });
+            }
+
+            function sync() {
+                var taken = isTaken(input.value || '');
+                input.setCustomValidity(taken ? 'This template name is already taken.' : '');
+                input.classList.toggle('border-red-400', taken);
+                input.classList.toggle('focus:border-red-400', taken);
+                input.classList.toggle('focus:ring-red-100', taken);
+                if (errorEl) errorEl.classList.toggle('hidden', !taken);
+            }
+
+            input.addEventListener('input', sync);
+            input.addEventListener('change', sync);
+            input.addEventListener('blur', sync);
+
+            var form = input.closest('form');
+            if (form && form.dataset.nameGuardSubmit !== '1') {
+                form.dataset.nameGuardSubmit = '1';
+                form.addEventListener('submit', function (e) {
+                    sync();
+                    if (input.validationMessage) {
+                        e.preventDefault();
+                        input.focus();
+                        if (errorEl) errorEl.classList.remove('hidden');
+                    }
+                });
+            }
+
+            sync();
+        });
+    }
+
     function boot() {
+        bindTemplateNameInputs();
+
         var shell = document.querySelector('[data-voice-studio-shell]');
         if (!shell) return;
         init(shell);
@@ -842,6 +938,15 @@
             });
         });
     }
+
+    window.VedrixTemplateNameGuard = {
+        bind: bindTemplateNameInputs,
+        setCurrentName: function (input, name) {
+            if (!input) return;
+            input.setAttribute('data-current-name', name || '');
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+    };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', boot);
