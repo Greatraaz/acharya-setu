@@ -53,24 +53,141 @@
             .replace(/"/g, '&quot;');
     }
 
+    // Speech-to-text often mangles AI/ML and similar tokens.
+    var SPEECH_FIXES = [
+        [/\bai\s*[\s\/&\-]*m\.?\s*l\b/gi, 'ai ml'],
+        [/\ba\.?\s*i\.?\s*\/?\s*m\.?\s*l\.?\b/gi, 'ai ml'],
+        [/\baiml\b/gi, 'ai ml'],
+        [/\baimal\b/gi, 'ai ml'],
+        [/\baml\b/gi, 'ai ml'],
+        [/\baiml\b/gi, 'ai ml'],
+        [/\bmachine learning\b/gi, 'ml'],
+        [/\bartificial intelligence\b/gi, 'ai'],
+        [/\bui\s*[\s\/&\-]*ux\b/gi, 'ui ux'],
+        [/\bux\s*[\s\/&\-]*ui\b/gi, 'ui ux'],
+        [/\buiux\b/gi, 'ui ux'],
+        [/\band\b/gi, ' '],
+    ];
+
+    var INDUSTRY_ALIASES = {
+        'data science ai ml': 'Data Science & AI / ML',
+        'data science ai': 'Data Science & AI / ML',
+        'data science ml': 'Data Science & AI / ML',
+        'data science': 'Data Science & AI / ML',
+        'ai ml': 'Data Science & AI / ML',
+        'ai': 'Data Science & AI / ML',
+        'ml': 'Data Science & AI / ML',
+        'machine learning': 'Data Science & AI / ML',
+        'artificial intelligence': 'Data Science & AI / ML',
+        'datascience': 'Data Science & AI / ML',
+        'engineering technology': 'Engineering & Technology',
+        'engineering': 'Engineering & Technology',
+        'software': 'Engineering & Technology',
+        'tech': 'Engineering & Technology',
+        'product management': 'Product Management',
+        'product': 'Product Management',
+        'pm': 'Product Management',
+        'design ux ui': 'Design & UX / UI',
+        'design ui ux': 'Design & UX / UI',
+        'ui ux': 'Design & UX / UI',
+        'ux ui': 'Design & UX / UI',
+        'design': 'Design & UX / UI',
+        'finance investment banking': 'Finance & Investment Banking',
+        'finance': 'Finance & Investment Banking',
+        'investment banking': 'Finance & Investment Banking',
+        'mba management consulting': 'MBA & Management Consulting',
+        'mba': 'MBA & Management Consulting',
+        'consulting': 'MBA & Management Consulting',
+        'marketing growth': 'Marketing & Growth',
+        'marketing': 'Marketing & Growth',
+        'law legal': 'Law & Legal',
+        'law': 'Law & Legal',
+        'legal': 'Law & Legal',
+        'medicine healthcare': 'Medicine & Healthcare',
+        'medicine': 'Medicine & Healthcare',
+        'healthcare': 'Medicine & Healthcare',
+        'arts humanities': 'Arts & Humanities',
+        'government public policy': 'Government & Public Policy',
+        'government': 'Government & Public Policy',
+        'education academia': 'Education & Academia',
+        'education': 'Education & Academia',
+        'entrepreneurship startups': 'Entrepreneurship & Startups',
+        'entrepreneurship': 'Entrepreneurship & Startups',
+        'startup': 'Entrepreneurship & Startups',
+        'startups': 'Entrepreneurship & Startups',
+    };
+
+    // Short tokens that still matter for industry matching.
+    var SHORT_TOKENS = { ai: 1, ml: 1, ui: 1, ux: 1, pm: 1, mba: 1, hr: 1, cse: 1 };
+
     function normalize(s) {
-        return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+        return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    function autocorrectSpeech(text) {
+        var out = String(text || '');
+        SPEECH_FIXES.forEach(function (pair) {
+            out = out.replace(pair[0], pair[1]);
+        });
+        return out.replace(/\s+/g, ' ').trim();
+    }
+
+    function meaningfulTokens(text) {
+        return normalize(text).split(' ').filter(function (p) {
+            return p && (p.length > 2 || SHORT_TOKENS[p]);
+        });
     }
 
     function matchIndustry(industries, text) {
-        var n = normalize(text);
+        var fixed = autocorrectSpeech(text);
+        var n = normalize(fixed);
         if (!n) return null;
+
+        var available = {};
+        (industries || []).forEach(function (name) { available[name] = true; });
+
+        // Exact alias hit (speech-friendly).
+        if (INDUSTRY_ALIASES[n] && available[INDUSTRY_ALIASES[n]]) {
+            return INDUSTRY_ALIASES[n];
+        }
+
+        // Partial alias: longest alias key contained in spoken text (or vice versa).
+        var aliasBest = null;
+        var aliasBestLen = 0;
+        Object.keys(INDUSTRY_ALIASES).forEach(function (key) {
+            var canon = INDUSTRY_ALIASES[key];
+            if (!available[canon]) return;
+            if (n.indexOf(key) !== -1 || key.indexOf(n) !== -1) {
+                if (key.length > aliasBestLen) {
+                    aliasBestLen = key.length;
+                    aliasBest = canon;
+                }
+            }
+        });
+        if (aliasBest && aliasBestLen >= 2) return aliasBest;
+
         var best = null;
         var bestScore = 0;
+        var spokenParts = meaningfulTokens(fixed);
+
         industries.forEach(function (name) {
             var nn = normalize(name);
             var score = 0;
             if (nn === n) score = 100;
-            else if (nn.indexOf(n) !== -1 || n.indexOf(nn) !== -1) score = 80;
+            else if (nn.indexOf(n) !== -1 || n.indexOf(nn) !== -1) score = 85;
             else {
-                var parts = n.split(' ');
-                var hits = parts.filter(function (p) { return p.length > 2 && nn.indexOf(p) !== -1; }).length;
-                score = hits * 25;
+                var industryParts = meaningfulTokens(name);
+                var hits = spokenParts.filter(function (p) {
+                    return industryParts.indexOf(p) !== -1 || nn.indexOf(p) !== -1;
+                }).length;
+                score = hits * 28;
+                // Bonus when both data+science or ai+ml appear together.
+                if (/\bdata\b/.test(n) && /\bscience\b/.test(n) && /\bdata\b/.test(nn) && /\bscience\b/.test(nn)) {
+                    score += 30;
+                }
+                if (/\bai\b/.test(n) && /\bml\b/.test(n) && (/\bai\b/.test(nn) || /\bml\b/.test(nn) || /\bdata\b/.test(nn))) {
+                    score += 35;
+                }
             }
             if (score > bestScore) {
                 bestScore = score;
@@ -78,6 +195,97 @@
             }
         });
         return bestScore >= 40 ? best : null;
+    }
+
+    var NAME_WORDS = {
+        path: 1, track: 1, roadmap: 1, journey: 1, foundations: 1, foundation: 1,
+        mentorship: 1, starter: 1, growth: 1, fundamentals: 1, prep: 1, career: 1,
+    };
+
+    function stemToken(p) {
+        var t = String(p || '');
+        if (t === 'foundations') return 'foundation';
+        if (t === 'tracks') return 'track';
+        if (t === 'paths') return 'path';
+        if (t.length > 4 && t.slice(-1) === 's') return t.slice(0, -1);
+        return t;
+    }
+
+    function scoreNameSuggestion(spokenNorm, suggestion) {
+        var sn = normalize(suggestion);
+        if (!spokenNorm || !sn) return 0;
+        if (spokenNorm === sn) return 100;
+        if (sn.indexOf(spokenNorm) !== -1 || spokenNorm.indexOf(sn) !== -1) return 80;
+        var a = meaningfulTokens(spokenNorm).map(stemToken);
+        var b = meaningfulTokens(sn).map(stemToken);
+        if (!a.length || !b.length) return 0;
+        var hits = a.filter(function (p) { return b.indexOf(p) !== -1; }).length;
+        return Math.round((hits / Math.max(a.length, b.length)) * 100);
+    }
+
+    function matchSuggestedName(raw, industry) {
+        var n = normalize(autocorrectSpeech(raw));
+        var list = (NAME_SUGGESTIONS[industry] || []).slice();
+        // Always consider a few generic clean names too.
+        ['Career Mentorship Path', 'Starter Growth Track'].forEach(function (s) {
+            if (list.indexOf(s) === -1) list.push(s);
+        });
+        var best = null;
+        var bestScore = 0;
+        list.forEach(function (s) {
+            var score = scoreNameSuggestion(n, s);
+            if (score > bestScore) {
+                bestScore = score;
+                best = s;
+            }
+        });
+        // "ml foundation strack" → ML Foundations Track (~ high overlap)
+        return bestScore >= 55 ? best : null;
+    }
+
+    function isMostlyIndustryPhrase(raw, industry) {
+        if (!industry) return false;
+        var spoken = meaningfulTokens(autocorrectSpeech(raw));
+        if (!spoken.length) return false;
+        // If they said a name-like word (track/path/foundation…), keep it as a template name.
+        if (spoken.some(function (p) { return NAME_WORDS[p]; })) return false;
+        var indParts = meaningfulTokens(industry);
+        var overlap = spoken.filter(function (p) { return indParts.indexOf(p) !== -1; }).length;
+        // Only treat as "repeated industry" when almost every spoken token is industry.
+        return overlap >= Math.max(2, Math.ceil(spoken.length * 0.75));
+    }
+
+    function cleanTemplateName(raw, industry) {
+        var fixed = autocorrectSpeech(raw)
+            .replace(/\bstrack\b/gi, 'track')
+            .replace(/\btrak\b/gi, 'track')
+            .replace(/\bfoundations?\b/gi, function (m) {
+                return m.toLowerCase().indexOf('s') !== -1 ? 'Foundations' : 'Foundation';
+            });
+
+        // Prefer closest chip/suggestion (e.g. "ml foundation strack" → "ML Foundations Track").
+        var suggested = matchSuggestedName(fixed, industry);
+        if (suggested) return suggested;
+
+        // Only if they clearly repeated the industry alone, use the default industry path name.
+        if (isMostlyIndustryPhrase(fixed, industry)) {
+            var defaults = NAME_SUGGESTIONS[industry];
+            if (defaults && defaults.length) return defaults[0];
+            return industry + ' Path';
+        }
+
+        // Light spelling cleanup for free-form names.
+        var pretty = fixed
+            .replace(/\bai\s*ml\b/gi, 'AI / ML')
+            .replace(/\bml\b/gi, 'ML')
+            .replace(/\bai\b/gi, 'AI')
+            .replace(/\bui\s*ux\b/gi, 'UI / UX')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (pretty === pretty.toLowerCase() && pretty.length <= 60) {
+            pretty = pretty.replace(/\b([a-z])/g, function (m, c) { return c.toUpperCase(); });
+        }
+        return pretty.slice(0, 100);
     }
 
     function pickVoice(lang) {
@@ -136,14 +344,24 @@
                 key: 'expertise_field',
                 label: 'Industry / domain',
                 required: true,
-                ask: 'Hi! I am Adarsh. Let’s create a starter template together. First — which industry or domain is this for?',
+                ask: 'Hello! I am Adarsh. Let’s create a starter template together. First — which industry or domain is this for?',
                 explain: 'Pick one industry from the mentor list. Mentors in that industry will see this template. For example: Engineering and Technology.',
                 hint: 'Say an industry name, or tap a suggestion chip.',
                 chips: function () { return industries.slice(0, 8); },
                 validate: function (text) {
                     var matched = matchIndustry(industries, text);
-                    if (!matched) return { ok: false, message: 'I could not match that industry. Please pick a chip or say a closer name.' };
-                    return { ok: true, value: matched };
+                    if (!matched) {
+                        return {
+                            ok: false,
+                            message: 'I could not match that industry. Try saying “Data Science and AI ML”, or tap a suggestion chip.',
+                        };
+                    }
+                    var said = String(text || '').trim();
+                    return {
+                        ok: true,
+                        value: matched,
+                        corrected: normalize(autocorrectSpeech(said)) !== normalize(matched),
+                    };
                 },
             },
             {
@@ -157,9 +375,17 @@
                     return NAME_SUGGESTIONS[answers.expertise_field] || ['Career Mentorship Path', 'Starter Growth Track'];
                 },
                 validate: function (text) {
-                    var v = String(text || '').trim();
-                    if (v.length < 3) return { ok: false, message: 'Please give a name with at least 3 characters.' };
-                    return { ok: true, value: v.slice(0, 100) };
+                    var raw = String(text || '').trim();
+                    if (raw.length < 3) return { ok: false, message: 'Please give a name with at least 3 characters.' };
+                    var cleaned = cleanTemplateName(raw, answers.expertise_field);
+                    if (!cleaned || cleaned.length < 3) {
+                        return { ok: false, message: 'Please give a clearer template name.' };
+                    }
+                    return {
+                        ok: true,
+                        value: cleaned,
+                        corrected: cleaned !== raw,
+                    };
                 },
             },
             {
@@ -240,18 +466,18 @@
             wrap.className = 'va-bubble-in flex ' + (role === 'user' ? 'justify-end' : 'justify-start');
             if (role === 'ai') {
                 wrap.innerHTML =
-                    '<div class="max-w-[85%] sm:max-w-[78%]">' +
-                        '<div class="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-500">' +
-                            '<span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[9px] text-indigo-700">AD</span> Adarsh' +
+                    '<div class="va-msg va-msg--ai max-w-[85%] sm:max-w-[78%]">' +
+                        '<div class="va-msg__label mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-500">' +
+                            '<span class="va-msg__avatar inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[9px] text-indigo-700">AD</span> Adarsh' +
                         '</div>' +
-                        '<div class="rounded-2xl rounded-tl-md bg-white border border-indigo-100 shadow-sm px-4 py-3 text-sm text-slate-700 leading-relaxed">' + html + '</div>' +
-                        (meta ? '<div class="mt-1 text-[10px] text-slate-400">' + escapeHtml(meta) + '</div>' : '') +
+                        '<div class="va-msg__bubble rounded-2xl rounded-tl-md bg-white border border-indigo-100 shadow-sm px-4 py-3 text-sm text-slate-700 leading-relaxed">' + html + '</div>' +
+                        (meta ? '<div class="va-msg__meta mt-1 text-[10px] text-slate-400">' + escapeHtml(meta) + '</div>' : '') +
                     '</div>';
             } else {
                 wrap.innerHTML =
-                    '<div class="max-w-[85%] sm:max-w-[75%]">' +
-                        '<div class="mb-1 text-right text-[10px] font-semibold uppercase tracking-wide text-violet-500">You</div>' +
-                        '<div class="rounded-2xl rounded-tr-md bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/20 px-4 py-3 text-sm leading-relaxed">' + html + '</div>' +
+                    '<div class="va-msg va-msg--user max-w-[85%] sm:max-w-[75%]">' +
+                        '<div class="va-msg__label mb-1 text-right text-[10px] font-semibold uppercase tracking-wide text-violet-500">You</div>' +
+                        '<div class="va-msg__bubble rounded-2xl rounded-tr-md bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/20 px-4 py-3 text-sm leading-relaxed">' + html + '</div>' +
                     '</div>';
             }
             chatEl.appendChild(wrap);
@@ -411,6 +637,14 @@
             }
         }
 
+        function isSkipIntent(text) {
+            var n = normalize(text);
+            if (!n) return false;
+            return /^(skip|skip this|skip it|skip please|pass|no thanks|no thank you|none|nothing|nope|next|leave it|leave blank|not now)$/.test(n)
+                || /^(i )?want to skip$/.test(n)
+                || /^skip (this|the) (one|field|step|question)$/.test(n);
+        }
+
         function submitAnswer(raw) {
             if (busy) return;
             var text = String(raw || '').trim();
@@ -418,6 +652,14 @@
             if (stepIndex >= steps.length) return;
 
             var step = steps[stepIndex];
+
+            // Spoken/typed "skip" must skip optional fields — never save "skip" as the answer.
+            if (step.key !== 'confirm' && isSkipIntent(text)) {
+                if (inputEl) inputEl.value = '';
+                skipStep();
+                return;
+            }
+
             appendBubble('user', escapeHtml(text));
             if (inputEl) inputEl.value = '';
 
@@ -438,14 +680,22 @@
                 return;
             }
 
-            answers[step.key] = result.value;
-            if (step.key === 'expertise_field') {
+            // Extra guard: never persist skip-like values on optional text fields.
+            var value = result.value;
+            if (!step.required && isSkipIntent(value)) value = '';
+
+            answers[step.key] = value;
+            if (step.key === 'expertise_field' || result.corrected) {
+                var confirmMsg = result.corrected
+                    ? ('Got it — I autocorrected that to “' + result.value + '”.')
+                    : ('Got it — ' + result.value + '.');
                 appendBubble('ai', 'Got it — <strong>' + escapeHtml(result.value) + '</strong>.');
+                speak(confirmMsg);
             }
 
             stepIndex += 1;
             updateProgress();
-            setTimeout(function () { askCurrent(); }, 280);
+            setTimeout(function () { askCurrent(); }, (step.key === 'expertise_field' || result.corrected) ? 520 : 280);
         }
 
         function skipStep() {
@@ -459,6 +709,7 @@
             appendBubble('user', 'Skip');
             answers[step.key] = '';
             stepIndex += 1;
+            updateProgress();
             setTimeout(function () { askCurrent(); }, 220);
         }
 

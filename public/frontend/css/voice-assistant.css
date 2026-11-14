@@ -1,0 +1,780 @@
+/* ═══════════════════════════════════════════════════════════
+   Mentor Voice Assistant — light / dark theme
+   Scoped to body.vj-site-app so admin indigo UI stays intact.
+   ═══════════════════════════════════════════════════════════ */
+
+body.vj-site-app {
+    --va-accent: var(--brand);
+    --va-accent-soft: var(--brand-muted);
+    --va-accent-text: var(--brand-dark);
+    --va-surface: var(--bg-3);
+    --va-surface-2: var(--bg-2);
+    --va-border: var(--border-2);
+    --va-text: var(--text);
+    --va-text-2: var(--text-2);
+    --va-text-3: var(--text-3);
+    --va-input: var(--input-bg);
+    --va-shadow: var(--shadow);
+}
+
+html[data-theme="dark"] body.vj-site-app {
+    --va-accent-text: var(--brand-light);
+}
+
+/* ── Entry banner ─────────────────────────────────────────── */
+body.vj-site-app .va-entry {
+    position: relative;
+    overflow: hidden;
+    margin: 16px 0;
+    padding: 18px 20px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--va-border);
+    background: linear-gradient(135deg, var(--va-surface) 0%, var(--va-surface-2) 55%, var(--va-surface) 100%);
+    box-shadow: var(--va-shadow);
+}
+
+body.vj-site-app .va-entry::before,
+body.vj-site-app .va-entry::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    pointer-events: none;
+    filter: blur(28px);
+    opacity: .35;
+}
+
+body.vj-site-app .va-entry::before {
+    width: 140px;
+    height: 140px;
+    right: -30px;
+    top: -40px;
+    background: var(--brand);
+}
+
+body.vj-site-app .va-entry::after {
+    width: 110px;
+    height: 110px;
+    left: -24px;
+    bottom: -36px;
+    background: var(--brand-light);
+}
+
+body.vj-site-app .va-entry__inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+body.vj-site-app .va-entry__main {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-width: 0;
+    flex: 1 1 260px;
+}
+
+body.vj-site-app .va-entry__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #111;
+    box-shadow: var(--brand-glow);
+}
+
+body.vj-site-app .va-entry__icon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
+body.vj-site-app .va-entry__title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+body.vj-site-app .va-entry__title {
+    margin: 0;
+    font-family: var(--font-head);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--va-text);
+    line-height: 1.3;
+}
+
+body.vj-site-app .va-entry__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+    background: var(--success-muted);
+    color: var(--success);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+body.vj-site-app .va-entry__copy {
+    margin: 6px 0 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--va-text-2);
+    max-width: 42rem;
+}
+
+body.vj-site-app .va-entry__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+body.vj-site-app .va-entry__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background var(--trans), border-color var(--trans), color var(--trans), transform var(--trans);
+}
+
+body.vj-site-app .va-entry__btn svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    flex-shrink: 0;
+}
+
+body.vj-site-app .va-entry__btn--primary {
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #111;
+    box-shadow: var(--brand-glow);
+}
+
+body.vj-site-app .va-entry__btn--primary:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+}
+
+body.vj-site-app .va-entry__btn--ghost {
+    border: 1px solid var(--va-border);
+    background: var(--va-surface);
+    color: var(--va-text);
+}
+
+body.vj-site-app .va-entry__btn--ghost:hover {
+    border-color: var(--brand);
+    color: var(--va-accent-text);
+    background: var(--va-accent-soft);
+}
+
+/* ── Voice fill bar (forms) ───────────────────────────────── */
+body.vj-site-app .tpl-voice-studio {
+    border: 1px solid var(--va-border);
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--va-surface) 0%, var(--va-surface-2) 100%);
+    box-shadow: none;
+    padding: .75rem .85rem;
+    margin-bottom: 14px;
+}
+
+body.vj-site-app .tpl-voice-studio__mic {
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #111;
+    box-shadow: var(--brand-glow);
+}
+
+body.vj-site-app .tpl-voice-studio__mic:hover {
+    background: linear-gradient(135deg, var(--brand-light), var(--brand));
+}
+
+body.vj-site-app .tpl-voice-studio__mic svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+body.vj-site-app .tpl-voice-studio__title {
+    color: var(--va-text);
+}
+
+body.vj-site-app .tpl-voice-studio__step {
+    color: var(--va-accent-text);
+    background: var(--va-accent-soft);
+}
+
+body.vj-site-app .tpl-voice-studio__status {
+    color: var(--va-text-2);
+}
+
+body.vj-site-app .tpl-voice-studio__lang,
+body.vj-site-app .tpl-voice-studio__skip {
+    color: var(--va-text);
+    background: var(--va-input);
+    border: 1px solid var(--input-border);
+}
+
+body.vj-site-app .tpl-voice-studio__skip:hover {
+    background: var(--va-accent-soft);
+    color: var(--va-accent-text);
+    border-color: color-mix(in srgb, var(--brand) 40%, transparent);
+}
+
+body.vj-site-app .tpl-voice-studio__lang:focus {
+    box-shadow: 0 0 0 3px var(--input-focus);
+}
+
+body.vj-site-app .tpl-voice-field .tpl-field-mic {
+    top: calc(1.15rem + 8px);
+}
+
+body.vj-site-app .tpl-voice-field textarea.tpl-voice-input ~ .tpl-field-mic {
+    top: calc(1.15rem + 12px);
+}
+
+body.vj-site-app .tpl-field-mic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--input-border);
+    background: var(--va-surface);
+    color: var(--va-text-2);
+    padding: 0;
+    line-height: 0;
+}
+
+body.vj-site-app .tpl-field-mic svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+
+body.vj-site-app .tpl-field-mic:hover {
+    color: var(--va-accent-text);
+    border-color: color-mix(in srgb, var(--brand) 45%, transparent);
+    background: var(--va-accent-soft);
+    box-shadow: none;
+}
+
+body.vj-site-app .tpl-mic-btn.is-recording {
+    background: var(--error) !important;
+    border-color: var(--error) !important;
+    color: #fff !important;
+}
+
+/* ── Create with Adarsh studio ────────────────────────────── */
+body.vj-site-app .va-studio {
+    color: var(--va-text);
+    z-index: 1200;
+}
+
+body.vj-site-app .va-studio button {
+    font-family: inherit;
+}
+
+body.vj-site-app .va-studio [data-va-backdrop] {
+    background: var(--overlay) !important;
+    backdrop-filter: blur(6px);
+}
+
+body.vj-site-app .va-studio .va-shell {
+    color: var(--va-text);
+    background: var(--va-surface) !important;
+    border: 1px solid var(--va-border) !important;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+body.vj-site-app .va-studio .va-shell > .shrink-0:first-child,
+body.vj-site-app .va-studio .va-shell > .shrink-0:last-child {
+    background: color-mix(in srgb, var(--va-surface) 88%, transparent) !important;
+    border-color: var(--va-border) !important;
+}
+
+body.vj-site-app .va-studio .va-shell h2,
+body.vj-site-app .va-studio .va-shell .text-slate-900,
+body.vj-site-app .va-studio .va-shell .text-slate-800 {
+    color: var(--va-text) !important;
+}
+
+body.vj-site-app .va-studio .va-shell .text-slate-500,
+body.vj-site-app .va-studio .va-shell .text-slate-600,
+body.vj-site-app .va-studio .va-shell .text-slate-400,
+body.vj-site-app .va-studio .va-shell .text-[11px] {
+    color: var(--va-text-2) !important;
+}
+
+body.vj-site-app .va-studio .va-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #111;
+    box-shadow: var(--brand-glow);
+}
+
+body.vj-site-app .va-studio .va-avatar svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
+body.vj-site-app .va-studio .va-online-dot {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    background: var(--success);
+    box-shadow: 0 0 0 2px var(--va-surface);
+}
+
+body.vj-site-app .va-studio .va-btn-soft,
+body.vj-site-app .va-studio [data-va-repeat],
+body.vj-site-app .va-studio [data-open-voice-guide],
+body.vj-site-app .va-studio [data-va-explain],
+body.vj-site-app .va-studio [data-va-skip] {
+    border: 1px solid var(--va-border) !important;
+    background: var(--va-input) !important;
+    color: var(--va-text) !important;
+}
+
+body.vj-site-app .va-studio .va-btn-soft:hover,
+body.vj-site-app .va-studio [data-va-repeat]:hover,
+body.vj-site-app .va-studio [data-open-voice-guide]:hover,
+body.vj-site-app .va-studio [data-va-explain]:hover,
+body.vj-site-app .va-studio [data-va-skip]:hover {
+    background: var(--va-accent-soft) !important;
+    border-color: color-mix(in srgb, var(--brand) 40%, transparent) !important;
+    color: var(--va-accent-text) !important;
+}
+
+body.vj-site-app .va-studio [data-open-voice-guide] {
+    border-color: color-mix(in srgb, var(--brand) 35%, transparent) !important;
+    background: var(--va-accent-soft) !important;
+    color: var(--va-accent-text) !important;
+}
+
+body.vj-site-app .va-studio [data-va-close] {
+    color: var(--va-text-2) !important;
+    background: transparent !important;
+}
+
+body.vj-site-app .va-studio [data-va-close]:hover {
+    color: var(--va-text) !important;
+    background: var(--bg-4) !important;
+}
+
+body.vj-site-app .va-studio [data-va-close] svg,
+body.vj-site-app .va-studio [data-va-repeat] svg,
+body.vj-site-app .va-studio [data-open-voice-guide] svg,
+body.vj-site-app .va-studio [data-va-explain] svg,
+body.vj-site-app .va-studio [data-va-skip] svg,
+body.vj-site-app .va-studio [data-va-send] svg,
+body.vj-site-app .va-studio [data-va-mic] svg {
+    display: block;
+    flex-shrink: 0;
+}
+
+body.vj-site-app .va-studio .h-2.rounded-full,
+body.vj-site-app .va-studio [data-va-progress] {
+    background: var(--bg-4);
+}
+
+body.vj-site-app .va-studio [data-va-progress] {
+    background: linear-gradient(90deg, var(--brand), var(--brand-dark)) !important;
+}
+
+body.vj-site-app .va-studio [data-va-lang],
+body.vj-site-app .va-studio [data-va-input] {
+    background: var(--va-input) !important;
+    border: 1px solid var(--input-border) !important;
+    color: var(--va-text) !important;
+    box-shadow: none !important;
+}
+
+body.vj-site-app .va-studio [data-va-input]::placeholder {
+    color: var(--va-text-3);
+}
+
+body.vj-site-app .va-studio [data-va-input]:focus {
+    border-color: var(--brand) !important;
+    box-shadow: 0 0 0 3px var(--input-focus) !important;
+}
+
+body.vj-site-app .va-studio [data-va-send] {
+    background: var(--brand) !important;
+    color: #111 !important;
+}
+
+body.vj-site-app .va-studio [data-va-send]:hover {
+    background: var(--brand-light) !important;
+}
+
+body.vj-site-app .va-studio .va-mic {
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark)) !important;
+    color: #111 !important;
+    box-shadow: var(--brand-glow) !important;
+}
+
+body.vj-site-app .va-studio .va-mic.is-recording {
+    background: linear-gradient(135deg, #dc2626, #e11d48) !important;
+    color: #fff !important;
+}
+
+/* Chat bubbles + chips (JS-rendered) */
+body.vj-site-app .va-studio .va-chip {
+    border: 1px solid var(--va-border) !important;
+    background: var(--va-input) !important;
+    color: var(--va-text) !important;
+    box-shadow: none !important;
+}
+
+body.vj-site-app .va-studio .va-chip:hover {
+    border-color: color-mix(in srgb, var(--brand) 45%, transparent) !important;
+    background: var(--va-accent-soft) !important;
+    color: var(--va-accent-text) !important;
+}
+
+body.vj-site-app .va-studio .va-msg__label {
+    color: var(--va-accent-text) !important;
+}
+
+body.vj-site-app .va-studio .va-msg__avatar {
+    background: var(--va-accent-soft) !important;
+    color: var(--va-accent-text) !important;
+}
+
+body.vj-site-app .va-studio .va-msg__meta {
+    color: var(--va-text-3) !important;
+}
+
+body.vj-site-app .va-studio .va-msg--ai .va-msg__bubble {
+    background: var(--bg-4) !important;
+    border: 1px solid var(--va-border) !important;
+    color: var(--va-text) !important;
+    box-shadow: none !important;
+}
+
+body.vj-site-app .va-studio .va-msg--user .va-msg__bubble {
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark)) !important;
+    color: #111 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+body.vj-site-app .va-studio .va-msg--ai .va-msg__bubble strong {
+    color: var(--va-text);
+}
+
+/* Progress track */
+body.vj-site-app .va-studio .h-2.rounded-full.bg-indigo-100,
+body.vj-site-app .va-studio .h-2.rounded-full {
+    background: var(--bg-4) !important;
+}
+
+/* ── Guide modal ──────────────────────────────────────────── */
+body.vj-site-app #voice-assistant-guide-modal.tpl-modal {
+    z-index: 1250 !important;
+    background: var(--overlay) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .tpl-modal-panel {
+    background: var(--va-surface) !important;
+    border: 1px solid var(--va-border) !important;
+    color: var(--va-text);
+    box-shadow: var(--shadow-lg);
+}
+
+body.vj-site-app #voice-assistant-guide-modal .bg-white,
+body.vj-site-app #voice-assistant-guide-modal .bg-gray-50,
+body.vj-site-app #voice-assistant-guide-modal .bg-gray-50\/80,
+body.vj-site-app #voice-assistant-guide-modal .bg-gray-50\/70 {
+    background: var(--va-surface) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .border-b,
+body.vj-site-app #voice-assistant-guide-modal .border-t,
+body.vj-site-app #voice-assistant-guide-modal .border-gray-100,
+body.vj-site-app #voice-assistant-guide-modal .border-gray-200 {
+    border-color: var(--va-border) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .text-gray-900,
+body.vj-site-app #voice-assistant-guide-modal .text-gray-800 {
+    color: var(--va-text) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .text-gray-500,
+body.vj-site-app #voice-assistant-guide-modal .text-gray-600,
+body.vj-site-app #voice-assistant-guide-modal .text-gray-400 {
+    color: var(--va-text-2) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-close-modal] {
+    color: var(--va-text-2) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-close-modal]:hover {
+    color: var(--va-text) !important;
+    background: var(--bg-4) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal select,
+body.vj-site-app #voice-assistant-guide-modal button.border {
+    background: var(--va-input) !important;
+    border-color: var(--input-border) !important;
+    color: var(--va-text) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .from-indigo-500,
+body.vj-site-app #voice-assistant-guide-modal .from-indigo-400,
+body.vj-site-app #voice-assistant-guide-modal .bg-gradient-to-br.from-indigo-500,
+body.vj-site-app #voice-assistant-guide-modal .bg-gradient-to-br.from-indigo-400 {
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark)) !important;
+    color: #111 !important;
+    box-shadow: var(--brand-glow) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-start],
+body.vj-site-app #voice-assistant-guide-modal .bg-indigo-600 {
+    background: var(--brand) !important;
+    color: #111 !important;
+    border-color: transparent !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-start]:hover {
+    background: var(--brand-light) !important;
+}
+
+/* Player stage — match dashboard surfaces */
+body.vj-site-app #voice-assistant-guide-modal .bg-\[\#0b1220\],
+body.vj-site-app #voice-assistant-guide-modal .bg-\[\#070b14\],
+body.vj-site-app #voice-assistant-guide-modal .bg-\[\#050814\],
+body.vj-site-app #voice-assistant-guide-modal .bg-\[\#121a2b\],
+body.vj-site-app #voice-assistant-guide-modal .bg-\[\#0b1220\]\/70 {
+    background: var(--bg-2) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-stage] {
+    background: var(--bg) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-title],
+body.vj-site-app #voice-assistant-guide-modal [data-guide-caption],
+body.vj-site-app #voice-assistant-guide-modal [data-guide-time],
+body.vj-site-app #voice-assistant-guide-modal .text-white {
+    color: var(--va-text) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-body],
+body.vj-site-app #voice-assistant-guide-modal [data-guide-kicker],
+body.vj-site-app #voice-assistant-guide-modal .text-indigo-200,
+body.vj-site-app #voice-assistant-guide-modal .text-indigo-300,
+body.vj-site-app #voice-assistant-guide-modal .text-slate-100,
+body.vj-site-app #voice-assistant-guide-modal .text-slate-300,
+body.vj-site-app #voice-assistant-guide-modal .text-slate-400 {
+    color: var(--va-text-2) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .border-white\/10,
+body.vj-site-app #voice-assistant-guide-modal .border-white\/15 {
+    border-color: var(--va-border) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .bg-emerald-500\/15 {
+    background: var(--success-muted) !important;
+    border-color: color-mix(in srgb, var(--success) 30%, transparent) !important;
+    color: var(--success) !important;
+}
+
+/* Seek + transport controls */
+body.vj-site-app #voice-assistant-guide-modal .va-seek {
+    background: var(--bg-4) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-progress] {
+    background: var(--brand) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-thumb] {
+    background: var(--brand-light) !important;
+    border-color: var(--brand) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-play] {
+    background: var(--brand) !important;
+    color: #111 !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-back],
+body.vj-site-app #voice-assistant-guide-modal [data-guide-forward],
+body.vj-site-app #voice-assistant-guide-modal [data-guide-replay] {
+    color: var(--va-text) !important;
+    background: var(--bg-4) !important;
+    border: 1px solid var(--va-border);
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-back]:hover,
+body.vj-site-app #voice-assistant-guide-modal [data-guide-forward]:hover,
+body.vj-site-app #voice-assistant-guide-modal [data-guide-replay]:hover {
+    background: var(--va-accent-soft) !important;
+    color: var(--va-accent-text) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-back] svg,
+body.vj-site-app #voice-assistant-guide-modal [data-guide-forward] svg,
+body.vj-site-app #voice-assistant-guide-modal [data-guide-replay] svg,
+body.vj-site-app #voice-assistant-guide-modal [data-guide-play] svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+/* Live form preview — theme surfaces (no harsh white card on dark) */
+body.vj-site-app #voice-assistant-guide-modal .va-form-card {
+    background: var(--va-surface) !important;
+    border: 1px solid var(--va-border) !important;
+    color: var(--va-text) !important;
+    box-shadow: var(--shadow) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-form-card__badge {
+    color: var(--va-accent-text) !important;
+    background: var(--va-accent-soft) !important;
+    border-color: color-mix(in srgb, var(--brand) 35%, transparent) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-form-card__head strong {
+    color: var(--va-text) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-form-card__voice {
+    border-color: color-mix(in srgb, var(--brand) 30%, transparent) !important;
+    background: linear-gradient(135deg, var(--va-accent-soft), var(--va-surface)) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-form-card__mic,
+body.vj-site-app #voice-assistant-guide-modal .va-form-card__guide-btn {
+    background: var(--brand) !important;
+    color: #111 !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-form-card__mic svg,
+body.vj-site-app #voice-assistant-guide-modal .va-field__mic svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-form-card__voice-title {
+    color: var(--va-text) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-form-card__voice-hint {
+    color: var(--va-text-2) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-field {
+    border-color: var(--va-border) !important;
+    background: var(--va-surface-2) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-field.is-active {
+    border-color: var(--brand) !important;
+    background: var(--va-accent-soft) !important;
+    box-shadow: 0 0 0 3px var(--input-focus) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-field__label,
+body.vj-site-app #voice-assistant-guide-modal .va-field.is-active .va-field__label {
+    color: var(--va-text) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-field__input,
+body.vj-site-app #voice-assistant-guide-modal .va-field__color {
+    background: var(--va-input) !important;
+    border-color: var(--input-border) !important;
+    color: var(--va-text) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-field.is-active .va-field__input {
+    border-color: var(--brand) !important;
+    box-shadow: 0 0 0 2px var(--input-focus) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-field__mic {
+    background: var(--va-surface) !important;
+    color: var(--va-accent-text) !important;
+    border-color: var(--va-border) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-field.is-active .va-field__mic {
+    background: var(--brand) !important;
+    color: #111 !important;
+    border-color: var(--brand) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-field__hint,
+body.vj-site-app #voice-assistant-guide-modal .va-field__color-text,
+body.vj-site-app #voice-assistant-guide-modal .va-field__toggle {
+    color: var(--va-text-2) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal .va-field__toggle.is-on .va-field__toggle-knob {
+    background: var(--brand) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-fields-wrap] {
+    background: var(--bg-2) !important;
+    border: 1px solid var(--va-border) !important;
+}
+
+body.vj-site-app #voice-assistant-guide-modal [data-guide-fields-wrap] .text-slate-300,
+body.vj-site-app #voice-assistant-guide-modal [data-guide-field-note] {
+    color: var(--va-text-2) !important;
+}
+
+/* Ensure SVG icons always render at intended size */
+body.vj-site-app .va-entry svg,
+body.vj-site-app .tpl-voice-studio svg,
+body.vj-site-app .va-studio svg,
+body.vj-site-app #voice-assistant-guide-modal svg {
+    max-width: 100%;
+    overflow: visible;
+}
+
+@media (max-width: 640px) {
+    body.vj-site-app .va-entry {
+        padding: 16px;
+    }
+    body.vj-site-app .va-entry__actions {
+        width: 100%;
+    }
+    body.vj-site-app .va-entry__btn {
+        flex: 1 1 auto;
+    }
+}

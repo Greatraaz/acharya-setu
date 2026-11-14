@@ -1,6 +1,15 @@
 @extends('frontend.layouts.app')
 @section('title', 'Curriculum — Vedrix Mentor')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('frontend/css/voice-assistant.css') }}?v={{ @filemtime(public_path('frontend/css/voice-assistant.css')) }}">
+{{-- Tailwind utilities only for shared admin voice modals; preflight disabled --}}
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = { corePlugins: { preflight: false } };
+</script>
+@endpush
+
 @section('content')
 <div class="dash-layout">
     @include('frontend.mentors.partials.sidebar')
@@ -17,6 +26,40 @@
                 <button type="button" class="btn btn-primary btn-sm" onclick="openModal('add-track-modal')">+ New Track</button>
             </div>
         </div>
+
+        {{-- Voice Assistant entry — theme-aware (light/dark) --}}
+        <section class="va-entry" aria-label="Voice Assistant with Adarsh">
+            <div class="va-entry__inner">
+                <div class="va-entry__main">
+                    <span class="va-entry__icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <div class="va-entry__title-row">
+                            <h2 class="va-entry__title">Voice Assistant with Adarsh</h2>
+                            <span class="va-entry__badge">New</span>
+                        </div>
+                        <p class="va-entry__copy">
+                            Create a starter template by speaking, or watch a short walkthrough of template, months, weeks, tasks, and MCQs.
+                        </p>
+                    </div>
+                </div>
+                <div class="va-entry__actions">
+                    <button type="button" data-open-voice-studio class="va-entry__btn va-entry__btn--primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
+                        </svg>
+                        Speak to create
+                    </button>
+                    <button type="button" data-open-voice-guide class="va-entry__btn va-entry__btn--ghost">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5-9-5.5z"/></svg>
+                        Watch guide
+                    </button>
+                </div>
+            </div>
+        </section>
 
         @if(session('success'))
         <div class="alert alert-success" style="margin-bottom:16px;">{{ session('success') }}</div>
@@ -151,7 +194,7 @@
 
 {{-- Add Track --}}
 <div class="modal-overlay" id="add-track-modal">
-    <div class="modal" style="max-width:480px;">
+    <div class="modal" style="max-width:520px;">
         <div class="modal-header">
             <h3>New Curriculum Track</h3>
             <button type="button" class="modal-close" onclick="closeModal('add-track-modal')">✕</button>
@@ -159,22 +202,33 @@
         <form method="POST" action="{{ route('mentor.curriculum.tracks.store') }}">
             @csrf
             <div class="modal-body">
-                <div class="form-group">
+                @include('admin.curriculum.partials.voice-studio', [
+                    'voiceTitle' => 'Voice fill',
+                    'voiceHint'  => 'Speak to fill mentee, track name, and description.',
+                    'voiceSteps' => [
+                        ['key' => 'mentee_id', 'label' => 'Mentee', 'prompt' => 'Say the mentee name.', 'type' => 'select'],
+                        ['key' => 'name', 'label' => 'Track name', 'prompt' => 'Say the track name.', 'type' => 'text'],
+                        ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe this mentee track, or say skip.', 'type' => 'text', 'append' => true],
+                    ],
+                ])
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Mentee *</label>
-                    <select name="mentee_id" class="form-select" required>
+                    <select name="mentee_id" class="form-select" required data-voice-field="mentee_id">
                         <option value="">— Select mentee —</option>
                         @foreach($mentees as $m)
                         <option value="{{ $m->id }}" @selected(old('mentee_id', $filterMentee->id ?? null) == $m->id)>{{ $m->name }} ({{ $m->email }})</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Track name *</label>
-                    <input type="text" name="name" class="form-input" required maxlength="100" value="{{ old('name') }}" placeholder="e.g. Frontend Engineering Track">
+                    <input type="text" name="name" class="form-input tpl-voice-input" required maxlength="100" value="{{ old('name') }}" placeholder="e.g. Frontend Engineering Track" data-voice-field="name">
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'name', 'label' => 'Dictate track name'])
                 </div>
-                <div class="form-group">
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Description</label>
-                    <textarea name="description" class="form-textarea" rows="3" placeholder="Personalized roadmap for this mentee">{{ old('description') }}</textarea>
+                    <textarea name="description" class="form-textarea tpl-voice-input" rows="3" placeholder="Personalized roadmap for this mentee" data-voice-field="description">{{ old('description') }}</textarea>
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'description', 'label' => 'Dictate description'])
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
                     <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
@@ -191,6 +245,14 @@
         </form>
     </div>
 </div>
+
+@include('admin.curriculum.partials.voice-assistant-guide')
+@include('admin.curriculum.partials.voice-assistant-studio', [
+    'industries' => $industries ?? \App\Support\MentorIndustry::all(),
+    'vaStoreUrl' => route('mentor.curriculum.templates.store'),
+    'vaTitle' => 'Create with Adarsh',
+    'vaSubtitle' => 'Speak or type — Adarsh will create a starter template for your industry',
+])
 
 {{-- Import templates --}}
 <div class="modal-overlay" id="import-templates-modal">
@@ -309,7 +371,38 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('admin/js/voice-dictation.js') }}?v={{ @filemtime(public_path('admin/js/voice-dictation.js')) }}"></script>
+<script src="{{ asset('admin/js/voice-assistant-guide.js') }}?v={{ @filemtime(public_path('admin/js/voice-assistant-guide.js')) }}"></script>
+<script src="{{ asset('admin/js/voice-assistant-studio.js') }}?v={{ @filemtime(public_path('admin/js/voice-assistant-studio.js')) }}"></script>
 <script>
+(function () {
+    function closeTplModal(el) {
+        if (!el) return;
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+        if (el._closeVoiceGuideCleanup) el._closeVoiceGuideCleanup();
+        if (!document.querySelector('.tpl-modal.flex') && !document.querySelector('[data-voice-studio-shell]:not(.hidden)')) {
+            document.body.style.overflow = '';
+        }
+    }
+    document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            closeTplModal(btn.closest('.tpl-modal'));
+        });
+    });
+    document.querySelectorAll('.tpl-modal').forEach(function (modal) {
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) closeTplModal(modal);
+        });
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        document.querySelectorAll('.tpl-modal.flex').forEach(function (modal) {
+            closeTplModal(modal);
+        });
+    });
+})();
+
 function openAssignTemplate(id, name, action) {
     const form = document.getElementById('assign-template-form');
     form.action = action || (@json(url('/mentor/curriculum/templates')) + '/' + id + '/assign');

@@ -65,7 +65,7 @@
                                 </div>
                             </div>
                                 <p class="text-sm sm:text-[15px] text-slate-100 leading-relaxed" data-guide-body>
-                                    Hi! I will walk you through template, months, weeks, tasks, and MCQs — with the same form fields you use manually.
+                                    Hello! I will walk you through template, months, weeks, tasks, and MCQs — with the same form fields you use manually.
                                 </p>
                         </div>
 
@@ -83,7 +83,7 @@
             {{-- Caption strip (separate, always readable) --}}
             <div class="shrink-0 border-t border-white/10 bg-[#070b14] px-4 sm:px-5 py-3">
                 <p class="text-sm sm:text-[15px] text-white font-medium leading-relaxed text-center" data-guide-caption>
-                    Hi there. I am Adarsh. Let me show you each form field, slowly and clearly.
+                    Hello. I am Adarsh. Let me show you each form field, slowly and clearly.
                 </p>
             </div>
 

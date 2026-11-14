@@ -1,6 +1,12 @@
 @extends('frontend.layouts.app')
 @section('title', 'Months — '.$track->name)
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('frontend/css/voice-assistant.css') }}?v={{ @filemtime(public_path('frontend/css/voice-assistant.css')) }}">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { corePlugins: { preflight: false } };</script>
+@endpush
+
 @section('content')
 <div class="dash-layout">
     @include('frontend.mentors.partials.sidebar')
@@ -10,18 +16,26 @@
             <a href="{{ route('mentor.curriculum.tracks') }}" style="color:var(--brand);">Curriculum</a>
             <span> / </span>
             <span>{{ $track->name }}</span>
+            @if($track->is_template)
+            <span class="curriculum-template-pill" style="margin-left:6px;">Template</span>
+            @endif
         </div>
 
         <div class="dash-header flex-between" style="flex-wrap:wrap;gap:12px;">
             <div>
                 <div class="dash-title">{{ $track->name }}</div>
                 <div class="dash-subtitle">
-                    Mentee: {{ $track->mentee->name ?? '—' }}
+                    @if($track->is_template)
+                        Starter template
+                        @if($track->expertise_field)· {{ $track->expertise_field }}@endif
+                    @else
+                        Mentee: {{ $track->mentee->name ?? '—' }}
+                    @endif
                     · {{ $months->count() }} month(s)
                     · {{ $months->sum(fn ($m) => $m->weeks->count()) }} week(s)
                 </div>
             </div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="openAddMonth()" @disabled(! $track->mentee_id)>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openAddMonth()" @disabled(! $track->mentee_id && ! $track->is_template)>
                 + Add month
             </button>
         </div>
@@ -38,9 +52,12 @@
         </div>
         @endif
 
-        @unless($track->mentee_id)
+        @unless($track->mentee_id || $track->is_template)
         <div class="alert alert-error" style="margin-bottom:16px;">Assign a mentee to this track before adding months.</div>
         @endunless
+        @if($track->is_template)
+        <div class="alert alert-info" style="margin-bottom:16px;">Building your private starter template. When ready, go back and assign it to a mentee.</div>
+        @endif
 
         @forelse($months as $month)
         <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden;">
@@ -103,7 +120,7 @@
         <div class="empty-state" style="padding:48px 0;">
             <div style="font-size:16px;font-weight:700;margin-bottom:8px;">No months yet</div>
             <p style="font-size:13px;color:var(--text-2);margin-bottom:16px;">Add Month 1–12 to build this mentee’s curriculum.</p>
-            <button type="button" class="btn btn-primary" onclick="openAddMonth()" @disabled(! $track->mentee_id)>Add month</button>
+            <button type="button" class="btn btn-primary" onclick="openAddMonth()" @disabled(! $track->mentee_id && ! $track->is_template)>Add month</button>
         </div>
         @endforelse
     </div>
@@ -111,7 +128,7 @@
 
 {{-- Add / Edit Month Modal --}}
 <div class="modal-overlay" id="month-modal">
-    <div class="modal" style="max-width:520px;">
+    <div class="modal" style="max-width:560px;">
         <div class="modal-header">
             <h3 id="month-modal-title">Add Month</h3>
             <button type="button" class="modal-close" onclick="closeModal('month-modal')">✕</button>
@@ -121,32 +138,48 @@
             <input type="hidden" name="_method" id="month-method" value="POST">
             <input type="hidden" name="mentee_id" value="{{ $track->mentee_id }}">
             <div class="modal-body">
+                @include('admin.curriculum.partials.voice-studio', [
+                    'voiceTitle' => 'Voice fill',
+                    'voiceHint' => 'Dictate month title, theme, description, and outcomes.',
+                    'voiceSteps' => [
+                        ['key' => 'title', 'label' => 'Title', 'prompt' => 'Say the month title.', 'type' => 'text'],
+                        ['key' => 'theme', 'label' => 'Theme', 'prompt' => 'Say the theme, or say skip.', 'type' => 'text'],
+                        ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe what the mentee will accomplish this month.', 'type' => 'text', 'append' => true],
+                        ['key' => 'learning_outcomes', 'label' => 'Learning outcomes', 'prompt' => 'Say one learning outcome. You can add more with the field mic.', 'type' => 'text', 'newline' => true],
+                        ['key' => 'milestone_badge', 'label' => 'Milestone badge', 'prompt' => 'Say the milestone badge name, or say skip.', 'type' => 'text'],
+                    ],
+                ])
                 <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;">
                     <div class="form-group">
                         <label class="form-label">Month # *</label>
                         <input type="number" name="month_number" class="form-input" min="1" max="12" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group tpl-voice-field">
                         <label class="form-label">Title *</label>
-                        <input type="text" name="title" class="form-input" maxlength="200" required>
+                        <input type="text" name="title" class="form-input tpl-voice-input" maxlength="200" required data-voice-field="title">
+                        @include('admin.curriculum.partials.voice-mic', ['for' => 'title', 'label' => 'Dictate title'])
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Theme</label>
-                    <input type="text" name="theme" class="form-input" maxlength="100" placeholder="e.g. Foundations">
+                    <input type="text" name="theme" class="form-input tpl-voice-input" maxlength="100" placeholder="e.g. Foundations" data-voice-field="theme">
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'theme', 'label' => 'Dictate theme'])
                 </div>
-                <div class="form-group">
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Description</label>
-                    <textarea name="description" class="form-textarea" rows="2"></textarea>
+                    <textarea name="description" class="form-textarea tpl-voice-input" rows="2" data-voice-field="description"></textarea>
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'description', 'label' => 'Dictate description'])
                 </div>
-                <div class="form-group">
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Learning outcomes</label>
-                    <textarea name="learning_outcomes" class="form-textarea" rows="3" placeholder="One outcome per line"></textarea>
+                    <textarea name="learning_outcomes" class="form-textarea tpl-voice-input" rows="3" placeholder="One outcome per line" data-voice-field="learning_outcomes"></textarea>
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'learning_outcomes', 'label' => 'Dictate learning outcomes'])
                     <div class="form-hint">One outcome per line — shown as bullet points to mentees.</div>
                 </div>
-                <div class="form-group">
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Milestone badge</label>
-                    <input type="text" name="milestone_badge" class="form-input" maxlength="100" placeholder="e.g. Foundation Builder">
+                    <input type="text" name="milestone_badge" class="form-input tpl-voice-input" maxlength="100" placeholder="e.g. Foundation Builder" data-voice-field="milestone_badge">
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'milestone_badge', 'label' => 'Dictate milestone badge'])
                     <div class="form-hint">Earned on 100% completion of this month.</div>
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
@@ -167,6 +200,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('admin/js/voice-dictation.js') }}?v={{ @filemtime(public_path('admin/js/voice-dictation.js')) }}"></script>
 <script>
 function openAddMonth() {
     document.getElementById('month-modal-title').textContent = 'Add Month';

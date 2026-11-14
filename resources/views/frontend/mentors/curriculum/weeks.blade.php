@@ -1,6 +1,12 @@
 @extends('frontend.layouts.app')
 @section('title', 'Weeks — Month '.$month->month_number)
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('frontend/css/voice-assistant.css') }}?v={{ @filemtime(public_path('frontend/css/voice-assistant.css')) }}">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { corePlugins: { preflight: false } };</script>
+@endpush
+
 @section('content')
 <div class="dash-layout">
     @include('frontend.mentors.partials.sidebar')
@@ -18,7 +24,11 @@
             <div>
                 <div class="dash-title">Month {{ $month->month_number }}: {{ $month->title }}</div>
                 <div class="dash-subtitle">
-                    {{ $month->stream->mentee->name ?? 'Mentee' }}
+                    @if($month->stream?->is_template)
+                        Starter template
+                    @else
+                        {{ $month->stream->mentee->name ?? 'Mentee' }}
+                    @endif
                     · {{ $month->weeks->count() }} weeks
                     @if($month->theme)· Theme: {{ $month->theme }}@endif
                 </div>
@@ -246,7 +256,7 @@
 
 {{-- Add Week Modal --}}
 <div class="modal-overlay" id="add-week-modal">
-    <div class="modal" style="max-width:480px;">
+    <div class="modal" style="max-width:560px;">
         <div class="modal-header">
             <h3>Add Week</h3>
             <button type="button" class="modal-close" onclick="closeModal('add-week-modal')">✕</button>
@@ -255,23 +265,35 @@
             @csrf
             <input type="hidden" name="mentee_id" value="{{ $month->mentee_id }}">
             <div class="modal-body">
+                @include('admin.curriculum.partials.voice-studio', [
+                    'voiceTitle' => 'Voice fill',
+                    'voiceHint' => 'Dictate week title, focus, and mentor guide.',
+                    'voiceSteps' => [
+                        ['key' => 'title', 'label' => 'Title', 'prompt' => 'Say the week title.', 'type' => 'text'],
+                        ['key' => 'focus', 'label' => 'Focus', 'prompt' => 'Say the week focus, or say skip.', 'type' => 'text', 'append' => true],
+                        ['key' => 'mentor_guide', 'label' => 'Mentor guide', 'prompt' => 'Say private guidance for this week, or say skip.', 'type' => 'text', 'append' => true],
+                    ],
+                ])
                 <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;">
                     <div class="form-group">
                         <label class="form-label">Week # *</label>
                         <input type="number" name="week_number" class="form-input" min="1" max="52" required value="{{ ($month->weeks->max('week_number') ?? 0) + 1 }}">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group tpl-voice-field">
                         <label class="form-label">Title *</label>
-                        <input type="text" name="title" class="form-input" maxlength="200" required>
+                        <input type="text" name="title" class="form-input tpl-voice-input" maxlength="200" required data-voice-field="title">
+                        @include('admin.curriculum.partials.voice-mic', ['for' => 'title', 'label' => 'Dictate title'])
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Focus</label>
-                    <textarea name="focus" class="form-textarea" rows="2" placeholder="Core focus for this week"></textarea>
+                    <textarea name="focus" class="form-textarea tpl-voice-input" rows="2" placeholder="Core focus for this week" data-voice-field="focus"></textarea>
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'focus', 'label' => 'Dictate focus'])
                 </div>
-                <div class="form-group">
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Mentor guide (private)</label>
-                    <textarea name="mentor_guide" class="form-textarea" rows="3" placeholder="Guidance for running this week"></textarea>
+                    <textarea name="mentor_guide" class="form-textarea tpl-voice-input" rows="3" placeholder="Guidance for running this week" data-voice-field="mentor_guide"></textarea>
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'mentor_guide', 'label' => 'Dictate mentor guide'])
                 </div>
                 <div class="form-group">
                     <label class="form-label">Intro video URL</label>
@@ -303,18 +325,29 @@
             <input type="hidden" name="_method" id="task-method" value="POST">
             <input type="hidden" name="mentee_id" id="task-mentee-id">
             <div class="modal-body">
-                <div class="form-group">
+                @include('admin.curriculum.partials.voice-studio', [
+                    'voiceTitle' => 'Voice fill',
+                    'voiceHint' => 'Dictate task title and description.',
+                    'voiceSteps' => [
+                        ['key' => 'title', 'label' => 'Title', 'prompt' => 'Say the task title.', 'type' => 'text'],
+                        ['key' => 'description', 'label' => 'Description', 'prompt' => 'Describe the task, or say skip.', 'type' => 'text', 'append' => true],
+                        ['key' => 'type', 'label' => 'Type', 'prompt' => 'Say the task type, like reading, video, or project.', 'type' => 'select'],
+                    ],
+                ])
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Title *</label>
-                    <input type="text" name="title" class="form-input" maxlength="200" required>
+                    <input type="text" name="title" class="form-input tpl-voice-input" maxlength="200" required data-voice-field="title">
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'title', 'label' => 'Dictate title'])
                 </div>
-                <div class="form-group">
+                <div class="form-group tpl-voice-field">
                     <label class="form-label">Description</label>
-                    <textarea name="description" class="form-textarea" rows="2"></textarea>
+                    <textarea name="description" class="form-textarea tpl-voice-input" rows="2" data-voice-field="description"></textarea>
+                    @include('admin.curriculum.partials.voice-mic', ['for' => 'description', 'label' => 'Dictate description'])
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <div class="form-group">
                         <label class="form-label">Type</label>
-                        <select name="type" class="form-select">
+                        <select name="type" class="form-select" data-voice-field="type">
                             @foreach(\App\Models\CurriculumTask::TYPES as $val => $label)
                             <option value="{{ $val }}">{{ $label }}</option>
                             @endforeach
@@ -568,6 +601,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('admin/js/voice-dictation.js') }}?v={{ @filemtime(public_path('admin/js/voice-dictation.js')) }}"></script>
 <script>
 const STORE_TASK = @json(url('/mentor/curriculum/weeks'));
 const STORE_MCQ = @json(url('/mentor/curriculum/weeks'));

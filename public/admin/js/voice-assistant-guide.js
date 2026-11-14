@@ -69,16 +69,16 @@
 
     var STEPS = [
         {
-            title: 'Hi, I am Adarsh',
+            title: 'Hello, I am Adarsh',
             kicker: 'Adarsh · Curriculum guide',
             body: 'I will walk you through the full curriculum builder — template, months, weeks, tasks, and MCQs — using the same forms you fill manually.',
-            caption: 'Hi there. I am Adarsh. Today I will show every curriculum form, field by field, just like a teammate sitting with you.',
-            speak: 'Hi there. I am Adarsh. Today I will show every curriculum form, field by field, just like a teammate sitting with you.',
+            caption: 'Hello. I am Adarsh. Today I will show every curriculum form, field by field, just like a teammate sitting with you.',
+            speak: 'Hello. I am Adarsh. Today I will show every curriculum form, field by field, just like a teammate sitting with you.',
             form: 'template',
             highlight: null,
             filled: {},
             fieldNote: 'We start with the starter template form',
-            durationSec: 8,
+            durationSec: 12,
         },
         {
             title: 'Template: Industry',
@@ -90,7 +90,7 @@
             highlight: 'expertise_field',
             filled: { expertise_field: true },
             fieldNote: 'Highlighting Industry / domain',
-            durationSec: 9,
+            durationSec: 11,
         },
         {
             title: 'Template: Name',
@@ -102,7 +102,7 @@
             highlight: 'name',
             filled: { expertise_field: true, name: true },
             fieldNote: 'Highlighting Template name',
-            durationSec: 8,
+            durationSec: 12,
         },
         {
             title: 'Template: Description & Skills',
@@ -114,7 +114,7 @@
             highlight: 'description',
             filled: { expertise_field: true, name: true, description: true, expertise_tags: true, icon: true, color: true, is_active: true },
             fieldNote: 'Highlighting Description',
-            durationSec: 9,
+            durationSec: 11,
         },
         {
             title: 'Month form',
@@ -126,7 +126,7 @@
             highlight: 'title',
             filled: { month_number: true, theme: true, title: true },
             fieldNote: 'Month form preview',
-            durationSec: 10,
+            durationSec: 12,
         },
         {
             title: 'Month: Outcomes & Badge',
@@ -138,7 +138,7 @@
             highlight: 'learning_outcomes',
             filled: { month_number: true, theme: true, title: true, description: true, learning_outcomes: true, milestone_badge: true },
             fieldNote: 'Highlighting Learning Outcomes',
-            durationSec: 9,
+            durationSec: 12,
         },
         {
             title: 'Week form',
@@ -150,7 +150,7 @@
             highlight: 'title',
             filled: { week_number: true, title: true, focus: true },
             fieldNote: 'Week form preview',
-            durationSec: 9,
+            durationSec: 12,
         },
         {
             title: 'Week: Mentor guide',
@@ -162,7 +162,7 @@
             highlight: 'mentor_guide',
             filled: { week_number: true, title: true, focus: true, mentor_guide: true, video_url: true },
             fieldNote: 'Highlighting Mentor Guide',
-            durationSec: 8,
+            durationSec: 11,
         },
         {
             title: 'Task form',
@@ -174,7 +174,7 @@
             highlight: 'title',
             filled: { title: true, description: true },
             fieldNote: 'Task form preview',
-            durationSec: 9,
+            durationSec: 12,
         },
         {
             title: 'Task: Type & submission',
@@ -186,7 +186,7 @@
             highlight: 'type',
             filled: { title: true, description: true, type: true, submission_type: true, estimated_minutes: true, is_required: true },
             fieldNote: 'Highlighting Type',
-            durationSec: 9,
+            durationSec: 12,
         },
         {
             title: 'MCQ form',
@@ -198,7 +198,7 @@
             highlight: 'question',
             filled: { topic: true, question: true, option_0: true, option_1: true },
             fieldNote: 'MCQ form preview',
-            durationSec: 10,
+            durationSec: 12,
         },
         {
             title: 'You are ready',
@@ -210,9 +210,20 @@
             highlight: null,
             filled: { expertise_field: true, name: true, description: true, expertise_tags: true, icon: true, color: true, is_active: true },
             fieldNote: 'All set — start whenever you are ready',
-            durationSec: 9,
+            durationSec: 12,
         },
     ];
+
+    function estimateSpeechSec(text) {
+        var words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
+        // Speech rate ~0.94 ≈ 2.1–2.3 words/sec; add buffer so lines never cut off.
+        return Math.max(8, Math.ceil(words / 2.05) + 2);
+    }
+
+    // Ensure every step lasts at least as long as its spoken sentence.
+    STEPS.forEach(function (step) {
+        step.durationSec = Math.max(step.durationSec || 0, estimateSpeechSec(step.speak || step.caption));
+    });
 
     function $(sel, root) {
         return (root || document).querySelector(sel);
@@ -363,6 +374,21 @@
         var dragging = false;
         var speakToken = 0;
         var voicesPromise = null;
+        var speechDoneFor = -1;
+        var speechHoldUntil = 0;
+
+        function isSpeechBusy() {
+            try {
+                return !!(window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function markSpeechDone(stepIndex, token) {
+            if (token !== speakToken) return;
+            if (stepIndex === index) speechDoneFor = stepIndex;
+        }
 
         function lang() {
             return (langSelect && langSelect.value) || 'en-US';
@@ -380,6 +406,7 @@
 
         function stopSpeech() {
             speakToken += 1;
+            speechHoldUntil = 0;
             try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
         }
 
@@ -423,13 +450,17 @@
 
             var started = false;
             u.onstart = function () { started = true; };
+            u.onend = function () { markSpeechDone(stepIndex, token); };
+            u.onerror = function () { markSpeechDone(stepIndex, token); };
 
             try {
                 // Chrome can stay "paused" and silently drop the first speak.
                 window.speechSynthesis.resume();
                 window.speechSynthesis.speak(u);
                 window.speechSynthesis.resume();
-            } catch (e) {}
+            } catch (e) {
+                markSpeechDone(stepIndex, token);
+            }
 
             // If the first cold-start utterance was eaten, retry once.
             setTimeout(function () {
@@ -440,23 +471,32 @@
                 retry.lang = u.lang;
                 retry.rate = u.rate;
                 if (voice) retry.voice = voice;
+                retry.onend = function () { markSpeechDone(stepIndex, token); };
+                retry.onerror = function () { markSpeechDone(stepIndex, token); };
                 try {
                     window.speechSynthesis.cancel();
                     window.speechSynthesis.resume();
                     window.speechSynthesis.speak(retry);
                     window.speechSynthesis.resume();
-                } catch (e) {}
+                } catch (e) {
+                    markSpeechDone(stepIndex, token);
+                }
             }, 280);
         }
 
         function speakCurrentStep() {
-            if (!window.speechSynthesis) return;
+            if (!window.speechSynthesis) {
+                speechDoneFor = index;
+                return;
+            }
             var step = STEPS[index];
             if (!step) return;
 
             var stepIndex = index;
             var text = step.speak;
             spokenIndex = stepIndex;
+            speechDoneFor = -1;
+            speechHoldUntil = Date.now() + (estimateSpeechSec(text) * 1000) + 1500;
 
             // Bump token and cancel any previous speech, then wait briefly.
             // Immediate cancel()+speak() is a known Chrome cold-start failure.
@@ -541,14 +581,22 @@
             positionSec = Math.min(totalSec(), positionSec + delta);
             var nextIndex = stepIndexAtSec(Math.min(positionSec, Math.max(0, totalSec() - 0.01)));
 
+            // Never cut a sentence short — hold on this step until speech finishes.
             if (nextIndex !== index) {
+                var speechStillGoing = isSpeechBusy() || (speechDoneFor !== index && now < speechHoldUntil);
+                if (speechStillGoing) {
+                    positionSec = Math.max(positionSec, stepStartSec(index + 1) - 0.05);
+                    // Stretch timeline while we wait so progress does not jump backwards.
+                    syncInteractiveUi();
+                    return;
+                }
                 index = nextIndex;
                 renderStepContent();
                 speakCurrentStep();
             }
 
             syncInteractiveUi();
-            if (positionSec >= totalSec()) onEnded();
+            if (positionSec >= totalSec() && (speechDoneFor === index || !isSpeechBusy())) onEnded();
         }
 
         function playInteractive() {

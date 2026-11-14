@@ -19,6 +19,7 @@ use App\Models\{
 };
 use App\Services\CurriculumTemplateImportService;
 use App\Services\CurriculumTemplateService;
+use App\Support\MentorIndustry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -52,14 +53,88 @@ class CurriculumController extends Controller
             : null;
 
         $templates = app(CurriculumTemplateService::class)->templatesForMentor(auth()->user());
+        $mentorIndustry = MentorIndustry::canonicalize(auth()->user()->field);
+        $industries = $mentorIndustry ? [$mentorIndustry] : MentorIndustry::all();
 
         return view('frontend.mentors.curriculum.tracks', compact(
             'tracks',
             'mentees',
             'filterMentee',
             'search',
-            'templates'
+            'templates',
+            'industries'
         ));
+    }
+
+    public function storeTemplate(Request $request)
+    {
+        $mentor = auth()->user();
+        $mentorIndustry = MentorIndustry::canonicalize($mentor->field);
+
+        if (! $mentorIndustry) {
+            throw ValidationException::withMessages([
+                'expertise_field' => 'Set your industry on your profile before creating a template.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'name'            => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('education_streams', 'name')->where('is_template', true)->where('mentor_id', $mentor->id),
+            ],
+            'icon'            => 'nullable|string|max:10',
+            'color'           => 'nullable|string|max:20',
+            'description'     => 'nullable|string',
+            'expertise_field' => ['required', 'string', Rule::in(MentorIndustry::all())],
+            'expertise_tags'  => 'nullable|string',
+            'is_active'       => 'nullable|boolean',
+            'sort_order'      => 'nullable|integer',
+        ]);
+
+        // Mentors can only create templates for their own industry.
+        if (MentorIndustry::canonicalize($data['expertise_field']) !== $mentorIndustry) {
+            throw ValidationException::withMessages([
+                'expertise_field' => 'You can only create templates for your industry ('.$mentorIndustry.').',
+            ]);
+        }
+
+        $slug = Str::slug($data['name']) ?: 'template';
+        $base = $slug;
+        $i = 2;
+        while (EducationStream::where('slug', $slug)->exists()) {
+            $slug = $base.'-'.$i;
+            $i++;
+        }
+
+        $tags = [];
+        if (! empty($data['expertise_tags'])) {
+            $tags = array_values(array_unique(array_filter(array_map(
+                'trim',
+                preg_split('/,/', $data['expertise_tags']) ?: []
+            ))));
+        }
+
+        $template = EducationStream::create([
+            'mentee_id'        => null,
+            'mentor_id'        => $mentor->id,
+            'name'             => $data['name'],
+            'slug'             => $slug,
+            'icon'             => $data['icon'] ?? '💻',
+            'color'            => $data['color'] ?? '#4f46e5',
+            'description'      => $data['description'] ?? null,
+            'expertise_field'  => $mentorIndustry,
+            'expertise_stream' => $mentorIndustry,
+            'expertise_tags'   => $tags,
+            'is_active'        => $request->boolean('is_active', true),
+            'is_template'      => true,
+            'sort_order'       => $data['sort_order'] ?? 0,
+        ]);
+
+        return redirect()
+            ->route('mentor.curriculum.months', $template)
+            ->with('success', 'Template created. Add months and weeks next, then assign it to a mentee.');
     }
 
     public function showTemplate(EducationStream $template)
@@ -234,7 +309,7 @@ class CurriculumController extends Controller
         $this->assertOwnsTrack($track);
 
         $data = $request->validate([
-            'mentee_id'           => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'mentee_id'           => ['nullable', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'month_number'        => [
                 'required', 'integer', 'min:1', 'max:12',
                 Rule::unique('curriculum_months', 'month_number')->where('stream_id', $track->id),
@@ -248,11 +323,22 @@ class CurriculumController extends Controller
             'sort_order'          => 'nullable|integer',
         ]);
 
-        $this->assertMenteeMatchesParent($track->mentee_id, (int) $data['mentee_id'], 'track');
+        if ($track->is_template) {
+            abort_unless((int) $track->mentor_id === (int) auth()->id(), 403);
+            $menteeId = null;
+        } else {
+            $menteeId = (int) ($data['mentee_id'] ?? $track->mentee_id);
+            if (! $menteeId) {
+                throw ValidationException::withMessages([
+                    'mentee_id' => 'Assign a mentee to this track before adding months.',
+                ]);
+            }
+            $this->assertMenteeMatchesParent($track->mentee_id, $menteeId, 'track');
+        }
 
         CurriculumMonth::create([
             'stream_id'         => $track->id,
-            'mentee_id'         => $data['mentee_id'],
+            'mentee_id'         => $menteeId,
             'month_number'      => $data['month_number'],
             'title'             => $data['title'],
             'theme'             => $data['theme'] ?? null,
@@ -346,7 +432,7 @@ class CurriculumController extends Controller
         $this->assertOwnsTrack($month->stream);
 
         $data = $request->validate([
-            'mentee_id'   => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'mentee_id'   => ['nullable', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'week_number' => [
                 'required', 'integer', 'min:1', 'max:52',
                 Rule::unique('curriculum_weeks', 'week_number')->where('month_id', $month->id),
@@ -360,11 +446,15 @@ class CurriculumController extends Controller
             'sort_order'   => 'nullable|integer',
         ]);
 
-        $this->assertMenteeMatchesParent($month->mentee_id, (int) $data['mentee_id'], 'month');
+        $menteeId = $this->resolveContentMenteeId(
+            $month->stream,
+            isset($data['mentee_id']) ? (int) $data['mentee_id'] : null,
+            $month->mentee_id
+        );
 
         CurriculumWeek::create([
             'month_id'     => $month->id,
-            'mentee_id'    => $data['mentee_id'],
+            'mentee_id'    => $menteeId,
             'week_number'  => $data['week_number'],
             'title'        => $data['title'],
             'focus'        => $data['focus'] ?? $data['description'] ?? null,
@@ -440,7 +530,7 @@ class CurriculumController extends Controller
         $this->assertOwnsTrack($week->month->stream);
 
         $rules = [
-            'mentee_id'       => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'mentee_id'       => ['nullable', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'title'           => 'required|string|max:200',
             'description'     => 'nullable|string',
             'type'                => 'nullable|in:task,reading,video,project,quiz,reflection',
@@ -457,14 +547,18 @@ class CurriculumController extends Controller
         }
 
         $data = $request->validate($rules);
-        $this->assertMenteeMatchesParent($week->mentee_id, (int) $data['mentee_id'], 'week');
+        $menteeId = $this->resolveContentMenteeId(
+            $week->month->stream,
+            isset($data['mentee_id']) ? (int) $data['mentee_id'] : null,
+            $week->mentee_id
+        );
         $this->validateTaskAttachmentFiles($request);
 
         $attachments = $this->processUploadedAttachments($request, $data['attachments'] ?? []);
 
         $task = CurriculumTask::create([
             'week_id'            => $week->id,
-            'mentee_id'          => $data['mentee_id'],
+            'mentee_id'          => $menteeId,
             'plan_id'            => $data['plan_id'] ?? null,
             'title'              => $data['title'],
             'description'        => $data['description'] ?? null,
@@ -563,16 +657,20 @@ class CurriculumController extends Controller
         $this->assertOwnsTrack($week->month->stream);
 
         $data = $request->validate(array_merge([
-            'mentee_id'   => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'mentee_id'   => ['nullable', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'name'        => 'required|string|max:255',
             'description' => 'nullable|string',
             'order_index' => 'nullable|integer|min:0',
             'is_active'   => 'nullable',
         ], $this->bulkMcqRules('mcqs')));
 
-        $this->assertMenteeMatchesParent($week->mentee_id, (int) $data['mentee_id'], 'week');
+        $menteeId = $this->resolveContentMenteeId(
+            $week->month->stream,
+            isset($data['mentee_id']) ? (int) $data['mentee_id'] : null,
+            $week->mentee_id
+        );
 
-        $existingTopic = $this->findMcqTopicByNameInWeek($week, (int) $data['mentee_id'], $data['name']);
+        $existingTopic = $this->findMcqTopicByNameInWeek($week, $menteeId, $data['name']);
 
         if ($existingTopic) {
             $nextOrder = ((int) $existingTopic->mcqs()->max('order_index')) + 1;
@@ -588,7 +686,7 @@ class CurriculumController extends Controller
 
         $topic = CurriculumMcqTopic::create([
             'week_id'     => $week->id,
-            'mentee_id'   => $data['mentee_id'],
+            'mentee_id'   => $menteeId,
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
             'order_index' => $data['order_index'] ?? 0,
@@ -689,7 +787,7 @@ class CurriculumController extends Controller
         $this->assertOwnsTrack($week->month->stream);
 
         $data = $request->validate([
-            'mentee_id'   => ['required', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
+            'mentee_id'   => ['nullable', 'integer', Rule::exists('users', 'id')->where('role', 'mentee')],
             'type'        => ['required', Rule::in(array_keys(TaskSupportingMaterial::TYPES))],
             'title'       => 'nullable|string|max:200',
             'description' => 'nullable|string',
@@ -698,7 +796,11 @@ class CurriculumController extends Controller
             'sort_order'  => 'nullable|integer',
         ]);
 
-        $this->assertMenteeMatchesParent($week->mentee_id, (int) $data['mentee_id'], 'week');
+        $menteeId = $this->resolveContentMenteeId(
+            $week->month->stream,
+            isset($data['mentee_id']) ? (int) $data['mentee_id'] : null,
+            $week->mentee_id
+        );
 
         $type = $data['type'];
 
@@ -722,7 +824,7 @@ class CurriculumController extends Controller
 
         TaskSupportingMaterial::create([
             'week_id'     => $week->id,
-            'mentee_id'   => $data['mentee_id'],
+            'mentee_id'   => $menteeId,
             'mentor_id'   => auth()->id(),
             'title'       => $data['title'] ?? null,
             'description' => $data['description'] ?? null,
@@ -854,6 +956,13 @@ class CurriculumController extends Controller
 
         $mentorId = (int) auth()->id();
 
+        // Mentor-owned starter templates (built before assigning to a mentee).
+        if ($track->is_template) {
+            abort_unless((int) $track->mentor_id === $mentorId, 403);
+
+            return;
+        }
+
         if ((int) $track->mentor_id === $mentorId) {
             return;
         }
@@ -867,6 +976,27 @@ class CurriculumController extends Controller
         }
 
         abort(403);
+    }
+
+    /**
+     * Mentee-bound tracks need a mentee_id; mentor-owned templates keep content mentee-less until assigned.
+     */
+    private function resolveContentMenteeId(?EducationStream $track, ?int $requestedMenteeId, ?int $parentMenteeId = null): ?int
+    {
+        if ($track?->is_template) {
+            return null;
+        }
+
+        $menteeId = $requestedMenteeId ?: $parentMenteeId ?: $track?->mentee_id;
+        if (! $menteeId) {
+            throw ValidationException::withMessages([
+                'mentee_id' => 'Assign a mentee before adding curriculum content.',
+            ]);
+        }
+
+        $this->assertMenteeMatchesParent($parentMenteeId ?: $track?->mentee_id, (int) $menteeId, 'curriculum');
+
+        return (int) $menteeId;
     }
 
     private function assertMentorMentee(int $menteeId): void
@@ -1013,12 +1143,16 @@ class CurriculumController extends Controller
 
     private function findMcqTopicByNameInWeek(
         CurriculumWeek $week,
-        int $menteeId,
+        ?int $menteeId,
         string $name,
         ?int $excludeTopicId = null
     ): ?CurriculumMcqTopic {
         return CurriculumMcqTopic::where('week_id', $week->id)
-            ->where('mentee_id', $menteeId)
+            ->when(
+                $menteeId === null,
+                fn ($q) => $q->whereNull('mentee_id'),
+                fn ($q) => $q->where('mentee_id', $menteeId)
+            )
             ->when($excludeTopicId, fn ($q) => $q->where('id', '!=', $excludeTopicId))
             ->whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($name))])
             ->first();

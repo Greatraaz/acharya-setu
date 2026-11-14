@@ -23,6 +23,9 @@
     </div>
     <div class="curriculum-template-card__actions">
         <a href="{{ route('mentor.curriculum.templates.show', $template) }}" class="btn btn-outline btn-sm">Preview</a>
+        @if(!empty($template->owned))
+        <a href="{{ route('mentor.curriculum.months', $template) }}" class="btn btn-outline btn-sm">Build</a>
+        @endif
         <button type="button"
                 class="btn btn-primary btn-sm js-assign-template"
                 data-id="{{ encrypt_id($template->id) }}"

@@ -1,11 +1,14 @@
 @php
     $vaIndustries = $industries ?? \App\Support\MentorIndustry::all();
+    $vaStoreUrl = $vaStoreUrl ?? route('admin.curriculum.templates.store');
+    $vaTitle = $vaTitle ?? 'Create with Adarsh';
+    $vaSubtitle = $vaSubtitle ?? 'Speak or type — Adarsh will walk you through each form field';
 @endphp
 
 <div id="voice-assistant-studio"
      class="va-studio fixed inset-0 z-[95] hidden"
      data-voice-studio-shell
-     data-store-url="{{ route('admin.curriculum.templates.store') }}"
+     data-store-url="{{ $vaStoreUrl }}"
      data-industries='@json($vaIndustries)'>
     <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" data-va-backdrop></div>
 
@@ -17,16 +20,16 @@
                 <div class="flex items-start justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
                         <div class="relative shrink-0">
-                            <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <span class="va-avatar flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/30">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
                                 </svg>
                             </span>
-                            <span class="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-white"></span>
+                            <span class="va-online-dot absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-white" aria-hidden="true"></span>
                         </div>
                         <div class="min-w-0">
-                            <h2 class="text-base sm:text-lg font-semibold text-slate-900 truncate">Create with Adarsh</h2>
-                            <p class="text-xs text-slate-500 mt-0.5">Speak or type — Adarsh will walk you through each form field</p>
+                            <h2 class="text-base sm:text-lg font-semibold text-slate-900 truncate">{{ $vaTitle }}</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">{{ $vaSubtitle }}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
@@ -108,7 +111,7 @@
         </div>
     </div>
 
-    <form data-va-form method="POST" action="{{ route('admin.curriculum.templates.store') }}" class="hidden">
+    <form data-va-form method="POST" action="{{ $vaStoreUrl }}" class="hidden">
         @csrf
         <input type="hidden" name="expertise_field" value="">
         <input type="hidden" name="name" value="">

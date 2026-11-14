@@ -413,6 +413,7 @@ Route::middleware(['auth', 'role:mentor,expert', 'mentor.approved'])
         Route::put('/tracks/{track}',                   [MentorCurriculumController::class, 'updateTrack'])->name('tracks.update');
 
         Route::get('/templates/sample',                 [MentorCurriculumController::class, 'downloadTemplateSample'])->name('templates.sample');
+        Route::post('/templates',                       [MentorCurriculumController::class, 'storeTemplate'])->name('templates.store');
         Route::post('/templates/import',                [MentorCurriculumController::class, 'importTemplates'])->name('templates.import');
         Route::get('/templates/{template}',             [MentorCurriculumController::class, 'showTemplate'])->name('templates.show');
         Route::post('/templates/{template}/assign',     [MentorCurriculumController::class, 'assignTemplate'])->name('templates.assign');
