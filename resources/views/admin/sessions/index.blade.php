@@ -7,7 +7,7 @@
 
     {{-- Header --}}
     <div class="flex items-center justify-between">
-        <p class="text-sm text-gray-500">Manage mentor–mentee consultation sessions and track outcomes.</p>
+        <p class="text-sm text-gray-500">Manage mentor and expert consultation sessions with mentees.</p>
         <div class="flex gap-2">
             <a href="{{ route('admin.sessions.export', request()->all()) }}"
                class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 border border-gray-200 px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors bg-white">
@@ -70,6 +70,14 @@
                 </select>
             </div>
             <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Host type</label>
+                <select name="host_type" class="border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                    <option value="">All (Mentor & Expert)</option>
+                    <option value="mentor" {{ request('host_type') === 'mentor' ? 'selected' : '' }}>Mentor sessions</option>
+                    <option value="expert" {{ request('host_type') === 'expert' ? 'selected' : '' }}>Expert sessions</option>
+                </select>
+            </div>
+            <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">From Date</label>
                 <input type="date" name="date_from" value="{{ request('date_from') }}"
                        class="border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
@@ -106,7 +114,7 @@
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-100">
                         <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Session</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Mentor → Mentee</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Host → Mentee</th>
                         <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Scheduled</th>
                         <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Duration</th>
                         <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
@@ -125,12 +133,12 @@
                         </td>
                         <td class="px-4 py-4">
                             <div class="flex items-center gap-2">
-                                <div class="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-semibold text-indigo-700 flex-shrink-0">
+                                <div class="w-7 h-7 rounded-full {{ $session->isExpertHost() ? 'bg-violet-100 text-violet-700' : 'bg-indigo-100 text-indigo-700' }} flex items-center justify-center text-xs font-semibold flex-shrink-0">
                                     {{ strtoupper(substr($session->mentor->name ?? 'M', 0, 1)) }}
                                 </div>
                                 <div>
                                     <div class="text-xs font-semibold text-gray-800">{{ $session->mentor->name ?? '—' }}</div>
-                                    <div class="text-xs text-gray-400">Mentor</div>
+                                    <div class="text-xs {{ $session->isExpertHost() ? 'text-violet-600 font-medium' : 'text-gray-400' }}">{{ $session->hostLabel() }}</div>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 mt-2">

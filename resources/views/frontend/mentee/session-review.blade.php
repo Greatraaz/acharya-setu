@@ -252,7 +252,7 @@
                 <div class="session-detail-sidebar">
                     <div class="review-sidebar-sticky">
                         <div class="card">
-                            <h3 style="font-size:14px;font-weight:700;margin-bottom:14px;">👤 Mentor</h3>
+                            <h3 style="font-size:14px;font-weight:700;margin-bottom:14px;">👤 {{ $session->hostLabel() }}</h3>
                             <div class="session-detail-person">
                                 <div class="session-detail-person__avatar mentor-avatar-lg" style="width:48px;height:48px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--brand-muted);font-weight:700;">
                                     @if($session->mentor->avatar_url ?? false)
@@ -262,8 +262,8 @@
                                     @endif
                                 </div>
                                 <div class="session-detail-person__info">
-                                    <div class="session-detail-person__name">{{ $session->mentor->name ?? 'Mentor' }}</div>
-                                    <div class="session-detail-person__email">{{ $session->mentor->designation ?? 'Mentor' }}</div>
+                                    <div class="session-detail-person__name">{{ $session->mentor->name ?? $session->hostLabel() }}</div>
+                                    <div class="session-detail-person__email">{{ $session->mentor->designation ?? $session->hostLabel() }}</div>
                                 </div>
                             </div>
                             @if($session->mentor?->slug)
@@ -276,7 +276,7 @@
                             <div class="booking-summary" style="padding:0;border:none;background:transparent;">
                                 <div class="booking-summary-row">
                                     <span>Title</span>
-                                    <strong style="text-align:right;max-width:55%;">{{ $session->title ?: 'Mentoring Session' }}</strong>
+                                    <strong style="text-align:right;max-width:55%;">{{ $session->title ?: ($session->hostLabel().' Session') }}</strong>
                                 </div>
                                 <div class="booking-summary-row">
                                     <span>When</span>

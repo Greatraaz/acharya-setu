@@ -43,13 +43,13 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentor <span class="text-red-500">*</span></label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentor / Expert <span class="text-red-500">*</span></label>
                             <select name="mentor_id"
                                     class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
-                                <option value="">Select Mentor…</option>
+                                <option value="">Select mentor or expert…</option>
                                 @foreach($mentors as $mentor)
                                 <option value="{{ $mentor->id }}" {{ old('mentor_id', $session->mentor_id) == $mentor->id ? 'selected' : '' }}>
-                                    {{ $mentor->name }}@if($mentor->designation ?? $mentor->field) — {{ $mentor->designation ?? $mentor->field }}@endif
+                                    [{{ $mentor->hostLabel() }}] {{ $mentor->name }}@if($mentor->designation ?? $mentor->field) — {{ $mentor->designation ?? $mentor->field }}@endif
                                 </option>
                                 @endforeach
                             </select>

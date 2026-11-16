@@ -9,7 +9,7 @@
         <div class="dash-header flex-between" style="flex-wrap:wrap;gap:12px;">
             <div>
                 <div class="dash-title">My Sessions</div>
-                <div class="dash-subtitle">Upcoming and past mentorship sessions.</div>
+                <div class="dash-subtitle">Upcoming and past sessions with mentors and experts.</div>
             </div>
             <a href="{{ route('mentors.search') }}" class="btn btn-primary">🔍 Book a Session</a>
         </div>
@@ -25,6 +25,7 @@
                 @php
                     $tabParams = array_filter([
                         'status' => $key === 'all' ? null : $key,
+                        'host_type' => (($hostType ?? 'all') !== 'all') ? ($hostType ?? null) : null,
                         'q' => $search ?? request('q') ?: null,
                         'date' => request('date') ?: null,
                     ]);
@@ -40,15 +41,20 @@
                 @if(request('status'))
                     <input type="hidden" name="status" value="{{ request('status') }}">
                 @endif
+                <select name="host_type" class="form-select session-date-input" title="Mentor or Expert" onchange="this.form.submit()">
+                    <option value="all" {{ ($hostType ?? 'all') === 'all' ? 'selected' : '' }}>All hosts</option>
+                    <option value="mentor" {{ ($hostType ?? '') === 'mentor' ? 'selected' : '' }}>Mentor sessions</option>
+                    <option value="expert" {{ ($hostType ?? '') === 'expert' ? 'selected' : '' }}>Expert sessions</option>
+                </select>
                 <div class="session-toolbar-controls__search-row">
                     <div class="session-search-field">
                         <span class="session-search-icon" aria-hidden="true">🔍</span>
                         <input type="search" name="q" class="form-input" value="{{ $search ?? request('q') }}"
-                               placeholder="Search by name, mentor, or ID…"
+                               placeholder="Search by name, mentor, expert, or ID…"
                                autocomplete="off">
                     </div>
                     <button type="submit" class="btn btn-outline session-toolbar-controls__submit">Search</button>
-                    @if(request()->filled('q') || request()->filled('date'))
+                    @if(request()->filled('q') || request()->filled('date') || (($hostType ?? 'all') !== 'all'))
                         <a href="{{ route('mentee.sessions', array_filter(['status' => request('status')])) }}" class="btn btn-ghost session-toolbar-controls__clear">Clear</a>
                     @endif
                 </div>
@@ -82,9 +88,10 @@
                 <div class="session-card-body">
                     <div class="session-card-header">
                         <div class="session-card-header__main">
-                            <div class="session-card-title">{{ $session->title ?: 'Mentoring Session' }}</div>
+                            <div class="session-card-title">{{ $session->title ?: ($session->hostLabel().' Session') }}</div>
                             <div class="session-card-subtitle">
-                                Mentor: <strong>{{ $session->mentor->name ?? '—' }}</strong>
+                                {{ $session->hostLabel() }}: <strong>{{ $session->mentor->name ?? '—' }}</strong>
+                                <span class="session-card-ref" style="margin-left:6px;">{{ $session->isExpertHost() ? 'Expert' : 'Mentor' }}</span>
                                 @if($session->booking_ref)
                                     · <span class="session-card-ref">{{ $session->booking_ref }}</span>
                                 @endif

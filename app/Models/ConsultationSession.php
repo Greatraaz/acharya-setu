@@ -169,6 +169,27 @@ class ConsultationSession extends Model
         return $q->where('mentee_id', $id);
     }
 
+    /** Filter by host role: mentor | expert */
+    public function scopeHostType(Builder $q, ?string $type): Builder
+    {
+        $type = strtolower(trim((string) $type));
+        if (! in_array($type, User::SESSION_HOST_ROLES, true)) {
+            return $q;
+        }
+
+        return $q->whereHas('mentor', fn (Builder $m) => $m->where('role', $type));
+    }
+
+    public function hostLabel(): string
+    {
+        return $this->mentor?->hostLabel() ?? 'Mentor';
+    }
+
+    public function isExpertHost(): bool
+    {
+        return (bool) $this->mentor?->isExpert();
+    }
+
     public function scopeUpcoming(Builder $q): Builder
     {
         $now = Carbon::now(self::SCHEDULE_TIMEZONE)->format('Y-m-d H:i:s');
@@ -829,7 +850,9 @@ class ConsultationSession extends Model
         }
 
         $roleLabel = match ($role) {
-            'mentor' => 'Mentor',
+            'mentor', 'expert' => $this->cancelledBy?->hostLabel()
+                ?? $this->mentor?->hostLabel()
+                ?? 'Mentor',
             'mentee' => 'Mentee',
             'admin' => 'Admin',
             default => 'User',

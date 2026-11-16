@@ -18,7 +18,7 @@
                     <div class="session-detail-header-top">
                         <div class="session-detail-header-main">
                             <div class="session-detail-title-row">
-                                <h2 class="session-detail-title">{{ $session->title ?: 'Mentoring Session' }}</h2>
+                                <h2 class="session-detail-title">{{ $session->title ?: ($session->hostLabel().' Session') }}</h2>
                                 <span class="session-status {{ str_replace('_', '-', $session->status) }}">{{ $session->status_label ?? ucfirst($session->status) }}</span>
                             </div>
                             <div class="session-detail-meta">
@@ -50,7 +50,7 @@
                 @endif
 
                 <div class="card session-detail-card">
-                    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">📝 Shared Notes from Mentor</h3>
+                    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">📝 Shared Notes from {{ $session->hostLabel() }}</h3>
                     @php $sharedNotes = ($session->notes ?? collect())->where('is_shared', true); @endphp
                     @forelse($sharedNotes as $note)
                     <div style="padding:12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;">
@@ -58,7 +58,7 @@
                         <div style="font-size:14px;color:var(--text-2);line-height:1.7;white-space:pre-wrap;word-break:break-word;">{{ $note->content ?? '' }}</div>
                     </div>
                     @empty
-                    <p style="font-size:13px;color:var(--text-2);margin:0;">No shared notes yet. Notes from your mentor appear here after the session.</p>
+                    <p style="font-size:13px;color:var(--text-2);margin:0;">No shared notes yet. Notes from your {{ strtolower($session->hostLabel()) }} appear here after the session.</p>
                     @endforelse
                 </div>
 
@@ -67,7 +67,7 @@
 
             <div class="session-detail-sidebar">
                 <div class="card">
-                    <h3 style="font-size:14px;font-weight:700;margin-bottom:14px;">👤 Mentor</h3>
+                    <h3 style="font-size:14px;font-weight:700;margin-bottom:14px;">👤 {{ $session->hostLabel() }}</h3>
                     <div class="session-detail-person">
                         <div class="session-detail-person__avatar mentor-avatar-lg" style="width:48px;height:48px;border-radius:50%;">
                             @if($session->mentor->avatar_url ?? false)

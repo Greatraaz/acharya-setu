@@ -32,6 +32,9 @@ class ConsultationSessionController extends Controller
         if ($request->status)   $query->where('status', $request->status);
         if ($request->date_from) $query->whereDate('scheduled_at', '>=', $request->date_from);
         if ($request->date_to)   $query->whereDate('scheduled_at', '<=', $request->date_to);
+        if ($request->filled('host_type')) {
+            $query->hostType($request->input('host_type'));
+        }
  
         $sessions = $query->paginate(15)->withQueryString();
  
@@ -50,7 +53,7 @@ class ConsultationSessionController extends Controller
     // ── Create / Book ─────────────────────────────────────────
     public function create()
     {
-        $mentors = User::mentors()->active()->approved()->get();;
+        $mentors = User::sessionHosts()->active()->approved()->orderBy('name')->get();
         $mentees = User::mentees()->active()->get(); // all users can be mentees
         return view('admin.sessions.form', [
             'session' => new ConsultationSession(),
@@ -76,7 +79,7 @@ class ConsultationSessionController extends Controller
         return redirect()->route('admin.sessions.index')->with(
             'success',
             $immediate
-                ? 'Session created. Mentor and mentee can join immediately.'
+                ? 'Session created. Host and mentee can join immediately.'
                 : 'Session booked successfully.'
         );
     }
@@ -91,7 +94,7 @@ class ConsultationSessionController extends Controller
     // ── Edit / Update ─────────────────────────────────────────
     public function edit(ConsultationSession $session)
     {
-        $mentors = User::mentors()->active()->approved()->orderBy('name')->get();
+        $mentors = User::sessionHosts()->active()->approved()->orderBy('name')->get();
         $mentees = User::mentees()->active()->orderBy('name')->get();
 
         return view('admin.sessions.form', compact('session', 'mentors', 'mentees'));
@@ -196,13 +199,15 @@ class ConsultationSessionController extends Controller
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->when($request->date_from, fn($q) => $q->whereDate('scheduled_at', '>=', $request->date_from))
             ->when($request->date_to,   fn($q) => $q->whereDate('scheduled_at', '<=', $request->date_to))
+            ->when($request->filled('host_type'), fn ($q) => $q->hostType($request->input('host_type')))
             ->latest('scheduled_at')->get();
  
-        $csv = "Booking Ref,Title,Mentor,Mentee,Scheduled At,Duration,Status,Amount,Payment,Rating\n";
+        $csv = "Booking Ref,Title,Host Type,Host,Mentee,Scheduled At,Duration,Status,Amount,Payment,Rating\n";
         foreach ($sessions as $s) {
             $csv .= implode(',', [
                 $s->booking_ref,
                 '"' . $s->title . '"',
+                '"' . $s->hostLabel() . '"',
                 '"' . ($s->mentor->name ?? '') . '"',
                 '"' . ($s->mentee->name ?? '') . '"',
                 $s->scheduled_at->format('Y-m-d H:i'),
@@ -226,7 +231,11 @@ class ConsultationSessionController extends Controller
         $startNow = $request->boolean('start_immediately');
 
         $data = $request->validate([
-            'mentor_id'          => 'required|exists:users,id',
+            'mentor_id'          => [
+                'required',
+                'exists:users,id',
+                \Illuminate\Validation\Rule::exists('users', 'id')->whereIn('role', User::SESSION_HOST_ROLES),
+            ],
             'mentee_id'          => 'required|exists:users,id|different:mentor_id',
             'title'              => 'required|string|max:200',
             'agenda'             => 'nullable|string|max:2000',

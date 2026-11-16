@@ -38,10 +38,17 @@ class SessionController extends Controller
             $query->whereDate('scheduled_at', $request->input('date'));
         }
 
+        $hostType = strtolower(trim((string) $request->input('host_type', 'all')));
+        if (in_array($hostType, ['mentor', 'expert'], true)) {
+            $query->hostType($hostType);
+        } else {
+            $hostType = 'all';
+        }
+
         $sessions = $query->paginate(15)->withQueryString();
         app(CounsellingBenefitService::class)->annotate($sessions->getCollection());
 
-        return view('frontend.mentee.sessions', compact('sessions', 'search'));
+        return view('frontend.mentee.sessions', compact('sessions', 'search', 'hostType'));
     }
 
     public function show(int $id)

@@ -90,7 +90,7 @@
                         ['Scheduled', ($st?->format('D, d M Y · H:i') ?? '—').' – '.($se?->format('H:i') ?? '—').' ('.$tz.')'],
                         ['Duration', $session->duration_minutes.' minutes'],
                         ['Amount', $amountLabel],
-                        ['Mentor earned', $session->status === 'cancelled'
+                        [$session->hostLabel().' earned', $session->status === 'cancelled'
                             ? '₹'.number_format((float) data_get($session->cancellation_settlement, 'mentor_credited', 0), 0).' (cancelled)'
                             : ($payout['list_amount'] > 0 ? '₹'.number_format($payout['net'], 0).' (after '.(int) round($payout['fee_rate'] * 100).'% fee)' : '—')],
                         ['Payment method', $session->paymentMethodLabel()],
@@ -317,9 +317,9 @@
         {{-- RIGHT: Participants + Sidebar --}}
         <div class="space-y-5">
 
-            {{-- Mentor card --}}
+            {{-- Host card (Mentor or Expert) --}}
             <div class="bg-white border border-gray-200 rounded-2xl p-5">
-                <div class="text-xs font-semibold text-indigo-600 uppercase tracking-widest mb-3">Mentor</div>
+                <div class="text-xs font-semibold {{ $session->isExpertHost() ? 'text-violet-600' : 'text-indigo-600' }} uppercase tracking-widest mb-3">{{ $session->hostLabel() }}</div>
                 <div class="flex items-center gap-3 mb-4">
                     <div class="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-base flex-shrink-0">
                         {{ strtoupper(substr($session->mentor->name ?? 'M', 0, 2)) }}

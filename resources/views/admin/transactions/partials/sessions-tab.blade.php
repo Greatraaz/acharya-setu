@@ -97,13 +97,13 @@
                     <th class="px-4 py-3 text-left">Session</th>
                     <th class="px-4 py-3 text-left">Date</th>
                     <th class="px-4 py-3 text-left">Mentee</th>
-                    <th class="px-4 py-3 text-left">Mentor</th>
+                    <th class="px-4 py-3 text-left">Host</th>
                     <th class="px-4 py-3 text-left">Method</th>
                     <th class="px-4 py-3 text-right">Duration</th>
                     <th class="px-4 py-3 text-right">Session Gross</th>
                     <th class="px-4 py-3 text-right">Coupon (Admin)</th>
                     <th class="px-4 py-3 text-right">Admin Commission</th>
-                    <th class="px-4 py-3 text-right">Mentor Earned</th>
+                    <th class="px-4 py-3 text-right">Host Earned</th>
                     <th class="px-4 py-3 text-left">Status</th>
                 </tr>
             </thead>
@@ -123,7 +123,10 @@
                             <p class="font-medium text-gray-800">{{ $inv->user?->name ?? '—' }}</p>
                             <p class="text-xs text-gray-400">{{ $inv->user?->email }}</p>
                         </td>
-                        <td class="px-4 py-3">{{ $inv->mentor?->name ?? '—' }}</td>
+                        <td class="px-4 py-3">
+                            <p class="font-medium text-gray-800">{{ $inv->mentor?->name ?? '—' }}</p>
+                            <p class="text-[11px] {{ $inv->mentor?->isExpert() ? 'text-violet-600' : 'text-gray-400' }}">{{ $inv->mentor?->hostLabel() ?? 'Host' }}</p>
+                        </td>
                         <td class="px-4 py-3"><span class="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">{{ $inv->paymentMethodLabel() }}</span></td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">{{ $inv->duration_minutes ? $inv->duration_minutes.' min' : '—' }}</td>
                         <td class="px-4 py-3 text-right font-semibold">₹{{ number_format($bd['gross'], 2) }}</td>

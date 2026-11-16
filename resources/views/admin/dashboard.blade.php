@@ -254,7 +254,7 @@
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-100 text-left">
                             <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Mentee</th>
-                            <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Mentor</th>
+                            <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Host</th>
                             <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
                             <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
                             <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
@@ -280,7 +280,10 @@
                                     <div class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px] flex items-center justify-center flex-shrink-0">
                                         {{ strtoupper(substr($session->mentor->name ?? 'M',0,2)) }}
                                     </div>
-                                    <span class="text-sm text-gray-600">{{ $session->mentor->name ?? '—' }}</span>
+                                    <div>
+                                        <span class="text-sm text-gray-600">{{ $session->mentor->name ?? '—' }}</span>
+                                        <div class="text-[11px] {{ $session->isExpertHost() ? 'text-violet-600' : 'text-gray-400' }}">{{ $session->hostLabel() }}</div>
+                                    </div>
                                 </div>
                             </td>
                             <td class="px-4 py-3.5 text-sm text-gray-500">{{ $session->scheduled_at->format('d M') }}</td>

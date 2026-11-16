@@ -1,8 +1,9 @@
 {{-- resources/views/frontend/mentor/sessions.blade.php --}}
 @extends('frontend.layouts.app')
-@section('title', 'My Sessions — Vedrix Mentor')
+@section('title', 'My Sessions — Vedrix '.auth()->user()->hostLabel())
 
 @section('content')
+@php $hostLabel = auth()->user()->hostLabel(); @endphp
 <div class="dash-layout">
     @include('frontend.mentors.partials.sidebar')
 
@@ -10,12 +11,15 @@
         <div class="dash-header flex-between">
             <div>
                 <div class="dash-title">My Sessions</div>
-                <div class="dash-subtitle">Manage and track all your mentoring sessions.</div>
+                <div class="dash-subtitle">Manage and track all your {{ strtolower($hostLabel) }} sessions.</div>
             </div>
+            <span class="session-status {{ auth()->user()->isExpert() ? 'completed' : 'upcoming' }}" style="align-self:center;">
+                {{ $hostLabel }} sessions
+            </span>
         </div>
 
         <div class="card" style="margin-bottom:16px;padding:16px 18px;">
-            <h3 style="font-size:14px;font-weight:700;margin:0 0 10px;">In-house mentor hours</h3>
+            <h3 style="font-size:14px;font-weight:700;margin:0 0 10px;">In-house {{ strtolower($hostLabel) }} hours</h3>
             @forelse($inHouseHistory ?? [] as $row)
             <div class="mentee-benefits__history-row" style="padding:6px 0;border-bottom:1px solid var(--border);">
                 <div>
@@ -29,7 +33,7 @@
                 </span>
             </div>
             @empty
-            <p style="font-size:13px;color:var(--text-2);margin:0;">No in-house mentor hours with your assigned mentees yet.</p>
+            <p style="font-size:13px;color:var(--text-2);margin:0;">No in-house {{ strtolower($hostLabel) }} hours with your assigned mentees yet.</p>
             @endforelse
         </div>
 
