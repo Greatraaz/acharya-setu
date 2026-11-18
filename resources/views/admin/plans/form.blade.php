@@ -115,7 +115,7 @@
             <div class="bg-white border border-gray-200 rounded-2xl p-6">
                 <h3 class="text-sm font-semibold text-gray-800 mb-4 pb-3 border-b border-gray-100">Pricing</h3>
 
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">
                             Monthly Price <span class="text-red-500">*</span>
@@ -156,19 +156,6 @@
                             >
                         </div>
                         <p class="text-xs text-gray-400 mt-1">Set 0 if yearly not offered.</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Trial Days</label>
-                        <input
-                            type="number"
-                            name="trial_days"
-                            min="0"
-                            value="{{ old('trial_days', $plan->trial_days ?? 0) }}"
-                            placeholder="0"
-                            class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 bg-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        >
-                        <p class="text-xs text-gray-400 mt-1">0 = no trial period.</p>
                     </div>
                 </div>
 

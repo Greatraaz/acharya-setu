@@ -130,7 +130,6 @@
                         <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Plan</th>
                         <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly</th>
                         <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Yearly</th>
-                        <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Trial</th>
                         <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Features</th>
                         <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Order</th>
@@ -175,13 +174,6 @@
                             @if($plan->price_yearly > 0)<span class="text-xs text-gray-400">/yr</span>@endif
                             @if($plan->yearly_savings_percent > 0)
                             <div class="text-xs text-green-600 font-medium mt-0.5">Save {{ $plan->yearly_savings_percent }}%</div>
-                            @endif
-                        </td>
-                        <td class="px-4 py-4">
-                            @if($plan->trial_days > 0)
-                            <span class="text-xs font-medium bg-purple-50 text-purple-700 px-2 py-1 rounded-lg">{{ $plan->trial_days }}d free</span>
-                            @else
-                            <span class="text-xs text-gray-400">None</span>
                             @endif
                         </td>
                         <td class="px-4 py-4">

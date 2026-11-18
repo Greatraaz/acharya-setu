@@ -655,7 +655,6 @@ class Plan extends Model
             'badge_palette'           => $this->badgePalette(),
             'is_featured'             => (bool) $this->is_featured,
             'color'                   => $this->color,
-            'trial_days'              => (int) ($this->trial_days ?? 0),
         ];
 
         if ($checkout !== null) {
