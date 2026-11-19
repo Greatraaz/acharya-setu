@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\ConsultationSession;
+use App\Models\User;
 use App\Models\UserSubscription;
 use Carbon\Carbon;
 
@@ -70,10 +71,13 @@ trait HasSubscription
     }
 
     /**
-     * Free career-counselling minutes included in the active plan for this billing period.
+     * Free plan minutes for this billing period.
      *
-     * Essential example: 30 minutes once per period, only for a 30-minute booking
-     * (duration must be ≤ remaining and ≤ free_session_max_duration).
+     * Benefit pool depends on the session host:
+     * - Expert → career_counselling
+     * - Mentor → in_house_mentor
+     *
+     * Pass `$host` when checking a booking, or `$benefitKey` to read a specific pool.
      *
      * @return array{
      *   covered: bool,
@@ -84,12 +88,19 @@ trait HasSubscription
      *   unlimited: bool,
      *   plan_name: string|null,
      *   subscription_id: string|null,
-     *   benefit: string|null
+     *   benefit: string|null,
+     *   host_role: string|null
      * }
      */
-    public function planSessionAllowance(?int $requestedDuration = null): array
-    {
+    public function planSessionAllowance(
+        ?int $requestedDuration = null,
+        ?User $host = null,
+        ?string $benefitKey = null,
+    ): array {
         $subscription = $this->activeSubscription();
+        $resolvedBenefit = $this->resolveSessionBenefitKey($host, $benefitKey);
+        $hostRole = $this->hostRoleForBenefit($resolvedBenefit);
+
         $empty = [
             'covered'              => false,
             'minutes_limit'        => null,
@@ -99,7 +110,8 @@ trait HasSubscription
             'unlimited'            => false,
             'plan_name'            => null,
             'subscription_id'      => null,
-            'benefit'              => null,
+            'benefit'              => $resolvedBenefit,
+            'host_role'            => $hostRole,
             // Legacy keys kept for older API clients
             'limit'                => null,
             'used'                 => 0,
@@ -110,7 +122,8 @@ trait HasSubscription
             return $empty;
         }
 
-        $limits = $subscription->plan->limits;
+        $plan = $subscription->plan;
+        $limits = $plan->limits;
         if (is_string($limits)) {
             $limits = json_decode($limits, true) ?: [];
         }
@@ -118,13 +131,15 @@ trait HasSubscription
             $limits = [];
         }
 
-        $minutesLimit = $this->resolveFreeSessionMinutes($limits);
+        $billing = $this->subscriptionBillingPeriod($subscription);
+        $minutesLimit = $this->resolveBenefitMinutes($plan, $limits, $resolvedBenefit, $billing);
         $maxSession = $this->resolveFreeSessionMaxDuration($limits, $minutesLimit);
 
         $base = [
-            'plan_name'           => $subscription->plan->name,
+            'plan_name'           => $plan->name,
             'subscription_id'     => $subscription->subscription_id,
-            'benefit'             => 'career_counselling',
+            'benefit'             => $resolvedBenefit,
+            'host_role'           => $hostRole,
             'max_session_minutes' => $maxSession,
         ];
 
@@ -132,7 +147,7 @@ trait HasSubscription
             return array_merge($empty, $base);
         }
 
-        $used = $this->freeSessionMinutesUsed();
+        $used = $this->freeSessionMinutesUsed($resolvedBenefit);
 
         // -1 = unlimited free minutes
         if ($minutesLimit < 0) {
@@ -190,6 +205,64 @@ trait HasSubscription
             'used'              => $used,
             'remaining'         => $remaining,
         ]);
+    }
+
+    /**
+     * Map booking host / explicit key → benefit pool.
+     */
+    public function resolveSessionBenefitKey(?User $host = null, ?string $benefitKey = null): string
+    {
+        if (is_string($benefitKey) && $benefitKey !== '') {
+            $key = strtolower(trim($benefitKey));
+
+            return match ($key) {
+                'in_house', 'in_house_mentor', 'mentor' => 'in_house_mentor',
+                default => 'career_counselling',
+            };
+        }
+
+        if ($host?->isMentor()) {
+            return 'in_house_mentor';
+        }
+
+        // Experts (and unscoped callers) use career counselling.
+        return 'career_counselling';
+    }
+
+    public function hostRoleForBenefit(string $benefitKey): string
+    {
+        return $benefitKey === 'in_house_mentor' ? 'mentor' : 'expert';
+    }
+
+    /**
+     * @param  array<string, mixed>  $limits
+     */
+    private function resolveBenefitMinutes($plan, array $limits, string $benefitKey, ?string $billing = null): ?int
+    {
+        if ($benefitKey === 'in_house_mentor') {
+            return $plan->allowanceMinutes('in_house_mentor', $billing);
+        }
+
+        $fromBenefits = $plan->allowanceMinutes('career_counselling', $billing);
+        if ($fromBenefits !== null) {
+            return $fromBenefits;
+        }
+
+        return $this->resolveFreeSessionMinutes($limits);
+    }
+
+    private function subscriptionBillingPeriod(?UserSubscription $subscription): string
+    {
+        if (! $subscription) {
+            return 'monthly';
+        }
+
+        $meta = is_array($subscription->meta) ? $subscription->meta : [];
+        $billing = data_get($meta, 'checkout.billing')
+            ?? data_get($meta, 'billing')
+            ?? null;
+
+        return \App\Models\Plan::normalizeBilling($billing);
     }
 
     /**
@@ -255,9 +328,10 @@ trait HasSubscription
     /**
      * Free (plan-covered) minutes already used in the current monthly benefit bucket.
      */
-    public function freeSessionMinutesUsed(): int
+    public function freeSessionMinutesUsed(?string $benefitKey = 'career_counselling'): int
     {
-        return app(\App\Services\CounsellingBenefitService::class)->countedMinutes($this);
+        return app(\App\Services\CounsellingBenefitService::class)
+            ->countedMinutesForBenefit($this, $benefitKey ?? 'career_counselling');
     }
 
     /**

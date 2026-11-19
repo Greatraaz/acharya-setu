@@ -78,7 +78,7 @@ class AgoraService
             'channel'      => $session->meeting_channel,
             'token'        => $token,
             'uid'          => $uid,
-            'role'         => (int) $session->mentor_id === (int) $user->id ? 'mentor' : 'mentee',
+            'role'         => $this->callRole($user, $session),
             'expires_at'   => $expireTs,
             'call_log_id'  => $log->id,
             'peer'         => $this->peerPayload($session, $user),
@@ -90,6 +90,15 @@ class AgoraService
                 'status'        => $session->status,
             ],
         ];
+    }
+
+    private function callRole(User $user, ConsultationSession $session): string
+    {
+        if (($user->role ?? null) === 'admin') {
+            return 'admin';
+        }
+
+        return (int) $session->mentor_id === (int) $user->id ? 'mentor' : 'mentee';
     }
 
     public function issueMockInterviewToken(User $user, MockInterviewRequest $request): array
@@ -240,6 +249,10 @@ class AgoraService
 
     public function assertParticipant(User $user, ConsultationSession $session): void
     {
+        if (($user->role ?? null) === 'admin') {
+            return;
+        }
+
         if ((int) $session->mentor_id !== (int) $user->id && (int) $session->mentee_id !== (int) $user->id) {
             throw new HttpException(403, 'You are not part of this session.');
         }
@@ -309,10 +322,12 @@ class AgoraService
             ->exists();
 
         if (! $alreadyIn) {
+            $isHost = ($user->role ?? null) === 'admin'
+                || (int) $user->id === (int) $session->mentor_id;
             $log->participants()->create([
                 'user_id'      => $user->id,
                 'display_name' => $user->name,
-                'role'         => (int) $user->id === (int) $session->mentor_id ? 'host' : 'participant',
+                'role'         => $isHost ? 'host' : 'participant',
                 'joined_at'    => now(),
             ]);
         }
@@ -369,9 +384,14 @@ class AgoraService
 
     private function peerPayload(ConsultationSession $session, User $user): array
     {
-        $peer = (int) $session->mentor_id === (int) $user->id
-            ? $session->mentee
-            : $session->mentor;
+        // Admin observes against the mentee by default (same pattern as mock interviews).
+        if (($user->role ?? null) === 'admin') {
+            $peer = $session->mentee;
+        } else {
+            $peer = (int) $session->mentor_id === (int) $user->id
+                ? $session->mentee
+                : $session->mentor;
+        }
 
         return [
             'id'         => $peer?->id,

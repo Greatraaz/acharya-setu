@@ -417,7 +417,10 @@ class PlanController extends Controller
                 'expires_at'      => $subscription->expires_at?->toDateTimeString(),
                 'days_remaining'  => $subscription->daysRemaining(),
                 'entitlements'    => [
-                    'sessions' => $user->planSessionAllowance(),
+                    // Legacy: sessions = career counselling (expert bookings)
+                    'sessions'           => $user->planSessionAllowance(null, null, 'career_counselling'),
+                    'career_counselling' => $user->planSessionAllowance(null, null, 'career_counselling'),
+                    'in_house_mentor'    => $user->planSessionAllowance(null, null, 'in_house_mentor'),
                 ],
                 'cancellation'    => app(SubscriptionCancelService::class)->previewForUser($user),
             ],
@@ -445,8 +448,38 @@ class PlanController extends Controller
     {
         $user = $request->user();
         $subscription = $user->activeSubscription();
-        $allowance = $user->planSessionAllowance();
+        $counselling = $user->planSessionAllowance(null, null, 'career_counselling');
+        $inHouse = $user->planSessionAllowance(null, null, 'in_house_mentor');
         [$periodStart, $periodEnd] = $user->planUsageWindow();
+
+        $toPool = function (array $allowance) use ($periodEnd): array {
+            $limit = $allowance['minutes_limit'] ?? $allowance['limit'];
+            $used = (int) ($allowance['minutes_used'] ?? $allowance['used'] ?? 0);
+            $unlimited = (bool) ($allowance['unlimited'] ?? false);
+            $remaining = $allowance['minutes_remaining'] ?? $allowance['remaining'];
+            $maxSession = $allowance['max_session_minutes'] ?? null;
+            $percentUsed = null;
+
+            if (! $unlimited && is_int($limit) && $limit > 0) {
+                $percentUsed = min(100, round(($used / $limit) * 100, 1));
+            } elseif (! $unlimited && $limit === 0) {
+                $percentUsed = 100.0;
+            }
+
+            return [
+                'included_limit'      => $limit,
+                'used'                => $used,
+                'remaining'           => $remaining,
+                'unlimited'           => $unlimited,
+                'percent_used'        => $percentUsed,
+                'max_session_minutes' => $maxSession,
+                'unit'                => 'minutes',
+                'benefit'             => $allowance['benefit'] ?? null,
+                'applies_to'          => $allowance['host_role'] ?? null,
+                'next_booking_free'   => $unlimited || (is_int($remaining) && $remaining > 0),
+                'resets_at'           => $periodEnd->copy()->toDateTimeString(),
+            ];
+        };
 
         if (! $subscription) {
             return response()->json([
@@ -461,33 +494,13 @@ class PlanController extends Controller
                         'starts_at' => $periodStart->toDateTimeString(),
                         'ends_at'   => $periodEnd->toDateTimeString(),
                     ],
-                    'sessions'                => [
-                        'included_limit'      => null,
-                        'used'                => (int) $allowance['used'],
-                        'remaining'           => null,
-                        'unlimited'           => false,
-                        'percent_used'        => null,
-                        'next_booking_free'   => false,
-                        'resets_at'           => $periodEnd->copy()->toDateTimeString(),
-                    ],
+                    // Legacy: sessions = career counselling (expert bookings)
+                    'sessions'                => $toPool($counselling),
+                    'career_counselling'      => $toPool($counselling),
+                    'in_house_mentor'         => $toPool($inHouse),
                 ],
             ], 200);
         }
-
-        $limit = $allowance['minutes_limit'] ?? $allowance['limit'];
-        $used = (int) ($allowance['minutes_used'] ?? $allowance['used'] ?? 0);
-        $unlimited = (bool) $allowance['unlimited'];
-        $remaining = $allowance['minutes_remaining'] ?? $allowance['remaining'];
-        $maxSession = $allowance['max_session_minutes'] ?? null;
-        $percentUsed = null;
-
-        if (! $unlimited && is_int($limit) && $limit > 0) {
-            $percentUsed = min(100, round(($used / $limit) * 100, 1));
-        } elseif (! $unlimited && $limit === 0) {
-            $percentUsed = 100.0;
-        }
-
-        $nextFree = $unlimited || (is_int($remaining) && $remaining > 0);
 
         return response()->json([
             'status'  => true,
@@ -512,19 +525,10 @@ class PlanController extends Controller
                     'starts_at' => $periodStart->toDateTimeString(),
                     'ends_at'   => $periodEnd->toDateTimeString(),
                 ],
-                'sessions'                => [
-                    // Minute-based free career counselling entitlement
-                    'included_limit'       => $limit,
-                    'used'                 => $used,
-                    'remaining'            => $remaining,
-                    'unlimited'            => $unlimited,
-                    'percent_used'         => $percentUsed,
-                    'max_session_minutes'  => $maxSession,
-                    'unit'                 => 'minutes',
-                    'benefit'              => $allowance['benefit'] ?? 'career_counselling',
-                    'next_booking_free'    => $nextFree,
-                    'resets_at'            => $periodEnd->copy()->toDateTimeString(),
-                ],
+                // Legacy key kept for older clients (career counselling / expert)
+                'sessions'                => $toPool($counselling),
+                'career_counselling'      => $toPool($counselling),
+                'in_house_mentor'         => $toPool($inHouse),
             ],
         ], 200);
     }

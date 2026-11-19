@@ -58,7 +58,9 @@ class ProgressController extends Controller
             'entitlement'=> [
                 'progress_report_enabled' => true,
                 'plan_name' => $user->activeSubscription()?->plan?->name,
-                'sessions'  => $user->planSessionAllowance(),
+                'sessions'           => $user->planSessionAllowance(null, null, 'career_counselling'),
+                'career_counselling' => $user->planSessionAllowance(null, null, 'career_counselling'),
+                'in_house_mentor'    => $user->planSessionAllowance(null, null, 'in_house_mentor'),
             ],
         ]);
     }

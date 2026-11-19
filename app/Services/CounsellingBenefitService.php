@@ -71,22 +71,35 @@ class CounsellingBenefitService
         $planName = $subscription->plan?->name ?? 'plan';
         $expiresLabel = $expires->format('d M Y, h:i A');
         $sessionLabel = $scheduled->format('d M Y, h:i A');
+        $session->loadMissing('mentor:id,role');
+        $benefitLabel = $session->isExpertHost()
+            ? 'Career counselling'
+            : 'In-house mentor time';
 
         return [
             'subscription_id' => $subscription->subscription_id,
             'plan_name'       => $planName,
             'expires_at'      => $expires->toDateTimeString(),
             'scheduled_at'    => $scheduled->toDateTimeString(),
-            'mentee_message'  => "This booking stays confirmed, but your {$planName} plan expires on {$expiresLabel}, before the session on {$sessionLabel}. In-house counselling will not cover it. Cancel the booking, or pay for it as a normal session.",
-            'mentor_message'  => "This booking stays confirmed, but the mentee's {$planName} plan expires on {$expiresLabel}, before the session on {$sessionLabel}. In-house counselling will not cover it.",
+            'mentee_message'  => "This booking stays confirmed, but your {$planName} plan expires on {$expiresLabel}, before the session on {$sessionLabel}. {$benefitLabel} will not cover it. Cancel the booking, or pay for it as a normal session.",
+            'mentor_message'  => "This booking stays confirmed, but the mentee's {$planName} plan expires on {$expiresLabel}, before the session on {$sessionLabel}. {$benefitLabel} will not cover it.",
         ];
     }
 
-    public function countedMinutes(User $user, ?int $mentorId = null): int
+    public function countedMinutes(User $user, ?int $mentorId = null, ?string $hostRole = null): int
     {
-        return (int) $this->periodSessions($user, $mentorId)
+        return (int) $this->periodSessions($user, $mentorId, $hostRole)
             ->reject(fn (ConsultationSession $session) => filled($session->plan_lapse))
             ->sum('duration_minutes');
+    }
+
+    /**
+     * Minutes used for a benefit pool this period.
+     * Career counselling = sessions with experts; in-house mentor = sessions with mentors.
+     */
+    public function countedMinutesForBenefit(User $user, string $benefitKey): int
+    {
+        return $this->countedMinutes($user, null, $this->hostRoleForScope($benefitKey));
     }
 
     /**
@@ -94,15 +107,21 @@ class CounsellingBenefitService
      */
     public function history(User $user, string $scope): array
     {
-        $mentorId = $scope === 'in_house' ? (int) ($user->assigned_mentor_id ?? 0) : null;
-        if ($scope === 'in_house' && $mentorId <= 0) {
-            return [];
-        }
-
-        $sessions = $this->periodSessions($user, $scope === 'in_house' ? $mentorId : null);
-        $sessions->loadMissing('mentor:id,name', 'mentee:id,name');
+        $hostRole = $this->hostRoleForScope($scope);
+        $sessions = $this->periodSessions($user, null, $hostRole);
+        $sessions->loadMissing('mentor:id,name,role', 'mentee:id,name');
 
         return $sessions->map(fn (ConsultationSession $session) => $this->historyRow($session, 'mentee'))->all();
+    }
+
+    private function hostRoleForScope(string $scope): string
+    {
+        $key = strtolower(trim($scope));
+
+        return match ($key) {
+            'in_house', 'in_house_mentor', 'mentor' => 'mentor',
+            default => 'expert',
+        };
     }
 
     /**
@@ -143,8 +162,8 @@ class CounsellingBenefitService
      */
     public function snapshot(User $user): array
     {
-        $allowance = $user->planSessionAllowance();
-        $rows = $this->history($user, 'counselling');
+        $allowance = $user->planSessionAllowance(null, null, 'career_counselling');
+        $rows = $this->history($user, 'career_counselling');
         $rows = array_merge($rows, $this->uncoveredFutureRows($user, $rows));
         $lapsed = array_values(array_filter($rows, fn (array $row) => ! $row['counts']));
         $used = (int) array_sum(array_map(
@@ -214,7 +233,7 @@ class CounsellingBenefitService
     /**
      * @return Collection<int, ConsultationSession>
      */
-    private function periodSessions(User $user, ?int $mentorId = null): Collection
+    private function periodSessions(User $user, ?int $mentorId = null, ?string $hostRole = null): Collection
     {
         [$start, $end] = $user->planUsageWindow();
 
@@ -230,6 +249,10 @@ class CounsellingBenefitService
 
         if ($mentorId) {
             $query->where('mentor_id', $mentorId);
+        }
+
+        if ($hostRole) {
+            $query->whereHas('mentor', fn ($q) => $q->where('role', $hostRole));
         }
 
         $sessions = $query->get();

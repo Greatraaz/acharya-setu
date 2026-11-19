@@ -5,7 +5,7 @@
 | Durations `15, 30, 60, 90` | Only **`30, 60, 90, 120`** |
 | Slot UI showed start time only (`9:00 AM`) | Show **full range** (`9:00 AM – 10:00 AM`) |
 | Could book shorter session inside a longer window | Duration must **exactly match** mentor window |
-| Plan free = session **count** | Plan free = **minutes** (career counselling) |
+| Plan free = session **count** | Plan free = **minutes** (expert → career counselling; mentor → in-house mentor) |
 | Plan/free sessions → mentor unpaid | Mentor still earns **80% of list**; admin pays the rest |
 | GST sometimes assumed | **No GST** on session bookings |
 
@@ -108,16 +108,25 @@ GET /api/v1/mentee/plans/subscription/consumption
 }
 ```
 
+### Benefit pools (important)
+
+| Host role | Benefit key | Consumption field |
+|-----------|-------------|-------------------|
+| **Expert** | `career_counselling` | `data.career_counselling` (legacy alias: `data.sessions`) |
+| **Mentor** | `in_house_mentor` | `data.in_house_mentor` |
+
+When previewing/booking, use the pool that matches the selected host’s role. Booking responses include `plan_allowance.benefit` and `plan_allowance.host_role`.
+
 ### UI rules
 
 | Condition | UI |
 |-----------|-----|
 | `has_active_subscription: false` | Hide free-minutes banner |
-| `remaining >= duration` AND `duration <= max_session_minutes` | Show: “This booking is covered by your plan (free)” |
-| Essential: remaining 30, user picks 60 | **Not free** — show normal payment |
-| `remaining: 0` | Show: “Free minutes used — paid booking” |
+| Matching pool `remaining >= duration` AND `duration <= max_session_minutes` | Show: “This booking is covered by your plan (free)” |
+| Essential: counselling remaining 30, user picks 60 with an expert | **Not free** — show normal payment |
+| Matching pool `remaining: 0` | Show: “Free minutes used — paid booking” |
 
-**Essential plan:** 30 free minutes, max booking length **30** → only a 30-min session can be free, once per billing period.
+**Essential plan:** 30 free career counselling minutes (experts) + separate in-house mentor minutes; max booking length for free cover comes from `max_session_minutes`.
 
 **Growth / Premium:** 60 free minutes, max **60**.
 

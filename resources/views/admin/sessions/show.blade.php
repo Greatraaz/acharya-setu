@@ -63,11 +63,17 @@
                         </div>
                         <div class="font-mono text-xs text-gray-400">{{ $session->booking_ref }}</div>
                     </div>
-                    @if($session->meeting_link)
-                    <a href="{{ $session->meeting_link }}" target="_blank"
+                    @if($session->status === 'upcoming')
+                    <a href="{{ route('sessions.call', $session->id) }}"
                        class="inline-flex items-center gap-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                        Join {{ ucfirst($session->meeting_provider ?? 'Meeting') }}
+                        Join {{ ucfirst($session->meeting_provider ?? 'Agora') }}
+                    </a>
+                    @elseif($session->meeting_link)
+                    <a href="{{ route('sessions.call', $session->id) }}"
+                       class="inline-flex items-center gap-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        Open {{ ucfirst($session->meeting_provider ?? 'Meeting') }}
                     </a>
                     @endif
                 </div>

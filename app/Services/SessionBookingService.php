@@ -58,7 +58,8 @@ class SessionBookingService
         if ($refusal) {
             return $this->fail($refusal, 422);
         }
-        $planAllowance = $mentee->planSessionAllowance($duration);
+        // Expert sessions use career counselling minutes; mentor sessions use in-house mentor minutes.
+        $planAllowance = $mentee->planSessionAllowance($duration, $mentor);
         $coveredByPlan = $baseAmount > 0 && ($planAllowance['covered'] ?? false);
         $activeSub = $mentee->activeSubscription();
         if ($coveredByPlan && $activeSub?->expires_at && $scheduledAt->gt($activeSub->expires_at)) {
@@ -162,8 +163,11 @@ class SessionBookingService
             $invoice = $this->invoices->ensureForSession($session, 'system');
 
             $minsLeft = $planAllowance['minutes_remaining'] ?? null;
+            $benefitLabel = ($planAllowance['benefit'] ?? '') === 'in_house_mentor'
+                ? 'in-house mentor'
+                : 'career counselling';
             $msg = $coveredByPlan
-                ? 'Session booked using your '.($planAllowance['plan_name'] ?? 'subscription').' plan free minutes'
+                ? 'Session booked using your '.($planAllowance['plan_name'] ?? 'subscription')." plan {$benefitLabel} minutes"
                     .(! empty($planAllowance['unlimited'])
                         ? ' (unlimited).'
                         : ' ('.max(0, (int) $minsLeft - $duration).' free minutes left this period).')
@@ -176,7 +180,7 @@ class SessionBookingService
                 'session'                 => $this->sessionArray($session),
                 'invoice'                 => $invoice?->toPublicArray(),
                 'payment_method'          => $method,
-                'plan_allowance'          => $mentee->planSessionAllowance($duration),
+                'plan_allowance'          => $mentee->planSessionAllowance($duration, $mentor),
                 'pricing'                 => [
                     'list_amount'      => $listAmount,
                     'mentee_paid'      => 0,

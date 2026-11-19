@@ -33,7 +33,15 @@ class CareerServiceController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin.career-services.index', compact('items', 'search', 'status', 'type'));
+        $stats = [
+            'under_review' => CareerServiceRequest::where('status', CareerServiceRequest::STATUS_SUBMITTED)->count(),
+            'completed'    => CareerServiceRequest::where('status', CareerServiceRequest::STATUS_COMPLETED)->count(),
+            'awaiting_pay' => CareerServiceRequest::where('status', CareerServiceRequest::STATUS_PENDING_PAYMENT)->count(),
+            'resume'       => CareerServiceRequest::where('type', CareerServiceRequest::TYPE_RESUME)->count(),
+            'linkedin'     => CareerServiceRequest::where('type', CareerServiceRequest::TYPE_LINKEDIN)->count(),
+        ];
+
+        return view('admin.career-services.index', compact('items', 'search', 'status', 'type', 'stats'));
     }
 
     public function show(CareerServiceRequest $careerService)

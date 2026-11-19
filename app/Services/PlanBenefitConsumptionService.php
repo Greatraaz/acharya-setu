@@ -48,7 +48,7 @@ class PlanBenefitConsumptionService
      */
     private function careerCounsellingItem(User $user, string $billing): array
     {
-        $allowance = $user->planSessionAllowance();
+        $allowance = $user->planSessionAllowance(null, null, 'career_counselling');
         [$periodStart, $periodEnd] = $user->planUsageWindow();
         $subscription = $user->activeSubscription();
         $subEnd = $subscription?->expires_at?->copy()->timezone('Asia/Kolkata');
@@ -76,19 +76,20 @@ class PlanBenefitConsumptionService
         );
 
         $message = match ($status) {
-            'addon' => 'Career counselling is not included on your current plan. Book as a paid session.',
+            'addon' => 'Career counselling is not included on your current plan. Book a session with an expert as a paid booking.',
             'available' => $unlimited
-                ? 'Unlimited free career counselling minutes on your plan.'
-                : "You have {$remaining} of {$limit} free counselling minutes left this period.",
+                ? 'Unlimited free career counselling minutes on your plan (applies when you book with an expert).'
+                : "You have {$remaining} of {$limit} free counselling minutes left this period (applies when you book with an expert).",
             'next_free' => 'You\'ve used this period\'s free counselling minutes. Next free benefit on '
-                .$nextFreeAt->timezone('Asia/Kolkata')->format('d M Y').'. Extra sessions require payment.',
-            'used' => 'You\'ve used your free counselling minutes for this plan period. Extra sessions require payment.',
+                .$nextFreeAt->timezone('Asia/Kolkata')->format('d M Y').'. Extra expert sessions require payment.',
+            'used' => 'You\'ve used your free counselling minutes for this plan period. Extra expert sessions require payment.',
             default => 'Career counselling entitlement unavailable.',
         };
 
         return [
             'key'               => 'career_counselling',
             'label'             => 'Career counselling',
+            'applies_to'        => 'expert',
             'included'          => $included,
             'tracking_enabled'  => true,
             'unit'              => 'minutes',
@@ -104,30 +105,28 @@ class PlanBenefitConsumptionService
                 'starts_at' => $periodStart->toDateTimeString(),
                 'ends_at'   => $periodEnd->toDateTimeString(),
             ],
-            'history'           => app(CounsellingBenefitService::class)->history($user, 'counselling'),
+            'history'           => app(CounsellingBenefitService::class)->history($user, 'career_counselling'),
             'message'           => $message,
         ];
     }
 
     /**
-     * In-house mentor minutes from the plan benefit, minus plan-covered time
-     * already booked with the mentee's assigned mentor this period.
+     * In-house mentor minutes: consumed when booking plan-covered sessions with mentors.
      *
      * @return array<string, mixed>
      */
     private function inHouseMentorItem(User $user, string $billing): array
     {
-        $subscription = $user->activeSubscription();
-        $plan = $subscription?->plan;
-        $allowance = $plan?->allowanceMinutes('in_house_mentor', $billing);
+        $allowance = $user->planSessionAllowance(null, null, 'in_house_mentor');
         [$periodStart, $periodEnd] = $user->planUsageWindow();
+        $subscription = $user->activeSubscription();
         $subEnd = $subscription?->expires_at?->copy()->timezone('Asia/Kolkata');
 
-        $included = $allowance !== null;
-        $unlimited = $allowance !== null && $allowance < 0;
-        $limit = $unlimited ? null : $allowance;
-        $used = $included ? $this->inHouseMinutesUsed($user) : 0;
-        $remaining = $unlimited ? null : max(0, (int) $limit - $used);
+        $included = $allowance['minutes_limit'] !== null || (bool) $allowance['unlimited'];
+        $unlimited = (bool) $allowance['unlimited'];
+        $limit = $unlimited ? null : $allowance['minutes_limit'];
+        $used = (int) ($allowance['minutes_used'] ?? 0);
+        $remaining = $unlimited ? null : ($allowance['minutes_remaining'] ?? 0);
         $paymentRequired = $included && ! $unlimited && (int) $remaining <= 0;
         $nextFreeAt = null;
 
@@ -147,19 +146,20 @@ class PlanBenefitConsumptionService
         $cap = $unlimited ? null : $this->formatDuration((int) $limit);
 
         $message = match ($status) {
-            'addon' => 'In-house mentor time is not included on your current plan.',
+            'addon' => 'In-house mentor time is not included on your current plan. Book a mentor session as a paid booking.',
             'available' => $unlimited
-                ? 'Unlimited free in-house mentor time on your plan.'
-                : "You have {$left} of {$cap} free in-house mentor time left this period.",
+                ? 'Unlimited free in-house mentor time on your plan (applies when you book with a mentor).'
+                : "You have {$left} of {$cap} free in-house mentor time left this period (applies when you book with a mentor).",
             'next_free' => 'You\'ve used this period\'s free in-house mentor time. Next free benefit on '
-                .$nextFreeAt->timezone('Asia/Kolkata')->format('d M Y').'. Extra sessions require payment.',
-            'used' => 'You\'ve used your free in-house mentor time for this plan period. Extra sessions require payment.',
+                .$nextFreeAt->timezone('Asia/Kolkata')->format('d M Y').'. Extra mentor sessions require payment.',
+            'used' => 'You\'ve used your free in-house mentor time for this plan period. Extra mentor sessions require payment.',
             default => 'In-house mentor entitlement unavailable.',
         };
 
         return [
             'key'               => 'in_house_mentor',
             'label'             => 'In-house mentor',
+            'applies_to'        => 'mentor',
             'included'          => $included,
             'tracking_enabled'  => true,
             'unit'              => 'minutes',
@@ -175,18 +175,9 @@ class PlanBenefitConsumptionService
                 'starts_at' => $periodStart->toDateTimeString(),
                 'ends_at'   => $periodEnd->toDateTimeString(),
             ],
-            'history'           => app(CounsellingBenefitService::class)->history($user, 'in_house'),
+            'history'           => app(CounsellingBenefitService::class)->history($user, 'in_house_mentor'),
             'message'           => $message,
         ];
-    }
-
-    private function inHouseMinutesUsed(User $user): int
-    {
-        if (! $user->assigned_mentor_id) {
-            return 0;
-        }
-
-        return app(CounsellingBenefitService::class)->countedMinutes($user, (int) $user->assigned_mentor_id);
     }
 
     /**

@@ -17,7 +17,7 @@ class SessionCallController extends Controller
     public function show(int $id)
     {
         $user = auth()->user();
-        $session = $this->ownedSession($id, $user->id)->load(['mentor', 'mentee']);
+        $session = $this->accessibleSession($id, $user)->load(['mentor', 'mentee']);
         $this->agora->assertParticipant($user, $session);
 
         if (! $session->canJoinCall()) {
@@ -30,7 +30,11 @@ class SessionCallController extends Controller
                 ->with('error', $message);
         }
 
-        $peer = (int) $session->mentor_id === (int) $user->id ? $session->mentee : $session->mentor;
+        if (($user->role ?? null) === 'admin') {
+            $peer = $session->mentee;
+        } else {
+            $peer = (int) $session->mentor_id === (int) $user->id ? $session->mentee : $session->mentor;
+        }
 
         return view('frontend.sessions.call', [
             'session'         => $session,
@@ -49,7 +53,7 @@ class SessionCallController extends Controller
     public function token(int $id)
     {
         $user = auth()->user();
-        $session = $this->ownedSession($id, $user->id);
+        $session = $this->accessibleSession($id, $user);
         $session->load(['mentor:id,name,avatar_url', 'mentee:id,name,avatar_url']);
 
         try {
@@ -64,7 +68,7 @@ class SessionCallController extends Controller
     public function end(Request $request, int $id)
     {
         $user = auth()->user();
-        $session = $this->ownedSession($id, $user->id);
+        $session = $this->accessibleSession($id, $user);
 
         $this->agora->endCall($user, $session, $request->input('reason', 'normal'));
 
@@ -84,7 +88,7 @@ class SessionCallController extends Controller
     public function myNote(int $id)
     {
         $user = auth()->user();
-        $session = $this->ownedSession($id, $user->id);
+        $session = $this->accessibleSession($id, $user);
         $note = $this->findPersonalNote($session, $user->id);
 
         return response()->json([
@@ -99,7 +103,7 @@ class SessionCallController extends Controller
     public function saveMyNote(Request $request, int $id)
     {
         $user = auth()->user();
-        $session = $this->ownedSession($id, $user->id);
+        $session = $this->accessibleSession($id, $user);
 
         $data = $request->validate([
             'content' => 'nullable|string|max:65535',
@@ -140,6 +144,22 @@ class SessionCallController extends Controller
             ->first();
     }
 
+    private function accessibleSession(int $id, $user): ConsultationSession
+    {
+        $session = ConsultationSession::where('id', $id)->firstOrFail();
+
+        if (($user->role ?? null) === 'admin') {
+            return $session;
+        }
+
+        if ((int) $session->mentor_id === (int) $user->id || (int) $session->mentee_id === (int) $user->id) {
+            return $session;
+        }
+
+        abort(404);
+    }
+
+    /** @deprecated Use accessibleSession(); kept for any older call sites. */
     private function ownedSession(int $id, int $userId): ConsultationSession
     {
         return ConsultationSession::where('id', $id)
@@ -151,8 +171,27 @@ class SessionCallController extends Controller
 
     private function sessionUrl(string $role, int $id): string
     {
+        if ($role === 'admin') {
+            return route('admin.sessions.show', $id);
+        }
+
         return in_array($role, ['mentor', 'expert'], true)
             ? route('mentor.sessions.show', $id)
             : route('mentee.sessions.show', $id);
+    }
+
+    /**
+     * Resolve legacy meeting_link URLs like /as/{channel} into the Agora call page.
+     */
+    public function joinByChannel(string $channel)
+    {
+        $user = auth()->user();
+        $session = ConsultationSession::query()
+            ->where('meeting_channel', $channel)
+            ->firstOrFail();
+
+        $this->accessibleSession($session->id, $user);
+
+        return redirect()->route('sessions.call', $session->id);
     }
 }

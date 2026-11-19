@@ -604,12 +604,18 @@ Route::middleware('auth')->group(function () {
     // Session notes (mentor writes, mentee can view if shared)
     Route::get('/sessions/{id}/notes', [MentorSessionController::class, 'notes'])->name('sessions.notes.show');
 
-    // Video call (Agora) — works for both roles
+    // Video call (Agora) — mentor, mentee, and admin
+    // NOTE: do not use whereNumber('id') — dashboard URLs encrypt IDs (UrlId), e.g. /sessions/rFg/call
     Route::get('/sessions/{id}/call', [SessionCallController::class, 'show'])->name('sessions.call');
     Route::get('/sessions/{id}/video-token', [SessionCallController::class, 'token'])->name('sessions.video-token');
     Route::post('/sessions/{id}/call/end', [SessionCallController::class, 'end'])->name('sessions.call.end');
     Route::get('/sessions/{id}/my-note', [SessionCallController::class, 'myNote'])->name('sessions.my-note.show');
     Route::put('/sessions/{id}/my-note', [SessionCallController::class, 'saveMyNote'])->name('sessions.my-note.save');
+
+    // Legacy meeting_link format: /as/{channel} → Agora room
+    Route::get('/as/{channel}', [SessionCallController::class, 'joinByChannel'])
+        ->name('sessions.call.channel')
+        ->where('channel', '[A-Za-z0-9_-]+');
 
     // Mock interview Agora call — mentee + admin
     Route::get('/mock-interviews/{id}/call', [MockInterviewCallController::class, 'show'])->name('mock-interviews.call');
