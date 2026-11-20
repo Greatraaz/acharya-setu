@@ -18,10 +18,12 @@
 .admin-mi-list .admin-mi-stat-label{ font-family:"Sora",system-ui,sans-serif; }
 </style>
 
-<div class="max-w-6xl space-y-5 admin-mi-list">
-    <div class="flex flex-wrap items-end justify-between gap-3">
+<div class="admin-page max-w-6xl space-y-5 admin-mi-list">
+    <div class="learn-intro">
         <div>
-            <p class="text-sm text-gray-500">Confirm slots, host interviews, and send feedback to mentees.</p>
+            <span class="learn-eyebrow">Services · Mock Interviews</span>
+            <h2>Mock Interviews</h2>
+            <p>Confirm slots, host interviews, and send feedback to mentees.</p>
         </div>
     </div>
 
@@ -64,11 +66,9 @@
                     <option value="completed" @selected($status === 'completed')>Completed</option>
                     <option value="cancelled" @selected($status === 'cancelled')>Cancelled</option>
                 </select>
-                <button type="submit" class="inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
-                    Search
-                </button>
+                <button type="submit" class="learn-btn-primary !py-2.5 !px-4">Search</button>
                 @if($search !== '' || $status !== '')
-                <a href="{{ route('admin.mock-interviews.index') }}" class="text-sm text-gray-500 hover:text-gray-800 px-2 py-2">Clear</a>
+                <a href="{{ route('admin.mock-interviews.index') }}" class="learn-btn-ghost !py-2.5">Clear</a>
                 @endif
             </form>
         </div>

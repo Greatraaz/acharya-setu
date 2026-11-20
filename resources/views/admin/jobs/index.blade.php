@@ -3,16 +3,20 @@
 @section('heading','Job Listings')
 @section('content')
 
-<div class="space-y-6">
+<div class="admin-page space-y-5">
 
-    {{-- Header --}}
-    <div class="flex items-center justify-between">
-        <p class="text-sm text-gray-500">Manage open positions and track applications.</p>
-        <a href="{{ route('admin.jobs.create') }}"
-           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            Post New Job
-        </a>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Careers · Jobs</span>
+                <h2>Job Listings</h2>
+                <p>Manage open positions and track applications.</p>
+            </div>
+            <a href="{{ route('admin.jobs.create') }}" class="learn-btn-primary self-start">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                Post New Job
+            </a>
+        </div>
     </div>
 
     @if(session('success'))
@@ -71,8 +75,8 @@
                 </select>
             </div>
             @endif
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition">Filter</button>
-            <a href="{{ route('admin.jobs.index') }}" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition">Reset</a>
+            <button type="submit" class="learn-btn-primary !py-2 !px-4">Filter</button>
+            <a href="{{ route('admin.jobs.index') }}" class="learn-btn-ghost !py-2">Reset</a>
         </form>
     </div>
 
@@ -90,7 +94,7 @@
             </div>
             <p class="text-gray-600 font-medium">No job listings found</p>
             <p class="text-gray-400 text-sm mt-1">Create your first listing to start accepting applications.</p>
-            <a href="{{ route('admin.jobs.create') }}" class="inline-flex items-center gap-2 mt-4 bg-blue-600 text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-blue-700 transition">Post a Job</a>
+            <a href="{{ route('admin.jobs.create') }}" class="learn-btn-primary mt-4">Post a Job</a>
         </div>
         @else
         <div class="overflow-x-auto">

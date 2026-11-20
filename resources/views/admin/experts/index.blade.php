@@ -3,13 +3,16 @@
 @section('heading', 'Experts')
 @section('content')
 
-<div class="space-y-5">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <p class="text-sm text-gray-500">Session specialists who take 1:1 calls with mentees, keep notes, and earn from their charge.</p>
-        <a href="{{ route('admin.experts.create') }}"
-           class="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-xl transition-colors">
-            + Add Expert
-        </a>
+<div class="admin-page space-y-5">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">People · Experts</span>
+                <h2>Experts</h2>
+                <p>Session specialists who take 1:1 calls with mentees, keep notes, and earn from their charge.</p>
+            </div>
+            <a href="{{ route('admin.experts.create') }}" class="learn-btn-primary self-start">+ Add Expert</a>
+        </div>
     </div>
 
     @if(session('success'))
@@ -62,8 +65,8 @@
                        class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
             </div>
             <div class="admin-filter-actions">
-                <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 rounded-xl">Filter</button>
-                <a href="{{ route('admin.experts.index') }}" class="text-center text-sm text-gray-500 border border-gray-200 px-3 rounded-xl hover:bg-gray-50">Reset</a>
+                <button type="submit" class="learn-btn-primary !py-0 !px-4 h-10">Filter</button>
+                <a href="{{ route('admin.experts.index') }}" class="learn-btn-ghost h-10">Reset</a>
             </div>
         </form>
     </div>
@@ -77,7 +80,7 @@
         @if($experts->isEmpty())
         <div class="py-20 text-center">
             <p class="text-gray-500 font-medium text-sm">No experts yet. Create one to start taking paid sessions.</p>
-            <a href="{{ route('admin.experts.create') }}" class="inline-flex mt-4 text-sm font-semibold text-indigo-600 hover:text-indigo-700">+ Add Expert</a>
+            <a href="{{ route('admin.experts.create') }}" class="learn-btn-primary mt-4">+ Add Expert</a>
         </div>
         @else
         <div class="overflow-x-auto">

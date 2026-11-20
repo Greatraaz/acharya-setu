@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Mentor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
+use App\Models\AssessmentCategory;
 use App\Models\AssessmentQuestion;
 use App\Services\AssessmentService;
 use Illuminate\Http\Request;
@@ -40,8 +41,14 @@ class AssessmentQuestionController extends Controller
     {
         $assessments = Assessment::query()->ownedByMentor(auth()->user())->orderBy('title')->get();
         $question    = new AssessmentQuestion(['options' => AssessmentQuestion::DEFAULT_OPTIONS]);
+        $assessmentIds = $assessments->pluck('id');
+        $categories = AssessmentCategory::query()
+            ->whereIn('assessment_id', $assessmentIds)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
 
-        return view('frontend.mentors.assessment-questions.create', compact('assessments', 'question'));
+        return view('frontend.mentors.assessment-questions.create', compact('assessments', 'question', 'categories'));
     }
 
     public function store(Request $request)
@@ -52,7 +59,7 @@ class AssessmentQuestionController extends Controller
 
         AssessmentQuestion::create([
             'assessment_id' => $assessment->id,
-            'category_id'   => null,
+            'category_id'   => $data['category_id'] ?? null,
             'question'      => $data['question'],
             'options'       => array_values($data['options']),
             'sort_order'    => $max + 1,
@@ -69,8 +76,13 @@ class AssessmentQuestionController extends Controller
         $assessments             = Assessment::query()->ownedByMentor(auth()->user())->orderBy('title')->get();
         $question                = $assessment_question;
         $question->options       = $question->optionLabels();
+        $categories = AssessmentCategory::query()
+            ->whereIn('assessment_id', $assessments->pluck('id'))
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
 
-        return view('frontend.mentors.assessment-questions.edit', compact('assessments', 'question'));
+        return view('frontend.mentors.assessment-questions.edit', compact('assessments', 'question', 'categories'));
     }
 
     public function update(Request $request, AssessmentQuestion $assessment_question)
@@ -81,7 +93,7 @@ class AssessmentQuestionController extends Controller
 
         $assessment_question->update([
             'assessment_id' => $data['assessment_id'],
-            'category_id'   => null,
+            'category_id'   => $data['category_id'] ?? null,
             'question'      => $data['question'],
             'options'       => array_values($data['options']),
         ]);
@@ -111,8 +123,15 @@ class AssessmentQuestionController extends Controller
 
     private function validated(Request $request): array
     {
+        $assessmentId = (int) $request->input('assessment_id');
+
         return $request->validate([
             'assessment_id' => 'required|exists:assessments,id',
+            'category_id'   => [
+                'nullable',
+                'integer',
+                \Illuminate\Validation\Rule::exists('assessment_categories', 'id')->where('assessment_id', $assessmentId),
+            ],
             'question'      => 'required|string|max:5000',
             'options'       => 'required|array|size:4',
             'options.0'     => 'required|string|max:200',

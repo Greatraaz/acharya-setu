@@ -3,12 +3,18 @@
 @section('heading', 'Edit Category')
 
 @section('content')
-<div class="space-y-4">
+@include('admin.partials.learning-ui')
+
+<div class="learn-page space-y-4 max-w-xl">
     @include('admin.assessments.partials.nav')
-    <div>
-        <a href="{{ route('admin.assessment-categories.index') }}" class="text-sm text-gray-400 hover:text-gray-600">← Back to Categories</a>
-        <h1 class="font-display text-2xl font-bold text-gray-900 mt-2">Edit Category</h1>
+
+    <div class="learn-intro">
+        <a href="{{ route('admin.assessment-categories.index') }}" class="text-sm text-slate-400 hover:text-slate-700">← Back to Categories</a>
+        <span class="learn-eyebrow mt-3 inline-flex">Learning · Edit category</span>
+        <h2>Edit Category</h2>
+        <p>{{ $category->name }}</p>
     </div>
+
     @include('admin.assessments.categories._form', ['category' => $category, 'assessments' => $assessments])
 </div>
 @endsection

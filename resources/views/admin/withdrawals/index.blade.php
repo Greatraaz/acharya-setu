@@ -1,26 +1,20 @@
 @extends('admin.layouts.app')
+@section('title', 'Withdrawals')
+@section('heading', 'Withdrawals')
 @section('content')
 
-<div class="min-w-0 max-w-full space-y-6">
+<div class="admin-page min-w-0 max-w-full space-y-6">
 
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-            <h6 class="text-lg font-semibold text-gray-800">Withdrawal Requests</h6>
-            <p class="text-sm text-gray-500 mt-0.5">Review mentor payout requests and mark them paid or rejected</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-3">
-        <a href="{{ route('admin.earnings.index') }}"
-           class="inline-flex items-center gap-1.5 text-sm font-medium text-orange-700 bg-orange-50 border border-orange-200 hover:bg-orange-100 px-3 py-2 rounded-xl">
-            Mentor earnings →
-        </a>
-        <nav class="flex items-center gap-2 text-sm">
-            <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors">
-                <iconify-icon icon="solar:home-smile-angle-outline" class="text-base"></iconify-icon>
-                Dashboard
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Finance · Withdrawals</span>
+                <h2>Withdrawal Requests</h2>
+                <p>Review mentor payout requests and mark them paid or rejected.</p>
+            </div>
+            <a href="{{ route('admin.earnings.index') }}" class="learn-btn-ghost">
+                Mentor earnings →
             </a>
-            <span class="text-gray-300">/</span>
-            <span class="text-gray-700 font-medium">Withdrawals</span>
-        </nav>
         </div>
     </div>
 
@@ -73,12 +67,12 @@
                     <option value="rejected" @selected(request('status') === 'rejected')>Rejected</option>
                 </select>
             </div>
-            <button type="submit" class="rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2">Filter</button>
+            <button type="submit" class="learn-btn-primary">Filter</button>
             <a href="{{ route('admin.withdrawals.index') }}" class="rounded-xl border border-gray-200 text-gray-600 text-sm font-medium px-4 py-2 hover:bg-gray-50">Reset</a>
         </form>
     </div>
 
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="learn-panel overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead class="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">

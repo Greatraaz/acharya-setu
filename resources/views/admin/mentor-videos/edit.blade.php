@@ -3,8 +3,15 @@
 @section('heading', 'Edit Mentor Videos')
 
 @section('content')
-<div class="max-w-2xl space-y-4">
-    <a href="{{ route('admin.mentor-videos.show', $item->id) }}" class="text-sm font-medium text-blue-600 hover:text-blue-800">← Back</a>
+@include('admin.partials.learning-ui')
+
+<div class="learn-page max-w-2xl space-y-5">
+    <div class="learn-intro">
+        <a href="{{ route('admin.mentor-videos.show', $item->id) }}" class="text-sm text-slate-400 hover:text-slate-700">← Back</a>
+        <span class="learn-eyebrow mt-3 inline-flex">Learning · Edit videos</span>
+        <h2>Edit Mentor Videos</h2>
+        <p>{{ $item->name }}</p>
+    </div>
 
     @if(session('error'))
     <div class="bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3 rounded-xl">{{ session('error') }}</div>
@@ -18,12 +25,12 @@
     @endif
 
     <form method="POST" action="{{ route('admin.mentor-videos.update', $item->id) }}" enctype="multipart/form-data"
-          class="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
+          class="learn-panel p-6 space-y-5">
         @csrf
         @method('PUT')
         <div>
             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Mentor *</label>
-            <select name="mentor_id" required class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm">
+            <select name="mentor_id" required class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none">
                 @foreach($mentors as $mentor)
                     <option value="{{ $mentor->id }}" @selected((string) old('mentor_id', $item->mentor_id) === (string) $mentor->id)>
                         {{ $mentor->name }} ({{ $mentor->email }})
@@ -34,11 +41,11 @@
         <div>
             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Collection name *</label>
             <input type="text" name="name" value="{{ old('name', $item->name) }}" required maxlength="255"
-                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm">
+                   class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none">
         </div>
         <div>
             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Description</label>
-            <textarea name="description" rows="3" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm">{{ old('description', $item->description) }}</textarea>
+            <textarea name="description" rows="3" class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none resize-y">{{ old('description', $item->description) }}</textarea>
         </div>
         <label class="inline-flex items-center gap-2 text-sm text-gray-700">
             <input type="hidden" name="is_active" value="0">
@@ -63,10 +70,10 @@
         <div>
             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Add more videos</label>
             <input type="file" name="videos[]" multiple accept="video/mp4,video/quicktime,video/x-msvideo,video/webm,video/mpeg"
-                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm">
+                   class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none">
         </div>
 
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl">Save changes</button>
+        <button type="submit" class="learn-btn-primary">Save changes</button>
     </form>
 </div>
 @endsection

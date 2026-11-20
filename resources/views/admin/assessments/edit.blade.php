@@ -3,13 +3,18 @@
 @section('heading', 'Edit Assessment')
 
 @section('content')
-<div class="space-y-4">
+@include('admin.partials.learning-ui')
+
+<div class="learn-page space-y-4">
     @include('admin.assessments.partials.nav')
-    <div>
-        <a href="{{ route('admin.assessments.index') }}" class="text-sm text-gray-400 hover:text-gray-600">← Back to Assessments</a>
-        <h1 class="font-display text-2xl font-bold text-gray-900 mt-2">Edit Assessment</h1>
-        <p class="text-sm text-gray-500 mt-1">{{ $assessment->title }}</p>
+
+    <div class="learn-intro">
+        <a href="{{ route('admin.assessments.index') }}" class="text-sm text-slate-400 hover:text-slate-700">← Back to Assessments</a>
+        <span class="learn-eyebrow mt-3 inline-flex">Learning · Edit assessment</span>
+        <h2>Edit Assessment</h2>
+        <p>{{ $assessment->title }}</p>
     </div>
+
     @include('admin.assessments.partials.form', [
         'assessment' => $assessment,
         'bands' => $bands,

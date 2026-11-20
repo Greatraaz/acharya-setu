@@ -48,7 +48,21 @@
     }
 </style>
 
-<div class="space-y-5">
+<div class="admin-page space-y-5">
+
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Consultations · Call logs</span>
+                <h2>Video Call Logs</h2>
+                <p>Review Agora, Zoom, and Google Meet sessions — duration, recordings, and ratings.</p>
+            </div>
+            <a href="{{ route('admin.call-logs.export', request()->all()) }}" class="learn-btn-ghost">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                Export CSV
+            </a>
+        </div>
+    </div>
 
     {{-- ── Stats Row ── --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -109,15 +123,11 @@
                 <input type="date" name="date_to" class="form-input w-full" value="{{ request('date_to') }}">
             </div>
             <div class="admin-filter-actions sm:col-span-2 flex flex-col sm:flex-row sm:flex-wrap gap-2 xl:ml-auto xl:w-auto">
-                <button type="submit" class="btn btn-primary whitespace-nowrap w-full sm:w-auto sm:flex-1 xl:flex-none justify-center">
+                <button type="submit" class="learn-btn-primary whitespace-nowrap w-full sm:w-auto sm:flex-1 xl:flex-none justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
                     Filter
                 </button>
-                <a href="{{ route('admin.call-logs.index') }}" class="btn btn-secondary whitespace-nowrap w-full sm:w-auto sm:flex-1 xl:flex-none justify-center">Reset</a>
-                <a href="{{ route('admin.call-logs.export', request()->all()) }}" class="btn btn-secondary whitespace-nowrap w-full sm:w-auto sm:flex-1 xl:flex-none justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
-                    Export CSV
-                </a>
+                <a href="{{ route('admin.call-logs.index') }}" class="learn-btn-ghost whitespace-nowrap w-full sm:w-auto sm:flex-1 xl:flex-none justify-center">Reset</a>
             </div>
         </form>
     </div>

@@ -1,19 +1,23 @@
 @extends('admin.layouts.app')
 @section('title', 'Community Channels')
 
+@section('heading', 'Community Channels')
 @section('content')
 <link rel="stylesheet" href="{{ asset('css/community-thread.css') }}?v={{ filemtime(public_path('css/community-thread.css')) }}">
 
-<div class="flex items-center justify-between mb-8">
-    <div>
-        <h1 class="font-display text-2xl font-bold text-gray-900">Community Channels</h1>
-        <p class="text-sm text-gray-500 mt-1">Public &amp; private channels for mentors and mentees — threads, likes, invites</p>
+<div class="admin-page space-y-5">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Community · Channels</span>
+                <h2>Community Channels</h2>
+                <p>Public &amp; private channels for mentors and mentees — threads, likes, invites.</p>
+            </div>
+            <a href="{{ route('admin.community.create') }}" class="learn-btn-primary self-start">
+                + New Channel
+            </a>
+        </div>
     </div>
-    <a href="{{ route('admin.community.create') }}"
-       class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">
-        + New Channel
-    </a>
-</div>
 
 <div class="community-channel-grid">
     @forelse($channels as $channel)
@@ -32,4 +36,5 @@
     @endforelse
 </div>
 @include('admin.partials.pagination', ['paginator' => $channels])
+</div>
 @endsection

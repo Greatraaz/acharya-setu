@@ -557,6 +557,13 @@ class CurriculumController extends Controller
             'order_index'   => 'nullable|integer|min:0',
             'is_active'     => 'nullable|boolean',
         ]);
+
+        $optionCount = count($data['options']);
+        if ((int) $data['correct_index'] >= $optionCount) {
+            throw ValidationException::withMessages([
+                'correct_index' => 'Correct answer must match one of the options.',
+            ]);
+        }
  
         $data['week_id']   = $week->id;
         $data['mentee_id'] = $this->resolveMenteeIdForStream(
@@ -586,6 +593,12 @@ class CurriculumController extends Controller
             'order_index'   => 'nullable|integer|min:0',
             'is_active'     => 'nullable|boolean',
         ]);
+
+        if ((int) $data['correct_index'] >= count($data['options'])) {
+            throw ValidationException::withMessages([
+                'correct_index' => 'Correct answer must match one of the options.',
+            ]);
+        }
 
         $mcq->load('week');
         if ($mcq->week) {

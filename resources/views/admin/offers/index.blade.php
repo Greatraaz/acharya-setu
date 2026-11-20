@@ -3,13 +3,16 @@
 @section('heading', 'Offers')
 
 @section('content')
-<div class="space-y-4">
-    <div class="flex items-center justify-between flex-wrap gap-3">
-        <p class="text-sm text-gray-500">Wallet credits for new joinees and session coupons for selected or unsubscribed mentees.</p>
-        <a href="{{ route('admin.offers.create') }}"
-           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition">
-            + Add Offer
-        </a>
+<div class="admin-page space-y-5">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Billing · Offers</span>
+                <h2>Offers</h2>
+                <p>Wallet credits for new joinees and session coupons for selected or unsubscribed mentees.</p>
+            </div>
+            <a href="{{ route('admin.offers.create') }}" class="learn-btn-primary self-start">+ Add Offer</a>
+        </div>
     </div>
 
     @if(session('success'))
@@ -32,9 +35,9 @@
                     <option value="active" @selected(request('status') === 'active')>Active</option>
                     <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
                 </select>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Search</button>
+                <button type="submit" class="learn-btn-primary !py-2 !px-4">Search</button>
                 @if(request()->filled('search') || request()->filled('audience') || request()->filled('status'))
-                    <a href="{{ route('admin.offers.index') }}" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Reset</a>
+                    <a href="{{ route('admin.offers.index') }}" class="learn-btn-ghost !py-2">Reset</a>
                 @endif
             </form>
         </div>

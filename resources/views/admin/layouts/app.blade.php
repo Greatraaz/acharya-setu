@@ -391,7 +391,93 @@ main button.inline-flex.items-center[class*="bg-orange"] {
         height: 2.25rem;
     }
 }
+
+/*
+ * Global primary actions → Learning amber theme (#F59E0B)
+ * Keeps blue/indigo/violet/emerald CTA classes looking consistent with Learning.
+ */
+main a.bg-indigo-600,
+main a.bg-blue-600,
+main a.bg-violet-600,
+main a.bg-emerald-600,
+main button.bg-indigo-600,
+main button.bg-blue-600,
+main button.bg-violet-600,
+main button.bg-emerald-600,
+main input[type="submit"].bg-indigo-600,
+main input[type="submit"].bg-blue-600,
+main input[type="button"].bg-indigo-600,
+main input[type="button"].bg-blue-600 {
+    background-image: linear-gradient(135deg, #F59E0B, #D97706) !important;
+    background-color: #F59E0B !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    box-shadow: 0 10px 22px -8px rgba(245, 158, 11, .28);
+}
+main a.bg-indigo-600:hover,
+main a.bg-blue-600:hover,
+main a.bg-violet-600:hover,
+main a.bg-emerald-600:hover,
+main a.hover\:bg-indigo-700:hover,
+main a.hover\:bg-blue-700:hover,
+main a.hover\:bg-violet-700:hover,
+main a.hover\:bg-emerald-700:hover,
+main button.bg-indigo-600:hover,
+main button.bg-blue-600:hover,
+main button.bg-violet-600:hover,
+main button.bg-emerald-600:hover,
+main button.hover\:bg-indigo-700:hover,
+main button.hover\:bg-blue-700:hover,
+main button.hover\:bg-violet-700:hover,
+main button.hover\:bg-emerald-700:hover {
+    filter: brightness(1.05);
+    background-image: linear-gradient(135deg, #F59E0B, #D97706) !important;
+    background-color: #D97706 !important;
+}
+main .focus\:border-indigo-400:focus,
+main .focus\:border-blue-400:focus,
+main .focus\:border-violet-400:focus {
+    border-color: #F59E0B !important;
+}
+main .focus\:ring-indigo-100:focus,
+main .focus\:ring-blue-100:focus,
+main .focus\:ring-violet-100:focus,
+main .focus\:ring-2.focus\:ring-indigo-100:focus,
+main .focus\:ring-2.focus\:ring-blue-100:focus {
+    --tw-ring-color: rgba(245, 158, 11, .22) !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, .18) !important;
+}
+main .text-indigo-600,
+main .text-blue-600 {
+    color: #D97706 !important;
+}
+main a.text-indigo-600:hover,
+main a.text-blue-600:hover,
+main a.hover\:text-blue-800:hover,
+main a.hover\:text-indigo-800:hover {
+    color: #B45309 !important;
+}
+main .bg-indigo-50,
+main .bg-blue-50 {
+    background-color: rgba(245, 158, 11, .1) !important;
+}
+main .border-indigo-200,
+main .border-blue-200 {
+    border-color: rgba(245, 158, 11, .28) !important;
+}
+main .text-indigo-700,
+main .text-blue-700 {
+    color: #B45309 !important;
+}
+.admin-table-toolbar__exports .dt-button:hover,
+[id$="-export-buttons"] .dt-button:hover {
+    background: #FFFBEB !important;
+    color: #B45309 !important;
+    border-color: #FCD34D !important;
+}
+.rich-text a { color: #D97706; }
 </style>
+@include('admin.partials.learning-ui')
 <script>
  tailwind.config = {
    theme: {

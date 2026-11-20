@@ -15,19 +15,19 @@
     @csrf
     @if($isEdit) @method('PUT') @endif
 
-    <div class="bg-white border border-gray-200 rounded-2xl p-6">
+    <div class="learn-panel p-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Assessment Name *</label>
                 <input type="text" name="title" value="{{ old('title', $assessment->title ?? '') }}" required
                        placeholder="Enter assessment name"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                       class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none">
                 @error('title')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Image</label>
                 <input type="file" name="image_file" accept="image/*"
-                       class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white">
+                       class="learn-focus w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none">
                 @if($assessment->image)
                     <img src="{{ $assessment->imageUrl() }}" alt="" class="mt-2 h-16 rounded-lg object-cover">
                 @endif
@@ -35,7 +35,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Assessment Icon</label>
                 <input type="file" name="icon_file" accept="image/*"
-                       class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white">
+                       class="learn-focus w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white outline-none">
                 @if($assessment->icon)
                     <img src="{{ $assessment->iconUrl() }}" alt="" class="mt-2 h-12 w-12 rounded-lg object-cover">
                 @endif
@@ -46,12 +46,12 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Assessment Description</label>
                 <textarea name="description" rows="6" placeholder="Enter description"
-                          class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-y">{{ old('description', $assessment->description ?? '') }}</textarea>
+                          class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none resize-y">{{ old('description', $assessment->description ?? '') }}</textarea>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Assessment Instructions</label>
                 <textarea name="instructions" rows="6" placeholder="Enter instructions"
-                          class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 resize-y">{{ old('instructions', $assessment->instructions ?? '') }}</textarea>
+                          class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none resize-y">{{ old('instructions', $assessment->instructions ?? '') }}</textarea>
             </div>
         </div>
 
@@ -75,7 +75,7 @@
             <select id="assessment-assignee"
                     name="mentee_ids[]"
                     required
-                    class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none">
                 <option value="all" @selected($selectedValue === 'all')>All</option>
                 @foreach(($assigneeMentees ?? collect()) as $mentee)
                     <option value="{{ $mentee->id }}" @selected($selectedValue === (string) $mentee->id)>
@@ -90,38 +90,37 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         @foreach($bands as $i => $band)
-        <div class="bg-white border border-gray-200 rounded-2xl p-5">
+        <div class="learn-panel p-5">
             <h3 class="font-semibold text-gray-800 mb-4">Score Band {{ $i }}</h3>
             <div class="grid grid-cols-3 gap-3 mb-3">
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">From *</label>
                     <input type="number" min="0" name="bands[{{ $i }}][from]" value="{{ $band['from'] }}" required
-                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                           class="learn-focus w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">To *</label>
                     <input type="number" min="0" name="bands[{{ $i }}][to]" value="{{ $band['to'] }}" required
-                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                           class="learn-focus w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Heading *</label>
                     <input type="text" name="bands[{{ $i }}][heading]" value="{{ $band['heading'] }}" required
                            placeholder="e.g. Mild"
-                           class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+                           class="learn-focus w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none">
                 </div>
             </div>
             @error("bands.$i.from")<p class="text-xs text-red-600 mb-2">{{ $message }}</p>@enderror
             @error("bands.$i.to")<p class="text-xs text-red-600 mb-2">{{ $message }}</p>@enderror
             @error("bands.$i.heading")<p class="text-xs text-red-600 mb-2">{{ $message }}</p>@enderror
             <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
-            <textarea name="bands[{{ $i }}][description]" rows="8" class="tinymce-band w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">{{ $band['description'] }}</textarea>
+            <textarea name="bands[{{ $i }}][description]" rows="8" class="tinymce-band learn-focus w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none">{{ $band['description'] }}</textarea>
         </div>
         @endforeach
     </div>
     @error('bands')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
 
-    <button type="submit"
-            class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors">
+    <button type="submit" class="learn-btn-primary w-full justify-center !py-3">
         {{ $isEdit ? 'Update Assessment' : 'Submit' }}
     </button>
 </form>

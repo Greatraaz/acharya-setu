@@ -3,9 +3,13 @@
 @section('heading', 'Plan Subscriptions')
 @section('content')
 
-<div class="space-y-6">
-    <div>
-        <p class="text-sm text-gray-500">See which mentee subscribed to which plan and download invoices from here.</p>
+<div class="admin-page space-y-5">
+    <div class="learn-intro">
+        <div>
+            <span class="learn-eyebrow">Billing · Subscriptions</span>
+            <h2>Plan Subscriptions</h2>
+            <p>See which mentee subscribed to which plan and download invoices from here.</p>
+        </div>
     </div>
 
     @if(session('success'))
@@ -39,7 +43,7 @@
             </select>
         </div>
         <div class="admin-filter-actions">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl px-4">Filter</button>
+            <button type="submit" class="learn-btn-primary !py-2 !px-4">Filter</button>
         </div>
     </form>
 

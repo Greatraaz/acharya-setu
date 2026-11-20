@@ -39,39 +39,29 @@
     }
 </style>
 
-<div class="space-y-5">
+<div class="admin-page space-y-5">
 
-    {{-- Hero --}}
-    <div class="roles-hero border border-gray-200 rounded-2xl p-5 sm:p-6">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div class="min-w-0">
-                <div class="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-indigo-600 mb-2">
-                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                    Access control
-                </div>
-                <h2 class="text-lg sm:text-xl font-bold text-gray-900">Roles & team permissions</h2>
-                <p class="text-sm text-gray-500 mt-1.5 max-w-2xl">
-                    Create roles, choose which admin modules they can open, then invite teammates. The sidebar and pages follow each person’s role.
-                </p>
+                <span class="learn-eyebrow">Settings · Access control</span>
+                <h2>Roles &amp; team permissions</h2>
+                <p>Create roles, choose which admin modules they can open, then invite teammates. The sidebar and pages follow each person’s role.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
                 @if($tab === 'team')
-                <a href="{{ route('admin.roles.index') }}"
-                   class="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2.5 rounded-xl transition-colors">
+                <a href="{{ route('admin.roles.index') }}" class="learn-btn-ghost">
                     Manage roles
                 </a>
-                <button type="button" data-open-modal="staff-modal"
-                        class="inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shadow-indigo-200">
+                <button type="button" data-open-modal="staff-modal" class="learn-btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
                     Add team member
                 </button>
                 @else
-                <a href="{{ route('admin.roles.index', ['tab' => 'team']) }}"
-                   class="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2.5 rounded-xl transition-colors">
+                <a href="{{ route('admin.roles.index', ['tab' => 'team']) }}" class="learn-btn-ghost">
                     View team
                 </a>
-                <button type="button" data-open-modal="role-modal"
-                        class="inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shadow-indigo-200">
+                <button type="button" data-open-modal="role-modal" class="learn-btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
                     New role
                 </button>
@@ -152,8 +142,7 @@
         </div>
         <p class="font-semibold text-gray-800 text-lg">No team members yet</p>
         <p class="text-sm text-gray-500 mt-1 max-w-sm mx-auto">Invite an admin, assign a role, and they’ll only see the modules you allow.</p>
-        <button type="button" data-open-modal="staff-modal"
-                class="inline-flex mt-5 items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+        <button type="button" data-open-modal="staff-modal" class="learn-btn-primary mt-5">
             + Add team member
         </button>
     </div>
@@ -310,8 +299,7 @@
             </div>
             <p class="font-semibold text-gray-800 text-lg">No roles yet</p>
             <p class="text-sm text-gray-500 mt-1 max-w-sm mx-auto">Create a role and choose which admin modules it can open.</p>
-            <button type="button" data-open-modal="role-modal"
-                    class="inline-flex mt-5 items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+            <button type="button" data-open-modal="role-modal" class="learn-btn-primary mt-5">
                 + New role
             </button>
         </div>
@@ -402,7 +390,7 @@
 
             <div class="px-6 sm:px-8 py-4 border-t border-gray-100 bg-gray-50/80 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 shrink-0">
                 <button type="button" data-close-modal class="px-4 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 rounded-xl transition-colors">Cancel</button>
-                <button type="submit" class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors shadow-sm shadow-indigo-200">Save role</button>
+                <button type="submit" class="learn-btn-primary">Save role</button>
             </div>
         </form>
     </div>
@@ -486,7 +474,7 @@
 
             <div class="px-6 sm:px-8 py-4 border-t border-gray-100 bg-gray-50/80 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 shrink-0">
                 <button type="button" data-close-modal class="px-4 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 rounded-xl transition-colors">Cancel</button>
-                <button type="submit" class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors shadow-sm shadow-indigo-200">Save member</button>
+                <button type="submit" class="learn-btn-primary">Save member</button>
             </div>
         </form>
     </div>

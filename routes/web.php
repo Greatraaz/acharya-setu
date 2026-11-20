@@ -84,6 +84,7 @@ use App\Http\Controllers\Admin\JourneyController as AdminJourneyController;
 use App\Http\Controllers\Admin\AdminOnboardingController;
 use App\Http\Controllers\Admin\MentorApprovalController;
 use App\Http\Controllers\Admin\AssessmentController;
+use App\Http\Controllers\Admin\AssessmentCategoryController;
 use App\Http\Controllers\Admin\AssessmentQuestionController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\BlogController;
@@ -746,6 +747,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin', 'admin
     Route::post('sessions/{session}/review',   [SessionReviewController::class, 'store']) ->name('sessions.review.store');
 
     Route::resource('assessments', AssessmentController::class);
+    Route::resource('assessment-categories', AssessmentCategoryController::class)->except(['show']);
     Route::resource('assessment-questions', AssessmentQuestionController::class)->except(['show']);
 
     // ── Utilities: Blogs ──────────────────────────────────────
@@ -932,6 +934,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin', 'admin
         Route::get('/create',                                   [QuizController::class, 'create']) ->name('create');
         Route::post('/',                                        [QuizController::class, 'store'])  ->name('store');
         Route::get('/{quiz}',                                   [QuizController::class, 'show'])   ->name('show');
+        Route::post('/{quiz}/toggle-publish',                   [QuizController::class, 'togglePublish'])->name('toggle-publish');
         Route::post('/{quiz}/attempt',                          [QuizController::class, 'attempt'])->name('attempt');
         Route::post('/{quiz}/attempt/{attempt}/submit',         [QuizController::class, 'submit']) ->name('submit');
         Route::get('/{quiz}/attempt/{attempt}/result',          [QuizController::class, 'result']) ->name('result');

@@ -7,19 +7,22 @@
     $inr = fn ($n) => '₹'.number_format((float) $n, 2);
 @endphp
 
-<div class="min-w-0 max-w-full space-y-6">
+<div class="admin-page min-w-0 max-w-full space-y-6">
 
-    <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-            <p class="text-sm text-gray-500">What each mentor and expert earned from sessions, what you have already paid out, and what is still in their wallet.</p>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Finance · Earnings</span>
+                <h2>Session Earnings</h2>
+                <p>What each mentor and expert earned from sessions, what you have already paid out, and what is still in their wallet.</p>
+            </div>
+            <a href="{{ route('admin.withdrawals.index') }}" class="learn-btn-ghost">
+                Withdrawal requests
+                @if(($stats['pending_out'] ?? 0) > 0)
+                <span class="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ $inr($stats['pending_out']) }}</span>
+                @endif
+            </a>
         </div>
-        <a href="{{ route('admin.withdrawals.index') }}"
-           class="inline-flex items-center gap-1.5 text-sm font-medium text-orange-700 bg-orange-50 border border-orange-200 hover:bg-orange-100 px-3 py-2 rounded-xl">
-            Withdrawal requests
-            @if(($stats['pending_out'] ?? 0) > 0)
-            <span class="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ $inr($stats['pending_out']) }}</span>
-            @endif
-        </a>
     </div>
 
     <div class="grid grid-cols-2 xl:grid-cols-5 gap-3">
@@ -72,12 +75,12 @@
                     <option value="name" @selected($sort === 'name')>Name</option>
                 </select>
             </div>
-            <button type="submit" class="rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2">Apply</button>
+            <button type="submit" class="learn-btn-primary">Apply</button>
             <a href="{{ route('admin.earnings.index') }}" class="rounded-xl border border-gray-200 text-gray-600 text-sm font-medium px-4 py-2 hover:bg-gray-50">Reset</a>
         </form>
     </div>
 
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="learn-panel overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
                 <thead class="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">

@@ -3,16 +3,20 @@
 @section('heading','Subscription Plans')
 @section('content')
 
-<div class="space-y-6">
+<div class="admin-page space-y-5">
 
-    {{-- Header --}}
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p class="text-sm text-gray-500">Each plan is its own record with its own benefits. Names can be changed anytime.</p>
-        <a href="{{ route('admin.plans.create') }}"
-           class="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors w-full sm:w-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            Add New Plan
-        </a>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Billing · Plans</span>
+                <h2>Subscription Plans</h2>
+                <p>Each plan is its own record with its own benefits. Names can be changed anytime.</p>
+            </div>
+            <a href="{{ route('admin.plans.create') }}" class="learn-btn-primary self-start w-full sm:w-auto justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                Add New Plan
+            </a>
+        </div>
     </div>
 
     @if(session('success'))
@@ -29,9 +33,7 @@
         </div>
         <p class="text-gray-600 font-medium mb-1">No plans yet</p>
         <p class="text-gray-400 text-sm mb-5">Create your first subscription plan to get started.</p>
-        <a href="{{ route('admin.plans.create') }}" class="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-blue-700 transition">
-            Create First Plan
-        </a>
+        <a href="{{ route('admin.plans.create') }}" class="learn-btn-primary">Create First Plan</a>
     </div>
     @else
 

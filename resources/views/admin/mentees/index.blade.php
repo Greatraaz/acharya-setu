@@ -13,35 +13,34 @@ $stats = [
 ];
 @endphp
 
-<div class="space-y-5">
+<div class="admin-page space-y-5">
 
-    {{-- Header --}}
-    <div class="flex items-center justify-between">
-        <p class="text-sm text-gray-500">Manage all registered mentees, assignments, and account status.</p>
-        <div class="flex gap-2 flex-wrap">
-            @php $menteeExportQuery = array_merge(request()->except(['page', 'format']), ['format' => 'csv']); @endphp
-            <a href="{{ route('admin.mentees.export', $menteeExportQuery) }}"
-               class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2 rounded-xl transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Export CSV
-            </a>
-            <a href="{{ route('admin.mentees.export', array_merge($menteeExportQuery, ['format' => 'excel'])) }}"
-               class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-4 py-2 rounded-xl transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Export Excel
-            </a>
-            <a href="{{ route('admin.mentees.create') }}"
-                class="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl transition-colors">
-                + Add Mentee
-            </a>
-            <a href="{{ route('admin.mentees.trashed') }}"
-               class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2 rounded-xl transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                Deleted
-                @if($stats['deleted'] > 0)
-                <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{{ $stats['deleted'] }}</span>
-                @endif
-            </a>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">People · Mentees</span>
+                <h2>Mentees</h2>
+                <p>Manage all registered mentees, assignments, and account status.</p>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                @php $menteeExportQuery = array_merge(request()->except(['page', 'format']), ['format' => 'csv']); @endphp
+                <a href="{{ route('admin.mentees.export', $menteeExportQuery) }}" class="learn-btn-ghost">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Export CSV
+                </a>
+                <a href="{{ route('admin.mentees.export', array_merge($menteeExportQuery, ['format' => 'excel'])) }}" class="learn-btn-ghost">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Export Excel
+                </a>
+                <a href="{{ route('admin.mentees.create') }}" class="learn-btn-primary">+ Add Mentee</a>
+                <a href="{{ route('admin.mentees.trashed') }}" class="learn-btn-ghost">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Deleted
+                    @if($stats['deleted'] > 0)
+                    <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{{ $stats['deleted'] }}</span>
+                    @endif
+                </a>
+            </div>
         </div>
     </div>
 
@@ -138,8 +137,8 @@ $stats = [
             </div>
 
             <div class="admin-filter-actions">
-                <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 rounded-lg transition-colors">Filter</button>
-                <a href="{{ route('admin.mentees.index') }}" class="text-sm text-gray-500 border border-gray-200 px-3 rounded-lg hover:bg-gray-50 transition-colors">Reset</a>
+                <button type="submit" class="learn-btn-primary !py-0 !px-4 h-10">Filter</button>
+                <a href="{{ route('admin.mentees.index') }}" class="learn-btn-ghost h-10">Reset</a>
             </div>
         </form>
     </div>
@@ -341,7 +340,7 @@ $stats = [
                 </span>
             </div>
             <div class="flex gap-3">
-                <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">Assign</button>
+                <button type="submit" class="learn-btn-primary flex-1 justify-center">Assign</button>
                 <button type="button" onclick="document.getElementById('assign-modal').classList.add('hidden')"
                         class="flex-1 border border-gray-200 text-gray-600 text-sm py-2.5 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
             </div>

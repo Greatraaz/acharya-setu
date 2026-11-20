@@ -2,6 +2,7 @@
 @section('title', 'Curriculum Templates')
 @section('heading', 'Curriculum Templates')
 @section('content')
+@include('admin.partials.learning-ui')
 
 @php
     $totalTemplates = $templates->count();
@@ -22,50 +23,52 @@
         transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
     }
     .tpl-card:hover {
-        border-color: #c7d2fe;
-        box-shadow: 0 12px 28px rgba(79, 70, 229, .08);
+        border-color: rgba(245, 158, 11, .45);
+        box-shadow: 0 12px 28px rgba(245, 158, 11, .12);
         transform: translateY(-2px);
     }
 </style>
 
-<div class="space-y-5">
+<div class="learn-page space-y-5">
 
     {{-- Header --}}
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div class="max-w-2xl">
-            <p class="text-sm text-gray-600 leading-relaxed">
-                One starter plan per mentor industry. Mentors only see their industry template, then clone and tailor it for each mentee.
-            </p>
-            <p class="text-xs text-gray-400 mt-1.5">
-                Tip: use <span class="font-semibold text-indigo-600">Voice Assistant</span> to create by speaking, or open a card’s <span class="font-semibold text-gray-600">Build</span> to add months, weeks, and tasks.
-            </p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto lg:justify-end">
-            <button type="button" data-open-modal="add-template-modal"
-                    class="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                New Template
-            </button>
-            <a href="{{ route('admin.curriculum.templates.sample') }}"
-               class="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 px-3 py-2.5 rounded-xl transition-colors whitespace-nowrap">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Sample Excel
-            </a>
-            <button type="button" data-open-modal="import-template-modal"
-                    class="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 px-3 py-2.5 rounded-xl transition-colors whitespace-nowrap">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L9 8m4-4v12"/></svg>
-                Import Excel
-            </button>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="max-w-2xl">
+                <span class="learn-eyebrow">Learning · Templates</span>
+                <h2>Curriculum Templates</h2>
+                <p>
+                    One starter plan per mentor industry. Mentors only see their industry template, then clone and tailor it for each mentee.
+                </p>
+                <p class="!mt-2 text-xs !text-slate-400">
+                    Tip: use <span class="font-semibold text-amber-700">Voice Assistant</span> to create by speaking, or open a card’s <span class="font-semibold text-slate-600">Build</span> to add months, weeks, and tasks.
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto lg:justify-end">
+                <button type="button" data-open-modal="add-template-modal" class="learn-btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    New Template
+                </button>
+                <a href="{{ route('admin.curriculum.templates.sample') }}" class="learn-btn-ghost">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Sample Excel
+                </a>
+                <button type="button" data-open-modal="import-template-modal"
+                        class="learn-btn-ghost !text-amber-800 !border-amber-200 !bg-amber-50 hover:!bg-amber-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L9 8m4-4v12"/></svg>
+                    Import Excel
+                </button>
+            </div>
         </div>
     </div>
 
     {{-- Voice Assistant entry --}}
-    <div class="relative overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-violet-50 shadow-sm">
-        <div class="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-indigo-200/30 blur-2xl pointer-events-none"></div>
-        <div class="absolute -left-6 -bottom-10 h-28 w-28 rounded-full bg-violet-200/30 blur-2xl pointer-events-none"></div>
+    <div class="relative overflow-hidden rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50 via-white to-orange-50 shadow-sm">
+        <div class="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-amber-200/30 blur-2xl pointer-events-none"></div>
+        <div class="absolute -left-6 -bottom-10 h-28 w-28 rounded-full bg-orange-200/25 blur-2xl pointer-events-none"></div>
         <div class="relative p-4 sm:p-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex items-start gap-3 min-w-0">
-                <span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/25">
+                <span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/25">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
                     </svg>
@@ -81,15 +84,13 @@
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
-                <button type="button" data-open-voice-studio
-                        class="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 px-4 py-2.5 rounded-xl transition-all shadow-sm shadow-indigo-500/20 whitespace-nowrap">
+                <button type="button" data-open-voice-studio class="learn-btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
                     </svg>
                     Speak to create
                 </button>
-                <button type="button" data-open-voice-guide
-                        class="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-50 px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                <button type="button" data-open-voice-guide class="learn-btn-ghost !text-amber-800 !border-amber-200">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5-9-5.5z"/></svg>
                     Watch guide
                 </button>
@@ -129,7 +130,7 @@
     {{-- Stats --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
         @foreach([
-            ['Templates', $totalTemplates, 'bg-indigo-50', 'text-indigo-700', 'border-indigo-100', 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z'],
+            ['Templates', $totalTemplates, 'bg-amber-50', 'text-amber-700', 'border-amber-100', 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z'],
             ['Industries covered', $coveredIndustries.' / '.$totalIndustries, 'bg-slate-50', 'text-slate-700', 'border-slate-200', 'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z'],
             ['Active', $activeTemplates, 'bg-green-50', 'text-green-700', 'border-green-200', 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
             ['Need months', $needsBuild, 'bg-amber-50', 'text-amber-700', 'border-amber-200', 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z'],
@@ -155,10 +156,10 @@
                 <div class="relative">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input type="text" id="template-search" placeholder="Search by industry, name, or skills…"
-                           class="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
+                           class="learn-focus w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none transition-all">
                 </div>
             </div>
-            <div class="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+            <div class="flex flex-wrap gap-1 bg-amber-50 border border-amber-100 p-1 rounded-xl w-fit">
                 <button type="button" data-filter="all" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold bg-white text-gray-900 shadow-sm">All</button>
                 <button type="button" data-filter="active" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-700">Active</button>
                 <button type="button" data-filter="incomplete" class="tpl-filter px-3 py-2 rounded-lg text-xs font-semibold text-gray-500 hover:text-gray-700">Needs build</button>
@@ -174,7 +175,7 @@
                 $monthsDone = (int) $template->months_count;
                 $progress = min(100, (int) round(($monthsDone / 6) * 100));
                 $tags = is_array($template->expertise_tags) ? $template->expertise_tags : [];
-                $accent = $template->color ?: '#4f46e5';
+                $accent = $template->color ?: '#F59E0B';
                 $cardSearch = strtolower($industry.' '.$template->name.' '.($template->description ?? '').' '.implode(' ', $tags));
             @endphp
             <article class="tpl-card bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col"
@@ -202,7 +203,7 @@
                                 </span>
                                 @endif
                             </div>
-                            <p class="text-[11px] font-medium text-indigo-600 mt-1 truncate">{{ $industry }}</p>
+                            <p class="text-[11px] font-medium text-amber-700 mt-1 truncate">{{ $industry }}</p>
                         </div>
                     </div>
 
@@ -215,7 +216,7 @@
                         <span class="text-[11px] text-gray-300">No skills tagged</span>
                         @endforelse
                         @if(count($tags) > 3)
-                        <span class="text-[11px] px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 font-semibold">+{{ count($tags) - 3 }}</span>
+                        <span class="text-[11px] px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-100 font-semibold">+{{ count($tags) - 3 }}</span>
                         @endif
                     </div>
 
@@ -233,7 +234,7 @@
 
                     <div class="mt-auto pt-4 flex items-center gap-2 border-t border-gray-100">
                         <a href="{{ route('admin.curriculum.months', $template) }}"
-                           class="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors"
+                           class="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-colors"
                            title="Add months, weeks, tasks, and MCQs">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.18-5.18m0 0a2.25 2.25 0 013.18-3.18l1.06 1.06m-4.24 2.12L6.64 12m4.78 3.17l5.18 5.18a2.25 2.25 0 003.18-3.18l-1.06-1.06m-4.24-2.12L17.36 12"/></svg>
                             {{ $monthsDone >= 6 ? 'Open build' : 'Build months' }}
@@ -264,7 +265,7 @@
                 </div>
                 <p class="text-sm font-semibold text-gray-800">{{ $industry }}</p>
                 <p class="text-xs text-gray-400 mt-1 max-w-[14rem]">No starter template yet for this industry.</p>
-                <button type="button" class="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition-colors"
+                <button type="button" class="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-2 rounded-lg transition-colors"
                         onclick="openAddForIndustry(@json($industry))">
                     Create template
                 </button>
@@ -298,7 +299,7 @@
                 <p class="text-xs text-gray-500 mt-3">{{ $template->expertise_field ?: $template->expertise_stream ?: 'No industry set' }}</p>
                 <div class="mt-auto pt-4 flex items-center gap-1.5 border-t border-gray-100">
                     <a href="{{ route('admin.curriculum.months', $template) }}"
-                       class="flex-1 inline-flex items-center justify-center text-xs font-semibold px-2.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">Build</a>
+                       class="flex-1 inline-flex items-center justify-center text-xs font-semibold px-2.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors">Build</a>
                     <button type="button" class="text-xs font-medium px-2.5 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
                             onclick='openEditTemplate(@json($template))'>Edit</button>
                 </div>
@@ -328,12 +329,12 @@
                 </button>
             </div>
             <div class="p-6 space-y-4 overflow-y-auto flex-1">
-                <div class="rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-900">
+                <div class="rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
                     One file can hold multiple templates. Repeat the template name and industry on every row. Re-importing the same name + industry replaces that template’s months/weeks.
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Excel file <span class="text-red-400">*</span></label>
-                    <label class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-indigo-300 rounded-2xl px-4 py-8 cursor-pointer bg-gray-50/50 transition-colors">
+                    <label class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 hover:border-amber-300 rounded-2xl px-4 py-8 cursor-pointer bg-gray-50/50 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
                         <span class="text-sm text-gray-600" id="import-file-label">Choose .xlsx, .xls, or .csv</span>
                         <input type="file" name="file" accept=".xlsx,.xls,.csv" required class="hidden"
@@ -342,13 +343,13 @@
                 </div>
                 <p class="text-xs text-gray-400">
                     Need the column layout?
-                    <a href="{{ route('admin.curriculum.templates.sample') }}" class="text-indigo-700 font-semibold hover:text-indigo-900">Download the sample</a>
+                    <a href="{{ route('admin.curriculum.templates.sample') }}" class="text-indigo-700 font-semibold hover:text-amber-900">Download the sample</a>
                     (Guide sheet lists every column and valid industries).
                 </p>
             </div>
             <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/70 flex justify-end gap-2 shrink-0">
                 <button type="button" data-close-modal class="px-4 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 rounded-xl transition-colors">Cancel</button>
-                <button type="submit" class="px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors">Import</button>
+                <button type="submit" class="px-4 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-xl transition-colors">Import</button>
             </div>
         </form>
     </div>
@@ -373,7 +374,7 @@
             </div>
             <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/70 flex justify-end gap-2 shrink-0">
                 <button type="button" data-close-modal class="px-4 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 rounded-xl transition-colors">Cancel</button>
-                <button type="submit" class="px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors">Create template</button>
+                <button type="submit" class="px-4 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-xl transition-colors">Create template</button>
             </div>
         </form>
     </div>
@@ -399,7 +400,7 @@
             </div>
             <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/70 flex justify-end gap-2 shrink-0">
                 <button type="button" data-close-modal class="px-4 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 rounded-xl transition-colors">Cancel</button>
-                <button type="submit" class="px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors">Update template</button>
+                <button type="submit" class="px-4 py-2.5 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-xl transition-colors">Update template</button>
             </div>
         </form>
     </div>

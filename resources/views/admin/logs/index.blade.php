@@ -3,33 +3,34 @@
 @section('heading', 'Activity Logs')
 @section('content')
 
-<div class="space-y-5">
+<div class="admin-page space-y-5">
 
-    {{-- Header row --}}
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <p class="text-sm text-gray-500">Real-time audit trail of all system and user activity.</p>
-        <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-            {{-- Live indicator --}}
-            <div class="flex items-center justify-center gap-1.5 text-xs text-gray-400 bg-white border border-gray-200 px-3 py-2 rounded-xl col-span-2 sm:col-span-1 sm:justify-start" id="live-indicator">
-                <span class="w-2 h-2 bg-gray-300 rounded-full" id="live-dot"></span>
-                <span id="live-text">Paused</span>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">System · Activity logs</span>
+                <h2>Activity Logs</h2>
+                <p>Real-time audit trail of all system and user activity.</p>
             </div>
-            <button onclick="toggleLiveTail()"
-                    id="live-btn"
-                    class="w-full sm:w-auto text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-xl transition-colors">
-                Enable Live Tail
-            </button>
-            <a href="{{ route('admin.logs.export', request()->all()) }}"
-               class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-2 rounded-xl transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                </svg>
-                Export CSV
-            </a>
-            <button type="button" onclick="document.getElementById('purge-modal').classList.remove('hidden')"
-                    class="w-full sm:w-auto text-xs font-medium text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 px-3 py-2 rounded-xl transition-colors">
-                Purge Logs
-            </button>
+            <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center w-full lg:w-auto">
+                <div class="flex items-center justify-center gap-1.5 text-xs text-gray-400 bg-white border border-gray-200 px-3 py-2 rounded-xl col-span-2 sm:col-span-1 sm:justify-start learn-btn-ghost !cursor-default" id="live-indicator">
+                    <span class="w-2 h-2 bg-gray-300 rounded-full" id="live-dot"></span>
+                    <span id="live-text">Paused</span>
+                </div>
+                <button onclick="toggleLiveTail()" id="live-btn" type="button" class="learn-btn-ghost col-span-2 sm:col-span-1 !text-emerald-800 !border-emerald-200 !bg-emerald-50 hover:!bg-emerald-100">
+                    Enable Live Tail
+                </button>
+                <a href="{{ route('admin.logs.export', request()->all()) }}" class="learn-btn-ghost">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Export CSV
+                </a>
+                <button type="button" onclick="document.getElementById('purge-modal').classList.remove('hidden')"
+                        class="learn-btn-ghost col-span-2 sm:col-span-1 !text-red-600 !border-red-200 !bg-red-50 hover:!bg-red-100">
+                    Purge Logs
+                </button>
+            </div>
         </div>
     </div>
 
@@ -121,7 +122,7 @@
             </div>
 
             <div class="sm:col-span-2 xl:col-span-full flex flex-col sm:flex-row gap-2 xl:w-auto xl:col-span-auto">
-                <button type="submit" class="w-full sm:flex-1 xl:w-auto bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors">Filter</button>
+                <button type="submit" class="learn-btn-primary w-full sm:flex-1 xl:w-auto">Filter</button>
                 <a href="{{ route('admin.logs.index') }}" class="w-full sm:flex-1 xl:w-auto text-center text-sm text-gray-500 border border-gray-200 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
             </div>
         </form>
@@ -131,7 +132,7 @@
     <div id="live-entries" class="space-y-1.5 hidden"></div>
 
     {{-- Log Table --}}
-    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+    <div class="learn-panel overflow-hidden">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3.5 border-b border-gray-100">
             <div class="flex items-center gap-3 min-w-0">
                 <h3 class="text-sm font-semibold text-gray-800">Log Entries</h3>

@@ -2,17 +2,24 @@
 @section('title','Curriculum Builder')
 @section('heading','6-Month Journey Builder')
 @section('content')
+@include('admin.partials.learning-ui')
 
-<div class="space-y-6">
+<div class="learn-page space-y-6">
 
     {{-- Page header --}}
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p class="text-sm text-gray-500">Build the 6-month plan on each mentee’s stream copy. Global catalog streams live under Curriculum Streams.</p>
-        <button type="button" onclick="document.getElementById('add-stream-modal').classList.remove('hidden')"
-                class="inline-flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap flex-shrink-0 w-full sm:w-auto">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            New Stream
-        </button>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <span class="learn-eyebrow">Learning · Journey</span>
+                <h2>6-Month Journey Manager</h2>
+                <p>Build the 6-month plan on each mentee’s stream copy. Add months, weeks, tasks, and MCQs.</p>
+            </div>
+            <button type="button" onclick="document.getElementById('add-stream-modal').classList.remove('hidden')"
+                    class="learn-btn-primary self-start">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                New Stream
+            </button>
+        </div>
     </div>
 
     @if(session('success'))
@@ -47,14 +54,14 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <input type="search" name="search" value="{{ $search ?? request('search') }}"
                            placeholder="Stream name, slug, mentee…"
-                           class="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-all">
+                           class="learn-focus w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm outline-none transition-all">
                 </div>
             </div>
 
             <div class="min-w-[180px]">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Mentee</label>
                 <select name="mentee_id"
-                        class="w-full border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 cursor-pointer">
+                        class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none cursor-pointer">
                     <option value="">All mentees</option>
                     @foreach($mentees as $mentee)
                     <option value="{{ $mentee->id }}" @selected((string) request('mentee_id') === (string) $mentee->id)>
@@ -67,7 +74,7 @@
             <div class="min-w-[140px]">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
                 <select name="status"
-                        class="w-full border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 cursor-pointer">
+                        class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none cursor-pointer">
                     <option value="">All</option>
                     <option value="active" @selected(($status ?? request('status')) === 'active')>Active</option>
                     <option value="inactive" @selected(($status ?? request('status')) === 'inactive')>Inactive</option>
@@ -75,7 +82,7 @@
             </div>
 
             <button type="submit"
-                    class="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">
+                    class="learn-btn-primary !py-2">
                 Search
             </button>
 
@@ -117,7 +124,7 @@
         </a>
         @endif
         <button onclick="document.getElementById('add-stream-modal').classList.remove('hidden')"
-                class="inline-flex items-center gap-2 bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-violet-700 transition-colors">
+                class="learn-btn-primary">
             {{ ($filterMentee ?? null) ? 'Create Stream for Mentee' : 'Create First Stream' }}
         </button>
     </div>
@@ -126,12 +133,12 @@
         @foreach($streams as $stream)
         <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow group">
             {{-- Color bar --}}
-            <div class="h-1.5 w-full" style="background: {{ $stream->color ?: '#7c3aed' }};"></div>
+            <div class="h-1.5 w-full" style="background: {{ $stream->color ?: '#F59E0B' }};"></div>
             <div class="p-5">
                 <div class="flex items-start justify-between mb-3">
                     <div class="flex items-center gap-3">
                         <div class="w-11 h-11 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                             style="background: {{ $stream->color ?: '#7c3aed' }}18;">
+                             style="background: {{ $stream->color ?: '#F59E0B' }}18;">
                             {{ $stream->icon ?: '📚' }}
                         </div>
                         <div class="min-w-0 flex-1">
@@ -151,7 +158,7 @@
                 @endif
 
                 @if($stream->mentee)
-                <p class="text-xs text-violet-700 bg-violet-50 inline-flex items-center gap-1 px-2 py-1 rounded-lg mb-4">
+                <p class="text-xs text-amber-800 bg-amber-50 border border-amber-100 inline-flex items-center gap-1 px-2 py-1 rounded-lg mb-4">
                     👤 {{ $stream->mentee->name }}
                 </p>
                 @else
@@ -166,7 +173,7 @@
                         [$stream->enrollments_count, 'Enrolled'],
                         [0, 'Completed'],
                     ] as [$val, $label])
-                    <div class="text-center bg-gray-50 rounded-lg py-2">
+                    <div class="text-center bg-amber-50/50 border border-amber-100/60 rounded-lg py-2">
                         <div class="text-lg font-bold text-gray-800">{{ $val }}</div>
                         <div class="text-xs text-gray-400">{{ $label }}</div>
                     </div>
@@ -175,7 +182,7 @@
 
                 <div class="flex gap-2">
                     <a href="{{ route('admin.curriculum.months', $stream) }}"
-                       class="flex-1 text-center text-xs font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-2 rounded-lg transition-colors">
+                       class="flex-1 text-center text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-100 px-3 py-2 rounded-lg transition-colors">
                         Manage Months
                     </a>
                     <button onclick='openEditStream(@json($stream))'

@@ -31,12 +31,14 @@ class MenteeTaskController extends Controller
             ->withQueryString();
 
         $pending = $this->tasks->pendingForMentor($mentorId, $menteeId)->paginate(10, ['*'], 'reviews_page')->withQueryString();
-        $pending->getCollection()->transform(function (StudentCurriculumProgress $p) {
-            $task = MenteeTask::find($p->item_id);
-
+        $taskMap = MenteeTask::query()
+            ->whereIn('id', $pending->getCollection()->pluck('item_id')->filter()->unique()->values())
+            ->get()
+            ->keyBy('id');
+        $pending->getCollection()->transform(function (StudentCurriculumProgress $p) use ($taskMap) {
             return [
                 'progress' => $p,
-                'task'     => $task,
+                'task'     => $taskMap->get($p->item_id),
             ];
         });
 

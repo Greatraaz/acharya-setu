@@ -18,10 +18,14 @@
 .admin-cs-list .admin-cs-stat{ font-family:"Sora",system-ui,sans-serif; }
 </style>
 
-<div class="max-w-6xl space-y-5 admin-cs-list">
-    <div class="flex flex-wrap items-end justify-between gap-3">
-        <div>
-            <p class="text-sm text-gray-500">Review resume &amp; LinkedIn requests, then send deliverables to mentees.</p>
+<div class="admin-page max-w-6xl space-y-5 admin-cs-list">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Careers · Services</span>
+                <h2>Career Services</h2>
+                <p>Review resume &amp; LinkedIn requests, then send deliverables to mentees.</p>
+            </div>
         </div>
     </div>
 
@@ -50,27 +54,27 @@
         @endforeach
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+    <div class="learn-panel overflow-hidden">
         <div class="admin-table-toolbar px-5 py-4 border-b border-gray-100">
             <form method="GET" class="admin-table-filters w-full">
                 <div class="relative flex-1 min-w-[200px]">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z"/></svg>
                     <input type="text" name="search" value="{{ $search }}" placeholder="Search mentee, email, ID…"
-                           class="w-full border border-gray-200 rounded-lg pl-9 pr-3.5 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
+                           class="learn-focus w-full border border-gray-200 rounded-lg pl-9 pr-3.5 py-2.5 text-sm outline-none">
                 </div>
-                <select name="type" class="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none">
+                <select name="type" class="learn-focus w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none">
                     <option value="">All types</option>
                     <option value="resume" @selected($type === 'resume')>Resume</option>
                     <option value="linkedin" @selected($type === 'linkedin')>LinkedIn</option>
                 </select>
-                <select name="status" class="w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none">
+                <select name="status" class="learn-focus w-full sm:w-auto border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none">
                     <option value="">All status</option>
                     <option value="submitted" @selected($status === 'submitted')>Under review</option>
                     <option value="completed" @selected($status === 'completed')>Completed</option>
                     <option value="pending_payment" @selected($status === 'pending_payment')>Awaiting payment</option>
                     <option value="cancelled" @selected($status === 'cancelled')>Cancelled</option>
                 </select>
-                <button type="submit" class="inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
+                <button type="submit" class="learn-btn-primary">
                     Search
                 </button>
                 @if($search !== '' || $type !== '' || $status !== '')

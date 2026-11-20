@@ -3,22 +3,25 @@
 @section('heading','Consultation Sessions')
 @section('content')
 
-<div class="space-y-6">
+<div class="admin-page space-y-5">
 
-    {{-- Header --}}
-    <div class="flex items-center justify-between">
-        <p class="text-sm text-gray-500">Manage mentor and expert consultation sessions with mentees.</p>
-        <div class="flex gap-2">
-            <a href="{{ route('admin.sessions.export', request()->all()) }}"
-               class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 border border-gray-200 px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors bg-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Export CSV
-            </a>
-            <a href="{{ route('admin.sessions.create') }}"
-               class="inline-flex items-center gap-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                Book Session
-            </a>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Consultations · Sessions</span>
+                <h2>Consultation Sessions</h2>
+                <p>Manage mentor and expert consultation sessions with mentees.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('admin.sessions.export', request()->all()) }}" class="learn-btn-ghost">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Export CSV
+                </a>
+                <a href="{{ route('admin.sessions.create') }}" class="learn-btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    Book Session
+                </a>
+            </div>
         </div>
     </div>
 
@@ -87,8 +90,8 @@
                 <input type="date" name="date_to" value="{{ request('date_to') }}"
                        class="border border-gray-200 rounded-xl px-3.5 py-2 text-sm bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100">
             </div>
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">Filter</button>
-            <a href="{{ route('admin.sessions.index') }}" class="text-sm text-gray-500 border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">Reset</a>
+            <button type="submit" class="learn-btn-primary !py-2 !px-4">Filter</button>
+            <a href="{{ route('admin.sessions.index') }}" class="learn-btn-ghost !py-2">Reset</a>
         </form>
     </div>
 
@@ -106,7 +109,7 @@
             </div>
             <p class="text-gray-600 font-medium mb-1">No sessions found</p>
             <p class="text-gray-400 text-sm mb-5">Book the first consultation session to get started.</p>
-            <a href="{{ route('admin.sessions.create') }}" class="inline-flex items-center gap-2 bg-indigo-600 text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors">Book a Session</a>
+            <a href="{{ route('admin.sessions.create') }}" class="learn-btn-primary">Book a Session</a>
         </div>
         @else
         <div class="overflow-x-auto">

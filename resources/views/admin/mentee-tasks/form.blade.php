@@ -3,12 +3,18 @@
 @section('heading', $task ? 'Edit mentee task' : 'New mentee task')
 
 @section('content')
-<div class="max-w-3xl space-y-5">
-    <a href="{{ $task ? route('admin.mentee-tasks.show', $task) : route('admin.mentee-tasks.index') }}"
-       class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-        {{ $task ? 'Back to task' : 'Back to tasks' }}
-    </a>
+@include('admin.partials.learning-ui')
+
+<div class="learn-page max-w-3xl space-y-5">
+    <div class="learn-intro">
+        <a href="{{ $task ? route('admin.mentee-tasks.show', $task) : route('admin.mentee-tasks.index') }}"
+           class="text-sm text-slate-400 hover:text-slate-700">
+            ← {{ $task ? 'Back to task' : 'Back to tasks' }}
+        </a>
+        <span class="learn-eyebrow mt-3 inline-flex">Learning · {{ $task ? 'Edit task' : 'New task' }}</span>
+        <h2>{{ $task ? 'Edit mentee task' : 'New mentee task' }}</h2>
+        <p>Assign a linked mentor to review submissions when mentees complete this task.</p>
+    </div>
 
     @if(session('error'))
     <div class="bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3 rounded-xl">{{ session('error') }}</div>
@@ -24,14 +30,14 @@
         @csrf
         @if($task) @method('PUT') @endif
 
-        <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <div class="learn-panel overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100 bg-gray-50/60">
                 <h3 class="text-sm font-semibold text-gray-800">Assignment</h3>
             </div>
             <div class="p-5 grid sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Mentee <span class="text-red-400">*</span></label>
-                    <select id="mentee-select" name="mentee_id" required class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                    <select id="mentee-select" name="mentee_id" required class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none">
                         <option value="">— Select —</option>
                         @foreach($mentees as $m)
                         <option value="{{ $m->id }}" @selected((int) old('mentee_id', $task->mentee_id ?? null) === (int) $m->id)>{{ $m->name }} ({{ $m->email }})</option>
@@ -40,7 +46,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Assign mentor <span class="text-red-400">*</span></label>
-                    <select id="mentor-select" name="mentor_id" required disabled class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:text-gray-400">
+                    <select id="mentor-select" name="mentor_id" required disabled class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none disabled:bg-gray-50 disabled:text-gray-400">
                         <option value="">Select a mentee first</option>
                     </select>
                     <p id="mentor-hint" class="text-xs text-gray-400 mt-1">Only mentors linked to this mentee are listed.</p>
@@ -48,7 +54,7 @@
             </div>
         </div>
 
-        <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <div class="learn-panel overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100 bg-gray-50/60">
                 <h3 class="text-sm font-semibold text-gray-800">Task details</h3>
             </div>
@@ -56,18 +62,18 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Title <span class="text-red-400">*</span></label>
                     <input type="text" name="title" value="{{ old('title', $task->title ?? '') }}" required maxlength="200"
-                           class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                           class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-                    <textarea name="description" rows="4" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">{{ old('description', $task->description ?? '') }}</textarea>
+                    <textarea name="description" rows="4" class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none">{{ old('description', $task->description ?? '') }}</textarea>
                 </div>
 
                 <div class="grid sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Type</label>
-                        <select name="type" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                        <select name="type" class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none">
                             @foreach(\App\Models\MenteeTask::TYPES as $key => $label)
                             <option value="{{ $key }}" @selected(old('type', $task->type ?? 'task') === $key)>{{ $label }}</option>
                             @endforeach
@@ -75,7 +81,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Submission type</label>
-                        <select name="submission_type" class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100">
+                        <select name="submission_type" class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none">
                             @foreach(\App\Models\MenteeTask::SUBMISSION_TYPES as $key => $label)
                             <option value="{{ $key }}" @selected(old('submission_type', $task->submission_type ?? 'none') === $key)>{{ $label }}</option>
                             @endforeach
@@ -85,7 +91,7 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Attachments</label>
-                    <input type="file" name="attachments[]" multiple class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white">
+                    <input type="file" name="attachments[]" multiple class="learn-focus w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white outline-none">
                     @if($task && !empty($task->attachments))
                     <label class="inline-flex items-center gap-2 text-sm text-gray-600 mt-2">
                         <input type="checkbox" name="clear_attachments" value="1"> Clear existing attachments
@@ -107,11 +113,11 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl">
+            <button type="submit" class="learn-btn-primary">
                 {{ $task ? 'Save changes' : 'Create task' }}
             </button>
             <a href="{{ $task ? route('admin.mentee-tasks.show', $task) : route('admin.mentee-tasks.index') }}"
-               class="inline-flex items-center border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm font-medium px-5 py-2.5 rounded-xl">
+               class="learn-btn-ghost">
                 Cancel
             </a>
         </div>

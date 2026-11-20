@@ -5,6 +5,8 @@
         : route('mentor.assessment-questions.store'));
     $options          = old('options', $question->options ?? \App\Models\AssessmentQuestion::DEFAULT_OPTIONS);
     $selectedAssessment = (int) old('assessment_id', $question->assessment_id ?? 0);
+    $selectedCategory   = (int) old('category_id', $question->category_id ?? 0);
+    $categories         = $categories ?? collect();
 @endphp
 
 <form method="POST" action="{{ $formAction }}" style="max-width:720px;">
@@ -29,9 +31,9 @@
 
         {{-- Assessment picker --}}
         <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">Assessment Category *</label>
-            <select name="assessment_id" required class="form-select">
-                <option value="">Select Assessment Category</option>
+            <label class="form-label">Assessment *</label>
+            <select name="assessment_id" id="mq-assessment" required class="form-select">
+                <option value="">Select assessment</option>
                 @foreach($assessments as $assessment)
                 <option value="{{ $assessment->id }}" @selected($selectedAssessment === (int) $assessment->id)>
                     {{ $assessment->title }}
@@ -40,8 +42,23 @@
             </select>
             @error('assessment_id')<p class="assess-error">{{ $message }}</p>@enderror
             @if($assessments->isEmpty())
-            <p class="assess-error" style="color:var(--warning);">Create an assessment category first before adding questions.</p>
+            <p class="assess-error" style="color:var(--warning);">Create an assessment first before adding questions.</p>
             @endif
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Question group (optional)</label>
+            <select name="category_id" id="mq-category" class="form-select">
+                <option value="">No group</option>
+                @foreach($categories as $category)
+                <option value="{{ $category->id }}"
+                        data-assessment="{{ $category->assessment_id }}"
+                        @selected($selectedCategory === (int) $category->id)>
+                    {{ $category->name }}
+                </option>
+                @endforeach
+            </select>
+            @error('category_id')<p class="assess-error">{{ $message }}</p>@enderror
         </div>
 
         {{-- Question text --}}
@@ -73,3 +90,22 @@
 
     </div>
 </form>
+
+<script>
+(function () {
+    const assessment = document.getElementById('mq-assessment');
+    const category = document.getElementById('mq-category');
+    if (!assessment || !category) return;
+    function syncCategories() {
+        const aid = assessment.value;
+        [...category.options].forEach((opt) => {
+            if (!opt.value) { opt.hidden = false; return; }
+            const match = String(opt.dataset.assessment) === String(aid);
+            opt.hidden = !match;
+            if (!match && opt.selected) category.value = '';
+        });
+    }
+    assessment.addEventListener('change', syncCategories);
+    syncCategories();
+})();
+</script>

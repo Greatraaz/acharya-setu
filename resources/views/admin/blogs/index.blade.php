@@ -3,20 +3,25 @@
 @section('heading', 'Blogs')
 
 @section('content')
-<div class="space-y-4">
-    <div class="flex items-center justify-between flex-wrap gap-3">
-        <p class="text-sm text-gray-500">Manage blog posts for the Vedrix Insights library.</p>
-        <a href="{{ route('admin.blogs.create') }}"
-           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition">
-            + Add New
-        </a>
+<div class="admin-page space-y-4">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Content · Blogs</span>
+                <h2>Blogs</h2>
+                <p>Manage blog posts for the Vedrix Insights library.</p>
+            </div>
+            <a href="{{ route('admin.blogs.create') }}" class="learn-btn-primary self-start">
+                + Add New
+            </a>
+        </div>
     </div>
 
     @if(session('success'))
     <div class="bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded-xl">{{ session('success') }}</div>
     @endif
 
-    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+    <div class="learn-panel overflow-hidden">
         <div class="admin-table-toolbar px-5 py-4 border-b border-gray-100">
             <div class="admin-table-toolbar__exports" id="blogs-export-buttons"></div>
             <form method="GET" class="admin-table-filters">
@@ -27,7 +32,7 @@
                     <option value="active" @selected(request('status') === 'active')>Active</option>
                     <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
                 </select>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Search</button>
+                <button type="submit" class="learn-btn-primary">Search</button>
                 @if(request()->filled('search') || request()->filled('status'))
                     <a href="{{ route('admin.blogs.index') }}" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Reset</a>
                 @endif
