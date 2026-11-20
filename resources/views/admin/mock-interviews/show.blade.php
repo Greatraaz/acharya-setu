@@ -5,8 +5,8 @@
 @php
     $statusClass = match ($item->status) {
         'completed' => 'bg-green-50 text-green-700 ring-green-200',
-        'confirmed' => 'bg-blue-50 text-blue-700 ring-blue-200',
-        'submitted' => 'bg-amber-50 text-amber-700 ring-amber-200',
+        'confirmed' => 'bg-amber-50 text-amber-700 ring-amber-200',
+        'submitted' => 'bg-orange-50 text-orange-700 ring-orange-200',
         'cancelled' => 'bg-gray-100 text-gray-600 ring-gray-200',
         default => 'bg-gray-100 text-gray-600 ring-gray-200',
     };
@@ -14,15 +14,41 @@
 @endphp
 
 @section('content')
-<div class="space-y-5 max-w-5xl">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+.admin-mi{ --brand:#f59e0b; --brand-dark:#d97706; font-family:"DM Sans",system-ui,sans-serif; }
+.admin-mi h3,.admin-mi .admin-mi-title{ font-family:"Sora",system-ui,sans-serif; }
+.admin-mi .admin-mi-hero{
+    background:radial-gradient(420px 140px at 100% 0%, rgba(245,158,11,.14), transparent 70%), #fff;
+}
+.admin-mi .admin-mi-accent{ background:linear-gradient(135deg,var(--brand),var(--brand-dark)); }
+</style>
+<div class="space-y-5 max-w-5xl admin-mi">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('admin.mock-interviews.index') }}"
-           class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800">
-            ← Back to list
+           class="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            All Mock Interviews
         </a>
-        <span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold ring-1 ring-inset {{ $statusClass }}">
-            {{ $item->statusLabel() }}
-        </span>
+        <div class="flex flex-wrap items-center gap-2">
+            @if($item->invoice)
+            <a href="{{ route('admin.mock-interview-invoices.download', $item->invoice) }}"
+               class="inline-flex items-center gap-1.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition-colors">
+                Invoice {{ $item->invoice->invoice_number }}
+            </a>
+            @elseif(in_array($item->payment_status, ['paid', 'free'], true))
+            <form method="POST" action="{{ route('admin.mock-interview-invoices.generate', $item) }}">
+                @csrf
+                <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-xl transition-colors bg-white">
+                    Generate invoice
+                </button>
+            </form>
+            @endif
+            <span class="inline-flex px-3 py-1 rounded-full text-xs font-semibold ring-1 ring-inset {{ $statusClass }}">
+                {{ $item->statusLabel() }}
+            </span>
+        </div>
     </div>
 
     @if(session('success'))
@@ -36,13 +62,13 @@
 
     <div class="grid lg:grid-cols-5 gap-5 items-start">
         <div class="lg:col-span-3 space-y-5">
-            <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden admin-mi-hero shadow-sm">
                 <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-lg font-bold">
+                    <div class="w-11 h-11 rounded-xl admin-mi-accent text-white flex items-center justify-center text-lg font-bold shadow-md shadow-amber-200/60">
                         {{ strtoupper(substr($item->user->name ?? 'M', 0, 1)) }}
                     </div>
                     <div class="min-w-0">
-                        <div class="text-base font-semibold text-gray-900 truncate">{{ $item->user->name ?? '—' }}</div>
+                        <div class="admin-mi-title text-base font-extrabold text-gray-900 truncate tracking-tight">{{ $item->user->name ?? '—' }}</div>
                         <div class="text-sm text-gray-500 truncate">{{ $item->user->email ?? '' }}</div>
                     </div>
                 </div>
@@ -150,12 +176,12 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Key discussion points</label>
                         <textarea name="content" rows="5" required
-                                  class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                  class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                                   placeholder="Summarize what was discussed, strengths, areas to improve…">{{ old('content', $mySharedContent) }}</textarea>
                         @error('content') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                     </div>
                     <button type="submit"
-                            class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition">
+                            class="inline-flex items-center bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition">
                         Save Shared Notes
                     </button>
                 </form>
@@ -177,11 +203,11 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Notes for mentee (optional)</label>
                         <textarea name="admin_notes" rows="3"
-                                  class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                  class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                                   placeholder="Prep tips, what to expect…">{{ old('admin_notes', $item->admin_notes) }}</textarea>
                     </div>
                     <button type="submit"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition">
+                            class="w-full bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition">
                         Confirm mock interview
                     </button>
                 </form>
@@ -189,7 +215,7 @@
             @endif
 
             @if($item->status === 'confirmed')
-            <div class="bg-white border border-blue-100 rounded-2xl p-5">
+            <div class="bg-white border border-amber-100 rounded-2xl p-5">
                 <h3 class="text-sm font-semibold text-gray-900 mb-1">Live interview</h3>
                 <p class="text-sm text-gray-500 mb-4 leading-relaxed">
                     Preferred slot: {{ $item->preferred_at?->timezone($tz)->format('d M Y, h:i A') }} · {{ $item->duration_minutes }} min.
@@ -197,7 +223,7 @@
                 </p>
                 @if($item->canJoinCall())
                 <a href="{{ route('mock-interviews.call', $item->id) }}"
-                   class="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-3 rounded-xl transition">
+                   class="w-full inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-5 py-3 rounded-xl transition">
                     Join interview
                 </a>
                 @else
@@ -218,18 +244,18 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Feedback <span class="text-red-600">*</span></label>
                         <textarea name="feedback" rows="6" required
-                                  class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                  class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                                   placeholder="Strengths, areas to improve, recommended next steps…">{{ old('feedback', $item->feedback) }}</textarea>
                         @error('feedback') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1.5">Admin notes (optional)</label>
                         <textarea name="admin_notes" rows="3"
-                                  class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                  class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                                   placeholder="Internal or mentee-visible notes…">{{ old('admin_notes', $item->admin_notes) }}</textarea>
                     </div>
                     <button type="submit"
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition">
+                            class="w-full bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition">
                         Complete & send feedback
                     </button>
                 </form>
@@ -266,6 +292,15 @@
                         <p class="text-xs text-gray-500">Feedback is visible on the mentee dashboard</p>
                     </div>
                 </div>
+                @if($item->mentee_rating)
+                <div class="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 mt-4">
+                    <div class="text-[11px] font-semibold uppercase tracking-wide text-amber-700/70 mb-1">Mentee rating</div>
+                    <div class="text-sm font-bold text-amber-800">★ {{ $item->mentee_rating }}/5</div>
+                    @if($item->mentee_review)
+                    <p class="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{{ $item->mentee_review }}</p>
+                    @endif
+                </div>
+                @endif
                 @if($item->admin_notes)
                 <div class="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 mt-4">
                     <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Admin notes</div>

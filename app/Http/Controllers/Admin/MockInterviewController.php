@@ -31,7 +31,15 @@ class MockInterviewController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin.mock-interviews.index', compact('items', 'search', 'status'));
+        $stats = [
+            'awaiting'   => MockInterviewRequest::where('status', MockInterviewRequest::STATUS_SUBMITTED)->count(),
+            'confirmed'  => MockInterviewRequest::where('status', MockInterviewRequest::STATUS_CONFIRMED)->count(),
+            'completed'  => MockInterviewRequest::where('status', MockInterviewRequest::STATUS_COMPLETED)->count(),
+            'cancelled'  => MockInterviewRequest::where('status', MockInterviewRequest::STATUS_CANCELLED)->count(),
+            'paid_addon' => MockInterviewRequest::where('is_paid_addon', true)->count(),
+        ];
+
+        return view('admin.mock-interviews.index', compact('items', 'search', 'status', 'stats'));
     }
 
     public function show(MockInterviewRequest $mockInterview)
@@ -40,8 +48,14 @@ class MockInterviewController extends Controller
             'user',
             'reviewer',
             'assigner',
+            'invoice',
             'notes.author:id,name,role,avatar_url',
         ]);
+
+        if (in_array($mockInterview->payment_status, ['paid', 'free'], true) && ! $mockInterview->invoice) {
+            app(\App\Services\MockInterviewInvoiceService::class)->ensureForRequest($mockInterview, 'admin');
+            $mockInterview->load('invoice');
+        }
 
         return view('admin.mock-interviews.show', [
             'item' => $mockInterview,
@@ -70,12 +84,18 @@ class MockInterviewController extends Controller
             ->latest()
             ->first();
 
+        $isNew = ! $note;
         if ($note) {
             $note->update($payload);
         } else {
             $note = $mockInterview->notes()->create(array_merge($payload, [
                 'author_id' => auth()->id(),
             ]));
+        }
+
+        if ($isNew && $request->boolean('is_shared', true)) {
+            app(\App\Services\NotificationService::class)
+                ->mockInterviewEvent($mockInterview, 'notes_shared');
         }
 
         if ($request->expectsJson() || $request->ajax()) {

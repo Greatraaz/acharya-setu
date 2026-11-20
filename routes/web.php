@@ -54,6 +54,7 @@ use App\Http\Controllers\Mentee\CareerServiceController as MenteeCareerServiceCo
 use App\Http\Controllers\Mentee\MockInterviewController as MenteeMockInterviewController;
 use App\Http\Controllers\Mentee\MenteeTaskController as MenteeMenteeTaskController;
 use App\Http\Controllers\Mentee\CareerServiceInvoiceController as MenteeCareerServiceInvoiceController;
+use App\Http\Controllers\Mentee\MockInterviewInvoiceController as MenteeMockInterviewInvoiceController;
 use App\Http\Controllers\Mentee\MentorVideoController as MenteeMentorVideoController;
 use App\Http\Controllers\Mentor\MentorRequestController as MentorMentorRequestController;
 
@@ -91,6 +92,7 @@ use App\Http\Controllers\Admin\CareerServiceController as AdminCareerServiceCont
 use App\Http\Controllers\Admin\MockInterviewController as AdminMockInterviewController;
 use App\Http\Controllers\Admin\MenteeTaskController as AdminMenteeTaskController;
 use App\Http\Controllers\Admin\CareerServiceInvoiceController as AdminCareerServiceInvoiceController;
+use App\Http\Controllers\Admin\MockInterviewInvoiceController as AdminMockInterviewInvoiceController;
 use App\Http\Controllers\Admin\MentorVideoController as AdminMentorVideoController;
 use App\Http\Controllers\Admin\WhitePaperController;
 use App\Http\Controllers\Admin\CaseStudyController;
@@ -501,6 +503,7 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::post('/career-services/{careerService}/verify', [MenteeCareerServiceController::class, 'verify'])->name('career-services.verify');
     Route::post('/career-services/{careerService}/pay', [MenteeCareerServiceController::class, 'pay'])->name('career-services.pay');
     Route::get( '/career-service-invoices/{invoice}/download', [MenteeCareerServiceInvoiceController::class, 'download'])->name('career-service-invoices.download');
+    Route::post('/career-services/{careerService}/rate', [MenteeCareerServiceController::class, 'rate'])->name('career-services.rate');
 
     Route::get( '/mock-interviews', [MenteeMockInterviewController::class, 'index'])->name('mock-interviews.index');
     Route::get( '/mock-interviews/create', [MenteeMockInterviewController::class, 'create'])->name('mock-interviews.create');
@@ -508,6 +511,8 @@ Route::middleware(['auth', 'role:mentee', 'onboarding.complete'])
     Route::get( '/mock-interviews/{mockInterview}', [MenteeMockInterviewController::class, 'show'])->name('mock-interviews.show');
     Route::post('/mock-interviews/{mockInterview}/pay', [MenteeMockInterviewController::class, 'pay'])->name('mock-interviews.pay');
     Route::post('/mock-interviews/{mockInterview}/verify', [MenteeMockInterviewController::class, 'verify'])->name('mock-interviews.verify');
+    Route::post('/mock-interviews/{mockInterview}/rate', [MenteeMockInterviewController::class, 'rate'])->name('mock-interviews.rate');
+    Route::get( '/mock-interview-invoices/{invoice}/download', [MenteeMockInterviewInvoiceController::class, 'download'])->name('mock-interview-invoices.download');
 
     // Standalone tasks (outside curriculum)
     Route::get('/tasks', [MenteeMenteeTaskController::class, 'index'])->name('tasks.index');
@@ -761,6 +766,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin', 'admin
     Route::post('/mock-interviews/{mockInterview}/confirm', [AdminMockInterviewController::class, 'confirm'])->name('mock-interviews.confirm')->whereNumber('mockInterview');
     Route::post('/mock-interviews/{mockInterview}/complete', [AdminMockInterviewController::class, 'complete'])->name('mock-interviews.complete')->whereNumber('mockInterview');
     Route::post('/mock-interviews/{mockInterview}/cancel', [AdminMockInterviewController::class, 'cancel'])->name('mock-interviews.cancel')->whereNumber('mockInterview');
+    Route::get('mock-interview-invoices/{invoice}/download', [AdminMockInterviewInvoiceController::class, 'download'])->name('mock-interview-invoices.download');
+    Route::post('mock-interviews/{mockInterview}/invoice', [AdminMockInterviewInvoiceController::class, 'generate'])->name('mock-interview-invoices.generate')->whereNumber('mockInterview');
 
     Route::get('/mentee-tasks', [AdminMenteeTaskController::class, 'index'])->name('mentee-tasks.index');
     Route::get('/mentee-tasks/create', [AdminMenteeTaskController::class, 'create'])->name('mentee-tasks.create');

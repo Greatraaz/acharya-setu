@@ -159,6 +159,30 @@ class CareerServiceController extends Controller
         ]);
     }
 
+    public function rate(Request $request, CareerServiceRequest $careerService)
+    {
+        abort_unless((int) $careerService->user_id === (int) auth()->id(), 404);
+
+        if (! $careerService->canBeRatedBy(auth()->user())) {
+            return back()->with('error', 'This request cannot be rated right now.');
+        }
+
+        $data = $request->validate([
+            'mentee_rating' => 'required|integer|min:1|max:5',
+            'mentee_review' => 'nullable|string|max:1000',
+        ]);
+
+        $careerService->update([
+            'mentee_rating' => (int) $data['mentee_rating'],
+            'mentee_review' => trim((string) ($data['mentee_review'] ?? '')) ?: null,
+            'rated_at'      => now(),
+        ]);
+
+        return redirect()
+            ->route('mentee.career-services.show', $careerService)
+            ->with('success', 'Thanks for your rating.');
+    }
+
     private function paymentResponse(Request $request, array $result)
     {
         $item = $result['request'];

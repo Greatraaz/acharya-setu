@@ -20,7 +20,18 @@
 @endphp
 
 @section('content')
-<div class="max-w-6xl space-y-5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+.admin-cs{ --brand:#f59e0b; --brand-dark:#d97706; font-family:"DM Sans",system-ui,sans-serif; }
+.admin-cs h2,.admin-cs h3,.admin-cs .admin-cs-head{ font-family:"Sora",system-ui,sans-serif; }
+.admin-cs .admin-cs-hero{
+    background:radial-gradient(420px 140px at 100% 0%, rgba(245,158,11,.14), transparent 70%), #fff;
+    border:1px solid #e5e7eb; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,.06);
+}
+.admin-cs .admin-cs-accent{ background:linear-gradient(135deg,var(--brand),var(--brand-dark)); }
+</style>
+<div class="max-w-6xl space-y-5 admin-cs">
 
     {{-- Top bar --}}
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -62,11 +73,11 @@
         <div class="lg:col-span-2 space-y-5">
 
             {{-- Overview --}}
-            <div class="bg-white border border-gray-200 rounded-2xl p-6">
+            <div class="admin-cs-hero rounded-2xl p-6">
                 <div class="flex flex-wrap items-start justify-between gap-4 mb-5">
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2 mb-1">
-                            <h2 class="text-base font-bold text-gray-900">{{ $item->typeLabel() }}</h2>
+                            <h2 class="text-lg font-extrabold text-gray-900 tracking-tight">{{ $item->typeLabel() }}</h2>
                             <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
                                   style="background:{{ $statusMeta['bg'] }};color:{{ $statusMeta['text'] }}">
                                 <span class="w-1.5 h-1.5 rounded-full" style="background:{{ $statusMeta['dot'] }}"></span>
@@ -80,7 +91,7 @@
                         <div class="font-mono text-xs text-gray-400">Request #{{ $item->id }}</div>
                     </div>
                     <div class="flex items-center gap-3">
-                        <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-lg font-bold">
+                        <div class="w-11 h-11 rounded-xl admin-cs-accent text-white flex items-center justify-center text-lg font-bold shadow-md shadow-amber-200/60">
                             {{ strtoupper(substr($item->user->name ?? 'M', 0, 1)) }}
                         </div>
                         <div class="min-w-0">
@@ -232,6 +243,16 @@
                     Completed {{ $item->completed_at?->format('d M Y, h:i A') }}
                     @if($item->reviewer) · by {{ $item->reviewer->name }} @endif
                 </p>
+
+                @if($item->mentee_rating)
+                <div class="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+                    <div class="text-[11px] font-semibold uppercase tracking-wide text-amber-700/70 mb-1">Mentee rating</div>
+                    <div class="text-sm font-bold text-amber-800">★ {{ $item->mentee_rating }}/5</div>
+                    @if($item->mentee_review)
+                    <p class="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{{ $item->mentee_review }}</p>
+                    @endif
+                </div>
+                @endif
             </div>
             @elseif($item->status === 'submitted')
             <div class="bg-white border border-gray-200 rounded-2xl p-5">
@@ -262,7 +283,7 @@
                                   placeholder="Short summary the mentee will see…">{{ old('admin_notes') }}</textarea>
                     </div>
                     <button type="submit"
-                            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors">
+                            class="w-full bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors">
                         Submit to mentee
                     </button>
                 </form>

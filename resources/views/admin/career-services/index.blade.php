@@ -11,8 +11,14 @@
         'cancelled'       => ['bg' => '#f8fafc', 'text' => '#64748b', 'dot' => '#94a3b8'],
     ];
 @endphp
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+.admin-cs-list{ font-family:"DM Sans",system-ui,sans-serif; }
+.admin-cs-list .admin-cs-stat{ font-family:"Sora",system-ui,sans-serif; }
+</style>
 
-<div class="max-w-6xl space-y-5">
+<div class="max-w-6xl space-y-5 admin-cs-list">
     <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
             <p class="text-sm text-gray-500">Review resume &amp; LinkedIn requests, then send deliverables to mentees.</p>
@@ -35,11 +41,11 @@
             ['Completed', $stats['completed'] ?? 0, 'bg-emerald-50 text-emerald-800 border-emerald-100'],
             ['Awaiting pay', $stats['awaiting_pay'] ?? 0, 'bg-rose-50 text-rose-800 border-rose-100'],
             ['Resume', $stats['resume'] ?? 0, 'bg-indigo-50 text-indigo-800 border-indigo-100'],
-            ['LinkedIn', $stats['linkedin'] ?? 0, 'bg-sky-50 text-sky-800 border-sky-100'],
+            ['LinkedIn', $stats['linkedin'] ?? 0, 'bg-violet-50 text-violet-800 border-violet-100'],
         ] as [$label, $value, $tone])
         <div class="rounded-xl border px-4 py-3 {{ $tone }}">
-            <div class="text-[11px] font-semibold uppercase tracking-wide opacity-70">{{ $label }}</div>
-            <div class="text-2xl font-bold mt-0.5 tabular-nums">{{ $value }}</div>
+            <div class="admin-cs-stat text-[11px] font-semibold uppercase tracking-wide opacity-70">{{ $label }}</div>
+            <div class="admin-cs-stat text-2xl font-extrabold mt-0.5 tabular-nums tracking-tight">{{ $value }}</div>
         </div>
         @endforeach
     </div>
@@ -64,7 +70,7 @@
                     <option value="pending_payment" @selected($status === 'pending_payment')>Awaiting payment</option>
                     <option value="cancelled" @selected($status === 'cancelled')>Cancelled</option>
                 </select>
-                <button type="submit" class="inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
+                <button type="submit" class="inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
                     Search
                 </button>
                 @if($search !== '' || $type !== '' || $status !== '')
@@ -92,13 +98,13 @@
                         $sc = $statusStyles[$item->status] ?? $statusStyles['cancelled'];
                         $isResume = $item->type === 'resume';
                     @endphp
-                    <tr class="hover:bg-indigo-50/30 transition-colors">
+                    <tr class="hover:bg-amber-50/30 transition-colors">
                         <td class="px-5 py-3.5">
                             <div class="font-mono text-xs text-gray-400">#{{ $item->id }}</div>
                         </td>
                         <td class="px-5 py-3.5">
                             <div class="flex items-center gap-3 min-w-0">
-                                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-sm font-bold shrink-0">
+                                <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-sm font-bold shrink-0">
                                     {{ strtoupper(substr($item->user->name ?? 'M', 0, 1)) }}
                                 </div>
                                 <div class="min-w-0">
@@ -109,10 +115,13 @@
                         </td>
                         <td class="px-5 py-3.5">
                             <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full
-                                {{ $isResume ? 'bg-violet-50 text-violet-700' : 'bg-sky-50 text-sky-700' }}">
-                                <span class="w-1.5 h-1.5 rounded-full {{ $isResume ? 'bg-violet-500' : 'bg-sky-500' }}"></span>
+                                {{ $isResume ? 'bg-amber-50 text-amber-700' : 'bg-violet-50 text-violet-700' }}">
+                                <span class="w-1.5 h-1.5 rounded-full {{ $isResume ? 'bg-amber-500' : 'bg-violet-500' }}"></span>
                                 {{ $item->typeLabel() }}
                             </span>
+                            @if($item->mentee_rating)
+                            <div class="text-xs text-amber-600 font-semibold mt-1">★ {{ $item->mentee_rating }}/5</div>
+                            @endif
                         </td>
                         <td class="px-5 py-3.5">
                             @if($item->is_paid_addon)
@@ -138,7 +147,7 @@
                         </td>
                         <td class="px-5 py-3.5 text-right">
                             <a href="{{ route('admin.career-services.show', $item) }}"
-                               class="inline-flex items-center gap-1.5 text-sm font-medium bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg transition-colors">
+                               class="inline-flex items-center gap-1.5 text-sm font-medium bg-white border border-gray-200 hover:border-amber-300 hover:bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg transition-colors">
                                 View
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                             </a>

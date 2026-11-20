@@ -75,12 +75,42 @@ class MockInterviewController extends Controller
 
         $mockInterview->load([
             'assigner',
+            'invoice',
             'notes.author:id,name,role,avatar_url',
         ]);
+
+        if (in_array($mockInterview->payment_status, ['paid', 'free'], true) && ! $mockInterview->invoice) {
+            app(\App\Services\MockInterviewInvoiceService::class)->ensureForRequest($mockInterview, 'system');
+            $mockInterview->load('invoice');
+        }
 
         return view('frontend.mentee.mock-interviews.show', [
             'item' => $mockInterview,
         ]);
+    }
+
+    public function rate(Request $request, MockInterviewRequest $mockInterview)
+    {
+        abort_unless((int) $mockInterview->user_id === (int) auth()->id(), 404);
+
+        if (! $mockInterview->canBeRatedBy(auth()->user())) {
+            return back()->with('error', 'This interview cannot be rated right now.');
+        }
+
+        $data = $request->validate([
+            'mentee_rating' => 'required|integer|min:1|max:5',
+            'mentee_review' => 'nullable|string|max:1000',
+        ]);
+
+        $mockInterview->update([
+            'mentee_rating' => (int) $data['mentee_rating'],
+            'mentee_review' => trim((string) ($data['mentee_review'] ?? '')) ?: null,
+            'rated_at'      => now(),
+        ]);
+
+        return redirect()
+            ->route('mentee.mock-interviews.show', $mockInterview)
+            ->with('success', 'Thanks for your rating.');
     }
 
     public function pay(Request $request, $mockInterview, MockInterviewService $services)

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MockInterviewRequest extends Model
 {
@@ -51,6 +52,9 @@ class MockInterviewRequest extends Model
         'reviewed_by',
         'reviewed_at',
         'completed_at',
+        'mentee_rating',
+        'mentee_review',
+        'rated_at',
         'meeting_channel',
         'meeting_link',
         'meeting_provider',
@@ -62,12 +66,14 @@ class MockInterviewRequest extends Model
         'assigned_at'      => 'datetime',
         'reviewed_at'      => 'datetime',
         'completed_at'     => 'datetime',
+        'rated_at'         => 'datetime',
         'is_paid_addon'    => 'boolean',
         'amount'           => 'decimal:2',
         'rate_per_minute'  => 'decimal:2',
         'wallet_amount'    => 'decimal:2',
         'razorpay_amount'  => 'decimal:2',
         'duration_minutes' => 'integer',
+        'mentee_rating'    => 'integer',
     ];
 
     protected static function booted(): void
@@ -107,6 +113,19 @@ class MockInterviewRequest extends Model
     public function notes(): HasMany
     {
         return $this->hasMany(MockInterviewNote::class, 'mock_interview_request_id');
+    }
+
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(MockInterviewInvoice::class, 'mock_interview_request_id');
+    }
+
+    public function canBeRatedBy(?User $user): bool
+    {
+        return $user
+            && (int) $this->user_id === (int) $user->id
+            && $this->status === self::STATUS_COMPLETED
+            && empty($this->mentee_rating);
     }
 
     public function isMentee(User $user): bool
@@ -217,7 +236,13 @@ class MockInterviewRequest extends Model
             'admin_notes'       => $this->admin_notes,
             'feedback'          => $this->feedback,
             'completed_at'      => $this->completed_at?->toDateTimeString(),
+            'mentee_rating'     => $this->mentee_rating,
+            'mentee_review'     => $this->mentee_review,
+            'rated_at'          => $this->rated_at?->toDateTimeString(),
             'created_at'        => $this->created_at?->toDateTimeString(),
+            'invoice'           => $this->relationLoaded('invoice') && $this->invoice
+                ? $this->invoice->toPublicArray()
+                : null,
             'meeting'           => [
                 'provider'   => $this->meeting_provider ?: 'agora',
                 'channel'    => $this->meeting_channel,

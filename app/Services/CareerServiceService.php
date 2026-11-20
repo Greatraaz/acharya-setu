@@ -176,9 +176,11 @@ class CareerServiceService
             ]);
 
             app(CareerServiceInvoiceService::class)->ensureForRequest($request->fresh(), 'system');
+            $request = $request->fresh(['invoice']);
+            app(NotificationService::class)->careerServiceEvent($request, 'submitted');
 
             return [
-                'request' => $request->fresh(['invoice']),
+                'request' => $request,
                 'payment' => null,
                 'requires_payment_choice' => false,
             ];
@@ -317,9 +319,11 @@ class CareerServiceService
             });
 
             app(CareerServiceInvoiceService::class)->ensureForRequest($request, 'system');
+            $request = $request->fresh(['invoice']);
+            app(NotificationService::class)->careerServiceEvent($request, 'submitted');
 
             return [
-                'request' => $request->fresh(['invoice']),
+                'request' => $request,
                 'payment' => null,
                 'requires_payment_choice' => false,
             ];
@@ -439,8 +443,10 @@ class CareerServiceService
         });
 
         app(CareerServiceInvoiceService::class)->ensureForRequest($request, 'system');
+        $request = $request->fresh(['invoice']);
+        app(NotificationService::class)->careerServiceEvent($request, 'submitted');
 
-        return $request->fresh(['invoice']);
+        return $request;
     }
 
     /**
@@ -479,7 +485,10 @@ class CareerServiceService
             'completed_at'     => now(),
         ]);
 
-        return $request->fresh(['user', 'reviewer']);
+        $request = $request->fresh(['user', 'reviewer']);
+        app(NotificationService::class)->careerServiceEvent($request, 'completed');
+
+        return $request;
     }
 
     private function createRazorpayOrder(User $user, CareerServiceRequest $request, float $razorAmount): array

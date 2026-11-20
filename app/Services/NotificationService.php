@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\AppSetting;
+use App\Models\CareerServiceRequest;
 use App\Models\ConsultationSession;
+use App\Models\MockInterviewRequest;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -104,6 +106,182 @@ class NotificationService
         }
 
         return $sessions->count();
+    }
+
+    /**
+     * Career services (resume / LinkedIn) lifecycle for mentee + admin inbox.
+     * Events: submitted, completed
+     */
+    public function careerServiceEvent(CareerServiceRequest $request, string $event): void
+    {
+        $request = $request->fresh(['user']) ?: $request;
+        $mentee = $request->user;
+        if (! $mentee) {
+            return;
+        }
+
+        $label = $request->typeLabel();
+        $typeKey = $request->type === CareerServiceRequest::TYPE_LINKEDIN ? 'linkedin' : 'resume';
+
+        $copy = match ($event) {
+            'submitted' => [
+                'type'        => 'career_'.$typeKey.'_submitted',
+                'menteeTitle' => $label.' request received',
+                'menteeBody'  => "Your {$label} request (#{$request->id}) is under review. We’ll notify you when it’s ready.",
+                'adminTitle'  => "New {$label} request",
+                'adminBody'   => "{$mentee->name} submitted a {$label} request (#{$request->id}).",
+            ],
+            'completed' => [
+                'type'        => 'career_'.$typeKey.'_completed',
+                'menteeTitle' => $label.' is ready',
+                'menteeBody'  => "Your {$label} deliverable is ready to download from Career Services.",
+                'adminTitle'  => null,
+                'adminBody'   => null,
+            ],
+            default => null,
+        };
+
+        if (! $copy) {
+            return;
+        }
+
+        if (! $this->alreadySent((int) $mentee->id, $copy['type'], 'request_id', $request->id)) {
+            $this->send(
+                $mentee,
+                $copy['type'],
+                $copy['menteeTitle'],
+                $copy['menteeBody'],
+                [
+                    'request_id' => $request->id,
+                    'type'       => $request->type,
+                    'event'      => $event,
+                ],
+                $this->roleUrl($mentee, 'career-services.show', $request)
+            );
+        }
+
+        if ($event === 'submitted' && $copy['adminTitle']) {
+            $adminType = 'admin_'.$copy['type'];
+            if (! $this->alreadySentForAdmins($adminType, 'request_id', $request->id)) {
+                $this->notifyAdmins(
+                    $adminType,
+                    $copy['adminTitle'],
+                    $copy['adminBody'],
+                    [
+                        'request_id' => $request->id,
+                        'type'       => $request->type,
+                        'event'      => $event,
+                        'user_id'    => $mentee->id,
+                    ],
+                    route('admin.career-services.show', $request)
+                );
+            }
+        }
+    }
+
+    /**
+     * Mock interview lifecycle for mentee + admin inbox.
+     * Events: submitted, confirmed, completed, cancelled, notes_shared
+     */
+    public function mockInterviewEvent(MockInterviewRequest $request, string $event): void
+    {
+        $request = $request->fresh(['user']) ?: $request;
+        $mentee = $request->user;
+        if (! $mentee) {
+            return;
+        }
+
+        $when = $request->preferred_at
+            ? $request->preferred_at->timezone($request->timezone ?: 'Asia/Kolkata')->format('d M Y, g:i A')
+            : 'your preferred slot';
+        $mins = (int) $request->duration_minutes;
+
+        $copy = match ($event) {
+            'submitted' => [
+                'type'        => 'mock_interview_submitted',
+                'menteeTitle' => 'Mock interview request received',
+                'menteeBody'  => "Your {$mins}-min mock interview request (#{$request->id}) for {$when} is awaiting confirmation.",
+                'adminTitle'  => 'New mock interview request',
+                'adminBody'   => "{$mentee->name} requested a {$mins}-min mock interview (#{$request->id}) for {$when}.",
+            ],
+            'confirmed' => [
+                'type'        => 'mock_interview_confirmed',
+                'menteeTitle' => 'Mock interview confirmed',
+                'menteeBody'  => "Your mock interview (#{$request->id}) is confirmed for {$when}. Join from Mock Interviews when ready.",
+                'adminTitle'  => null,
+                'adminBody'   => null,
+            ],
+            'completed' => [
+                'type'        => 'mock_interview_completed',
+                'menteeTitle' => 'Mock interview completed',
+                'menteeBody'  => "Your mock interview (#{$request->id}) is complete. Feedback and notes are available on the booking page.",
+                'adminTitle'  => null,
+                'adminBody'   => null,
+            ],
+            'cancelled' => [
+                'type'        => 'mock_interview_cancelled',
+                'menteeTitle' => 'Mock interview cancelled',
+                'menteeBody'  => "Your mock interview (#{$request->id}) scheduled for {$when} was cancelled.",
+                'adminTitle'  => null,
+                'adminBody'   => null,
+            ],
+            'notes_shared' => [
+                'type'        => 'mock_interview_notes_shared',
+                'menteeTitle' => 'New interviewer notes',
+                'menteeBody'  => "Your interviewer shared notes on mock interview #{$request->id}.",
+                'adminTitle'  => null,
+                'adminBody'   => null,
+            ],
+            default => null,
+        };
+
+        if (! $copy) {
+            return;
+        }
+
+        if (! $this->alreadySent((int) $mentee->id, $copy['type'], 'request_id', $request->id)) {
+            $this->send(
+                $mentee,
+                $copy['type'],
+                $copy['menteeTitle'],
+                $copy['menteeBody'],
+                [
+                    'request_id' => $request->id,
+                    'event'      => $event,
+                ],
+                $this->roleUrl($mentee, 'mock-interviews.show', $request)
+            );
+        }
+
+        if ($event === 'submitted' && $copy['adminTitle']) {
+            $adminType = 'admin_'.$copy['type'];
+            if (! $this->alreadySentForAdmins($adminType, 'request_id', $request->id)) {
+                $this->notifyAdmins(
+                    $adminType,
+                    $copy['adminTitle'],
+                    $copy['adminBody'],
+                    [
+                        'request_id' => $request->id,
+                        'event'      => $event,
+                        'user_id'    => $mentee->id,
+                    ],
+                    route('admin.mock-interviews.show', $request)
+                );
+            }
+        }
+    }
+
+    public function alreadySentForAdmins(string $type, string $dataKey, mixed $dataValue): bool
+    {
+        if (! Schema::hasTable('notifications')) {
+            return false;
+        }
+
+        return Notification::query()
+            ->where('type', $type)
+            ->where("data->{$dataKey}", $dataValue)
+            ->whereHas('user', fn ($q) => $q->where('role', 'admin'))
+            ->exists();
     }
 
     public function sessionEvent(ConsultationSession $session, string $event): void

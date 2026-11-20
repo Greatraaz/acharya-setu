@@ -199,8 +199,12 @@ class MockInterviewService
                 'payment_reference' => null,
             ]));
 
+            $request = $request->fresh();
+            app(MockInterviewInvoiceService::class)->ensureForRequest($request, 'system');
+            app(NotificationService::class)->mockInterviewEvent($request, 'submitted');
+
             return [
-                'request'                   => $request->fresh(),
+                'request'                   => $request->fresh(['invoice']),
                 'payment'                   => null,
                 'requires_payment_choice'   => false,
             ];
@@ -266,8 +270,11 @@ class MockInterviewService
                 return $request->fresh();
             });
 
+            app(MockInterviewInvoiceService::class)->ensureForRequest($request, 'system');
+            app(NotificationService::class)->mockInterviewEvent($request, 'submitted');
+
             return [
-                'request'                 => $request,
+                'request'                 => $request->fresh(['invoice']),
                 'payment'                 => null,
                 'requires_payment_choice' => false,
             ];
@@ -386,8 +393,11 @@ class MockInterviewService
                 return $request->fresh();
             });
 
+            app(MockInterviewInvoiceService::class)->ensureForRequest($request, 'system');
+            app(NotificationService::class)->mockInterviewEvent($request, 'submitted');
+
             return [
-                'request'                 => $request,
+                'request'                 => $request->fresh(['invoice']),
                 'payment'                 => null,
                 'requires_payment_choice' => false,
             ];
@@ -503,7 +513,11 @@ class MockInterviewService
             return $request->fresh();
         });
 
-        return $request->fresh();
+        $request = $request->fresh();
+        app(MockInterviewInvoiceService::class)->ensureForRequest($request, 'system');
+        app(NotificationService::class)->mockInterviewEvent($request, 'submitted');
+
+        return $request->fresh(['invoice']);
     }
 
     public function confirm(
@@ -534,7 +548,10 @@ class MockInterviewService
 
         $request->update($updates);
 
-        return $request->fresh(['user', 'assigner']);
+        $request = $request->fresh(['user', 'assigner']);
+        app(NotificationService::class)->mockInterviewEvent($request, 'confirmed');
+
+        return $request;
     }
 
     public function complete(MockInterviewRequest $request, User $admin, ?string $feedback = null): MockInterviewRequest
@@ -554,7 +571,10 @@ class MockInterviewService
             'completed_at' => now(),
         ]);
 
-        return $request->fresh(['user', 'assigner', 'reviewer']);
+        $request = $request->fresh(['user', 'assigner', 'reviewer']);
+        app(NotificationService::class)->mockInterviewEvent($request, 'completed');
+
+        return $request;
     }
 
     public function cancel(MockInterviewRequest $request): MockInterviewRequest
@@ -571,7 +591,10 @@ class MockInterviewService
             'status' => MockInterviewRequest::STATUS_CANCELLED,
         ]);
 
-        return $request->fresh();
+        $request = $request->fresh();
+        app(NotificationService::class)->mockInterviewEvent($request, 'cancelled');
+
+        return $request;
     }
 
     public function purgePendingFor(User $user): void

@@ -44,6 +44,9 @@ class CareerServiceRequest extends Model
         'reviewed_by',
         'reviewed_at',
         'completed_at',
+        'mentee_rating',
+        'mentee_review',
+        'rated_at',
     ];
 
     protected $casts = [
@@ -53,6 +56,8 @@ class CareerServiceRequest extends Model
         'razorpay_amount' => 'decimal:2',
         'reviewed_at'     => 'datetime',
         'completed_at'    => 'datetime',
+        'mentee_rating'   => 'integer',
+        'rated_at'        => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -120,11 +125,22 @@ class CareerServiceRequest extends Model
             'deliverable_url' => $this->deliverableUrl(),
             'reviewed_at'     => $this->reviewed_at?->toDateTimeString(),
             'completed_at'    => $this->completed_at?->toDateTimeString(),
+            'mentee_rating'   => $this->mentee_rating,
+            'mentee_review'   => $this->mentee_review,
+            'rated_at'        => $this->rated_at?->toDateTimeString(),
             'created_at'      => $this->created_at?->toDateTimeString(),
             'updated_at'      => $this->updated_at?->toDateTimeString(),
             'invoice'         => $this->relationLoaded('invoice') && $this->invoice
                 ? $this->invoice->toPublicArray()
                 : null,
         ];
+    }
+
+    public function canBeRatedBy(?User $user): bool
+    {
+        return $user
+            && (int) $this->user_id === (int) $user->id
+            && $this->status === self::STATUS_COMPLETED
+            && empty($this->mentee_rating);
     }
 }
