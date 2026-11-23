@@ -10,11 +10,11 @@
     @csrf
     @if($isEdit) @method('PUT') @endif
 
-    <div class="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
+    <div class="learn-panel p-5 sm:p-6 space-y-5">
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Title *</label>
             <input type="text" name="title" value="{{ old('title', $download->title ?? '') }}" required
-                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus"
                    placeholder="Enter download title">
             @error('title')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
         </div>
@@ -22,7 +22,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Slug</label>
             <input type="text" name="slug" value="{{ old('slug', $download->slug ?? '') }}"
-                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus"
                    placeholder="auto-generated-from-title">
             <p class="text-xs text-gray-500 mt-1">Leave blank to auto-generate from the title. Use lowercase letters, numbers, and hyphens only.</p>
             @error('slug')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
@@ -71,8 +71,8 @@
     </div>
 
     <div class="flex items-center justify-end gap-3">
-        <a href="{{ route('admin.download-centres.index') }}" class="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50">Cancel</a>
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition">
+        <a href="{{ route('admin.download-centres.index') }}" class="learn-btn-ghost">Cancel</a>
+        <button type="submit" class="learn-btn-primary">
             {{ $isEdit ? 'Update' : 'Submit' }}
         </button>
     </div>

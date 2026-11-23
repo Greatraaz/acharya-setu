@@ -3,23 +3,23 @@
 @section('heading', $meta['label'])
 
 @section('content')
-<div class="space-y-4">
-    <div class="flex items-center justify-between flex-wrap gap-3">
-        <p class="text-sm text-gray-500">
-            Manage {{ strtolower($meta['label']) }} for the Vedrix Insights library.
-            @if(!empty($meta['gated'])) Downloads are gated behind a lead form.@endif
-        </p>
-        <div class="flex items-center gap-2">
-            @if(!empty($meta['gated']))
-            <a href="{{ route($meta['admin'].'.downloads') }}"
-               class="inline-flex items-center gap-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium px-4 py-2.5 rounded-lg transition">
-                Download leads
-            </a>
-            @endif
-            <a href="{{ route($meta['admin'].'.create') }}"
-               class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition">
-                + Add New
-            </a>
+<div class="admin-page space-y-5">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Utilities · {{ $meta['label'] }}</span>
+                <h2>{{ $meta['label'] }}</h2>
+                <p>
+                    Manage {{ strtolower($meta['label']) }} for the Vedrix Insights library.
+                    @if(!empty($meta['gated'])) Downloads are gated behind a lead form.@endif
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 self-start">
+                @if(!empty($meta['gated']))
+                <a href="{{ route($meta['admin'].'.downloads') }}" class="learn-btn-ghost">Download leads</a>
+                @endif
+                <a href="{{ route($meta['admin'].'.create') }}" class="learn-btn-primary">+ Add New</a>
+            </div>
         </div>
     </div>
 
@@ -27,20 +27,20 @@
     <div class="bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 rounded-xl">{{ session('success') }}</div>
     @endif
 
-    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+    <div class="learn-panel overflow-hidden">
         <div class="admin-table-toolbar px-5 py-4 border-b border-gray-100">
             <div class="admin-table-toolbar__exports" id="{{ $meta['table_id'] }}-export-buttons"></div>
             <form method="GET" class="admin-table-filters">
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search title…"
-                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 w-full sm:min-w-[220px]">
+                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none learn-focus w-full sm:min-w-[220px]">
                 <select name="status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
                     <option value="">All status</option>
                     <option value="active" @selected(request('status') === 'active')>Active</option>
                     <option value="inactive" @selected(request('status') === 'inactive')>Inactive</option>
                 </select>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Search</button>
+                <button type="submit" class="learn-btn-primary">Search</button>
                 @if(request()->filled('search') || request()->filled('status'))
-                    <a href="{{ route($meta['admin'].'.index') }}" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Reset</a>
+                    <a href="{{ route($meta['admin'].'.index') }}" class="learn-btn-soft">Reset</a>
                 @endif
             </form>
         </div>
@@ -54,7 +54,7 @@
         @else
         <div class="overflow-x-auto">
             <table id="{{ $meta['table_id'] }}" class="w-full text-sm">
-                <thead class="bg-gray-50 border-b border-gray-200">
+                <thead class="bg-slate-50/80 border-b border-slate-100">
                     <tr>
                         <th class="text-left px-5 py-3 font-semibold text-gray-600 w-16">Sr. No.</th>
                         <th class="text-left px-5 py-3 font-semibold text-gray-600 w-24">Image</th>
@@ -70,7 +70,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($items as $row)
-                    <tr class="hover:bg-gray-50/70">
+                    <tr class="hover:bg-amber-50/40">
                         <td class="px-5 py-4 text-gray-500">{{ $items->firstItem() + $loop->index }}</td>
                         <td class="px-5 py-4">
                             @if($row->imageUrl())
@@ -104,12 +104,12 @@
                         <td class="px-5 py-4">
                             <div class="flex items-center justify-end gap-2">
                                 <a href="{{ route($meta['admin'].'.edit', $row) }}"
-                                   class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-green-600 text-white hover:bg-green-700" title="Edit">✎</a>
+                                   class="learn-btn-edit" title="Edit">✎</a>
                                 <form method="POST" action="{{ route($meta['admin'].'.destroy', $row) }}"
                                       onsubmit="return confirm('Delete this {{ strtolower($meta['singular']) }}?')">
                                     @csrf @method('DELETE')
                                     <button type="submit"
-                                            class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-red-600 text-white hover:bg-red-700" title="Delete">🗑</button>
+                                            class="learn-btn-danger" title="Delete">🗑</button>
                                 </form>
                             </div>
                         </td>

@@ -11,12 +11,12 @@
     @csrf
     @if($isEdit) @method('PUT') @endif
 
-    <div class="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
+    <div class="learn-panel p-5 sm:p-6 space-y-5">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Title *</label>
                 <input type="text" name="title" id="podcast-title" value="{{ old('title', $podcast->title ?? '') }}" required
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus"
                        placeholder="Enter podcast title">
                 @error('title')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
@@ -24,7 +24,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Slug *</label>
                 <input type="text" name="slug" id="podcast-slug" value="{{ old('slug', $podcast->slug ?? '') }}" required
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus"
                        placeholder="episode-slug">
                 <p class="text-xs text-gray-500 mt-1">Lowercase letters, numbers, and hyphens only.</p>
                 @error('slug')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
@@ -89,7 +89,7 @@
         <div id="podcast-youtube-field" class="{{ $selectedType === 'audio' ? 'hidden' : '' }}">
             <label class="block text-sm font-medium text-gray-700 mb-1.5">YouTube URL *</label>
             <input type="url" name="youtube_url" value="{{ old('youtube_url', $podcast->youtube_url ?? '') }}"
-                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus"
                    placeholder="https://www.youtube.com/watch?v=... or youtu.be/... or /shorts/...">
             <p class="text-xs text-gray-500 mt-1">Paste a standard watch, youtu.be, embed, or Shorts URL.</p>
             @error('youtube_url')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
@@ -97,8 +97,8 @@
     </div>
 
     <div class="flex items-center justify-end gap-3">
-        <a href="{{ route('admin.podcasts.index') }}" class="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50">Cancel</a>
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition">
+        <a href="{{ route('admin.podcasts.index') }}" class="learn-btn-ghost">Cancel</a>
+        <button type="submit" class="learn-btn-primary">
             {{ $isEdit ? 'Update' : 'Submit' }}
         </button>
     </div>

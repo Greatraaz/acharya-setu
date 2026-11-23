@@ -3,11 +3,14 @@
 @section('heading', 'Edit Blog')
 
 @section('content')
-<div class="space-y-4 max-w-5xl">
-    <div>
-        <a href="{{ route('admin.blogs.index') }}" class="text-sm text-gray-400 hover:text-gray-600">← Back to Blogs</a>
-        <h1 class="text-2xl font-bold text-gray-900 mt-2">Edit Blog</h1>
-        <p class="text-sm text-gray-500 mt-1">Update blog post details.</p>
+<div class="admin-page space-y-5 max-w-5xl">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-3">
+            <a href="{{ route('admin.blogs.index') }}" class="text-sm font-semibold text-amber-700 hover:underline w-fit">← Back to Blogs</a>
+            <span class="learn-eyebrow">Utilities · Blogs</span>
+            <h2>Edit Blog</h2>
+            <p>Update blog post details.</p>
+        </div>
     </div>
     @include('admin.blogs._form', ['blog' => $blog])
 </div>

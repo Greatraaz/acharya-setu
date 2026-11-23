@@ -3,7 +3,7 @@
 @section('heading', 'Mentorship Guide Downloads')
 
 @section('content')
-<div class="space-y-4">
+<div class="admin-page space-y-5">
     <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
             <a href="{{ route('admin.mentorship-guides.index') }}" class="text-sm text-gray-400 hover:text-gray-600">← Back to Mentorship Guides</a>
@@ -11,21 +11,21 @@
         </div>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+    <div class="learn-panel overflow-hidden">
         <div class="admin-table-toolbar px-5 py-4 border-b border-gray-100">
             <div class="admin-table-toolbar__exports" id="guide-downloads-export-buttons"></div>
             <form method="GET" class="admin-table-filters">
                 <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name, email, phone, guide…"
-                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 w-full sm:min-w-[240px]">
+                       class="border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm outline-none learn-focus w-full sm:min-w-[240px]">
                 <select name="guide_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
                     <option value="">All guides</option>
                     @foreach($guides as $guide)
                         <option value="{{ $guide->id }}" @selected((string) request('guide_id') === (string) $guide->id)>{{ $guide->title }}</option>
                     @endforeach
                 </select>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">Search</button>
+                <button type="submit" class="learn-btn-primary">Search</button>
                 @if(request()->filled('search') || request()->filled('guide_id'))
-                    <a href="{{ route('admin.mentorship-guides.downloads') }}" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Reset</a>
+                    <a href="{{ route('admin.mentorship-guides.downloads') }}" class="learn-btn-soft">Reset</a>
                 @endif
             </form>
         </div>
@@ -53,7 +53,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($downloads as $row)
-                    <tr class="hover:bg-gray-50/70">
+                    <tr class="hover:bg-amber-50/40">
                         <td class="px-5 py-4 text-gray-500">{{ $downloads->firstItem() + $loop->index }}</td>
                         <td class="px-5 py-4 font-semibold text-gray-900">{{ $row->full_name }}</td>
                         <td class="px-5 py-4 text-gray-600">{{ $row->email }}</td>

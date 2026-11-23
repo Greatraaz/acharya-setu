@@ -12,7 +12,7 @@
     @csrf
     @if($isEdit) @method('PUT') @endif
 
-    <div class="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
+    <div class="learn-panel p-5 sm:p-6 space-y-5">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Type *</label>
@@ -39,7 +39,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Title *</label>
             <input type="text" name="title" value="{{ old('title', $event->title ?? '') }}" required
-                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus"
                    placeholder="Enter title">
             @error('title')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
         </div>
@@ -48,7 +48,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Speaker *</label>
                 <input type="text" name="speaker" value="{{ old('speaker', $event->speaker ?? '') }}" required
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus"
                        placeholder="Speaker name">
                 @error('speaker')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
@@ -56,7 +56,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Location *</label>
                 <input type="text" name="location" value="{{ old('location', $event->location ?? '') }}" required
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus"
                        placeholder="City or Online">
                 @error('location')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
@@ -76,13 +76,13 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Start Date *</label>
                 <input type="date" name="start_date" value="{{ old('start_date', optional($event->start_date ?? null)->format('Y-m-d')) }}" required
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus">
                 @error('start_date')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">End Date *</label>
                 <input type="date" name="end_date" value="{{ old('end_date', optional($event->end_date ?? null)->format('Y-m-d')) }}" required
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus">
                 @error('end_date')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
         </div>
@@ -91,13 +91,13 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Start Time *</label>
                 <input type="time" name="start_time" value="{{ $startTime }}" required
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus">
                 @error('start_time')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">End Time *</label>
                 <input type="time" name="end_time" value="{{ $endTime }}" required
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none learn-focus">
                 @error('end_time')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
         </div>
@@ -140,8 +140,8 @@
     </div>
 
     <div class="flex items-center justify-end gap-3">
-        <a href="{{ route('admin.events-webinars.index') }}" class="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50">Cancel</a>
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition">
+        <a href="{{ route('admin.events-webinars.index') }}" class="learn-btn-ghost">Cancel</a>
+        <button type="submit" class="learn-btn-primary">
             {{ $isEdit ? 'Update' : 'Submit' }}
         </button>
     </div>

@@ -173,4 +173,94 @@
     border-color: var(--ln) !important;
     box-shadow: 0 0 0 3px var(--ln-soft) !important;
 }
+.learn-page .learn-btn-edit,
+.admin-page .learn-btn-edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 8px;
+    border: 1px solid rgba(245,158,11,.28);
+    background: var(--ln-soft);
+    color: var(--ln-dark);
+    font-size: .85rem;
+    transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.learn-page .learn-btn-edit:hover,
+.admin-page .learn-btn-edit:hover {
+    background: rgba(245,158,11,.2);
+    border-color: rgba(245,158,11,.45);
+    transform: translateY(-1px);
+}
+.learn-page .learn-btn-danger,
+.admin-page .learn-btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 8px;
+    border: 1px solid rgba(239,68,68,.22);
+    background: rgba(239,68,68,.08);
+    color: #dc2626;
+    font-size: .85rem;
+    transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.learn-page .learn-btn-danger:hover,
+.admin-page .learn-btn-danger:hover {
+    background: rgba(239,68,68,.14);
+    border-color: rgba(239,68,68,.4);
+    transform: translateY(-1px);
+}
+.learn-page .learn-btn-soft,
+.admin-page .learn-btn-soft {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    background: #fff;
+    color: #334155;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: .55rem .9rem;
+    border-radius: 8px;
+    border: 1px solid var(--ln-line);
+    transition: border-color .15s ease, background .15s ease;
+}
+.learn-page .learn-btn-soft:hover,
+.admin-page .learn-btn-soft:hover {
+    border-color: rgba(245,158,11,.4);
+    background: var(--ln-surface-2);
+}
+.admin-page .dt-button,
+.learn-page .dt-button {
+    background: #fff !important;
+    border: 1px solid var(--ln-line) !important;
+    color: #334155 !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: .75rem !important;
+    padding: .45rem .75rem !important;
+    box-shadow: none !important;
+}
+.admin-page .dt-button:hover,
+.learn-page .dt-button:hover {
+    border-color: rgba(245,158,11,.45) !important;
+    background: var(--ln-soft) !important;
+    color: var(--ln-dark) !important;
+}
+.admin-page input[type="text"]:focus,
+.admin-page input[type="search"]:focus,
+.admin-page input[type="email"]:focus,
+.admin-page input[type="url"]:focus,
+.admin-page input[type="number"]:focus,
+.admin-page input[type="date"]:focus,
+.admin-page input[type="file"]:focus,
+.admin-page select:focus,
+.admin-page textarea:focus {
+    border-color: var(--ln) !important;
+    box-shadow: 0 0 0 3px var(--ln-soft) !important;
+    outline: none !important;
+}
 </style>
