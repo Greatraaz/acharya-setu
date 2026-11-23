@@ -2,469 +2,609 @@
 @section('title', 'My Dashboard — Vedrix')
 
 @section('content')
+@include('frontend.partials.dash-premium-ui')
 @php
     $firstName = auth()->user()->first_name ?? explode(' ', auth()->user()->name)[0];
     $hour = now()->hour;
-    $greeting = $hour < 12 ? 'morning' : ($hour < 17 ? 'afternoon' : 'evening');
-    $monthSessions = (int) ($stats['this_month_sessions'] ?? 0);
+    $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
     $plan = $planAllowance ?? [];
     $hasPlan = filled($plan['plan_name'] ?? null);
-@endphp
-<div class="dash-layout mentee-dash">
 
+    $growthBadge = function (?int $pct) {
+        if ($pct === null) return ['—', 'growth-flat'];
+        if ($pct > 0) return ['↑ '.$pct.'%', 'growth-up'];
+        if ($pct < 0) return ['↓ '.abs($pct).'%', 'growth-down'];
+        return ['0%', 'growth-flat'];
+    };
+    [$gSess, $gSessCls] = $growthBadge($stats['sessions_growth'] ?? null);
+@endphp
+
+<div class="dash-layout mentee-dash">
     @include('frontend.mentee.partials.sidebar')
 
     <div class="dash-content">
+        <div class="dash-page" style="display:flex;flex-direction:column;gap:1.1rem;">
 
-        <div class="dash-header mentee-dash__header">
-            <div class="dash-header__main">
-                <div class="dash-title">Good {{ $greeting }}, {{ $firstName }}! 👋</div>
-                <div class="dash-subtitle">Here's what's happening with your learning journey.</div>
+            <div class="learn-intro">
+                <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start;justify-content:space-between;">
+                    <div>
+                        <span class="learn-eyebrow">Overview · Mentee dashboard</span>
+                        <h2>{{ $greeting }}, {{ $firstName }}</h2>
+                        <p>Your learning command centre — sessions, journey progress, wallet, and what’s next today.</p>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+                        <a href="{{ route('mentee.sessions') }}" class="learn-btn-ghost">Sessions</a>
+                        <a href="{{ route('mentee.wallet') }}" class="learn-btn-ghost">Wallet</a>
+                        <a href="{{ route('mentors.search') }}" class="learn-btn-primary">Book session</a>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="card mentee-dash__mentor-card mentee-dash__mentor-card--top">
-            <div class="mentee-dash__card-head">
-                <h3 class="mentee-dash__card-title">Your mentor</h3>
-                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-outline btn-sm">
-                    {{ ($assignedMentor ?? null) ? 'Change mentor' : 'Choose mentor' }}
-                </a>
+            {{-- Mentor strip --}}
+            <div class="learn-panel panel-pad">
+                <div class="panel-head">
+                    <div>
+                        <h3 class="dash-section-title">Your mentor</h3>
+                        <p class="dash-section-sub">Primary guide for your journey and sessions</p>
+                    </div>
+                    <a href="{{ route('mentee.mentor.change') }}" class="learn-btn-ghost">{{ ($assignedMentor ?? null) ? 'Change' : 'Choose mentor' }}</a>
+                </div>
+                @if($assignedMentor ?? null)
+                <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:space-between;">
+                    <a href="{{ $assignedMentor->profile_url }}" style="display:flex;align-items:center;gap:.85rem;text-decoration:none;color:inherit;min-width:0;">
+                        <span class="dash-avatar" style="width:3rem;height:3rem;border-radius:1rem;font-size:.9rem;">
+                            @if($assignedMentor->avatar_url)
+                                <img src="{{ $assignedMentor->avatar_url }}" alt="">
+                            @else
+                                {{ strtoupper(substr($assignedMentor->name, 0, 1)) }}
+                            @endif
+                        </span>
+                        <div style="min-width:0;">
+                            <div style="font-family:var(--font-head);font-weight:800;font-size:1rem;">{{ $assignedMentor->name }}</div>
+                            <div style="font-size:.8rem;color:var(--text-2);">{{ $assignedMentor->designation }}{{ $assignedMentor->company ? ' · '.$assignedMentor->company : '' }}</div>
+                            <div style="font-size:11px;color:var(--text-3);margin-top:.2rem;">⭐ {{ number_format((float) ($assignedMentor->rating ?? 0), 1) }} · ₹{{ $assignedMentor->rate_per_minute }}/min</div>
+                        </div>
+                    </a>
+                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                        <a href="{{ $assignedMentor->profile_url }}" class="learn-btn-primary">Book session</a>
+                        <a href="{{ $assignedMentor->profile_url }}" class="learn-btn-ghost">Profile</a>
+                    </div>
+                </div>
+                @else
+                <div class="empty-block" style="padding:1rem;">
+                    <div class="icon">🎓</div>
+                    <p>You don’t have an assigned mentor yet.</p>
+                    <a href="{{ route('mentee.mentor.change') }}" class="learn-btn-primary" style="margin-top:.75rem;">Find &amp; request a mentor</a>
+                </div>
+                @endif
+
+                @if(($pendingMentorRequests ?? collect())->isNotEmpty())
+                <div style="margin-top:1rem;border-top:1px solid var(--ln-line);padding-top:.85rem;">
+                    <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem;">Pending requests</div>
+                    @foreach($pendingMentorRequests as $req)
+                    <div class="dash-row" style="padding-left:0;padding-right:0;">
+                        <div style="flex:1;">
+                            <strong style="font-size:.85rem;">{{ $req->mentor?->name }}</strong>
+                            <span style="font-size:11px;color:var(--text-3);"> · {{ $req->created_at?->diffForHumans() }}</span>
+                        </div>
+                        <span class="dash-status pending">Pending</span>
+                        <form method="POST" action="{{ route('mentee.mentor-requests.destroy', $req->id) }}" style="margin:0;">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="learn-btn-ghost" style="padding:.35rem .65rem;font-size:.72rem;">Cancel</button>
+                        </form>
+                    </div>
+                    @endforeach
+                </div>
+                @endif
             </div>
 
-            @if($assignedMentor ?? null)
-            <div class="mentee-dash__mentor-row">
-                <a href="{{ $assignedMentor->profile_url }}" class="mentee-dash__mentor-profile">
-                    <div class="mentor-avatar-lg mentee-dash__mentor-avatar">
-                        @if($assignedMentor->avatar_url)
-                            <img src="{{ $assignedMentor->avatar_url }}" alt="">
-                        @else
-                            {{ strtoupper(substr($assignedMentor->name, 0, 1)) }}
+            {{-- KPIs --}}
+            <div class="dash-grid dash-grid-4">
+                <div class="learn-stat fu">
+                    <div style="display:flex;justify-content:space-between;gap:.75rem;">
+                        <div>
+                            <div class="learn-stat__value">{{ number_format($stats['sessions'] ?? 0) }}</div>
+                            <div class="learn-stat__label">Sessions completed</div>
+                            <div style="margin-top:.45rem;font-size:11px;color:var(--text-3);">{{ $stats['this_month_sessions'] ?? 0 }} this month · {{ $stats['completion_rate'] ?? 0 }}% rate</div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.45rem;">
+                            <span class="learn-stat__icon">📅</span>
+                            <span class="growth-pill {{ $gSessCls }}">{{ $gSess }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="learn-stat fu">
+                    <div style="display:flex;justify-content:space-between;gap:.75rem;">
+                        <div>
+                            <div class="learn-stat__value">{{ number_format($stats['hours'] ?? (($stats['minutes'] ?? 0) / 60), 1) }}</div>
+                            <div class="learn-stat__label">Mentoring hours</div>
+                            <div style="margin-top:.45rem;font-size:11px;color:var(--text-3);">{{ number_format($stats['minutes'] ?? 0) }} minutes total</div>
+                        </div>
+                        <span class="learn-stat__icon">⏱️</span>
+                    </div>
+                </div>
+
+                <div class="revenue-card fu">
+                    <div style="position:relative;z-index:1;display:flex;justify-content:space-between;gap:.75rem;">
+                        <div>
+                            <div style="font-family:var(--font-head);font-size:1.5rem;font-weight:800;">₹{{ number_format($stats['balance'] ?? 0) }}</div>
+                            <div style="font-size:.75rem;font-weight:600;opacity:.9;margin-top:.25rem;">Wallet balance</div>
+                            <div style="font-size:11px;opacity:.75;margin-top:.35rem;">{{ $stats['upcoming'] ?? 0 }} upcoming · {{ $stats['sessions_today'] ?? 0 }} today</div>
+                        </div>
+                        <a href="{{ route('mentee.wallet') }}" style="align-self:flex-start;background:rgba(255,255,255,.2);color:#fff;font-size:11px;font-weight:700;padding:.35rem .65rem;border-radius:999px;text-decoration:none;">Add money</a>
+                    </div>
+                </div>
+
+                <div class="learn-stat fu">
+                    <div style="display:flex;justify-content:space-between;gap:.75rem;">
+                        <div>
+                            @if($canViewProgress ?? false)
+                            <div class="learn-stat__value">{{ $stats['progress'] ?? 0 }}%</div>
+                            <div class="learn-stat__label">Journey progress</div>
+                            <div class="progress-track" style="margin-top:.75rem;"><span style="width:{{ min(100, $stats['progress'] ?? 0) }}%"></span></div>
+                            @else
+                            <div class="learn-stat__value" style="font-size:1.15rem;">Locked</div>
+                            <div class="learn-stat__label">Journey progress</div>
+                            <a href="{{ route('mentee.plans') }}" class="dash-link" style="display:inline-block;margin-top:.5rem;">Upgrade plan →</a>
+                            @endif
+                        </div>
+                        <span class="learn-stat__icon">📈</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Charts --}}
+            <div class="dash-grid dash-grid-3">
+                <div class="learn-panel panel-pad">
+                    <div class="panel-head">
+                        <div>
+                            <h3 class="dash-section-title">Session activity</h3>
+                            <p class="dash-section-sub">Last 6 months — booked vs completed</p>
+                        </div>
+                        <div style="display:flex;gap:.75rem;font-size:11px;font-weight:600;color:var(--text-3);">
+                            <span>● Booked</span>
+                            <span>● Completed</span>
+                        </div>
+                    </div>
+                    <div class="chart-wrap"><canvas id="menteeChartTrend" height="110"></canvas></div>
+                </div>
+                <div class="learn-panel panel-pad">
+                    <div class="panel-head">
+                        <div>
+                            <h3 class="dash-section-title">Status mix</h3>
+                            <p class="dash-section-sub">Your booking distribution</p>
+                        </div>
+                    </div>
+                    <div class="chart-wrap" style="min-height:200px;"><canvas id="menteeChartStatus"></canvas></div>
+                </div>
+            </div>
+
+            <div class="dash-grid dash-grid-3">
+                <div class="learn-panel panel-pad">
+                    <div class="panel-head">
+                        <div>
+                            <h3 class="dash-section-title">Daily volume</h3>
+                            <p class="dash-section-sub">Last 14 days</p>
+                        </div>
+                        <a href="{{ route('mentee.sessions') }}" class="dash-link">Sessions →</a>
+                    </div>
+                    <div class="chart-wrap" style="min-height:190px;"><canvas id="menteeChartDaily"></canvas></div>
+                </div>
+
+                <div class="learn-panel panel-pad">
+                    <div class="panel-head">
+                        <div>
+                            <h3 class="dash-section-title">Your plan</h3>
+                            <p class="dash-section-sub">Benefits and allowances</p>
+                        </div>
+                        <a href="{{ route('mentee.plans') }}" class="dash-link">{{ $hasPlan ? 'Manage →' : 'View plans →' }}</a>
+                    </div>
+                    @if($hasPlan)
+                    <div style="font-family:var(--font-head);font-weight:800;font-size:1.1rem;margin-bottom:.65rem;">{{ $plan['plan_name'] }}</div>
+                    @include('frontend.mentee.partials.benefit-balance', ['benefitBalance' => $benefitBalance ?? []])
+                    @else
+                    <div class="empty-block" style="padding:1rem;">
+                        <div class="icon">📦</div>
+                        <p>No active subscription</p>
+                        <a href="{{ route('mentee.plans') }}" class="learn-btn-primary" style="margin-top:.75rem;">Choose a plan</a>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Focus + Upcoming --}}
+            <div class="dash-grid dash-grid-2">
+                <div class="learn-panel">
+                    <div class="panel-pad panel-head" style="margin-bottom:0;border-bottom:1px solid var(--ln-line);">
+                        <div>
+                            <h3 class="dash-section-title">Today’s focus</h3>
+                            <p class="dash-section-sub">Sessions, assessments, and quizzes</p>
+                        </div>
+                        @if(($upcomingCount ?? 0) > 0)
+                        <a href="{{ route('mentee.sessions') }}" class="dash-link">{{ $upcomingCount }} upcoming →</a>
                         @endif
                     </div>
-                    <div class="mentee-dash__mentor-info">
-                        <div class="mentee-dash__mentor-name">{{ $assignedMentor->name }}</div>
-                        <div class="mentee-dash__mentor-role">
-                            {{ $assignedMentor->designation }}{{ $assignedMentor->company ? ' · '.$assignedMentor->company : '' }}
-                        </div>
-                        <div class="mentee-dash__mentor-meta">
-                            ⭐ {{ number_format((float) ($assignedMentor->rating ?? 0), 1) }}
-                            · ₹{{ $assignedMentor->rate_per_minute }}/min
-                        </div>
-                    </div>
-                </a>
-                <div class="mentee-dash__mentor-actions">
-                    <a href="{{ $assignedMentor->profile_url }}" class="btn btn-primary btn-sm">Book session</a>
-                    <a href="{{ $assignedMentor->profile_url }}" class="btn btn-outline btn-sm">View profile</a>
-                </div>
-            </div>
-            @else
-            <div class="mentee-dash__empty">
-                <div class="mentee-dash__empty-icon">🎓</div>
-                <p>You don't have an assigned mentor yet</p>
-                <a href="{{ route('mentee.mentor.change') }}" class="btn btn-primary btn-sm">Find & request a mentor</a>
-            </div>
-            @endif
-
-            @if(($pendingMentorRequests ?? collect())->isNotEmpty())
-            <div class="mentee-dash__pending">
-                <div class="mentee-dash__pending-label">Pending requests</div>
-                @foreach($pendingMentorRequests as $req)
-                <div class="mentee-dash__pending-row">
-                    <div class="mentee-dash__pending-main">
-                        <strong>{{ $req->mentor?->name }}</strong>
-                        <span> · {{ $req->created_at?->diffForHumans() }}</span>
-                    </div>
-                    <span class="badge badge-muted">Pending</span>
-                    <form method="POST" action="{{ route('mentee.mentor-requests.destroy', $req->id) }}">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-ghost btn-sm">Cancel</button>
-                    </form>
-                </div>
-                @endforeach
-            </div>
-            @endif
-        </div>
-
-        <div class="stats-grid mentee-dash__stats">
-            <div class="stat-card">
-                <div class="stat-card-icon">📅</div>
-                <div class="stat-card-label">Sessions Completed</div>
-                <div class="stat-card-value">{{ $stats['sessions'] ?? 0 }}</div>
-                <div class="stat-card-delta">
-                    @if($monthSessions > 0)
-                        +{{ $monthSessions }} this month
-                    @else
-                        No sessions this month yet
-                    @endif
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-card-icon">⏱️</div>
-                <div class="stat-card-label">Total Hours</div>
-                <div class="stat-card-value">{{ number_format(($stats['minutes'] ?? 0) / 60, 1) }}</div>
-                <div class="stat-card-delta">hrs of mentoring</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-card-icon">💰</div>
-                <div class="stat-card-label">Wallet Balance</div>
-                <div class="stat-card-value">₹{{ number_format($stats['balance'] ?? 0, 0) }}</div>
-                <a href="{{ route('mentee.wallet') }}" class="mentee-dash__stat-link">Add Money →</a>
-            </div>
-            <div class="stat-card">
-                <div class="stat-card-icon">📈</div>
-                <div class="stat-card-label">Journey Progress</div>
-                @if($canViewProgress ?? false)
-                <div class="stat-card-value">{{ $stats['progress'] ?? 0 }}%</div>
-                <div class="progress-bar mentee-dash__stat-progress">
-                    <div class="progress-fill" style="width:{{ $stats['progress'] ?? 0 }}%"></div>
-                </div>
-                @else
-                <div class="stat-card-value mentee-dash__stat-locked">Locked</div>
-                <a href="{{ route('mentee.plans') }}" class="mentee-dash__stat-link">Upgrade plan →</a>
-                @endif
-            </div>
-        </div>
-
-        <div class="card mentee-dash__txn-card">
-            <div class="mentee-dash__card-head">
-                <h3 class="mentee-dash__card-title">Transactions</h3>
-                <a href="{{ route('mentee.wallet') }}" class="mentee-dash__card-link">Wallet →</a>
-            </div>
-            <p class="mentee-dash__txn-note">Wallet activity, plan purchases, Razorpay session payments, and other charges.</p>
-            <div class="table-scroll">
-                <table class="data-table mentee-txn-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Details</th>
-                            <th>Category</th>
-                            <th>Method</th>
-                            <th>Reference</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($transactions as $txn)
-                        <tr>
-                            <td style="white-space:nowrap;">{{ $txn->at?->timezone('Asia/Kolkata')->format('d M Y, h:i A') ?? '—' }}</td>
-                            <td>
-                                @if($txn->url)
-                                    <a href="{{ $txn->url }}" class="mentee-txn-title">{{ $txn->title }}</a>
-                                @else
-                                    <div class="mentee-txn-title">{{ $txn->title }}</div>
-                                @endif
-                                @if($txn->detail)
-                                    <div class="mentee-txn-detail">{{ $txn->detail }}</div>
-                                @endif
-                            </td>
-                            <td>{{ $txn->category }}</td>
-                            <td>{{ $txn->method }}</td>
-                            <td class="mentee-txn-ref">{{ $txn->reference }}</td>
-                            <td class="mentee-txn-amount mentee-txn-amount--{{ $txn->direction }}">
-                                {{ $txn->direction === 'in' ? '+' : '−' }}₹{{ number_format($txn->amount, 2) }}
-                            </td>
-                            <td>{{ $txn->status }}</td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="7" class="mentee-txn-empty">No transactions yet. Wallet top-ups, plans, and session payments will appear here.</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            @include('frontend.partials.pagination', ['paginator' => $transactions])
-        </div>
-
-        <div class="mentee-dash__panels mentee-dash__panels--2">
-            <div class="card mentee-dash__plan-card">
-                <div class="mentee-dash__card-head">
-                    <h3 class="mentee-dash__card-title">Your plan</h3>
-                    <a href="{{ route('mentee.plans') }}" class="mentee-dash__card-link">
-                        {{ $hasPlan ? 'Manage →' : 'View plans →' }}
-                    </a>
-                </div>
-                @if($hasPlan)
-                <div class="mentee-dash__plan-name">{{ $plan['plan_name'] }}</div>
-                <p class="mentee-dash__plan-hint" style="margin-top:0;margin-bottom:12px;">Free benefits left on this plan.</p>
-                @include('frontend.mentee.partials.benefit-balance', ['benefitBalance' => $benefitBalance ?? []])
-                @else
-                <div class="mentee-dash__empty mentee-dash__empty--compact">
-                    <div class="mentee-dash__empty-icon">📦</div>
-                    <p>No active subscription</p>
-                    <a href="{{ route('mentee.plans') }}" class="btn btn-primary btn-sm">Choose a plan</a>
-                </div>
-                @endif
-            </div>
-
-            <div class="card">
-                <div class="mentee-dash__card-head">
-                    <h3 class="mentee-dash__card-title">Today's focus</h3>
-                    @if(($upcomingCount ?? 0) > 0)
-                    <a href="{{ route('mentee.sessions') }}" class="mentee-dash__card-link">{{ $upcomingCount }} upcoming →</a>
-                    @endif
-                </div>
-                @if(($agendaItems ?? collect())->isNotEmpty())
-                <ul class="mentee-dash__agenda">
-                    @foreach($agendaItems as $item)
-                    <li class="mentee-dash__agenda-item mentee-dash__agenda-item--{{ $item['type'] }}">
-                        <div class="mentee-dash__agenda-main">
-                            <span class="mentee-dash__agenda-type">
-                                @if($item['type'] === 'session') 🎥
-                                @elseif($item['type'] === 'request') 📨
-                                @elseif($item['type'] === 'assessment') 📝
-                                @elseif($item['type'] === 'quiz') 🧠
-                                @else 📌
-                                @endif
-                            </span>
-                            <div class="mentee-dash__agenda-text">
-                                <a href="{{ $item['url'] }}" class="mentee-dash__agenda-label">{{ $item['label'] }}</a>
-                                <span class="mentee-dash__agenda-meta">{{ $item['meta'] }}</span>
-                            </div>
+                    @forelse($agendaItems ?? [] as $item)
+                    <div class="dash-row">
+                        <span class="dash-avatar">
+                            @if($item['type'] === 'session') 🎥
+                            @elseif($item['type'] === 'request') 📨
+                            @elseif($item['type'] === 'assessment') 📝
+                            @elseif($item['type'] === 'quiz') 🧠
+                            @else 📌
+                            @endif
+                        </span>
+                        <div style="flex:1;min-width:0;">
+                            <a href="{{ $item['url'] }}" style="font-weight:700;font-size:.85rem;color:var(--text);text-decoration:none;">{{ $item['label'] }}</a>
+                            <div style="font-size:11px;color:var(--text-3);">{{ $item['meta'] }}</div>
                         </div>
                         @if(!empty($item['cta_url']))
-                        <a href="{{ $item['cta_url'] }}" class="btn {{ $item['type'] === 'session' && ($item['cta'] ?? '') === 'Join' ? 'btn-primary' : 'btn-outline' }} btn-sm">{{ $item['cta'] }}</a>
+                        <a href="{{ $item['cta_url'] }}" class="{{ ($item['cta'] ?? '') === 'Join' ? 'learn-btn-primary' : 'learn-btn-ghost' }}" style="padding:.4rem .7rem;font-size:.72rem;">{{ $item['cta'] }}</a>
                         @endif
-                    </li>
-                    @endforeach
-                </ul>
-                @else
-                <div class="mentee-dash__empty mentee-dash__empty--compact">
-                    <div class="mentee-dash__empty-icon">✅</div>
-                    <p>You're all caught up for now.</p>
-                    <a href="{{ route('mentors.search') }}" class="btn btn-outline btn-sm">Book a session</a>
-                </div>
-                @endif
-            </div>
-        </div>
-
-        <div class="mentee-dash__panels">
-            <div class="card mentee-dash__panel">
-                <div class="mentee-dash__card-head">
-                    <h3 class="mentee-dash__card-title">Upcoming Sessions</h3>
-                    <a href="{{ route('mentee.sessions') }}" class="mentee-dash__card-link">View all →</a>
-                </div>
-
-                @forelse($upcomingSessions ?? [] as $session)
-                <div class="session-card mentee-dash__session-card">
-                    <div class="session-card-icon">🎥</div>
-                    <div class="mentee-dash__session-main">
-                        <div class="mentee-dash__session-title">{{ $session->title }}</div>
-                        <div class="mentee-dash__session-meta">with {{ $session->mentor->name }}</div>
-                        <div class="mentee-dash__session-meta">📅 {{ $session->scheduled_at->format('D, d M Y · g:i A') }}</div>
                     </div>
-                    <div class="mentee-dash__session-actions">
-                        <span class="session-status {{ $session->status }}">{{ ucfirst($session->status) }}</span>
+                    @empty
+                    <div class="empty-block"><div class="icon">✅</div>You’re all caught up. <a href="{{ route('mentors.search') }}" class="dash-link">Book a session →</a></div>
+                    @endforelse
+                </div>
+
+                <div class="learn-panel">
+                    <div class="panel-pad panel-head" style="margin-bottom:0;border-bottom:1px solid var(--ln-line);">
+                        <div>
+                            <h3 class="dash-section-title">Upcoming sessions</h3>
+                            <p class="dash-section-sub">Next on your calendar</p>
+                        </div>
+                        <a href="{{ route('mentee.sessions') }}" class="dash-link">View all →</a>
+                    </div>
+                    @forelse($upcomingSessions ?? [] as $session)
+                    <div class="dash-row">
+                        <span class="dash-avatar">🎥</span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:700;font-size:.85rem;">{{ $session->title ?: 'Session' }}</div>
+                            <div style="font-size:11px;color:var(--text-3);">{{ $session->mentor?->name }} · {{ $session->scheduled_at->format('D, d M · g:i A') }}</div>
+                        </div>
+                        <span class="dash-status {{ $session->status }}">{{ ucfirst($session->status) }}</span>
                         @if($session->canJoinCall())
-                        <a href="{{ route('sessions.call', $session->id) }}" class="btn btn-primary btn-sm">Join</a>
+                        <a href="{{ route('sessions.call', $session->id) }}" class="learn-btn-primary" style="padding:.4rem .7rem;font-size:.72rem;">Join</a>
                         @endif
                     </div>
+                    @empty
+                    <div class="empty-block"><div class="icon">📅</div>No upcoming sessions. <a href="{{ route('mentors.search') }}" class="dash-link">Book now →</a></div>
+                    @endforelse
                 </div>
-                @empty
-                <div class="mentee-dash__empty mentee-dash__empty--compact">
-                    <div class="mentee-dash__empty-icon">📅</div>
-                    <p>No upcoming sessions yet</p>
-                    <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-sm">Book Now</a>
-                </div>
-                @endforelse
             </div>
 
-            <div class="card mentee-dash__panel">
-                <div class="mentee-dash__card-head">
-                    <h3 class="mentee-dash__card-title">6-Month Journey</h3>
-                    <a href="{{ route('mentee.journey.index') }}" class="mentee-dash__card-link">Continue →</a>
-                </div>
-
-                @if($enrollment ?? false)
-                <div class="mentee-dash__journey-head">
-                    <div class="mentee-dash__journey-stream">{{ $enrollment->stream->name ?? 'Engineering' }}</div>
-                    <div class="mentee-dash__journey-week">Month {{ $enrollment->current_month }} · Week {{ $enrollment->current_week }}</div>
-                    @if($canViewProgress ?? false)
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width:{{ ($enrollment->current_month/6)*100 }}%"></div>
+            {{-- Journey + recent sessions --}}
+            <div class="dash-grid dash-grid-2">
+                <div class="learn-panel panel-pad">
+                    <div class="panel-head">
+                        <div>
+                            <h3 class="dash-section-title">6-month journey</h3>
+                            <p class="dash-section-sub">This week’s curriculum tasks</p>
+                        </div>
+                        <a href="{{ route('mentee.journey.index') }}" class="dash-link">Continue →</a>
                     </div>
-                    @else
-                    <div class="mentee-dash__journey-upgrade">
-                        Task list shown without scores.
-                        <a href="{{ route('mentee.plans') }}">Upgrade for progress report →</a>
-                    </div>
-                    @endif
-                </div>
-                @forelse($weekTasks ?? [] as $task)
-                <div class="mentee-dash__task-row">
-                    @if($canViewProgress ?? false)
-                    <span class="mentee-dash__task-icon">{{ $task->is_completed ? '✅' : '⬜' }}</span>
-                    <span class="mentee-dash__task-title {{ $task->is_completed ? 'is-done' : '' }}">{{ $task->title }}</span>
-                    @else
-                    <span class="mentee-dash__task-icon">⬜</span>
-                    <span class="mentee-dash__task-title">{{ $task->title }}</span>
-                    @endif
-                </div>
-                @empty
-                <div class="mentee-dash__task-empty">No tasks for this week yet.</div>
-                @endforelse
-                @else
-                <div class="mentee-dash__empty mentee-dash__empty--compact">
-                    <div class="mentee-dash__empty-icon">🗺️</div>
-                    <p>You haven't enrolled in a journey yet</p>
-                    <a href="{{ route('mentee.journey.index') }}" class="btn btn-primary btn-sm">Start Journey</a>
-                </div>
-                @endif
-            </div>
-        </div>
-
-        <div class="mentee-dash__panels mentee-dash__panels--2">
-            <div class="card mentee-dash__panel">
-                <div class="mentee-dash__card-head">
-                    <h3 class="mentee-dash__card-title">Assessments</h3>
-                    <a href="{{ route('mentee.assessments.index') }}" class="mentee-dash__card-link">View all →</a>
-                </div>
-                @forelse($pendingAssessments ?? [] as $assessment)
-                <div class="mentee-dash__activity-row">
-                    <div class="mentee-dash__activity-main">
-                        <div class="mentee-dash__activity-title">{{ $assessment->title }}</div>
-                        <div class="mentee-dash__activity-meta">Self-assessment · not completed</div>
-                    </div>
-                    <a href="{{ route('mentee.assessments.show', $assessment->id) }}" class="btn btn-primary btn-sm">Start</a>
-                </div>
-                @empty
-                <div class="mentee-dash__empty mentee-dash__empty--compact">
-                    <div class="mentee-dash__empty-icon">📝</div>
-                    <p>No pending assessments.</p>
-                    <a href="{{ route('mentee.assessments.index') }}" class="btn btn-outline btn-sm">Browse assessments</a>
-                </div>
-                @endforelse
-            </div>
-
-            <div class="card mentee-dash__panel">
-                <div class="mentee-dash__card-head">
-                    <h3 class="mentee-dash__card-title">Quizzes</h3>
-                    <a href="{{ route('mentee.quizzes.index') }}" class="mentee-dash__card-link">View all →</a>
-                </div>
-                @forelse($availableQuizzes ?? [] as $quiz)
-                <div class="mentee-dash__activity-row">
-                    <div class="mentee-dash__activity-main">
-                        <div class="mentee-dash__activity-title">{{ $quiz->title }}</div>
-                        <div class="mentee-dash__activity-meta">{{ $quiz->questions_count ?? 0 }} questions</div>
-                    </div>
-                    <a href="{{ route('mentee.quizzes.show', $quiz) }}" class="btn btn-outline btn-sm">Try</a>
-                </div>
-                @empty
-                <div class="mentee-dash__empty mentee-dash__empty--compact">
-                    <div class="mentee-dash__empty-icon">🧠</div>
-                    <p>No new quizzes right now.</p>
-                    <a href="{{ route('mentee.quizzes.index') }}" class="btn btn-outline btn-sm">Browse quizzes</a>
-                </div>
-                @endforelse
-            </div>
-        </div>
-
-        <div class="mentee-dash__panels mentee-dash__panels--2">
-            <div class="card mentee-dash__panel">
-                <div class="mentee-dash__card-head">
-                    <h3 class="mentee-dash__card-title">Community</h3>
-                    <a href="{{ route('mentee.community.index') }}" class="mentee-dash__card-link">
-                        @if(($communityUnread ?? 0) > 0)
-                            {{ $communityUnread }} unread →
+                    @if($enrollment ?? false)
+                    <div style="margin-bottom:.85rem;">
+                        <div style="font-family:var(--font-head);font-weight:700;">{{ $enrollment->stream->name ?? 'Engineering' }}</div>
+                        <div style="font-size:12px;color:var(--text-3);margin:.25rem 0 .55rem;">Month {{ $enrollment->current_month }} · Week {{ $enrollment->current_week }}</div>
+                        @if($canViewProgress ?? false)
+                        <div class="progress-track"><span style="width:{{ ($enrollment->current_month/6)*100 }}%"></span></div>
                         @else
-                            Open community →
+                        <div style="font-size:12px;color:var(--text-3);">Task list shown without scores. <a href="{{ route('mentee.plans') }}" class="dash-link">Upgrade →</a></div>
                         @endif
+                    </div>
+                    @forelse($weekTasks ?? [] as $task)
+                    <div style="display:flex;align-items:center;gap:.55rem;padding:.45rem 0;border-bottom:1px solid var(--ln-line);font-size:.85rem;">
+                        <span>{{ ($canViewProgress ?? false) && $task->is_completed ? '✅' : '⬜' }}</span>
+                        <span style="{{ (($canViewProgress ?? false) && $task->is_completed) ? 'text-decoration:line-through;color:var(--text-3);' : '' }}">{{ $task->title }}</span>
+                    </div>
+                    @empty
+                    <div class="empty-block" style="padding:1rem;">No tasks for this week yet.</div>
+                    @endforelse
+                    @else
+                    <div class="empty-block">
+                        <div class="icon">🗺️</div>
+                        <p>You haven’t enrolled in a journey yet</p>
+                        <a href="{{ route('mentee.journey.index') }}" class="learn-btn-primary" style="margin-top:.75rem;">Start journey</a>
+                    </div>
+                    @endif
+                </div>
+
+                <div class="learn-panel">
+                    <div class="panel-pad panel-head" style="margin-bottom:0;border-bottom:1px solid var(--ln-line);">
+                        <div>
+                            <h3 class="dash-section-title">Recent sessions</h3>
+                            <p class="dash-section-sub">Latest mentoring activity</p>
+                        </div>
+                    </div>
+                    @forelse($recentSessions ?? [] as $session)
+                    <div class="dash-row">
+                        <span class="dash-avatar">
+                            @if($session->mentor?->avatar_url)
+                                <img src="{{ $session->mentor->avatar_url }}" alt="">
+                            @else
+                                {{ strtoupper(substr($session->mentor?->name ?? 'M', 0, 2)) }}
+                            @endif
+                        </span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:700;font-size:.85rem;">{{ $session->mentor?->name ?? 'Mentor' }}</div>
+                            <div style="font-size:11px;color:var(--text-3);">{{ optional($session->scheduled_at)->format('d M · g:i A') }}</div>
+                        </div>
+                        <span class="dash-status {{ $session->status }}">{{ ucfirst($session->status) }}</span>
+                    </div>
+                    @empty
+                    <div class="empty-block"><div class="icon">🗂️</div>No sessions yet.</div>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- Assessments / quizzes / community / jobs --}}
+            <div class="dash-grid dash-grid-4" style="grid-template-columns:repeat(1,minmax(0,1fr));">
+                <div class="dash-grid" style="grid-template-columns:repeat(1,minmax(0,1fr));gap:.85rem;">
+                    <div class="dash-grid dash-grid-2">
+                        <div class="learn-panel">
+                            <div class="panel-pad panel-head" style="margin-bottom:0;border-bottom:1px solid var(--ln-line);">
+                                <div><h3 class="dash-section-title">Assessments</h3></div>
+                                <a href="{{ route('mentee.assessments.index') }}" class="dash-link">All →</a>
+                            </div>
+                            @forelse(($pendingAssessments ?? collect())->take(3) as $assessment)
+                            <div class="dash-row">
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-weight:700;font-size:.85rem;">{{ $assessment->title }}</div>
+                                    <div style="font-size:11px;color:var(--text-3);">Self-assessment</div>
+                                </div>
+                                <a href="{{ route('mentee.assessments.show', $assessment->id) }}" class="learn-btn-primary" style="padding:.4rem .7rem;font-size:.72rem;">Start</a>
+                            </div>
+                            @empty
+                            <div class="empty-block" style="padding:1.2rem;">No pending assessments.</div>
+                            @endforelse
+                        </div>
+                        <div class="learn-panel">
+                            <div class="panel-pad panel-head" style="margin-bottom:0;border-bottom:1px solid var(--ln-line);">
+                                <div><h3 class="dash-section-title">Quizzes</h3></div>
+                                <a href="{{ route('mentee.quizzes.index') }}" class="dash-link">All →</a>
+                            </div>
+                            @forelse(($availableQuizzes ?? collect())->take(3) as $quiz)
+                            <div class="dash-row">
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-weight:700;font-size:.85rem;">{{ $quiz->title }}</div>
+                                    <div style="font-size:11px;color:var(--text-3);">{{ $quiz->questions_count ?? 0 }} questions</div>
+                                </div>
+                                <a href="{{ route('mentee.quizzes.show', $quiz) }}" class="learn-btn-ghost" style="padding:.4rem .7rem;font-size:.72rem;">Try</a>
+                            </div>
+                            @empty
+                            <div class="empty-block" style="padding:1.2rem;">No new quizzes.</div>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <div class="dash-grid dash-grid-2">
+                        <div class="learn-panel">
+                            <div class="panel-pad panel-head" style="margin-bottom:0;border-bottom:1px solid var(--ln-line);">
+                                <div><h3 class="dash-section-title">Community</h3></div>
+                                <a href="{{ route('mentee.community.index') }}" class="dash-link">{{ ($communityUnread ?? 0) > 0 ? ($communityUnread.' unread →') : 'Open →' }}</a>
+                            </div>
+                            @forelse(($recentCommunityMessages ?? collect())->take(3) as $message)
+                            <a href="{{ route('mentee.community.show', $message->channel?->slug) }}" class="dash-row" style="text-decoration:none;color:inherit;">
+                                <span class="dash-avatar">{{ $message->channel?->icon ?? '💬' }}</span>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-weight:700;font-size:.8rem;">{{ $message->channel?->name }}</div>
+                                    <div style="font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ Str::limit($message->body ?: 'Attachment', 50) }}</div>
+                                </div>
+                            </a>
+                            @empty
+                            <div class="empty-block" style="padding:1.2rem;">No community activity yet.</div>
+                            @endforelse
+                        </div>
+                        <div class="learn-panel">
+                            <div class="panel-pad panel-head" style="margin-bottom:0;border-bottom:1px solid var(--ln-line);">
+                                <div><h3 class="dash-section-title">Jobs</h3></div>
+                                <a href="{{ route('mentee.jobs') }}" class="dash-link">All →</a>
+                            </div>
+                            @forelse(($recentJobs ?? collect())->take(3) as $job)
+                            <a href="{{ route('mentee.jobs.show', $job->id) }}" class="dash-row" style="text-decoration:none;color:inherit;">
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-weight:700;font-size:.85rem;">{{ $job->title }}</div>
+                                    <div style="font-size:11px;color:var(--text-3);">{{ $job->department ?: 'General' }} · {{ $job->job_type_label }}</div>
+                                </div>
+                                <span style="font-size:11px;font-weight:700;color:var(--ln-dark);">{{ $job->salary_range }}</span>
+                            </a>
+                            @empty
+                            <div class="empty-block" style="padding:1.2rem;">No open roles right now.</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Transactions --}}
+            <div class="learn-panel">
+                <div class="panel-pad panel-head" style="margin-bottom:0;border-bottom:1px solid var(--ln-line);">
+                    <div>
+                        <h3 class="dash-section-title">Transactions</h3>
+                        <p class="dash-section-sub">Wallet, plans, and session payments</p>
+                    </div>
+                    <a href="{{ route('mentee.wallet') }}" class="dash-link">Wallet →</a>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+                        <thead>
+                            <tr style="text-align:left;background:var(--bg-2);">
+                                <th style="padding:.75rem 1rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);">Date</th>
+                                <th style="padding:.75rem .5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);">Details</th>
+                                <th style="padding:.75rem .5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);">Category</th>
+                                <th style="padding:.75rem .5rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);">Amount</th>
+                                <th style="padding:.75rem 1rem;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($transactions as $txn)
+                            <tr style="border-top:1px solid var(--ln-line);">
+                                <td style="padding:.85rem 1rem;white-space:nowrap;color:var(--text-2);">{{ $txn->at?->timezone('Asia/Kolkata')->format('d M Y, h:i A') ?? '—' }}</td>
+                                <td style="padding:.85rem .5rem;">
+                                    @if($txn->url)
+                                        <a href="{{ $txn->url }}" style="font-weight:700;color:var(--text);text-decoration:none;">{{ $txn->title }}</a>
+                                    @else
+                                        <div style="font-weight:700;">{{ $txn->title }}</div>
+                                    @endif
+                                    @if($txn->detail)
+                                        <div style="font-size:11px;color:var(--text-3);">{{ $txn->detail }}</div>
+                                    @endif
+                                </td>
+                                <td style="padding:.85rem .5rem;color:var(--text-2);">{{ $txn->category }}</td>
+                                <td style="padding:.85rem .5rem;font-weight:800;color:{{ $txn->direction === 'in' ? '#16a34a' : 'var(--text)' }};">
+                                    {{ $txn->direction === 'in' ? '+' : '−' }}₹{{ number_format($txn->amount, 2) }}
+                                </td>
+                                <td style="padding:.85rem 1rem;"><span class="dash-status {{ strtolower($txn->status) === 'completed' ? 'completed' : 'pending' }}">{{ $txn->status }}</span></td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="5" style="padding:2rem;text-align:center;color:var(--text-3);">No transactions yet.</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                @include('frontend.partials.pagination', ['paginator' => $transactions])
+            </div>
+
+            {{-- Recommended mentors --}}
+            <div class="learn-panel panel-pad">
+                <div class="panel-head">
+                    <div>
+                        <h3 class="dash-section-title">Recommended mentors</h3>
+                        <p class="dash-section-sub">Top-rated hosts you can book next</p>
+                    </div>
+                    <a href="{{ route('mentors.search') }}" class="dash-link">Browse all →</a>
+                </div>
+                <div class="dash-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;">
+                    @forelse($recommendedMentors ?? [] as $mentor)
+                    <a href="{{ $mentor->profile_url }}" class="qa-link" style="flex-direction:column;align-items:stretch;gap:.65rem;">
+                        <div style="display:flex;align-items:center;gap:.65rem;">
+                            <span class="dash-avatar">{{ strtoupper(substr($mentor->name, 0, 1)) }}</span>
+                            <div style="min-width:0;">
+                                <div style="font-weight:700;font-size:.85rem;">{{ $mentor->name }}</div>
+                                <div style="font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $mentor->designation }}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;">
+                            <span style="color:var(--ln-dark);">₹{{ $mentor->rate_per_minute }}/min</span>
+                            <span>⭐ {{ $mentor->rating }}</span>
+                        </div>
                     </a>
+                    @empty
+                    <div class="empty-block">No mentors to recommend right now.</div>
+                    @endforelse
                 </div>
-                @forelse($recentCommunityMessages ?? [] as $message)
-                <a href="{{ route('mentee.community.show', $message->channel?->slug) }}" class="mentee-dash__community-row">
-                    <span class="mentee-dash__community-icon">{{ $message->channel?->icon ?? '💬' }}</span>
-                    <div class="mentee-dash__community-main">
-                        <span class="mentee-dash__community-channel">{{ $message->channel?->name }}</span>
-                        <span class="mentee-dash__community-preview">{{ Str::limit($message->body ?: '📎 Attachment', 60) }}</span>
-                    </div>
-                    <span class="mentee-dash__community-time">{{ $message->created_at?->diffForHumans(short: true) }}</span>
-                </a>
-                @empty
-                <div class="mentee-dash__empty mentee-dash__empty--compact">
-                    <div class="mentee-dash__empty-icon">💬</div>
-                    <p>No community activity yet.</p>
-                    <a href="{{ route('mentee.community.index') }}" class="btn btn-outline btn-sm">Explore channels</a>
-                </div>
-                @endforelse
             </div>
 
-            <div class="card mentee-dash__panel">
-                <div class="mentee-dash__card-head">
-                    <h3 class="mentee-dash__card-title">Job opportunities</h3>
-                    <a href="{{ route('mentee.jobs') }}" class="mentee-dash__card-link">View all →</a>
-                </div>
-                @forelse($recentJobs ?? [] as $job)
-                <a href="{{ route('mentee.jobs.show', $job->id) }}" class="mentee-dash__job-row">
-                    <div class="mentee-dash__job-main">
-                        <div class="mentee-dash__job-title">{{ $job->title }}</div>
-                        <div class="mentee-dash__job-meta">
-                            {{ $job->department ?: 'General' }}
-                            @if($job->location) · {{ $job->location }} @endif
-                            · {{ $job->job_type_label }}
-                        </div>
-                    </div>
-                    <span class="mentee-dash__job-salary">{{ $job->salary_range }}</span>
-                </a>
-                @empty
-                <div class="mentee-dash__empty mentee-dash__empty--compact">
-                    <div class="mentee-dash__empty-icon">💼</div>
-                    <p>No open roles at the moment.</p>
-                    <a href="{{ route('mentee.jobs') }}" class="btn btn-outline btn-sm">Check jobs</a>
-                </div>
-                @endforelse
-            </div>
         </div>
-
-        <div class="card mentee-dash__recommended">
-            <div class="mentee-dash__card-head">
-                <h3 class="mentee-dash__card-title">Recommended Mentors for You</h3>
-                <a href="{{ route('mentors.search') }}" class="mentee-dash__card-link">Browse all →</a>
-            </div>
-            <div class="mentee-dash__mentors-grid">
-                @forelse($recommendedMentors ?? [] as $mentor)
-                <div class="mentor-card mentee-dash__mentor-card-item" role="link" tabindex="0" onclick="window.location='{{ $mentor->profile_url }}'" onkeydown="if(event.key==='Enter')window.location='{{ $mentor->profile_url }}'">
-                    <div class="mentor-card-head">
-                        <div class="mentor-avatar-lg">{{ strtoupper(substr($mentor->name, 0, 1)) }}</div>
-                        <div class="mentor-card-info">
-                            <div class="mentor-card-name">{{ $mentor->name }}</div>
-                            <div class="mentor-card-role">{{ $mentor->designation }}</div>
-                        </div>
-                    </div>
-                    <div class="mentor-card-meta">
-                        <span class="mentor-rate">₹{{ $mentor->rate_per_minute }}/min</span>
-                        <span class="mentor-rating">⭐ {{ $mentor->rating }}</span>
-                    </div>
-                </div>
-                @empty
-                @foreach([
-                    ['R','Rohit S.','Senior PM · Google','₹12/min','4.9'],
-                    ['P','Priya N.','SDE-2 · Microsoft','₹15/min','4.8'],
-                    ['A','Ananya G.','Consultant · McKinsey','₹10/min','5.0'],
-                ] as [$i,$n,$r,$rate,$rating])
-                <div class="mentor-card mentee-dash__mentor-card-item">
-                    <div class="mentor-card-head">
-                        <div class="mentor-avatar-lg">{{ $i }}</div>
-                        <div class="mentor-card-info">
-                            <div class="mentor-card-name">{{ $n }}</div>
-                            <div class="mentor-card-role">{{ $r }}</div>
-                        </div>
-                    </div>
-                    <div class="mentor-card-meta">
-                        <span class="mentor-rate">{{ $rate }}</span>
-                        <span class="mentor-rating">⭐ {{ $rating }}</span>
-                    </div>
-                    <div class="mentor-card-actions">
-                        <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-sm">Book</a>
-                    </div>
-                </div>
-                @endforeach
-                @endforelse
-            </div>
-        </div>
-
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const amber = '#F59E0B';
+    const amberDark = '#D97706';
+    const muted = getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim() || '#71717a';
+    const grid = 'rgba(148,163,184,.18)';
+
+    const trendLabels = @json($sessionChart->pluck('month'));
+    const booked = @json($sessionChart->pluck('sessions'));
+    const completed = @json($sessionChart->pluck('completed'));
+    const dailyLabels = @json($dailySessions->pluck('label'));
+    const dailyCounts = @json($dailySessions->pluck('count'));
+    const statusData = @json(array_values($statusBreakdown));
+    const statusLabels = @json(array_map('ucfirst', array_keys($statusBreakdown)));
+
+    Chart.defaults.font.family = 'DM Sans, ui-sans-serif, system-ui, sans-serif';
+    Chart.defaults.color = muted;
+
+    new Chart(document.getElementById('menteeChartTrend'), {
+        type: 'bar',
+        data: {
+            labels: trendLabels,
+            datasets: [
+                {
+                    label: 'Booked',
+                    data: booked,
+                    backgroundColor: 'rgba(245,158,11,.35)',
+                    borderRadius: 8,
+                    borderSkipped: false,
+                },
+                {
+                    label: 'Completed',
+                    data: completed,
+                    backgroundColor: 'rgba(245,158,11,.9)',
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0f172a', padding: 10, cornerRadius: 8 } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' } } },
+                y: { beginAtZero: true, grid: { color: grid }, ticks: { precision: 0 } }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('menteeChartStatus'), {
+        type: 'doughnut',
+        data: {
+            labels: statusLabels,
+            datasets: [{
+                data: statusData,
+                backgroundColor: [amber, '#38BDF8', '#F87171'],
+                borderWidth: 0,
+                hoverOffset: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'circle', padding: 14, font: { size: 11, weight: '600' } }
+                }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('menteeChartDaily'), {
+        type: 'line',
+        data: {
+            labels: dailyLabels,
+            datasets: [{
+                data: dailyCounts,
+                borderColor: amber,
+                backgroundColor: 'rgba(245,158,11,.15)',
+                fill: true,
+                tension: .4,
+                borderWidth: 2.5,
+                pointRadius: 2.5,
+                pointBackgroundColor: amberDark,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 7, font: { size: 10 } } },
+                y: { beginAtZero: true, grid: { color: grid }, ticks: { precision: 0 } }
+            }
+        }
+    });
+})();
+</script>
+@endpush

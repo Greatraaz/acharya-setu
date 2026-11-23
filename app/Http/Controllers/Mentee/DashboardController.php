@@ -59,17 +59,78 @@ class DashboardController extends Controller
             ->get();
 
         $thisMonthStart = $now->copy()->startOfMonth();
+        $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
+        $lastMonthEnd = $now->copy()->subMonth()->endOfMonth();
+
+        $completedSessions = ConsultationSession::where('mentee_id', $menteeId)->where('status', 'completed')->count();
+        $thisMonthSessions = ConsultationSession::where('mentee_id', $menteeId)
+            ->where('status', 'completed')
+            ->where('updated_at', '>=', $thisMonthStart)
+            ->count();
+        $lastMonthSessions = ConsultationSession::where('mentee_id', $menteeId)
+            ->where('status', 'completed')
+            ->whereBetween('updated_at', [$lastMonthStart, $lastMonthEnd])
+            ->count();
+        $totalBookings = ConsultationSession::where('mentee_id', $menteeId)->count();
+        $cancelledSessions = ConsultationSession::where('mentee_id', $menteeId)->where('status', 'cancelled')->count();
+        $minutes = (int) ConsultationSession::where('mentee_id', $menteeId)->where('status', 'completed')->sum('duration_minutes');
 
         $stats = [
-            'sessions'            => ConsultationSession::where('mentee_id', $menteeId)->where('status', 'completed')->count(),
-            'this_month_sessions' => ConsultationSession::where('mentee_id', $menteeId)
-                ->where('status', 'completed')
-                ->where('updated_at', '>=', $thisMonthStart)
-                ->count(),
-            'minutes'             => ConsultationSession::where('mentee_id', $menteeId)->where('status', 'completed')->sum('duration_minutes'),
+            'sessions'            => $completedSessions,
+            'this_month_sessions' => $thisMonthSessions,
+            'last_month_sessions' => $lastMonthSessions,
+            'sessions_growth'     => $this->growthPct($thisMonthSessions, $lastMonthSessions),
+            'minutes'             => $minutes,
+            'hours'               => round($minutes / 60, 1),
             'progress'            => $enrollment ? (int) (($enrollment->current_month / 6) * 100) : 0,
             'balance'             => (float) ($mentee->wallet_balance ?? 0),
+            'upcoming'            => $upcomingCount,
+            'sessions_today'      => ConsultationSession::where('mentee_id', $menteeId)
+                ->whereDate('scheduled_at', today())
+                ->count(),
+            'completion_rate'     => $totalBookings > 0 ? (int) round($completedSessions / $totalBookings * 100) : 0,
+            'cancelled'           => $cancelledSessions,
         ];
+
+        $sessionChart = collect(range(5, 0))->map(function ($i) use ($menteeId) {
+            $month = now()->subMonths($i);
+
+            return [
+                'month' => $month->format('M'),
+                'sessions' => ConsultationSession::where('mentee_id', $menteeId)
+                    ->whereYear('scheduled_at', $month->year)
+                    ->whereMonth('scheduled_at', $month->month)
+                    ->count(),
+                'completed' => ConsultationSession::where('mentee_id', $menteeId)
+                    ->where('status', 'completed')
+                    ->whereYear('scheduled_at', $month->year)
+                    ->whereMonth('scheduled_at', $month->month)
+                    ->count(),
+            ];
+        })->values();
+
+        $dailySessions = collect(range(13, 0))->map(function ($i) use ($menteeId) {
+            $day = now()->subDays($i);
+
+            return [
+                'label' => $day->format('d M'),
+                'count' => ConsultationSession::where('mentee_id', $menteeId)
+                    ->whereDate('scheduled_at', $day->toDateString())
+                    ->count(),
+            ];
+        })->values();
+
+        $statusBreakdown = [
+            'completed' => $completedSessions,
+            'upcoming' => ConsultationSession::where('mentee_id', $menteeId)->where('status', 'upcoming')->count(),
+            'cancelled' => $cancelledSessions,
+        ];
+
+        $recentSessions = ConsultationSession::where('mentee_id', $menteeId)
+            ->with('mentor:id,name,avatar_url,role')
+            ->latest('scheduled_at')
+            ->limit(6)
+            ->get();
 
         $canViewProgress = $mentee->canAccessProgressReport();
         $planAllowance = $mentee->planSessionAllowance();
@@ -117,7 +178,20 @@ class DashboardController extends Controller
             'recentJobs',
             'agendaItems',
             'transactions',
+            'sessionChart',
+            'dailySessions',
+            'statusBreakdown',
+            'recentSessions',
         ) + $communityData);
+    }
+
+    private function growthPct(float|int $current, float|int $previous): ?int
+    {
+        if ((float) $previous <= 0) {
+            return $current > 0 ? 100 : null;
+        }
+
+        return (int) round((($current - $previous) / $previous) * 100);
     }
 
     private function loadWeekTasks(User $mentee, ?MenteeEnrollment $enrollment): array

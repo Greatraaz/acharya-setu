@@ -75,23 +75,39 @@ class DashboardController extends Controller
         $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
         $lastMonthEnd = $now->copy()->subMonth()->endOfMonth();
 
+        $thisMonthSessions = ConsultationSession::where('mentor_id', $mentorId)
+            ->where('status', ConsultationSession::STATUS_COMPLETED)
+            ->where('updated_at', '>=', $thisMonthStart)
+            ->count();
+        $lastMonthSessions = ConsultationSession::where('mentor_id', $mentorId)
+            ->where('status', ConsultationSession::STATUS_COMPLETED)
+            ->whereBetween('updated_at', [$lastMonthStart, $lastMonthEnd])
+            ->count();
+        $thisMonthEarnings = (float) (clone $earningsQuery)
+            ->where('created_at', '>=', $thisMonthStart)
+            ->sum('amount');
+        $lastMonthEarnings = (float) (clone $earningsQuery)
+            ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+            ->sum('amount');
+        $completedSessions = ConsultationSession::where('mentor_id', $mentorId)
+            ->where('status', ConsultationSession::STATUS_COMPLETED)
+            ->count();
+        $cancelledSessions = ConsultationSession::where('mentor_id', $mentorId)
+            ->where('status', ConsultationSession::STATUS_CANCELLED)
+            ->count();
+        $totalBookings = ConsultationSession::where('mentor_id', $mentorId)->count();
+
         $stats = [
-            'total_sessions'      => (int) ($mentor->total_sessions ?? 0),
-            'this_month_sessions' => ConsultationSession::where('mentor_id', $mentorId)
-                ->where('status', ConsultationSession::STATUS_COMPLETED)
-                ->where('updated_at', '>=', $thisMonthStart)
-                ->count(),
-            'last_month_sessions' => ConsultationSession::where('mentor_id', $mentorId)
-                ->where('status', ConsultationSession::STATUS_COMPLETED)
-                ->whereBetween('updated_at', [$lastMonthStart, $lastMonthEnd])
-                ->count(),
+            'total_sessions'      => (int) ($mentor->total_sessions ?? $completedSessions),
+            'completed_sessions'  => $completedSessions,
+            'cancelled_sessions'  => $cancelledSessions,
+            'this_month_sessions' => $thisMonthSessions,
+            'last_month_sessions' => $lastMonthSessions,
+            'sessions_growth'     => $this->growthPct($thisMonthSessions, $lastMonthSessions),
             'total_earnings'      => (float) (clone $earningsQuery)->sum('amount'),
-            'this_month_earnings' => (float) (clone $earningsQuery)
-                ->where('created_at', '>=', $thisMonthStart)
-                ->sum('amount'),
-            'last_month_earnings' => (float) (clone $earningsQuery)
-                ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
-                ->sum('amount'),
+            'this_month_earnings' => $thisMonthEarnings,
+            'last_month_earnings' => $lastMonthEarnings,
+            'earnings_growth'     => $this->growthPct($thisMonthEarnings, $lastMonthEarnings),
             'active_mentees'      => MentorMenteesQuery::for($mentorId)->count(),
             'pending_sessions'    => ConsultationSession::where('mentor_id', $mentorId)
                 ->upcoming()
@@ -99,10 +115,56 @@ class DashboardController extends Controller
             'pending_requests'    => MentorRequest::where('mentor_id', $mentorId)
                 ->where('status', MentorRequest::STATUS_PENDING)
                 ->count(),
+            'sessions_today'      => ConsultationSession::where('mentor_id', $mentorId)
+                ->whereDate('scheduled_at', today())
+                ->count(),
+            'completion_rate'     => $totalBookings > 0 ? (int) round($completedSessions / $totalBookings * 100) : 0,
             'balance'             => $walletBalance,
             'pending_hold'        => $pendingHold,
             'available'           => max(0, $walletBalance - $pendingHold),
+            'avg_rating'          => (float) ($mentor->rating ?? 0),
         ];
+
+        $sessionChart = collect(range(5, 0))->map(function ($i) use ($mentorId, $earningsQuery) {
+            $month = now()->subMonths($i);
+
+            return [
+                'month' => $month->format('M'),
+                'sessions' => ConsultationSession::where('mentor_id', $mentorId)
+                    ->whereYear('scheduled_at', $month->year)
+                    ->whereMonth('scheduled_at', $month->month)
+                    ->count(),
+                'earnings' => (int) (clone $earningsQuery)
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->sum('amount'),
+            ];
+        })->values();
+
+        $dailySessions = collect(range(13, 0))->map(function ($i) use ($mentorId) {
+            $day = now()->subDays($i);
+
+            return [
+                'label' => $day->format('d M'),
+                'count' => ConsultationSession::where('mentor_id', $mentorId)
+                    ->whereDate('scheduled_at', $day->toDateString())
+                    ->count(),
+            ];
+        })->values();
+
+        $statusBreakdown = [
+            'completed' => $completedSessions,
+            'upcoming' => ConsultationSession::where('mentor_id', $mentorId)
+                ->where('status', ConsultationSession::STATUS_UPCOMING)
+                ->count(),
+            'cancelled' => $cancelledSessions,
+        ];
+
+        $recentSessions = ConsultationSession::where('mentor_id', $mentorId)
+            ->with('mentee:id,name,avatar_url')
+            ->latest('scheduled_at')
+            ->limit(6)
+            ->get();
 
         $sessionsWithoutNotes = ConsultationSession::where('mentor_id', $mentorId)
             ->where('status', ConsultationSession::STATUS_COMPLETED)
@@ -184,7 +246,20 @@ class DashboardController extends Controller
             'availability',
             'agendaItems',
             'sessionsNext24h',
+            'sessionChart',
+            'dailySessions',
+            'statusBreakdown',
+            'recentSessions',
         ));
+    }
+
+    private function growthPct(float|int $current, float|int $previous): ?int
+    {
+        if ((float) $previous <= 0) {
+            return $current > 0 ? 100 : null;
+        }
+
+        return (int) round((($current - $previous) / $previous) * 100);
     }
 
     private function resolveNextSlot(MentorAvailabilityService $availabilityService, $mentor): array
