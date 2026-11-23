@@ -661,6 +661,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin', 'admin
     Route::delete('/roles/{role}',         [AdminRoleController::class, 'destroyRole'])->name('roles.destroy');
     Route::post('/roles/users',            [AdminRoleController::class, 'storeUser'])->name('roles.users.store');
     Route::put('/roles/users/{user}',      [AdminRoleController::class, 'updateUser'])->name('roles.users.update');
+    Route::get('/roles/users/deleted',     [UserController::class, 'adminTrashed'])->name('roles.users.trashed');
     Route::delete('/roles/users/{user}',   [AdminRoleController::class, 'destroyUser'])->name('roles.users.destroy');
 
     // ── Bulk email ────────────────────────────────────────────
@@ -703,6 +704,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin', 'admin
     Route::prefix('experts')->name('experts.')->group(function () {
         Route::get('/',                        [UserController::class, 'expertIndex'])->name('index');
         Route::get('/create',                  [AdminOnboardingController::class, 'createExpert'])->name('create');
+        Route::get('/deleted',                 [UserController::class, 'expertTrashed'])->name('trashed');
         Route::post('/',                       [AdminOnboardingController::class, 'storeExpert'])->name('store');
         Route::get('/{expert}/edit',           [AdminOnboardingController::class, 'editExpert'])->name('edit');
         Route::put('/{expert}',                [AdminOnboardingController::class, 'updateExpert'])->name('update');

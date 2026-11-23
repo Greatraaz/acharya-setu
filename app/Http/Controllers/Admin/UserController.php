@@ -111,9 +111,12 @@ class UserController extends Controller
  
     public function menteeDestroy(User $mentee)
     {
+        abort_unless($mentee->role === 'mentee', 404);
         ActivityLogger::record('user_deleted', auth()->user()->name . " deleted mentee: {$mentee->name}", 'users', 'danger');
-        $mentee->delete();
-        return redirect()->route('admin.mentees.index')->with('success', "{$mentee->name} has been deleted.");
+        $name = $mentee->name;
+        $mentee->deleteAccount();
+
+        return redirect()->route('admin.mentees.index')->with('success', "{$name} has been deleted.");
     }
  
     public function menteeTrashed(Request $request)
@@ -260,6 +263,7 @@ class UserController extends Controller
                 ->where($this->expertSessionEarningConstraint())
                 ->sum('amount'),
             'unpaid'    => (float) User::experts()->sum('wallet_balance'),
+            'deleted'   => User::experts()->onlyTrashed()->count(),
         ];
 
         return view('admin.experts.index', compact('experts', 'stats'));
@@ -317,9 +321,43 @@ class UserController extends Controller
             'danger'
         );
         $name = $expert->name;
-        $expert->delete();
+        $expert->deleteAccount();
 
         return redirect()->route('admin.experts.index')->with('success', "{$name} has been deleted.");
+    }
+
+    public function expertTrashed(Request $request)
+    {
+        $users = User::experts()
+            ->onlyTrashed()
+            ->when($request->search, fn ($q) => $q->where(fn ($q) => $q
+                ->where('name', 'like', "%{$request->search}%")
+                ->orWhere('email', 'like', "%{$request->search}%")
+                ->orWhere('deleted_email', 'like', "%{$request->search}%")
+            ))
+            ->latest('deleted_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('admin.users.trashed', ['users' => $users, 'type' => 'expert']);
+    }
+
+    public function adminTrashed(Request $request)
+    {
+        $users = User::query()
+            ->where('role', 'admin')
+            ->onlyTrashed()
+            ->with('adminRole')
+            ->when($request->search, fn ($q) => $q->where(fn ($q) => $q
+                ->where('name', 'like', "%{$request->search}%")
+                ->orWhere('email', 'like', "%{$request->search}%")
+                ->orWhere('deleted_email', 'like', "%{$request->search}%")
+            ))
+            ->latest('deleted_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('admin.users.trashed', ['users' => $users, 'type' => 'admin']);
     }
  
     public function mentorTrashed(Request $request)

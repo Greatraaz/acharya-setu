@@ -179,9 +179,13 @@ class MentorApprovalController extends Controller
         );
  
         $name = $user->name;
-        $redirectRoute = $user->role === 'mentee' ? 'admin.mentees.index' : 'admin.mentors.index';
+        $redirectRoute = match ($user->role) {
+            'mentee' => 'admin.mentees.index',
+            'expert' => 'admin.experts.index',
+            default => 'admin.mentors.index',
+        };
 
-        $user->delete(); // SoftDeletes trait
+        $user->deleteAccount();
 
         return redirect()->route($redirectRoute)->with('success', "{$name} has been deactivated.");
     }

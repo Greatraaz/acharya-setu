@@ -1,16 +1,32 @@
 @extends('admin.layouts.app')
-@section('title', 'Deleted ' . ucfirst($type) . 's')
-@section('heading', 'Deleted ' . ucfirst($type) . 's')
+@php
+    $typeLabel = match ($type) {
+        'admin' => 'Admin',
+        'expert' => 'Expert',
+        'mentor' => 'Mentor',
+        default => 'Mentee',
+    };
+    $typePlural = $typeLabel === 'Admin' ? 'Admins' : $typeLabel.'s';
+    $backRoute = match ($type) {
+        'mentee' => route('admin.mentees.index'),
+        'expert' => route('admin.experts.index'),
+        'admin' => route('admin.roles.index', ['tab' => 'team']),
+        default => route('admin.mentors.index'),
+    };
+    $backLabel = $type === 'admin' ? 'Team' : $typePlural;
+@endphp
+@section('title', 'Deleted ' . $typePlural)
+@section('heading', 'Deleted ' . $typePlural)
 @section('content')
 
 <div class="space-y-5">
 
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-            <a href="{{ $type === 'mentee' ? route('admin.mentees.index') : route('admin.mentors.index') }}"
+            <a href="{{ $backRoute }}"
                class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                Back to {{ ucfirst($type) }}s
+                Back to {{ $backLabel }}
             </a>
             <span class="text-gray-300">/</span>
             <span class="text-sm text-gray-600 font-medium">Deleted Records</span>
@@ -35,7 +51,7 @@
             <div class="flex-1 relative">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input type="text" name="search" value="{{ request('search') }}"
-                       placeholder="Search deleted {{ $type }}s…"
+                       placeholder="Search deleted {{ strtolower($typePlural) }}…"
                        class="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all">
             </div>
             <button type="submit" class="bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">Search</button>
@@ -46,14 +62,14 @@
     <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-red-50">
             <div class="w-2 h-2 bg-red-400 rounded-full"></div>
-            <h3 class="text-sm font-semibold text-red-700">Deleted {{ ucfirst($type) }}s</h3>
+            <h3 class="text-sm font-semibold text-red-700">Deleted {{ $typePlural }}</h3>
             <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full ml-auto">{{ $users->total() }} records</span>
         </div>
 
         @if($users->isEmpty())
         <div class="py-16 text-center text-gray-400">
             <div class="text-4xl mb-3">🗑️</div>
-            <p class="text-sm font-medium">No deleted {{ $type }}s</p>
+            <p class="text-sm font-medium">No deleted {{ strtolower($typePlural) }}</p>
             <p class="text-xs mt-1">Deleted users will appear here and can be restored.</p>
         </div>
         @else
@@ -83,9 +99,12 @@
                             </div>
                         </td>
                         <td class="px-4 py-4">
-                            @if($type === 'mentor')
+                            @if($type === 'mentor' || $type === 'expert')
                             <div class="text-xs text-gray-500">{{ $user->designation ?? '—' }}</div>
-                            <div class="text-xs text-gray-400">{{ $user->mentor_status ? ucfirst($user->mentor_status) : '' }}</div>
+                            <div class="text-xs text-gray-400">{{ $user->mentor_status ? ucfirst($user->mentor_status) : ($user->field ?? '') }}</div>
+                            @elseif($type === 'admin')
+                            <div class="text-xs text-gray-500">{{ $user->adminRole?->name ?? ($user->isSuperAdmin() ? 'Super Admin' : '—') }}</div>
+                            <div class="text-xs text-gray-400">Admin access</div>
                             @else
                             <div class="text-xs text-gray-500">{{ $user->college ?? '—' }}</div>
                             <div class="text-xs text-gray-400">{{ $user->field ?? '' }}</div>

@@ -11,7 +11,15 @@
                 <h2>Experts</h2>
                 <p>Session specialists who take 1:1 calls with mentees, keep notes, and earn from their charge.</p>
             </div>
-            <a href="{{ route('admin.experts.create') }}" class="learn-btn-primary self-start">+ Add Expert</a>
+            <div class="flex flex-wrap items-center gap-2 self-start">
+                <a href="{{ route('admin.experts.trashed') }}" class="learn-btn-ghost">
+                    Deleted
+                    @if(($stats['deleted'] ?? 0) > 0)
+                    <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{{ $stats['deleted'] }}</span>
+                    @endif
+                </a>
+                <a href="{{ route('admin.experts.create') }}" class="learn-btn-primary">+ Add Expert</a>
+            </div>
         </div>
     </div>
 
@@ -20,14 +28,20 @@
         {{ session('success') }}
     </div>
     @endif
+    @if(session('warning'))
+    <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3 rounded-xl">
+        {{ session('warning') }}
+    </div>
+    @endif
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-8 gap-3">
         @foreach([
             ['Total', number_format($stats['total']), 'bg-slate-50', 'text-slate-700', 'border-slate-200'],
             ['Approved', number_format($stats['approved']), 'bg-green-50', 'text-green-700', 'border-green-200'],
             ['Pending', number_format($stats['pending']), 'bg-amber-50', 'text-amber-700', 'border-amber-200'],
             ['Rejected', number_format($stats['rejected']), 'bg-red-50', 'text-red-600', 'border-red-200'],
             ['Suspended', number_format($stats['suspended']), 'bg-gray-50', 'text-gray-600', 'border-gray-200'],
+            ['Deleted', number_format($stats['deleted'] ?? 0), 'bg-rose-50', 'text-rose-600', 'border-rose-200'],
             ['Earned (net)', '₹'.number_format((float) $stats['earned'], 0), 'bg-orange-50', 'text-orange-700', 'border-orange-200'],
             ['Wallet unpaid', '₹'.number_format((float) $stats['unpaid'], 0), 'bg-indigo-50', 'text-indigo-700', 'border-indigo-200'],
         ] as [$label, $value, $bg, $tc, $bc])
@@ -161,7 +175,8 @@
                                     </button>
                                 </form>
                                 @endif
-                                <form method="POST" action="{{ route('admin.experts.destroy', $expert) }}" onsubmit="return confirm('Delete {{ addslashes($expert->name) }}?')">
+                                <form method="POST" action="{{ route('admin.experts.destroy', $expert) }}"
+                                      onsubmit="return confirm('Delete {{ addslashes($expert->name) }}? They can be restored later, and their email will be free for new onboarding.')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-xs font-medium px-2.5 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg">Delete</button>
                                 </form>

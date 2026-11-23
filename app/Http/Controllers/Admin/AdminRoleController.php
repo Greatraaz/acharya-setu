@@ -22,6 +22,7 @@ class AdminRoleController extends Controller
             'tab' => $tab,
             'roles' => AdminRole::query()->withCount('users')->orderByDesc('is_super')->orderBy('name')->get(),
             'staff' => User::query()->where('role', 'admin')->with('adminRole')->orderBy('name')->get(),
+            'deletedStaffCount' => User::query()->where('role', 'admin')->onlyTrashed()->count(),
             'groups' => AdminRole::groupedCatalog(),
             'moduleKeys' => array_keys(AdminRole::catalog()),
         ]);
@@ -116,12 +117,12 @@ class AdminRoleController extends Controller
         }
 
         $name = $user->name;
-        $user->delete();
+        $user->deleteAccount();
 
         (new ActivityLogger())->event('admin_staff_deleted')->module('roles')->warning()
             ->description('Removed admin user '.$name.'.')->log();
 
-        return back()->with('success', 'Team member removed.')->with('tab', 'team');
+        return back()->with('success', 'Team member removed. They can be restored from Deleted team.')->with('tab', 'team');
     }
 
     private function saveRole(Request $request, AdminRole $role): void

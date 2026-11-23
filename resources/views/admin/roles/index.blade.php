@@ -6,6 +6,7 @@
     $tab = session('tab', $tab ?? 'roles');
     $isSuper = auth()->user()->isSuperAdmin();
     $activeStaff = $staff->where('is_active', true)->count();
+    $deletedStaffCount = $deletedStaffCount ?? 0;
     $superRoles = $roles->where('is_super', true)->count();
     $moduleCatalogCount = count($moduleKeys ?? []);
 @endphp
@@ -50,6 +51,12 @@
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
                 @if($tab === 'team')
+                <a href="{{ route('admin.roles.users.trashed') }}" class="learn-btn-ghost">
+                    Deleted
+                    @if($deletedStaffCount > 0)
+                    <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">{{ $deletedStaffCount }}</span>
+                    @endif
+                </a>
                 <a href="{{ route('admin.roles.index') }}" class="learn-btn-ghost">
                     Manage roles
                 </a>
@@ -200,7 +207,7 @@
                     </button>
                     @if(! $isYou)
                     <form action="{{ route('admin.roles.users.destroy', $member) }}" method="POST" class="inline"
-                          onsubmit="return confirm('Remove {{ addslashes($member->name) }} from admin access?');">
+                          onsubmit="return confirm('Remove {{ addslashes($member->name) }}? They can be restored later from Deleted team.');">
                         @csrf @method('DELETE')
                         <button type="submit" class="text-xs font-medium px-2.5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors">
                             Remove
