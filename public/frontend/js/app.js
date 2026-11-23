@@ -1622,15 +1622,24 @@
        // OTP inputs
        initOtpInputs(".otp-grid");
    
-       // Active nav links
+       // Active top-nav links (sidebar active state is set in Blade by route name)
        const path = window.location.pathname;
-       document.querySelectorAll(".navbar-nav a, .sidebar-item").forEach((a) => {
+       document.querySelectorAll(".navbar-nav a").forEach((a) => {
            if (a.getAttribute("href") && path.startsWith(a.getAttribute("href")) && a.getAttribute("href") !== "/") {
                a.classList.add("active");
            } else if (a.getAttribute("href") === "/" && path === "/") {
                a.classList.add("active");
            }
        });
+
+       const activeSidebarItem = document.querySelector("#dashSidebar .sidebar-item.active, #dashSidebar [data-nav-active='1']");
+       if (activeSidebarItem && typeof activeSidebarItem.scrollIntoView === "function") {
+           try {
+               activeSidebarItem.scrollIntoView({ block: "center", inline: "nearest" });
+           } catch (e) {
+               activeSidebarItem.scrollIntoView(true);
+           }
+       }
    
        // Generic form data-ajax
        document.querySelectorAll("[data-ajax-form]").forEach((form) => {

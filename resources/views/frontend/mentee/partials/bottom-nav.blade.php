@@ -2,7 +2,11 @@
     $isHome = request()->routeIs('mentee.dashboard');
     $isMentors = request()->routeIs('mentors.search', 'mentors.show') || request()->routeIs('mentee.mentor.*');
     $isSessions = request()->routeIs('mentee.sessions*');
-    $isTasks = request()->routeIs('mentee.journey.*') || request()->routeIs('mentee.quizzes*') || request()->routeIs('mentee.assessments*');
+    $isTasks = request()->routeIs('mentee.journey.*')
+        || request()->routeIs('mentee.tasks*')
+        || request()->routeIs('mentee.quizzes*')
+        || request()->routeIs('mentee.assessments*')
+        || request()->routeIs('mentee.mentor-videos*');
     $isProfile = request()->routeIs('account*');
 @endphp
 <nav class="app-bottom-nav" aria-label="Mentee mobile navigation">

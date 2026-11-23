@@ -4,10 +4,12 @@
         <p class="mt-2 text-xl font-bold text-black">Admin Platform</p>
     </div>
 
-    <div class="pl-3 pr-1.5 pt-3 pb-6 overflow-y-auto flex-1 space-y-1">
+    <div class="pl-3 pr-1.5 pt-3 pb-6 overflow-y-auto flex-1 space-y-1" id="admin-sidebar-scroll">
 
         @php
-        $current = request()->route()->getName();
+        use App\Support\SidebarNav;
+
+        $current = optional(request()->route())->getName() ?? '';
 
         $menuSections = [
             'Overview' => [
@@ -35,7 +37,6 @@
                 ['admin.subscription-cancels.index', '↩️', 'Plan Cancellations'],
             ],
             'Learning' => [
-                // ['admin.curriculum.catalog',         '📚', 'Curriculum Streams'],
                 ['admin.curriculum.templates',       '🧩', 'Curriculum Templates'],
                 ['admin.curriculum.streams',         '🗺️', '6-Month Journey Manager'],
                 ['admin.mentee-tasks.index',         '✅', 'Mentee Tasks'],
@@ -105,6 +106,19 @@
             }
             $menuSections[$section] = $menus;
         }
+
+        $navCandidates = [];
+        foreach ($menuSections as $menus) {
+            $items = isset($menus['type']) && $menus['type'] === 'group' ? ($menus['items'] ?? []) : $menus;
+            foreach ($items as $item) {
+                $route = $item[0] ?? '';
+                if ($route === '' || $route === '#') {
+                    continue;
+                }
+                $navCandidates[$route] = SidebarNav::defaultPatterns($route);
+            }
+        }
+        $activeNavRoute = SidebarNav::bestMatch($navCandidates, $current);
         @endphp
 
         @foreach($menuSections as $section => $menus)
@@ -113,13 +127,12 @@
                 @php $groupId = 'admin-nav-'.\Illuminate\Support\Str::slug($section); @endphp
                 <div class="{{ $loop->first ? 'pt-1' : 'pt-4' }}">
                     @php
-                        $groupOpen = collect($menus['items'])->contains(function ($item) use ($current) {
-                            $target = $item[0] ?? '';
-                            return $target !== '#' && str_starts_with((string) $current, (string) $target);
+                        $groupOpen = collect($menus['items'])->contains(function ($item) use ($activeNavRoute) {
+                            return ($item[0] ?? '') === $activeNavRoute;
                         });
                     @endphp
                     <button type="button"
-                            class="w-full flex items-center gap-2.5 pl-3 pr-2 py-2.5 rounded-2xl transition-all font-medium text-slate-600 hover:bg-slate-50"
+                            class="w-full flex items-center gap-2.5 pl-3 pr-2 py-2.5 rounded-2xl transition-all font-medium text-slate-600 hover:bg-slate-50 {{ $groupOpen ? 'bg-orange-50/60 text-orange-700' : '' }}"
                             data-admin-nav-toggle="{{ $groupId }}"
                             aria-expanded="{{ $groupOpen ? 'true' : 'true' }}"
                             aria-controls="{{ $groupId }}">
@@ -136,13 +149,14 @@
                                 $isRoute = $target !== '#' && ! str_starts_with((string) $target, '#');
                                 try {
                                     $href = $isRoute ? route($target) : $target;
-                                    $isActive = $isRoute && str_starts_with((string) $current, (string) $target);
+                                    $isActive = $isRoute && $activeNavRoute === $target;
                                 } catch (\Exception $e) {
                                     $href = '#';
                                     $isActive = false;
                                 }
                             @endphp
                             <a href="{{ $href }}"
+                               @if($isActive) data-nav-active="1" @endif
                                class="flex items-center gap-2 pl-2.5 pr-1.5 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap
                                       {{ $isActive
                                           ? 'bg-orange-50 text-orange-600'
@@ -154,7 +168,6 @@
                     </div>
                 </div>
             @else
-                {{-- Section Divider --}}
                 <p class="text-xs font-semibold text-slate-400 uppercase tracking-widest px-2 pb-1 {{ $loop->first ? 'pt-1' : 'pt-4' }}">
                     {{ $section }}
                 </p>
@@ -163,8 +176,7 @@
                     @php
                         try {
                             $href = route($route);
-                            $isActive = str_starts_with($current, $route)
-                                || ($route === 'admin.earnings.index' && str_starts_with((string) $current, 'admin.earnings.'));
+                            $isActive = $activeNavRoute === $route;
                         } catch (\Exception $e) {
                             $href = $route === 'admin.roles.index' ? url('/admin/roles') : '#';
                             $isActive = false;
@@ -172,6 +184,7 @@
                     @endphp
 
                     <a href="{{ $href }}"
+                       @if($isActive) data-nav-active="1" @endif
                        class="flex items-center gap-2.5 pl-3 pr-2 py-2.5 rounded-2xl transition-all font-medium whitespace-nowrap
                               {{ $isActive
                                   ? 'bg-orange-50 text-orange-600 shadow-sm'
@@ -180,7 +193,7 @@
                         <span class="text-base shrink-0">{{ $icon }}</span>
                         <span class="text-sm">{{ $label }}</span>
                         @if($isActive)
-                            <span class="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0 ml-auto"></span>
                         @endif
                     </a>
                 @endforeach
@@ -205,5 +218,33 @@
             if (chevron) chevron.style.transform = open ? 'rotate(-90deg)' : '';
         });
     });
+
+    function revealActiveAdminNav() {
+        var active = document.querySelector('#admin-sidebar [data-nav-active="1"]');
+        if (!active) return;
+        var panel = active.closest('[id^="admin-nav-"]');
+        if (panel) {
+            panel.classList.remove('hidden');
+            var toggle = document.querySelector('[data-admin-nav-toggle="' + panel.id + '"]');
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', 'true');
+                var chevron = toggle.querySelector('[data-admin-nav-chevron]');
+                if (chevron) chevron.style.transform = '';
+            }
+        }
+        if (typeof active.scrollIntoView === 'function') {
+            try {
+                active.scrollIntoView({ block: 'center', inline: 'nearest' });
+            } catch (e) {
+                active.scrollIntoView(true);
+            }
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', revealActiveAdminNav);
+    } else {
+        revealActiveAdminNav();
+    }
 })();
 </script>

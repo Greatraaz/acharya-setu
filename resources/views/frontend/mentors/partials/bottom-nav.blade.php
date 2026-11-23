@@ -4,8 +4,11 @@
     $isSessions = request()->routeIs('mentor.sessions*');
     $isNotes = request()->routeIs('mentor.notes') || request()->routeIs('mentor.wallet*');
     $isTasks = request()->routeIs('mentor.curriculum*')
+        || request()->routeIs('mentor.tasks*')
         || request()->routeIs('mentor.journey*')
-        || request()->routeIs('mentor.submissions*');
+        || request()->routeIs('mentor.submissions*')
+        || request()->routeIs('mentor.assessments*')
+        || request()->routeIs('mentor.assessment-questions*');
     $isCommunity = request()->routeIs('mentor.community*');
     $isProfile = request()->routeIs('mentor.profile.*') || request()->routeIs('account*');
 @endphp
