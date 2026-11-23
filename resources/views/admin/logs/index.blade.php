@@ -13,6 +13,7 @@
                 <p>Real-time audit trail of all system and user activity.</p>
             </div>
             <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center w-full lg:w-auto">
+                {{-- Live Tail (disabled)
                 <div class="flex items-center justify-center gap-1.5 text-xs text-gray-400 bg-white border border-gray-200 px-3 py-2 rounded-xl col-span-2 sm:col-span-1 sm:justify-start learn-btn-ghost !cursor-default" id="live-indicator">
                     <span class="w-2 h-2 bg-gray-300 rounded-full" id="live-dot"></span>
                     <span id="live-text">Paused</span>
@@ -20,6 +21,7 @@
                 <button onclick="toggleLiveTail()" id="live-btn" type="button" class="learn-btn-ghost col-span-2 sm:col-span-1 !text-emerald-800 !border-emerald-200 !bg-emerald-50 hover:!bg-emerald-100">
                     Enable Live Tail
                 </button>
+                --}}
                 <a href="{{ route('admin.logs.export', request()->all()) }}" class="learn-btn-ghost">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
