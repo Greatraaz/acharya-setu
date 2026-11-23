@@ -44,29 +44,33 @@ class WalletService
         }
 
         return DB::transaction(function () use ($sender, $receiver, $amount, $note, $options) {
-            $reference = 'TRF-' . strtoupper(Str::random(10));
+            // reference is UNIQUE per row — use distinct OUT/IN suffixes, shared group in meta
+            $group = 'TRF-'.strtoupper(Str::random(10));
+            $pairMeta = [
+                'transfer_group' => $group,
+            ];
 
             // Sender: transfer_out
             $outTxn = $sender->_transferOut($amount, $note ?: "Transfer to {$receiver->name}", [
-                'reference'    => $reference,
+                'reference'    => $group.'-OUT',
                 'performed_by' => $options['performed_by'] ?? null,
-                'meta'         => [
+                'meta'         => array_merge($pairMeta, [
                     'to_type' => get_class($receiver),
                     'to_id'   => $receiver->id,
                     'to_name' => $receiver->name,
-                ],
+                ]),
             ]);
 
             // Receiver: transfer_in
             $inTxn = $receiver->_transferIn($amount, $note ?: "Transfer from {$sender->name}", [
-                'reference'      => $reference,
+                'reference'        => $group.'-IN',
                 'transfer_pair_id' => $outTxn->id,
-                'performed_by'   => $options['performed_by'] ?? null,
-                'meta'           => [
+                'performed_by'     => $options['performed_by'] ?? null,
+                'meta'             => array_merge($pairMeta, [
                     'from_type' => get_class($sender),
                     'from_id'   => $sender->id,
                     'from_name' => $sender->name,
-                ],
+                ]),
             ]);
 
             // Link both sides

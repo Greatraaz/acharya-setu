@@ -37,74 +37,57 @@
     @endphp
 
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-
-        {{-- Total Credited --}}
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+        <div class="learn-stat flex items-start justify-between gap-3">
             <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total Credited</p>
-                <p class="text-2xl font-bold text-emerald-600">₹{{ number_format($totalCredit, 2) }}</p>
+                <div class="learn-stat__value text-emerald-600">₹{{ number_format($totalCredit, 2) }}</div>
+                <div class="learn-stat__label">Total Credited</div>
             </div>
-            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                <iconify-icon icon="fa-solid:plus-circle" class="text-emerald-600 text-xl"></iconify-icon>
-            </div>
+            <span class="learn-stat__icon text-base text-emerald-600"><iconify-icon icon="fa-solid:plus-circle"></iconify-icon></span>
         </div>
-
-        {{-- Total Debited --}}
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+        <div class="learn-stat flex items-start justify-between gap-3">
             <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total Debited</p>
-                <p class="text-2xl font-bold text-red-500">₹{{ number_format($totalDebit, 2) }}</p>
+                <div class="learn-stat__value text-red-500">₹{{ number_format($totalDebit, 2) }}</div>
+                <div class="learn-stat__label">Total Debited</div>
             </div>
-            <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <iconify-icon icon="fa-solid:minus-circle" class="text-red-500 text-xl"></iconify-icon>
-            </div>
+            <span class="learn-stat__icon text-base text-red-500"><iconify-icon icon="fa-solid:minus-circle"></iconify-icon></span>
         </div>
-
-        {{-- Total Refunded --}}
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+        <div class="learn-stat flex items-start justify-between gap-3">
             <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total Refunded</p>
-                <p class="text-2xl font-bold text-sky-500">₹{{ number_format($totalRefund, 2) }}</p>
+                <div class="learn-stat__value text-sky-500">₹{{ number_format($totalRefund, 2) }}</div>
+                <div class="learn-stat__label">Total Refunded</div>
             </div>
-            <div class="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center flex-shrink-0">
-                <iconify-icon icon="fa-solid:undo" class="text-sky-500 text-xl"></iconify-icon>
-            </div>
+            <span class="learn-stat__icon text-base text-sky-500"><iconify-icon icon="fa-solid:undo"></iconify-icon></span>
         </div>
-
-        {{-- Total Transfers --}}
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+        <div class="learn-stat flex items-start justify-between gap-3">
             <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total Transfers</p>
-                <p class="text-2xl font-bold text-violet-600">{{ $totalTransfer }}</p>
+                <div class="learn-stat__value text-amber-600">{{ $totalTransfer }}</div>
+                <div class="learn-stat__label">Total Transfers</div>
             </div>
-            <div class="w-12 h-12 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0">
-                <iconify-icon icon="fa-solid:exchange-alt" class="text-violet-600 text-xl"></iconify-icon>
-            </div>
+            <span class="learn-stat__icon text-base text-amber-600"><iconify-icon icon="fa-solid:exchange-alt"></iconify-icon></span>
         </div>
-
     </div>
 
     {{-- Filters --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 min-w-0">
+    <div class="learn-panel p-5 min-w-0">
         <form method="GET" action="{{ route('admin.wallet.index') }}">
             <div class="admin-filter-form flex flex-wrap items-end gap-3 min-w-0">
 
                 <div class="flex flex-col gap-1 min-w-[140px]">
                     <label class="text-xs font-medium text-gray-600">From Date</label>
                     <input type="date" name="from_date" value="{{ request('from_date') }}"
-                        class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        class="learn-focus text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none">
                 </div>
 
                 <div class="flex flex-col gap-1 min-w-[140px]">
                     <label class="text-xs font-medium text-gray-600">To Date</label>
                     <input type="date" name="to_date" value="{{ request('to_date') }}"
-                        class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        class="learn-focus text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none">
                 </div>
 
                 <div class="flex flex-col gap-1 min-w-[150px]">
                     <label class="text-xs font-medium text-gray-600">Type</label>
                     <select name="type"
-                        class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
+                        class="learn-focus text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white outline-none">
                         <option value="">All Types</option>
                         @foreach(['credit'=>'Credit','debit'=>'Debit','refund'=>'Refund','transfer_in'=>'Transfer In','transfer_out'=>'Transfer Out'] as $val => $label)
                             <option value="{{ $val }}" {{ request('type') === $val ? 'selected' : '' }}>{{ $label }}</option>
@@ -117,7 +100,7 @@
                     <div class="relative">
                         <iconify-icon icon="fa-solid:search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></iconify-icon>
                         <input type="text" name="search" value="{{ request('search') }}" placeholder="TXN-XXXX / TRF-XXXX"
-                            class="w-full text-sm border border-gray-200 rounded-lg pl-8 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            class="learn-focus w-full text-sm border border-gray-200 rounded-lg pl-8 pr-3 py-2 outline-none">
                     </div>
                 </div>
 
@@ -138,7 +121,7 @@
     </div>
 
     {{-- Transactions Table --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-w-0">
+    <div class="learn-panel overflow-hidden min-w-0">
 
         {{-- Table Header --}}
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">

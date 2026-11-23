@@ -8,15 +8,20 @@
     $paidPct = $summary['earned'] > 0 ? min(100, round(($summary['paid_out'] / $summary['earned']) * 100)) : 0;
 @endphp
 
-<div class="min-w-0 max-w-full space-y-6">
+<div class="admin-page min-w-0 max-w-full space-y-6">
 
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <a href="{{ route('admin.earnings.index') }}"
-           class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
-            ← All session earnings
-        </a>
-        <a href="{{ route('admin.withdrawals.index', ['search' => $mentor->email]) }}"
-           class="text-sm font-medium text-orange-600 hover:text-orange-700">Withdrawal queue →</a>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Finance · Mentor Earnings</span>
+                <h2>{{ $mentor->name }}</h2>
+                <p>{{ $mentor->email }} · Session earnings and payout history.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.earnings.index') }}" class="learn-btn-ghost">← All earnings</a>
+                <a href="{{ route('admin.withdrawals.index', ['search' => $mentor->email]) }}" class="learn-btn-ghost">Withdrawal queue →</a>
+            </div>
+        </div>
     </div>
 
     @if(session('success'))
@@ -31,51 +36,28 @@
     </div>
     @endif
 
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-wrap items-center gap-4">
-        @if($mentor->avatar_url)
-        <img src="{{ $mentor->avatar_url }}" alt="" class="w-14 h-14 rounded-2xl object-cover">
-        @else
-        <div class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 font-bold text-lg flex items-center justify-center">{{ strtoupper(substr($mentor->name, 0, 2)) }}</div>
-        @endif
-        <div class="flex-1 min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-                <h2 class="text-lg font-semibold text-gray-800">{{ $mentor->name }}</h2>
-                <span class="inline-flex items-center text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{{ ucfirst($mentor->mentor_status ?? 'pending') }}</span>
-                @if($mentor->isExpert())
-                <span class="inline-flex items-center text-xs font-bold uppercase tracking-wide text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-full">Expert</span>
-                @endif
-            </div>
-            <p class="text-sm text-gray-500 truncate">{{ $mentor->email }}</p>
-            @if($mentor->bank_details)
-            <p class="text-xs text-gray-400 mt-1">Payout to: {{ $mentor->bank_details }}</p>
-            @endif
-        </div>
-        <div class="text-right">
-            <p class="text-xs text-gray-400 uppercase tracking-wider">Wallet unpaid</p>
-            <p class="text-2xl font-bold text-orange-600">{{ $inr($summary['balance']) }}</p>
-            @if($summary['pending_out'] > 0)
-            <p class="text-xs text-amber-600">{{ $inr($summary['pending_out']) }} held in pending requests</p>
-            @endif
-        </div>
-    </div>
+    @if($mentor->bank_details)
+    <p class="text-sm text-gray-500">Payout to: <span class="font-medium text-gray-700">{{ $mentor->bank_details }}</span></p>
+    @endif
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
         @foreach([
-            ['Session earnings', $summary['earned'], $summary['session_count'].' sessions · net after fee', 'text-slate-800'],
-            ['Gross billed', $summary['gross'], 'Mentees paid '.$inr($summary['mentee_paid']), 'text-gray-800'],
-            ['Platform fee', $summary['platform_fee'], '20% kept by Vedrix', 'text-indigo-700'],
-            ['Paid by admin', $summary['paid_out'], $paidPct.'% of earnings transferred', 'text-emerald-700'],
+            ['Session earnings', $inr($summary['earned']), $summary['session_count'].' sessions · net after fee', 'text-slate-800'],
+            ['Gross billed', $inr($summary['gross']), 'Mentees paid '.$inr($summary['mentee_paid']), 'text-gray-800'],
+            ['Platform fee', $inr($summary['platform_fee']), '20% kept by Vedrix', 'text-amber-700'],
+            ['Paid by admin', $inr($summary['paid_out']), $paidPct.'% of earnings transferred', 'text-emerald-700'],
+            ['Wallet unpaid', $inr($summary['balance']), $summary['pending_out'] > 0 ? $inr($summary['pending_out']).' held in pending requests' : 'Available '.$inr($summary['available']), 'text-orange-600'],
         ] as [$label, $value, $hint, $tc])
-        <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $label }}</p>
-            <p class="text-xl font-bold {{ $tc }} mt-1">{{ $inr($value) }}</p>
+        <div class="learn-stat">
+            <div class="learn-stat__value {{ $tc }}">{{ $value }}</div>
+            <div class="learn-stat__label">{{ $label }}</div>
             <p class="text-[11px] text-gray-400 mt-1">{{ $hint }}</p>
         </div>
         @endforeach
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div class="xl:col-span-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 h-fit">
+        <div class="xl:col-span-1 learn-panel p-5 h-fit">
             <h3 class="text-sm font-semibold text-gray-800 mb-1">Record a payout</h3>
             <p class="text-xs text-gray-500 mb-4">Debits the mentor wallet and marks this amount as paid by admin. Use this after you transfer money to their bank or UPI.</p>
 
@@ -95,28 +77,28 @@
                     <label class="block text-xs font-medium text-gray-500 mb-1">Amount</label>
                     <input type="number" name="amount" min="1" step="0.01" max="{{ $summary['available'] }}"
                            value="{{ old('amount', number_format($summary['available'], 2, '.', '')) }}" required
-                           class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                           class="learn-focus w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none">
                     <p class="text-[11px] text-gray-400 mt-1">Available {{ $inr($summary['available']) }}</p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Paid to (UPI / bank)</label>
                     <input type="text" name="bank_details" value="{{ old('bank_details', $mentor->bank_details) }}" required
                            placeholder="UPI ID or account details"
-                           class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                           class="learn-focus w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">UTR / payment reference</label>
                     <input type="text" name="payment_ref" value="{{ old('payment_ref') }}"
                            placeholder="Optional bank UTR"
-                           class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                           class="learn-focus w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Note</label>
                     <input type="text" name="admin_note" value="{{ old('admin_note') }}"
                            placeholder="Optional"
-                           class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                           class="learn-focus w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none">
                 </div>
-                <button type="submit" class="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5">
+                <button type="submit" class="learn-btn-primary w-full justify-center !py-3">
                     Mark as paid
                 </button>
             </form>
@@ -124,7 +106,7 @@
         </div>
 
         <div class="xl:col-span-2 space-y-6">
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="learn-panel overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                     <h3 class="text-sm font-semibold text-gray-800">Payouts you made</h3>
                     <span class="text-xs text-gray-400">{{ $payouts->total() }} records</span>
@@ -191,7 +173,7 @@
                 @endif
             </div>
 
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="learn-panel overflow-hidden">
                 <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
                     <h3 class="text-sm font-semibold text-gray-800">Session earnings credited</h3>
                     <span class="text-xs text-gray-400">{{ $earnings->total() }} credits</span>

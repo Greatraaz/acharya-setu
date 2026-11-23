@@ -3,11 +3,16 @@
 @section('heading', 'Create Offer')
 
 @section('content')
-<div class="space-y-4 max-w-4xl">
-    <div>
-        <a href="{{ route('admin.offers.index') }}" class="text-sm text-gray-400 hover:text-gray-600">← Back to Offers</a>
-        <h1 class="text-2xl font-bold text-gray-900 mt-2">New Offer</h1>
-        <p class="text-sm text-gray-500 mt-1">Credit new joinees on onboarding or assign session coupons to mentees.</p>
+<div class="admin-page space-y-4 max-w-4xl">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Billing · Offers</span>
+                <h2>New Offer</h2>
+                <p>Credit new joinees on onboarding or assign session coupons to mentees.</p>
+            </div>
+            <a href="{{ route('admin.offers.index') }}" class="learn-btn-ghost self-start">← Back to Offers</a>
+        </div>
     </div>
     @include('admin.offers._form', ['offer' => $offer, 'mentees' => $mentees])
 </div>

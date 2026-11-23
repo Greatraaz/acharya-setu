@@ -3,24 +3,25 @@
 @section('heading', 'Wallet')
 @section('content')
 
-<div class="min-w-0 max-w-full space-y-6">
+<div class="admin-page min-w-0 max-w-full space-y-6">
 
-    {{-- Back + breadcrumb --}}
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <a href="{{ route('admin.wallet.index') }}"
-           class="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-            Back to Wallet Transactions
-        </a>
-        <nav class="flex items-center gap-2 text-sm">
-            <a href="{{ route('admin.dashboard') }}" class="text-gray-500 hover:text-blue-600 transition-colors">Dashboard</a>
-            <span class="text-gray-300">/</span>
-            <a href="{{ route('admin.wallet.index') }}" class="text-gray-500 hover:text-blue-600 transition-colors">Wallet</a>
-            <span class="text-gray-300">/</span>
-            <span class="text-gray-700 font-medium">{{ $user->name }}</span>
-        </nav>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Finance · Wallet Detail</span>
+                <h2>{{ $user->name }}</h2>
+                <p>{{ $user->email }} · {{ ucfirst($user->role) }}</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.wallet.index') }}" class="learn-btn-ghost">← Wallet transactions</a>
+                @if($user->role === 'mentee')
+                    <a href="{{ route('admin.wallet.add-fund', ['mentee_id' => $user->id]) }}" class="learn-btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Add Fund
+                    </a>
+                @endif
+            </div>
+        </div>
     </div>
 
     @if(session('success'))
@@ -41,88 +42,28 @@
     </div>
     @endif
 
-    {{-- User profile strip --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-wrap items-center gap-4">
-        <div class="w-14 h-14 rounded-2xl bg-blue-100 text-blue-700 font-bold text-lg flex items-center justify-center flex-shrink-0">
-            {{ strtoupper(substr($user->name, 0, 2)) }}
-        </div>
-        <div class="flex-1 min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-                <h2 class="text-lg font-semibold text-gray-800">{{ $user->name }}</h2>
-                @if($user->role === 'admin')
-                    <span class="inline-flex items-center text-xs font-medium bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">Admin</span>
-                @elseif($user->role === 'mentor')
-                    <span class="inline-flex items-center text-xs font-medium bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Mentor</span>
-                @elseif($user->role === 'mentee')
-                    <span class="inline-flex items-center text-xs font-medium bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">Mentee</span>
-                @endif
-            </div>
-            <p class="text-sm text-gray-500 truncate">{{ $user->email }}</p>
-        </div>
-        @if($user->role === 'mentee')
-            <a href="{{ route('admin.wallet.add-fund', ['mentee_id' => $user->id]) }}"
-               class="inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                </svg>
-                Add Fund
-            </a>
-        @endif
-    </div>
-
     {{-- Summary Cards --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
-            <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Current Balance</p>
-                <p class="text-2xl font-bold text-blue-600">₹{{ number_format($summary['balance'], 2) }}</p>
-            </div>
-            <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3"/>
-                </svg>
-            </div>
+        <div class="learn-stat">
+            <div class="learn-stat__value text-amber-600">₹{{ number_format($summary['balance'], 2) }}</div>
+            <div class="learn-stat__label">Current Balance</div>
         </div>
-
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
-            <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total Credited</p>
-                <p class="text-2xl font-bold text-emerald-600">₹{{ number_format($summary['total_credited'], 2) }}</p>
-            </div>
-            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                </svg>
-            </div>
+        <div class="learn-stat">
+            <div class="learn-stat__value text-emerald-600">₹{{ number_format($summary['total_credited'], 2) }}</div>
+            <div class="learn-stat__label">Total Credited</div>
         </div>
-
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
-            <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total Debited</p>
-                <p class="text-2xl font-bold text-red-500">₹{{ number_format($summary['total_debited'], 2) }}</p>
-            </div>
-            <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/>
-                </svg>
-            </div>
+        <div class="learn-stat">
+            <div class="learn-stat__value text-red-500">₹{{ number_format($summary['total_debited'], 2) }}</div>
+            <div class="learn-stat__label">Total Debited</div>
         </div>
-
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
-            <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Total Refunded</p>
-                <p class="text-2xl font-bold text-sky-500">₹{{ number_format($summary['total_refunded'], 2) }}</p>
-            </div>
-            <div class="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                </svg>
-            </div>
+        <div class="learn-stat">
+            <div class="learn-stat__value text-sky-500">₹{{ number_format($summary['total_refunded'], 2) }}</div>
+            <div class="learn-stat__label">Total Refunded</div>
         </div>
     </div>
 
     {{-- Adjust Wallet --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-w-0">
+    <div class="learn-panel overflow-hidden min-w-0">
         <div class="px-5 py-4 border-b border-gray-100">
             <h6 class="font-semibold text-gray-800">Adjust Wallet</h6>
             <p class="text-xs text-gray-400 mt-0.5">Manually credit or debit this user's wallet balance</p>
@@ -138,7 +79,7 @@
                 <div class="flex flex-col gap-1 min-w-[120px]">
                     <label class="text-xs font-medium text-gray-600">Action</label>
                     <select name="action"
-                        class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        class="learn-focus text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white outline-none">
                         <option value="credit" @selected(old('action', 'credit') === 'credit')>Credit</option>
                         <option value="debit" @selected(old('action') === 'debit')>Debit</option>
                     </select>
@@ -149,7 +90,7 @@
                     <div class="relative">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">₹</span>
                         <input type="number" name="amount" step="0.01" min="0.01" required value="{{ old('amount') }}"
-                            class="w-full text-sm border border-gray-200 rounded-lg pl-7 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            class="learn-focus w-full text-sm border border-gray-200 rounded-lg pl-7 pr-3 py-2 outline-none">
                     </div>
                     <p class="text-[11px] text-gray-400">Debit cannot exceed ₹{{ number_format((float) $user->wallet_balance, 2) }}. Negative amounts are rejected.</p>
                 </div>
@@ -157,11 +98,10 @@
                 <div class="flex flex-col gap-1 flex-1 min-w-[200px]">
                     <label class="text-xs font-medium text-gray-600">Reason</label>
                     <input type="text" name="description" required placeholder="Reason for adjustment" value="{{ old('description') }}"
-                        class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="learn-focus w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none">
                 </div>
 
-                <button type="submit"
-                    class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
+                <button type="submit" class="learn-btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                     </svg>
@@ -172,7 +112,7 @@
     </div>
 
     {{-- Transaction History --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-w-0">
+    <div class="learn-panel overflow-hidden min-w-0">
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h6 class="font-semibold text-gray-800">Transaction History</h6>
             <span class="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">

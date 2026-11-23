@@ -3,10 +3,16 @@
 @section('heading', 'Edit Offer')
 
 @section('content')
-<div class="space-y-4 max-w-4xl">
-    <div>
-        <a href="{{ route('admin.offers.index') }}" class="text-sm text-gray-400 hover:text-gray-600">← Back to Offers</a>
-        <h1 class="text-2xl font-bold text-gray-900 mt-2">Edit Offer</h1>
+<div class="admin-page space-y-4 max-w-4xl">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Billing · Offers</span>
+                <h2>Edit Offer</h2>
+                <p>Update wallet credits or session coupon settings for this offer.</p>
+            </div>
+            <a href="{{ route('admin.offers.index') }}" class="learn-btn-ghost self-start">← Back to Offers</a>
+        </div>
     </div>
     @include('admin.offers._form', ['offer' => $offer, 'mentees' => $mentees])
 </div>

@@ -10,22 +10,17 @@
     $selectedBalance = old('_mentee_balance', $preselectedMentee ? number_format((float) $preselectedMentee->wallet_balance, 2, '.', '') : '');
 @endphp
 
-<div class="min-w-0 max-w-full space-y-6">
+<div class="admin-page min-w-0 max-w-full space-y-6">
 
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-            <h6 class="text-lg font-semibold text-gray-800">Add Fund to Mentee Wallet</h6>
-            <p class="text-sm text-gray-500 mt-0.5">
-                Credit money into a mentee’s wallet. This creates an audited ledger entry.
-            </p>
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="learn-eyebrow">Finance · Add Fund</span>
+                <h2>Add Fund to Mentee Wallet</h2>
+                <p>Credit money into a mentee’s wallet. This creates an audited ledger entry.</p>
+            </div>
+            <a href="{{ route('admin.wallet.index') }}" class="learn-btn-ghost self-start">← Back to Wallet</a>
         </div>
-        <nav class="flex items-center gap-2 text-sm">
-            <a href="{{ route('admin.dashboard') }}" class="text-gray-500 hover:text-blue-600 transition-colors">Dashboard</a>
-            <span class="text-gray-300">/</span>
-            <a href="{{ route('admin.wallet.index') }}" class="text-gray-500 hover:text-blue-600 transition-colors">Wallet</a>
-            <span class="text-gray-300">/</span>
-            <span class="text-gray-700 font-medium">Add Fund</span>
-        </nav>
     </div>
 
     @if(session('success'))
@@ -53,41 +48,33 @@
     @endif
 
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+        <div class="learn-stat flex items-start justify-between gap-3">
             <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Added Today</p>
-                <p class="text-2xl font-bold text-emerald-600">₹{{ number_format($totalAddedToday, 2) }}</p>
+                <div class="learn-stat__value text-emerald-600">₹{{ number_format($totalAddedToday, 2) }}</div>
+                <div class="learn-stat__label">Added Today</div>
             </div>
-            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                <iconify-icon icon="fa-solid:plus-circle" class="text-emerald-600 text-xl"></iconify-icon>
-            </div>
+            <span class="learn-stat__icon text-base text-emerald-600"><iconify-icon icon="fa-solid:plus-circle"></iconify-icon></span>
         </div>
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+        <div class="learn-stat flex items-start justify-between gap-3">
             <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Recent Credits</p>
-                <p class="text-2xl font-bold text-blue-600">{{ $recentFunds->total() }}</p>
+                <div class="learn-stat__value text-amber-600">{{ $recentFunds->total() }}</div>
+                <div class="learn-stat__label">Recent Credits</div>
             </div>
-            <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <iconify-icon icon="fa-solid:history" class="text-blue-600 text-xl"></iconify-icon>
-            </div>
+            <span class="learn-stat__icon text-base text-amber-600"><iconify-icon icon="fa-solid:history"></iconify-icon></span>
         </div>
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between sm:col-span-2 xl:col-span-1">
+        <div class="learn-stat flex items-start justify-between gap-3 sm:col-span-2 xl:col-span-1">
             <div>
-                <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Full Ledger</p>
-                <a href="{{ route('admin.wallet.index') }}" class="text-sm font-medium text-indigo-600 hover:underline">
-                    Open wallet transactions →
-                </a>
+                <a href="{{ route('admin.wallet.index') }}" class="text-sm font-medium text-amber-700 hover:underline">Open wallet transactions →</a>
+                <div class="learn-stat__label mt-1">Full Ledger</div>
             </div>
-            <div class="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                <iconify-icon icon="fa-solid:wallet" class="text-indigo-600 text-xl"></iconify-icon>
-            </div>
+            <span class="learn-stat__icon text-base text-amber-600"><iconify-icon icon="fa-solid:wallet"></iconify-icon></span>
         </div>
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
 
         {{-- Add Fund Form --}}
-        <div class="xl:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="xl:col-span-2 learn-panel overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-100">
                 <h6 class="font-semibold text-gray-800">Credit Mentee Wallet</h6>
                 <p class="text-xs text-gray-400 mt-0.5">Search a mentee, enter amount and reason</p>
@@ -102,7 +89,7 @@
                         <input type="text" id="mentee-search" autocomplete="off"
                                value="{{ $selectedName }}"
                                placeholder="Search by name, email or phone…"
-                               class="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                               class="learn-focus w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 outline-none">
                         <div id="mentee-dropdown"
                              class="hidden absolute z-20 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg"></div>
                     </div>
@@ -142,7 +129,7 @@
                         <input type="number" name="amount" step="0.01" min="0.01" max="1000000" required
                                value="{{ old('amount') }}"
                                placeholder="0.00"
-                               class="w-full text-sm border border-gray-200 rounded-xl pl-7 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                               class="learn-focus w-full text-sm border border-gray-200 rounded-xl pl-7 pr-3 py-2.5 outline-none">
                     </div>
                     <div class="flex flex-wrap gap-2 mt-2">
                         @foreach([100, 250, 500, 1000, 2000] as $quick)
@@ -161,12 +148,11 @@
                     <input type="text" name="description" required maxlength="255"
                            value="{{ old('description') }}"
                            placeholder="e.g. Promo credit, support compensation, manual top-up"
-                           class="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                           class="learn-focus w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 outline-none">
                     @error('description')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
 
-                <button type="submit"
-                        class="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors">
+                <button type="submit" class="learn-btn-primary w-full justify-center !py-3">
                     <iconify-icon icon="fa-solid:plus-circle"></iconify-icon>
                     Add Fund
                 </button>
@@ -174,7 +160,7 @@
         </div>
 
         {{-- Recent history --}}
-        <div class="xl:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-w-0">
+        <div class="xl:col-span-3 learn-panel overflow-hidden min-w-0">
             <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <div>
                     <h6 class="font-semibold text-gray-800">Recent Admin Fund Credits</h6>

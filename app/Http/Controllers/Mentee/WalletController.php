@@ -168,55 +168,83 @@ class WalletController extends Controller
      */
     public function verifyTopup(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'razorpay_payment_id' => 'required|string',
             'razorpay_order_id'   => 'required|string',
             'razorpay_signature'  => 'required|string',
-            'amount'              => 'required|numeric',
+            'amount'              => 'required|numeric|min:1',
         ]);
 
-        // Verify signature
         $creds = $this->razorpayCredentials();
+        if (($creds['secret'] ?? '') === '') {
+            return response()->json(['message' => 'Payment gateway is not configured.'], 503);
+        }
+
         $expectedSig = hash_hmac(
             'sha256',
-            $request->razorpay_order_id.'|'.$request->razorpay_payment_id,
+            $data['razorpay_order_id'].'|'.$data['razorpay_payment_id'],
             $creds['secret']
         );
 
-        if ($expectedSig !== $request->razorpay_signature) {
+        if (! hash_equals($expectedSig, $data['razorpay_signature'])) {
             return response()->json(['message' => 'Payment verification failed.'], 422);
         }
 
-        $user          = auth()->user();
-        $amount        = $request->amount;   // in rupees
-        $balanceBefore = $user->wallet_balance;
+        $user = auth()->user();
+        $amount = round((float) $data['amount'], 2);
+        $paymentId = $data['razorpay_payment_id'];
 
-        $user->increment('wallet_balance', $amount);
+        // Idempotent: same Razorpay payment already credited
+        $existing = WalletTransaction::where('user_id', $user->id)
+            ->where('reference', $paymentId)
+            ->where('type', 'credit')
+            ->where('status', 'completed')
+            ->first();
 
-        WalletTransaction::create([
-            'user_id'        => $user->id,
-            'type'           => 'credit',
-            'amount'         => $amount,
-            'balance_before' => $balanceBefore,
-            'balance_after'  => $user->fresh()->wallet_balance,
-            'description'    => 'Wallet top-up via Razorpay',
-            'reference'      => $request->razorpay_payment_id,
-            'status'         => 'completed',
-        ]);
+        if ($existing) {
+            return response()->json([
+                'message' => 'Wallet already credited for this payment.',
+                'balance' => round((float) $user->fresh()->wallet_balance, 2),
+            ]);
+        }
+
+        try {
+            $user->creditWallet(
+                $amount,
+                'Wallet top-up via Razorpay',
+                [
+                    'reference' => $paymentId,
+                    'meta' => [
+                        'razorpay_order_id' => $data['razorpay_order_id'],
+                        'razorpay_payment_id' => $paymentId,
+                        'source' => 'web_wallet_topup',
+                    ],
+                ]
+            );
+        } catch (\Throwable $e) {
+            Log::error('Wallet credit after Razorpay verify failed.', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Payment verified but wallet credit failed. Contact support with payment id: '.$paymentId,
+            ], 500);
+        }
 
         $notifications = app(\App\Services\NotificationService::class);
         $notifications->send(
             $user,
             'wallet_topup',
             'Wallet credited',
-            '₹'.number_format((float) $amount, 0).' was added to your wallet.',
-            ['amount' => $amount, 'reference' => $request->razorpay_payment_id],
+            '₹'.number_format($amount, 0).' was added to your wallet.',
+            ['amount' => $amount, 'reference' => $paymentId],
             $notifications->roleUrl($user, 'wallet')
         );
 
         return response()->json([
-            'message' => "₹" . number_format($amount, 0) . " added to your wallet!",
-            'balance' => $user->fresh()->wallet_balance,
+            'message' => '₹'.number_format($amount, 0).' added to your wallet!',
+            'balance' => round((float) $user->fresh()->wallet_balance, 2),
         ]);
     }
 

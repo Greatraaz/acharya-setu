@@ -9,11 +9,11 @@
     @csrf
     @if($isEdit) @method('PUT') @endif
 
-    <div class="bg-white border border-gray-200 rounded-2xl p-6 space-y-5">
+    <div class="learn-panel p-6 space-y-5">
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Offer Title *</label>
             <input type="text" name="title" value="{{ old('title', $offer->title ?? '') }}" required
-                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                   class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm learn-focus outline-none"
                    placeholder="e.g. Welcome ₹500 credit">
             @error('title')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
         </div>
@@ -21,7 +21,7 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5">Audience *</label>
             <select name="audience" id="offer-audience" required
-                    class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm bg-white learn-focus outline-none">
                 <option value="{{ \App\Models\Offer::AUDIENCE_NEW_JOINEE }}" @selected($audience === \App\Models\Offer::AUDIENCE_NEW_JOINEE)>
                     New joinee — auto wallet credit on onboarding
                 </option>
@@ -41,7 +41,7 @@
 
             <div class="relative">
                 <input type="text" id="mentee-search" autocomplete="off"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm learn-focus outline-none"
                        placeholder="Type to search mentees…">
                 <div id="mentee-dropdown"
                      class="hidden absolute z-20 left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg"></div>
@@ -60,7 +60,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Coupon Code</label>
                 <input type="text" name="coupon_code" value="{{ old('coupon_code', $offer->coupon_code ?? '') }}"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm uppercase learn-focus outline-none"
                        placeholder="Leave blank to auto-generate">
                 @error('coupon_code')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
@@ -70,14 +70,14 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Usage Limit *</label>
                     <input type="number" name="usage_limit" min="1" id="offer-usage-limit"
                            value="{{ old('usage_limit', $offer->usage_limit ?? 1) }}"
-                           class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm learn-focus outline-none">
                     @error('usage_limit')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Min. Session Booking (₹) *</label>
                     <input type="number" name="min_session_amount" min="0" step="0.01" id="offer-min-session"
                            value="{{ old('min_session_amount', $offer->min_session_amount ?? 0) }}"
-                           class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                           class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm learn-focus outline-none">
                     @error('min_session_amount')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
                 </div>
             </div>
@@ -90,13 +90,13 @@
                 </label>
                 <input type="number" name="amount" min="1" step="0.01" required
                        value="{{ old('amount', $offer->amount ?? '') }}"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm learn-focus outline-none">
                 @error('amount')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
                 <label class="inline-flex items-center gap-2 mt-2 text-sm text-gray-700">
-                    <input type="checkbox" name="is_active" value="1" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    <input type="checkbox" name="is_active" value="1" class="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
                            @checked(old('is_active', $offer->is_active ?? true))>
                     Active
                 </label>
@@ -108,14 +108,14 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Start Date *</label>
                 <input type="date" name="starts_at" required
                        value="{{ old('starts_at', optional($offer->starts_at)->format('Y-m-d') ?? now()->toDateString()) }}"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm learn-focus outline-none">
                 @error('starts_at')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Expiry Date *</label>
                 <input type="date" name="expires_at" required
                        value="{{ old('expires_at', optional($offer->expires_at)->format('Y-m-d') ?? now()->addMonth()->toDateString()) }}"
-                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       class="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm learn-focus outline-none">
                 @error('expires_at')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
         </div>
@@ -132,8 +132,8 @@
     </div>
 
     <div class="flex items-center justify-end gap-3">
-        <a href="{{ route('admin.offers.index') }}" class="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50">Cancel</a>
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition">
+        <a href="{{ route('admin.offers.index') }}" class="learn-btn-ghost">Cancel</a>
+        <button type="submit" class="learn-btn-primary">
             {{ $isEdit ? 'Update Offer' : 'Create Offer' }}
         </button>
     </div>

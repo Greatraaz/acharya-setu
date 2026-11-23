@@ -48,8 +48,8 @@
             <label class="block text-xs font-medium text-gray-500 mb-1">To</label>
             <input type="date" name="to_date" value="{{ request('to_date') }}" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm">
         </div>
-        <button class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl">Filter</button>
-        <a href="{{ route('admin.transactions.index', ['tab' => 'sessions']) }}" class="text-sm border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50">Reset</a>
+        <button type="submit" class="learn-btn-primary">Filter</button>
+        <a href="{{ route('admin.transactions.index', ['tab' => 'sessions']) }}" class="learn-btn-ghost">Reset</a>
     </form>
 </div>
 

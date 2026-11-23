@@ -3,18 +3,24 @@
 @section('heading', 'Transaction Detail')
 @section('content')
 
-<div class="max-w-4xl space-y-5">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-            <a href="{{ route('admin.transactions.index', ['tab' => 'wallet']) }}" class="text-sm text-indigo-600 hover:text-indigo-800">← Back to transactions</a>
-            <h1 class="text-xl font-semibold text-gray-900 mt-1">Transaction #{{ $transaction->id }}</h1>
+<div class="admin-page max-w-4xl space-y-5">
+    <div class="learn-intro">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <span class="learn-eyebrow">Finance · Transaction Detail</span>
+                <h2>Transaction #{{ $transaction->id }}</h2>
+                <p>{{ $transaction->type_label }} · {{ $transaction->category_label }}</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.transactions.index', ['tab' => 'wallet']) }}" class="learn-btn-ghost">← All transactions</a>
+                <span class="text-xs font-medium px-2.5 py-1 rounded-full {{ $transaction->status === 'completed' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }}">
+                    {{ ucfirst($transaction->status) }}
+                </span>
+            </div>
         </div>
-        <span class="text-xs font-medium px-2.5 py-1 rounded-full {{ $transaction->status === 'completed' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }}">
-            {{ ucfirst($transaction->status) }}
-        </span>
     </div>
 
-    <div class="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6">
+    <div class="learn-panel p-5 sm:p-6">
         <div class="flex flex-wrap items-end justify-between gap-4 pb-5 border-b border-gray-100">
             <div>
                 <p class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Amount</p>
@@ -33,7 +39,7 @@
                 <dt class="text-xs text-gray-400 uppercase tracking-wider">User</dt>
                 <dd class="mt-1 font-medium text-gray-900">
                     @if($transaction->user)
-                        <a href="{{ route('admin.wallet.customer.show', $transaction->user->id) }}" class="hover:text-indigo-600">
+                        <a href="{{ route('admin.wallet.customer.show', $transaction->user->id) }}" class="hover:text-amber-700">
                             {{ $transaction->user->name }}
                         </a>
                         <p class="text-xs text-gray-500 font-normal">{{ $transaction->user->email }} · {{ ucfirst($transaction->user->role) }}</p>
@@ -76,7 +82,7 @@
             <div class="sm:col-span-2">
                 <dt class="text-xs text-gray-400 uppercase tracking-wider">Transfer pair</dt>
                 <dd class="mt-1">
-                    <a href="{{ route('admin.transactions.show', $transaction->transferPair) }}" class="text-indigo-600 hover:underline">
+                    <a href="{{ route('admin.transactions.show', $transaction->transferPair) }}" class="text-amber-700 hover:underline">
                         #{{ $transaction->transferPair->id }} — {{ $transaction->transferPair->user?->name }} ({{ $transaction->transferPair->type_label }})
                     </a>
                 </dd>

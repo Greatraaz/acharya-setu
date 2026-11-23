@@ -83,9 +83,8 @@
                 <input type="number" step="0.01" name="max_amount" value="{{ request('max_amount') }}"
                        class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm">
             </div>
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl">Filter</button>
-            <a href="{{ route('admin.transactions.index', ['tab' => 'wallet']) }}"
-               class="text-sm text-gray-600 border border-gray-200 px-3 py-2 rounded-xl hover:bg-gray-50">Reset</a>
+            <button type="submit" class="learn-btn-primary">Filter</button>
+            <a href="{{ route('admin.transactions.index', ['tab' => 'wallet']) }}" class="learn-btn-ghost">Reset</a>
         </div>
     </form>
 </div>
