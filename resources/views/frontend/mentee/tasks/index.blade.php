@@ -2,131 +2,184 @@
 @section('title', 'My Tasks — Vedrix')
 
 @section('content')
-<style>
-    .mentee-task-toolbar {
-        flex-wrap: nowrap;
-        align-items: center;
-        gap: 12px;
-    }
-    .mentee-task-toolbar .session-filter-tabs {
-        flex-wrap: nowrap;
-        flex: 0 0 auto;
-    }
-    .mentee-task-toolbar .mentee-assess-toolbar__search {
-        flex-wrap: nowrap;
-        margin-left: auto;
-    }
-    .mentee-task-card__title-row { display: flex; align-items: flex-start; gap: 10px; }
-    .mentee-task-card__icon { font-size: 18px; line-height: 1.3; flex-shrink: 0; }
-    .mentee-task-card__status.is-wait { color: var(--warning, #f59e0b); }
-    .mentee-task-card__status.is-error { color: var(--error); }
-    @media (max-width: 768px) {
-        .mentee-task-toolbar { flex-wrap: wrap; }
-        .mentee-task-toolbar .mentee-assess-toolbar__search { margin-left: 0; width: 100%; }
-    }
-</style>
+@include('frontend.partials.tasks-premium-ui')
 
-<div class="dash-layout mentee-assess-page">
+@php
+    $summary = $summary ?? ['total' => 0, 'todo' => 0, 'completed' => 0, 'awaiting' => 0];
+    $openCount = max(0, (int) $summary['todo']);
+@endphp
+
+<div class="dash-layout">
     @include('frontend.mentee.partials.sidebar')
 
     <div class="dash-content">
-        <div class="dash-header">
-            <div class="dash-title">My Tasks</div>
-            <div class="dash-subtitle">Tasks assigned by your mentor or Vedrix admin (outside curriculum).</div>
-        </div>
+        <div class="dash-page tasks-premium" style="display:flex;flex-direction:column;gap:1.15rem;">
 
-        @if(session('success'))
-        <div class="alert alert-success" style="margin-bottom:16px;">
-            <span class="alert-icon">✓</span>
-            <div style="font-size:13px;">{{ session('success') }}</div>
-        </div>
-        @endif
-
-        <form method="GET" action="{{ route('mentee.tasks.index') }}" class="mentee-assess-toolbar mentee-task-toolbar">
-            <div class="session-filter-tabs mentee-assess-toolbar__tabs">
-                @foreach(['all' => 'All', 'todo' => 'To do', 'completed' => 'Completed'] as $key => $label)
-                    @php
-                        $tabParams = array_filter([
-                            'status' => $key === 'all' ? null : $key,
-                            'search' => $search ?: null,
-                        ]);
-                    @endphp
-                    <a href="{{ route('mentee.tasks.index', $tabParams) }}"
-                       class="session-filter-tab {{ $status === $key ? 'active' : '' }}">
-                        {{ $label }}
-                    </a>
-                @endforeach
-            </div>
-            <div class="mentee-assess-toolbar__search">
-                @if($status !== 'all')
-                    <input type="hidden" name="status" value="{{ $status }}">
-                @endif
-                <div class="session-search-field mentee-assess-toolbar__field">
-                    <span class="session-search-icon" aria-hidden="true">🔍</span>
-                    <input type="search" name="search" class="form-input" value="{{ $search }}"
-                           placeholder="Search task or mentor…" autocomplete="off" aria-label="Search tasks">
-                </div>
-                <button type="submit" class="btn btn-outline mentee-assess-toolbar__btn">Search</button>
-                @if($search !== '')
-                    <a href="{{ route('mentee.tasks.index', array_filter(['status' => $status === 'all' ? null : $status])) }}" class="btn btn-ghost mentee-assess-toolbar__btn">Clear</a>
-                @endif
-            </div>
-        </form>
-
-        <div class="mentee-assess-list">
-            @forelse($items as $task)
-            @php
-                $uiStatus = $task->uiStatus($task->progress);
-                $statusLabel = match ($uiStatus) {
-                    'awaiting_review' => 'Awaiting review',
-                    'completed' => 'Completed',
-                    'rejected' => 'Changes requested',
-                    default => 'To do',
-                };
-                $statusClass = match ($uiStatus) {
-                    'completed' => 'is-done',
-                    'awaiting_review' => 'is-wait',
-                    'rejected' => 'is-error',
-                    default => 'is-todo',
-                };
-                $desc = trim(preg_replace('/\s+/', ' ', strip_tags((string) ($task->description ?? ''))));
-            @endphp
-            <article class="mentee-assess-card">
-                <div class="mentee-assess-card__body">
-                    <div class="mentee-task-card__title-row">
-                        <span class="mentee-task-card__icon" aria-hidden="true">{{ \App\Models\MenteeTask::TYPE_ICONS[$task->type] ?? '✅' }}</span>
-                        <h3 class="mentee-assess-card__title">{{ $task->title }}</h3>
+            <div class="learn-intro fu">
+                <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start;justify-content:space-between;">
+                    <div>
+                        <span class="learn-eyebrow">Learning · Assignments</span>
+                        <h2>My Tasks</h2>
+                        <p>Mentor and admin assignments outside your curriculum — submit work, track reviews, stay on top of deadlines.</p>
                     </div>
-                    @if($desc !== '')
-                    <p class="mentee-assess-card__desc">{{ $desc }}</p>
+                </div>
+            </div>
+
+            <div class="tp-hero fu">
+                <div class="tp-hero__kicker">Your assignment board</div>
+                <h3 class="tp-hero__title">
+                    @if($openCount > 0)
+                        {{ $openCount }} open task{{ $openCount === 1 ? '' : 's' }} waiting
+                    @elseif(($summary['awaiting'] ?? 0) > 0)
+                        {{ $summary['awaiting'] }} under mentor review
+                    @else
+                        You’re all caught up
                     @endif
-                    <div class="mentee-assess-card__meta">
-                        <span>{{ $task->mentor->name ?? 'Mentor' }}</span>
-                        <span>{{ \App\Models\MenteeTask::TYPES[$task->type] ?? ucfirst((string) $task->type) }}</span>
-                        <span>{{ \App\Models\MenteeTask::SUBMISSION_TYPES[$task->submission_type] ?? $task->submission_type }}</span>
-                        @if($task->due_at)
-                            <span>Due {{ $task->due_at->format('d M Y') }}</span>
-                        @endif
-                        <span class="mentee-assess-card__status mentee-task-card__status {{ $statusClass }}">{{ $statusLabel }}</span>
+                </h3>
+                <p class="tp-hero__sub">Filter by status, search by title or mentor, and open a task to submit your work.</p>
+            </div>
+
+            <div class="dash-grid dash-grid-4 fu">
+                <div class="learn-stat">
+                    <div style="display:flex;justify-content:space-between;gap:.75rem;">
+                        <div>
+                            <div class="learn-stat__value">{{ (int) $summary['total'] }}</div>
+                            <div class="learn-stat__label">Total tasks</div>
+                        </div>
+                        <span class="learn-stat__icon">📋</span>
                     </div>
                 </div>
-                <a href="{{ route('mentee.tasks.show', $task) }}"
-                   class="btn {{ $uiStatus === 'completed' ? 'btn-outline' : 'btn-primary' }} btn-sm mentee-assess-card__cta">
-                    {{ $uiStatus === 'completed' ? 'View' : 'Open' }}
-                </a>
-            </article>
-            @empty
-            <div class="empty-state" style="padding:60px 0;">
-                <div style="font-size:48px;margin-bottom:12px;">✅</div>
-                <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">No tasks found</div>
-                <p style="font-size:13px;color:var(--text-2);max-width:380px;margin:0 auto;">
-                    Try adjusting your filters, or check back when your mentor assigns a new task.
-                </p>
+                <div class="learn-stat">
+                    <div style="display:flex;justify-content:space-between;gap:.75rem;">
+                        <div>
+                            <div class="learn-stat__value" style="color:var(--ln-dark);">{{ (int) $summary['todo'] }}</div>
+                            <div class="learn-stat__label">To do</div>
+                        </div>
+                        <span class="learn-stat__icon">⏳</span>
+                    </div>
+                </div>
+                <div class="learn-stat">
+                    <div style="display:flex;justify-content:space-between;gap:.75rem;">
+                        <div>
+                            <div class="learn-stat__value">{{ (int) ($summary['awaiting'] ?? 0) }}</div>
+                            <div class="learn-stat__label">Awaiting review</div>
+                        </div>
+                        <span class="learn-stat__icon">👀</span>
+                    </div>
+                </div>
+                <div class="learn-stat">
+                    <div style="display:flex;justify-content:space-between;gap:.75rem;">
+                        <div>
+                            <div class="learn-stat__value">{{ (int) $summary['completed'] }}</div>
+                            <div class="learn-stat__label">Completed</div>
+                        </div>
+                        <span class="learn-stat__icon">✅</span>
+                    </div>
+                </div>
             </div>
-            @endforelse
-        </div>
 
-        @include('frontend.partials.pagination', ['paginator' => $items])
+            @if(session('success'))
+            <div class="alert-premium fu" style="border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.1);">
+                <span>✓</span>
+                <div><p>{{ session('success') }}</p></div>
+            </div>
+            @endif
+
+            <form method="GET" action="{{ route('mentee.tasks.index') }}" class="learn-filter-bar fu">
+                <div class="session-filter-tabs">
+                    @foreach(['all' => 'All', 'todo' => 'To do', 'completed' => 'Completed'] as $key => $label)
+                        @php
+                            $tabParams = array_filter([
+                                'status' => $key === 'all' ? null : $key,
+                                'search' => $search ?: null,
+                            ]);
+                            $count = match ($key) {
+                                'todo' => (int) $summary['todo'],
+                                'completed' => (int) $summary['completed'],
+                                default => (int) $summary['total'],
+                            };
+                        @endphp
+                        <a href="{{ route('mentee.tasks.index', $tabParams) }}"
+                           class="session-filter-tab {{ $status === $key ? 'active' : '' }}">
+                            {{ $label }}
+                            <span style="opacity:.8;margin-left:.15rem;">({{ $count }})</span>
+                        </a>
+                    @endforeach
+                </div>
+                <div class="learn-search">
+                    @if($status !== 'all')
+                        <input type="hidden" name="status" value="{{ $status }}">
+                    @endif
+                    <div class="session-search-field">
+                        <span class="session-search-icon" aria-hidden="true">🔍</span>
+                        <input type="search" name="search" class="form-input" value="{{ $search }}"
+                               placeholder="Search task or mentor…" autocomplete="off" aria-label="Search tasks">
+                    </div>
+                    <button type="submit" class="learn-btn-ghost">Search</button>
+                    @if($search !== '')
+                        <a href="{{ route('mentee.tasks.index', array_filter(['status' => $status === 'all' ? null : $status])) }}" class="learn-btn-ghost">Clear</a>
+                    @endif
+                </div>
+            </form>
+
+            <div class="learn-list fu">
+                @forelse($items as $task)
+                @php
+                    $uiStatus = $task->uiStatus($task->progress);
+                    $statusLabel = match ($uiStatus) {
+                        'awaiting_review' => 'Awaiting review',
+                        'completed' => 'Completed',
+                        'rejected' => 'Changes requested',
+                        default => 'To do',
+                    };
+                    $chipClass = match ($uiStatus) {
+                        'completed' => 'learn-chip--done',
+                        'awaiting_review' => 'learn-chip--wait',
+                        'rejected' => 'learn-chip--error',
+                        default => 'learn-chip--todo',
+                    };
+                    $desc = trim(preg_replace('/\s+/', ' ', strip_tags((string) ($task->description ?? ''))));
+                    $isOverdue = $task->due_at && $task->due_at->isPast() && ! in_array($uiStatus, ['completed', 'awaiting_review'], true);
+                @endphp
+                <article class="tp-card">
+                    <span class="tp-card__icon" aria-hidden="true">{{ \App\Models\MenteeTask::TYPE_ICONS[$task->type] ?? '✅' }}</span>
+                    <div style="min-width:0;">
+                        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;">
+                            <h3 class="tp-card__title">{{ $task->title }}</h3>
+                            <span class="learn-chip {{ $chipClass }}">{{ $statusLabel }}</span>
+                        </div>
+                        @if($desc !== '')
+                            <p class="tp-card__desc">{{ \Illuminate\Support\Str::limit($desc, 150) }}</p>
+                        @endif
+                        <div class="tp-card__meta">
+                            <span>👤 {{ $task->mentor->name ?? 'Mentor' }}</span>
+                            <span>{{ \App\Models\MenteeTask::TYPES[$task->type] ?? ucfirst((string) $task->type) }}</span>
+                            <span>{{ \App\Models\MenteeTask::SUBMISSION_TYPES[$task->submission_type] ?? $task->submission_type }}</span>
+                            @if($task->due_at)
+                                <span class="tp-due {{ $isOverdue ? 'is-overdue' : '' }}">
+                                    {{ $isOverdue ? 'Overdue' : 'Due' }} {{ $task->due_at->format('d M Y') }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="tp-card__cta">
+                        <a href="{{ route('mentee.tasks.show', $task) }}"
+                           class="{{ $uiStatus === 'completed' ? 'learn-btn-ghost' : 'learn-btn-primary' }}">
+                            {{ $uiStatus === 'completed' ? 'View' : ($uiStatus === 'awaiting_review' ? 'Track' : 'Open') }}
+                        </a>
+                    </div>
+                </article>
+                @empty
+                <div class="learn-panel empty-block">
+                    <div class="icon">✅</div>
+                    <div style="font-family:var(--font-head);font-weight:800;font-size:1.05rem;color:var(--text);margin-bottom:.3rem;">No tasks found</div>
+                    <p>Try adjusting your filters, or check back when your mentor assigns a new task.</p>
+                </div>
+                @endforelse
+            </div>
+
+            @include('frontend.partials.pagination', ['paginator' => $items])
+        </div>
     </div>
 </div>
 @endsection

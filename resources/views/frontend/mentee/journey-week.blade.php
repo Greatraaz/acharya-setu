@@ -2,220 +2,271 @@
 @section('title', ($week->title ?: 'Week '.$week->week_number).' — Journey')
 
 @section('content')
-<div class="dash-layout journey-page">
+@include('frontend.partials.journey-premium-ui')
+
+<div class="dash-layout">
     @include('frontend.mentee.partials.sidebar')
 
     <div class="dash-content">
-        <div class="dash-header journey-page__header">
-            <nav class="journey-page__breadcrumbs" aria-label="Breadcrumb">
-                <a href="{{ route('mentee.journey.index') }}">My Journey</a>
-                <span class="journey-page__breadcrumb-sep">/</span>
-                <a href="{{ route('mentee.journey.month', $week->month_id) }}">Month {{ $week->month->month_number ?? '' }}</a>
-                <span class="journey-page__breadcrumb-sep">/</span>
-                <span class="journey-page__breadcrumb-current">Week {{ $week->week_number }}</span>
-            </nav>
-            <div class="dash-title journey-page__title">{{ $week->title ?: 'Week '.$week->week_number }}</div>
-            <div class="dash-subtitle journey-page__subtitle">{{ $week->focus ?: 'Tasks and quizzes for this week' }}</div>
-        </div>
+        <div class="dash-page journey-premium" style="display:flex;flex-direction:column;gap:1.15rem;">
 
-        @if($canViewProgress ?? false)
-        <div class="card journey-page__progress-card">
-            <div class="journey-page__progress-head">
-                <span>Week progress</span>
-                <span>{{ (int) ($progress['percent'] ?? 0) }}%</span>
+            <div class="learn-intro fu">
+                <nav class="jp-crumb" aria-label="Breadcrumb">
+                    <a href="{{ route('mentee.journey.index') }}">My Journey</a>
+                    <span class="jp-crumb__sep">/</span>
+                    <a href="{{ route('mentee.journey.month', $week->month_id) }}">Month {{ $week->month->month_number ?? '' }}</a>
+                    <span class="jp-crumb__sep">/</span>
+                    <span class="jp-crumb__now">Week {{ $week->week_number }}</span>
+                </nav>
+                <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start;justify-content:space-between;">
+                    <div>
+                        <span class="learn-eyebrow">Week {{ $week->week_number }}</span>
+                        <h2>{{ $week->title ?: 'Week '.$week->week_number }}</h2>
+                        <p>{{ $week->focus ?: 'Tasks and practice quizzes for this week — submit work for mentor review.' }}</p>
+                    </div>
+                    <a href="{{ route('mentee.journey.month', $week->month_id) }}" class="learn-btn-ghost">← Month</a>
+                </div>
             </div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width:{{ (int) ($progress['percent'] ?? 0) }}%"></div>
-            </div>
-        </div>
-        @else
-        <div class="alert alert-warning journey-page__alert">
-            <span class="alert-icon">🔒</span>
-            <div class="journey-page__alert-body">
-                You can work on tasks and MCQs. Scores, past submissions, and completion status stay hidden until you upgrade.
-                <a href="{{ route('mentee.plans') }}">View plans →</a>
-            </div>
-        </div>
-        @endif
 
-        <div class="card journey-page__section">
-            <h3 class="journey-page__section-title">Tasks</h3>
-            @forelse($week->tasks as $task)
-            @php
-                $taskEid = encrypt_id($task->id);
-                $taskProgress = ($canViewProgress ?? false) ? ($taskProgressById[$task->id] ?? null) : null;
-                $done = ($canViewProgress ?? false) && (($taskProgress?->is_completed) || in_array($task->id, $completedTaskIds ?? [], true));
-                $awaiting = ($canViewProgress ?? false) && $taskProgress && $taskProgress->submission_status === 'submitted' && ! $taskProgress->is_completed;
-                $rejected = ($canViewProgress ?? false) && $taskProgress && $taskProgress->submission_status === 'rejected';
-                $needsSubmission = $task->submission_type && $task->submission_type !== 'none';
-            @endphp
-            <div class="journey-page__item-card" id="task-{{ $task->id }}">
-                <div class="journey-page__item-row">
-                    <div class="journey-page__item-body">
-                        <div class="journey-page__item-head">
-                            <span class="journey-page__item-icon">{{ \App\Models\CurriculumTask::TYPE_ICONS[$task->type] ?? '✅' }}</span>
-                            <h4 class="journey-page__item-title">{{ $task->title }}</h4>
-                            @if($done)<span class="session-status completed">Approved</span>
-                            @elseif($awaiting)<span class="session-status pending">Under review</span>
-                            @elseif($rejected)<span class="session-status cancelled">Needs revision</span>
-                            @endif
-                        </div>
-                        @if($task->description)
-                        <p class="journey-page__item-desc">{{ $task->description }}</p>
-                        @endif
-                        @if(!empty($task->attachments))
-                        <div class="journey-page__task-attachments" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
-                            @foreach($task->attachments as $attachment)
-                                <a href="{{ $attachment['url'] ?? '#' }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
-                                    📎 {{ \Illuminate\Support\Str::limit($attachment['name'] ?? 'Attachment', 36) }}
-                                </a>
-                            @endforeach
-                        </div>
-                        @endif
-                        <div class="journey-page__item-meta">
-                            {{ ucfirst($task->type ?? 'task') }}
-                            @if($task->estimated_minutes) · {{ $task->estimated_minutes }} min @endif
-                            @if($task->is_required) · Required @endif
-                            @if($needsSubmission) · Submit {{ $task->submission_type }} @endif
-                        </div>
-                        @if($canViewProgress && $taskProgress?->mentor_feedback)
-                        <div class="journey-page__mentor-reply" style="margin-top:10px;">
-                            <strong>Mentor feedback:</strong>
-                            <p>{{ $taskProgress->mentor_feedback }}</p>
-                        </div>
-                        @endif
+            @if($canViewProgress ?? false)
+            <div class="jp-hero fu">
+                <div class="jp-hero__kicker">Week progress</div>
+                <h3 class="jp-hero__title">{{ (int) ($progress['percent'] ?? 0) }}% complete</h3>
+                <p class="jp-hero__sub">Keep finishing tasks and MCQs to move the needle this week.</p>
+                <div class="jp-hero__progress">
+                    <div class="jp-hero__bar"><span style="width:{{ (int) ($progress['percent'] ?? 0) }}%"></span></div>
+                </div>
+            </div>
 
-                        @if($canViewProgress && $taskProgress && ($taskProgress->submission_text || $taskProgress->submission_url) && ($done || $awaiting || $rejected))
-                        <div class="journey-page__your-submission" style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);">
-                            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);margin-bottom:8px;">Your submission</div>
-                            @if($taskProgress->submission_text)
-                            <div style="font-size:13px;color:var(--text-2);white-space:pre-wrap;margin-bottom:{{ $taskProgress->submission_url ? '10px' : '0' }};">{{ $taskProgress->submission_text }}</div>
-                            @endif
-                            @if($taskProgress->submission_url)
-                            <a href="{{ $taskProgress->submissionLink() }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
-                                📎 Open submitted {{ in_array($task->submission_type, ['link', 'url'], true) ? 'link' : 'file' }}
-                            </a>
-                            @endif
-                        </div>
-                        @endif
+            <div class="dash-grid dash-grid-4 fu" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+                <div class="learn-stat">
+                    <div class="learn-stat__value">{{ $week->tasks->count() }}</div>
+                    <div class="learn-stat__label">Tasks</div>
+                </div>
+                <div class="learn-stat">
+                    <div class="learn-stat__value">{{ $week->mcqs->count() }}</div>
+                    <div class="learn-stat__label">Practice MCQs</div>
+                </div>
+                <div class="learn-stat">
+                    <div class="learn-stat__value" style="color:var(--ln-dark);">{{ (int) ($progress['percent'] ?? 0) }}%</div>
+                    <div class="learn-stat__label">Done</div>
+                </div>
+            </div>
+            @else
+            <div class="alert-premium fu">
+                <span>🔒</span>
+                <div>
+                    <strong>Scores stay hidden until you upgrade</strong>
+                    <p>You can still work on tasks and MCQs.
+                        <a href="{{ route('mentee.plans') }}" class="dash-link">View plans →</a>
+                    </p>
+                </div>
+            </div>
+            @endif
+
+            <div class="learn-panel panel-pad fu">
+                <div class="panel-head">
+                    <div>
+                        <h3 class="dash-section-title">Tasks</h3>
+                        <p class="dash-section-sub">Submit work for mentor review</p>
                     </div>
                 </div>
 
-                @unless($done || $awaiting)
-                    @if($needsSubmission)
-                    <div class="journey-page__task-submit" style="margin-top:12px;display:grid;gap:10px;">
-                        @if(in_array($task->submission_type, ['text', 'reflection'], true))
-                            <textarea id="task-text-{{ $taskEid }}" class="form-input" rows="3" placeholder="Write your submission…">{{ $taskProgress->submission_text ?? '' }}</textarea>
-                        @elseif(in_array($task->submission_type, ['link', 'url'], true))
-                            <input type="url" id="task-url-{{ $taskEid }}" class="form-input" placeholder="https://…" value="{{ $taskProgress->submission_url ?? '' }}">
-                        @elseif(in_array($task->submission_type, ['file', 'pdf'], true))
-                            <input type="file" id="task-file-{{ $taskEid }}" class="form-input">
-                            @if($taskProgress?->submission_url)
-                                <a href="{{ $taskProgress->submissionLink() }}" target="_blank" rel="noopener" style="font-size:12px;color:var(--brand);">Previous file</a>
+                @forelse($week->tasks as $task)
+                @php
+                    $taskEid = encrypt_id($task->id);
+                    $taskProgress = ($canViewProgress ?? false) ? ($taskProgressById[$task->id] ?? null) : null;
+                    $done = ($canViewProgress ?? false) && (($taskProgress?->is_completed) || in_array($task->id, $completedTaskIds ?? [], true));
+                    $awaiting = ($canViewProgress ?? false) && $taskProgress && $taskProgress->submission_status === 'submitted' && ! $taskProgress->is_completed;
+                    $rejected = ($canViewProgress ?? false) && $taskProgress && $taskProgress->submission_status === 'rejected';
+                    $needsSubmission = $task->submission_type && $task->submission_type !== 'none';
+                @endphp
+                <div class="jp-item" id="task-{{ $task->id }}">
+                    <div class="jp-item__head">
+                        <span class="jp-item__icon">{{ \App\Models\CurriculumTask::TYPE_ICONS[$task->type] ?? '✅' }}</span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;">
+                                <h4 class="jp-item__title">{{ $task->title }}</h4>
+                                @if($done)<span class="learn-chip learn-chip--done">Approved</span>
+                                @elseif($awaiting)<span class="learn-chip learn-chip--wait">Under review</span>
+                                @elseif($rejected)<span class="learn-chip learn-chip--error">Needs revision</span>
+                                @endif
+                            </div>
+                            @if($task->description)
+                                <p class="jp-item__desc">{{ $task->description }}</p>
                             @endif
+                            @if(!empty($task->attachments))
+                                <div style="margin-top:.65rem;display:flex;flex-wrap:wrap;gap:.45rem;">
+                                    @foreach($task->attachments as $attachment)
+                                        <a href="{{ $attachment['url'] ?? '#' }}" target="_blank" rel="noopener" class="learn-btn-ghost" style="padding:.35rem .65rem;font-size:.72rem;">
+                                            📎 {{ \Illuminate\Support\Str::limit($attachment['name'] ?? 'Attachment', 36) }}
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @endif
+                            <div class="jp-item__meta">
+                                {{ ucfirst($task->type ?? 'task') }}
+                                @if($task->estimated_minutes) · {{ $task->estimated_minutes }} min @endif
+                                @if($task->is_required) · Required @endif
+                                @if($needsSubmission) · Submit {{ $task->submission_type }} @endif
+                            </div>
+
+                            @if($canViewProgress && $taskProgress?->mentor_feedback)
+                                <div class="jp-feedback">
+                                    <strong>Mentor feedback</strong>
+                                    {{ $taskProgress->mentor_feedback }}
+                                </div>
+                            @endif
+
+                            @if($canViewProgress && $taskProgress && ($taskProgress->submission_text || $taskProgress->submission_url) && ($done || $awaiting || $rejected))
+                                <div class="jp-feedback" style="background:var(--bg-2);border-color:var(--card-border);">
+                                    <strong>Your submission</strong>
+                                    @if($taskProgress->submission_text)
+                                        <div style="white-space:pre-wrap;margin-bottom:{{ $taskProgress->submission_url ? '.5rem' : '0' }};">{{ $taskProgress->submission_text }}</div>
+                                    @endif
+                                    @if($taskProgress->submission_url)
+                                        <a href="{{ $taskProgress->submissionLink() }}" target="_blank" rel="noopener" class="learn-btn-ghost" style="padding:.35rem .65rem;font-size:.72rem;">
+                                            📎 Open submitted {{ in_array($task->submission_type, ['link', 'url'], true) ? 'link' : 'file' }}
+                                        </a>
+                                    @endif
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    @unless($done || $awaiting)
+                        @if($needsSubmission)
+                            <div class="jp-submit-box">
+                                @if(in_array($task->submission_type, ['text', 'reflection'], true))
+                                    <textarea id="task-text-{{ $taskEid }}" class="form-input" rows="3" placeholder="Write your submission…">{{ $taskProgress->submission_text ?? '' }}</textarea>
+                                @elseif(in_array($task->submission_type, ['link', 'url'], true))
+                                    <input type="url" id="task-url-{{ $taskEid }}" class="form-input" placeholder="https://…" value="{{ $taskProgress->submission_url ?? '' }}">
+                                @elseif(in_array($task->submission_type, ['file', 'pdf'], true))
+                                    <input type="file" id="task-file-{{ $taskEid }}" class="form-input">
+                                    @if($taskProgress?->submission_url)
+                                        <a href="{{ $taskProgress->submissionLink() }}" target="_blank" rel="noopener" class="dash-link">Previous file</a>
+                                    @endif
+                                @else
+                                    <textarea id="task-text-{{ $taskEid }}" class="form-input" rows="3" placeholder="Notes / response…">{{ $taskProgress->submission_text ?? '' }}</textarea>
+                                    <input type="url" id="task-url-{{ $taskEid }}" class="form-input" placeholder="Optional link https://…" value="{{ $taskProgress->submission_url ?? '' }}">
+                                    <input type="file" id="task-file-{{ $taskEid }}" class="form-input">
+                                @endif
+                                <button type="button" class="learn-btn-primary" style="justify-self:start;" onclick="submitTask('{{ $taskEid }}', '{{ $task->submission_type }}', this)">
+                                    {{ $rejected ? 'Resubmit for review' : 'Submit for review' }}
+                                </button>
+                            </div>
                         @else
-                            <textarea id="task-text-{{ $taskEid }}" class="form-input" rows="3" placeholder="Notes / response…">{{ $taskProgress->submission_text ?? '' }}</textarea>
-                            <input type="url" id="task-url-{{ $taskEid }}" class="form-input" placeholder="Optional link https://…" value="{{ $taskProgress->submission_url ?? '' }}">
-                            <input type="file" id="task-file-{{ $taskEid }}" class="form-input">
+                            <div style="margin-top:.85rem;">
+                                <button type="button" class="learn-btn-primary" onclick="completeTask('{{ $taskEid }}', this)">
+                                    {{ ($canViewProgress ?? false) ? 'Mark done' : 'Submit' }}
+                                </button>
+                            </div>
                         @endif
-                        <button type="button" class="btn btn-primary btn-sm journey-page__item-action" onclick="submitTask('{{ $taskEid }}', '{{ $task->submission_type }}', this)">
-                            {{ $rejected ? 'Resubmit for review' : 'Submit for review' }}
-                        </button>
-                    </div>
-                    @else
-                    <div style="margin-top:12px;">
-                        <button type="button" class="btn btn-primary btn-sm journey-page__item-action" onclick="completeTask('{{ $taskEid }}', this)">
-                            {{ ($canViewProgress ?? false) ? 'Mark done' : 'Submit' }}
-                        </button>
-                    </div>
-                    @endif
-                @endunless
+                    @endunless
+                </div>
+                @empty
+                <div class="empty-block" style="padding:1.25rem;">
+                    <p>No tasks for this week.</p>
+                </div>
+                @endforelse
             </div>
-            @empty
-            <p class="journey-page__empty">No tasks for this week.</p>
-            @endforelse
-        </div>
 
-        <div class="card journey-page__section journey-page__section--last">
-            <h3 class="journey-page__section-title">Practice MCQs</h3>
-            @forelse($week->mcqs as $mcq)
-            @php
-                $mcqEid = encrypt_id($mcq->id);
-                $attempt = ($canViewProgress ?? false) ? ($mcqAttempts[$mcq->id] ?? null) : null;
-                $mcqProgress = ($canViewProgress ?? false) ? ($mcqProgressById[$mcq->id] ?? null) : null;
-                $mcqApproved = $mcqProgress?->is_completed || $mcqProgress?->submission_status === 'approved';
-                $mcqAwaiting = $mcqProgress?->submission_status === 'submitted' && ! $mcqProgress?->is_completed;
-                $mcqRejected = $mcqProgress?->submission_status === 'rejected';
-                $options = is_array($mcq->options) ? $mcq->options : [];
-            @endphp
-            <div class="journey-page__item-card" id="mcq-{{ $mcq->id }}">
-                <div class="journey-page__item-head" style="margin-bottom:8px;">
-                    <p class="journey-page__mcq-question" style="margin:0;flex:1;">{{ $mcq->question }}</p>
-                    @if($mcqApproved)<span class="session-status completed">Approved</span>
-                    @elseif($mcqAwaiting)<span class="session-status pending">Under review</span>
-                    @elseif($mcqRejected)<span class="session-status cancelled">Needs revision</span>
-                    @endif
-                </div>
-                <div class="journey-page__mcq-options" data-mcq-options="{{ $mcqEid }}">
-                    @foreach($options as $idx => $option)
-                    @php
-                        $isSelected = $attempt && (int) $attempt->selected_index === (int) $idx;
-                        $isCorrectOption = $mcqApproved && (int) $mcq->correct_index === (int) $idx;
-                        $showSelected = $isSelected && ($mcqAwaiting || $mcqRejected || $mcqApproved);
-                    @endphp
-                    <button type="button"
-                        class="btn btn-ghost journey-page__mcq-option {{ $isCorrectOption ? 'is-correct' : '' }} {{ $showSelected && ! $isCorrectOption ? 'is-selected' : '' }}"
-                        @if($mcqApproved || $mcqAwaiting) disabled @endif
-                        onclick="answerMcq('{{ $mcqEid }}', {{ (int)$idx }}, this)">
-                        <span class="journey-page__mcq-option-label">{{ chr(65 + (int)$idx) }}.</span>
-                        <span class="journey-page__mcq-option-text">{{ is_array($option) ? ($option['text'] ?? json_encode($option)) : $option }}</span>
-                        @if($isCorrectOption)
-                            <span class="journey-page__mcq-option-tag">Correct</span>
-                        @elseif($showSelected)
-                            <span class="journey-page__mcq-option-tag journey-page__mcq-option-tag--selected">Your answer</span>
-                        @endif
-                    </button>
-                    @endforeach
-                </div>
-                <div class="journey-page__mcq-result" data-mcq-result="{{ $mcqEid }}">
-                    @if($mcqAwaiting)
-                        <span class="journey-page__mcq-result--neutral">Answer submitted — waiting for mentor review</span>
-                        @if($attempt)
-                        <p class="journey-page__mcq-explanation">
-                            You selected:
-                            <strong>{{ is_array($options[$attempt->selected_index] ?? null) ? ($options[$attempt->selected_index]['text'] ?? '') : ($options[$attempt->selected_index] ?? '—') }}</strong>
-                        </p>
-                        @endif
-                    @elseif($mcqApproved)
-                        <span class="journey-page__mcq-result--correct">
-                            Approved by mentor
-                            @if($attempt && (int) $attempt->points_earned > 0)
-                                · +{{ $attempt->points_earned }} pts
-                            @endif
-                        </span>
-                        @if($mcq->explanation)
-                        <p class="journey-page__mcq-explanation">{{ $mcq->explanation }}</p>
-                        @endif
-                    @elseif($mcqRejected)
-                        <span class="journey-page__mcq-result--wrong">Mentor requested changes — pick an answer and resubmit</span>
-                        @if($attempt)
-                        <p class="journey-page__mcq-explanation">
-                            Previous answer:
-                            <strong>{{ is_array($options[$attempt->selected_index] ?? null) ? ($options[$attempt->selected_index]['text'] ?? '') : ($options[$attempt->selected_index] ?? '—') }}</strong>
-                        </p>
-                        @endif
-                    @endif
-                    @if($canViewProgress && $mcqProgress?->mentor_feedback)
-                    <div class="journey-page__mentor-reply" style="margin-top:8px;">
-                        <strong>Mentor feedback:</strong>
-                        <p>{{ $mcqProgress->mentor_feedback }}</p>
+            <div class="learn-panel panel-pad fu">
+                <div class="panel-head">
+                    <div>
+                        <h3 class="dash-section-title">Practice MCQs</h3>
+                        <p class="dash-section-sub">Choose an answer and submit for mentor review</p>
                     </div>
-                    @endif
                 </div>
+
+                @forelse($week->mcqs as $mcq)
+                @php
+                    $mcqEid = encrypt_id($mcq->id);
+                    $attempt = ($canViewProgress ?? false) ? ($mcqAttempts[$mcq->id] ?? null) : null;
+                    $mcqProgress = ($canViewProgress ?? false) ? ($mcqProgressById[$mcq->id] ?? null) : null;
+                    $mcqApproved = $mcqProgress?->is_completed || $mcqProgress?->submission_status === 'approved';
+                    $mcqAwaiting = $mcqProgress?->submission_status === 'submitted' && ! $mcqProgress?->is_completed;
+                    $mcqRejected = $mcqProgress?->submission_status === 'rejected';
+                    $options = is_array($mcq->options) ? $mcq->options : [];
+                @endphp
+                <div class="jp-item" id="mcq-{{ $mcq->id }}">
+                    <div class="jp-item__head" style="margin-bottom:.65rem;">
+                        <span class="jp-item__icon">🧠</span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;flex-wrap:wrap;align-items:flex-start;gap:.5rem;">
+                                <p class="jp-item__title" style="flex:1;">{{ $mcq->question }}</p>
+                                @if($mcqApproved)<span class="learn-chip learn-chip--done">Approved</span>
+                                @elseif($mcqAwaiting)<span class="learn-chip learn-chip--wait">Under review</span>
+                                @elseif($mcqRejected)<span class="learn-chip learn-chip--error">Needs revision</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <div data-mcq-options="{{ $mcqEid }}">
+                        @foreach($options as $idx => $option)
+                        @php
+                            $isSelected = $attempt && (int) $attempt->selected_index === (int) $idx;
+                            $isCorrectOption = $mcqApproved && (int) $mcq->correct_index === (int) $idx;
+                            $showSelected = $isSelected && ($mcqAwaiting || $mcqRejected || $mcqApproved);
+                        @endphp
+                        <button type="button"
+                            class="jp-mcq-option {{ $isCorrectOption ? 'is-correct' : '' }} {{ $showSelected && ! $isCorrectOption ? 'is-selected' : '' }}"
+                            @if($mcqApproved || $mcqAwaiting) disabled @endif
+                            onclick="answerMcq('{{ $mcqEid }}', {{ (int)$idx }}, this)">
+                            <span class="jp-mcq-letter">{{ chr(65 + (int)$idx) }}</span>
+                            <span>{{ is_array($option) ? ($option['text'] ?? json_encode($option)) : $option }}</span>
+                            @if($isCorrectOption)
+                                <span class="jp-mcq-tag">Correct</span>
+                            @elseif($showSelected)
+                                <span class="jp-mcq-tag">Your answer</span>
+                            @endif
+                        </button>
+                        @endforeach
+                    </div>
+
+                    <div class="jp-result" data-mcq-result="{{ $mcqEid }}">
+                        @if($mcqAwaiting)
+                            <span class="jp-result--wait">Answer submitted — waiting for mentor review</span>
+                            @if($attempt)
+                            <p style="margin:.35rem 0 0;font-size:.78rem;color:var(--text-2);">
+                                You selected:
+                                <strong>{{ is_array($options[$attempt->selected_index] ?? null) ? ($options[$attempt->selected_index]['text'] ?? '') : ($options[$attempt->selected_index] ?? '—') }}</strong>
+                            </p>
+                            @endif
+                        @elseif($mcqApproved)
+                            <span class="jp-result--ok">
+                                Approved by mentor
+                                @if($attempt && (int) $attempt->points_earned > 0)
+                                    · +{{ $attempt->points_earned }} pts
+                                @endif
+                            </span>
+                            @if($mcq->explanation)
+                                <p style="margin:.35rem 0 0;font-size:.78rem;color:var(--text-2);">{{ $mcq->explanation }}</p>
+                            @endif
+                        @elseif($mcqRejected)
+                            <span class="jp-result--bad">Mentor requested changes — pick an answer and resubmit</span>
+                            @if($attempt)
+                            <p style="margin:.35rem 0 0;font-size:.78rem;color:var(--text-2);">
+                                Previous answer:
+                                <strong>{{ is_array($options[$attempt->selected_index] ?? null) ? ($options[$attempt->selected_index]['text'] ?? '') : ($options[$attempt->selected_index] ?? '—') }}</strong>
+                            </p>
+                            @endif
+                        @endif
+                        @if($canViewProgress && $mcqProgress?->mentor_feedback)
+                            <div class="jp-feedback">
+                                <strong>Mentor feedback</strong>
+                                {{ $mcqProgress->mentor_feedback }}
+                            </div>
+                        @endif
+                    </div>
+                </div>
+                @empty
+                <div class="empty-block" style="padding:1.25rem;">
+                    <p>No MCQs for this week.</p>
+                </div>
+                @endforelse
             </div>
-            @empty
-            <p class="journey-page__empty">No MCQs for this week.</p>
-            @endforelse
         </div>
     </div>
 </div>
@@ -280,21 +331,21 @@ function answerMcq(mcqId, selectedIndex, btn) {
             const box = document.querySelector(`[data-mcq-result="${mcqId}"]`);
             if (!canViewProgress || data.progress_report_enabled === false) {
                 if (box) {
-                    box.innerHTML = `<span class="journey-page__mcq-result--neutral">Answer submitted. Scores unlock with Progress report.</span>`;
+                    box.innerHTML = `<span class="jp-result--wait">Answer submitted. Scores unlock with Progress report.</span>`;
                 }
                 showToast('success', data.message || 'Answer submitted.');
                 return;
             }
             if (box) {
                 if (data.awaiting_review || data.submission_status === 'submitted') {
-                    box.innerHTML = `<span class="journey-page__mcq-result--neutral">Answer submitted — waiting for mentor review</span>`;
+                    box.innerHTML = `<span class="jp-result--wait">Answer submitted — waiting for mentor review</span>`;
                 } else if (data.correct) {
-                    box.innerHTML = `<span class="journey-page__mcq-result--correct">Approved by mentor · +${data.points_earned || 0} pts</span>`;
+                    box.innerHTML = `<span class="jp-result--ok">Approved by mentor · +${data.points_earned || 0} pts</span>`;
                     if (data.explanation) {
-                        box.innerHTML += `<p class="journey-page__mcq-explanation">${data.explanation}</p>`;
+                        box.innerHTML += `<p style="margin:.35rem 0 0;font-size:.78rem;color:var(--text-2);">${data.explanation}</p>`;
                     }
                 } else {
-                    box.innerHTML = `<span class="journey-page__mcq-result--neutral">Answer submitted — waiting for mentor review</span>`;
+                    box.innerHTML = `<span class="jp-result--wait">Answer submitted — waiting for mentor review</span>`;
                 }
             }
             showToast('success', data.message || 'Answer submitted for mentor review.');

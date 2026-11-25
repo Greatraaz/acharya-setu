@@ -24,13 +24,22 @@ class MenteeTaskController extends Controller
             $status = 'all';
         }
 
-        $items = MenteeTask::query()
+        $base = MenteeTask::query()
+            ->where('mentee_id', auth()->id())
+            ->where('is_active', true);
+
+        $summary = [
+            'total' => (clone $base)->count(),
+            'todo' => (clone $base)->forUiStatus('todo')->count(),
+            'completed' => (clone $base)->forUiStatus('completed')->count(),
+            'awaiting' => (clone $base)->forUiStatus('awaiting_review')->count(),
+        ];
+
+        $items = (clone $base)
             ->with([
                 'mentor:id,name,avatar_url',
                 'progress' => fn ($q) => $q->where('user_id', auth()->id()),
             ])
-            ->where('mentee_id', auth()->id())
-            ->where('is_active', true)
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('title', 'like', '%'.$search.'%')
@@ -42,7 +51,7 @@ class MenteeTaskController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('frontend.mentee.tasks.index', compact('items', 'search', 'status'));
+        return view('frontend.mentee.tasks.index', compact('items', 'search', 'status', 'summary'));
     }
 
     public function show(MenteeTask $task)

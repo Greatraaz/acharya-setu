@@ -2,23 +2,29 @@
 @section('title', 'Progress Locked — Vedrix')
 
 @section('content')
+@include('frontend.partials.journey-premium-ui')
+
 <div class="dash-layout">
     @include('frontend.mentee.partials.sidebar')
 
     <div class="dash-content">
-        <div class="dash-header">
-            <div class="dash-title">My Journey</div>
-            <div class="dash-subtitle">Progress reporting depends on your subscription plan.</div>
-        </div>
+        <div class="dash-page journey-premium" style="display:flex;flex-direction:column;gap:1.15rem;">
 
-        <div class="empty-state" style="padding:56px 20px;">
-            <div style="font-size:48px;margin-bottom:12px;">🔒</div>
-            <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Progress report not included</div>
-            <p style="font-size:13px;color:var(--text-2);max-width:440px;margin:0 auto 18px;">
-                Your current plan does not include journey progress reports. Upgrade to a plan with
-                <strong>Progress report</strong> enabled to track months, weeks, and tasks.
-            </p>
-            <a href="{{ route('mentee.plans') }}" class="btn btn-primary">View subscription plans</a>
+            <div class="learn-intro fu">
+                <span class="learn-eyebrow">Learning · Curriculum</span>
+                <h2>My Journey</h2>
+                <p>Progress reporting depends on your subscription plan.</p>
+            </div>
+
+            <div class="learn-panel empty-block fu" style="padding:2.5rem 1.25rem;">
+                <div class="icon">🔒</div>
+                <div style="font-family:var(--font-head);font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:.4rem;">Progress report not included</div>
+                <p style="max-width:28rem;margin:0 auto;">
+                    Your current plan does not include journey progress reports. Upgrade to a plan with
+                    <strong>Progress report</strong> enabled to track months, weeks, and tasks.
+                </p>
+                <a href="{{ route('mentee.plans') }}" class="learn-btn-primary" style="margin-top:1rem;">View subscription plans</a>
+            </div>
         </div>
     </div>
 </div>
