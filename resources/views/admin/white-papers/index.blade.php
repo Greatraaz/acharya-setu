@@ -9,11 +9,12 @@
             <div>
                 <span class="learn-eyebrow">Utilities · White Papers</span>
                 <h2>White Papers</h2>
-                <p>Publish research papers and long-form insights for the Vedrix library.</p>
+                <p>Publish research papers for the Vedrix library. Downloads are gated behind a lead form.</p>
             </div>
-            <a href="{{ route('admin.white-papers.create') }}" class="learn-btn-primary self-start">
-                + Add New
-            </a>
+            <div class="flex flex-wrap items-center gap-2 self-start">
+                <a href="{{ route('admin.white-papers.downloads') }}" class="learn-btn-ghost">Download leads</a>
+                <a href="{{ route('admin.white-papers.create') }}" class="learn-btn-primary">+ Add New</a>
+            </div>
         </div>
     </div>
 
@@ -54,6 +55,7 @@
                         <th class="text-left px-5 py-3 font-semibold text-gray-600 w-24">Image</th>
                         <th class="text-left px-5 py-3 font-semibold text-gray-600">Title</th>
                         <th class="text-left px-5 py-3 font-semibold text-gray-600">Description</th>
+                        <th class="text-left px-5 py-3 font-semibold text-gray-600">Downloads</th>
                         <th class="text-left px-5 py-3 font-semibold text-gray-600 whitespace-nowrap">Date</th>
                         <th class="text-left px-5 py-3 font-semibold text-gray-600 w-28">Status</th>
                         <th class="text-right px-5 py-3 font-semibold text-gray-600 w-32">Action</th>
@@ -75,6 +77,12 @@
                         </td>
                         <td class="px-5 py-4 text-gray-600 max-w-md">
                             <div class="line-clamp-3 text-xs leading-relaxed">{{ $paper->excerpt(40) }}</div>
+                        </td>
+                        <td class="px-5 py-4">
+                            <a href="{{ route('admin.white-papers.downloads', ['paper_id' => $paper->id]) }}"
+                               class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-100 hover:bg-amber-100">
+                                {{ $paper->downloads_count ?? 0 }}
+                            </a>
                         </td>
                         <td class="px-5 py-4 text-gray-600 whitespace-nowrap">{{ optional($paper->created_at)->format('Y-m-d H:i:s') ?: '—' }}</td>
                         <td class="px-5 py-4">
@@ -140,14 +148,14 @@ $(function () {
         buttons: {
             dom: { container: { tag: 'div', className: 'flex flex-wrap gap-1' } },
             buttons: [
-                { extend: 'copyHtml5', text: 'Copy', exportOptions: { columns: [0, 2, 3, 4, 5] } },
-                { extend: 'excelHtml5', text: 'Excel', exportOptions: { columns: [0, 2, 3, 4, 5] } },
-                { extend: 'pdfHtml5', text: 'PDF', orientation: 'landscape', exportOptions: { columns: [0, 2, 3, 4, 5] } },
+                { extend: 'copyHtml5', text: 'Copy', exportOptions: { columns: [0, 2, 3, 4, 5, 6] } },
+                { extend: 'excelHtml5', text: 'Excel', exportOptions: { columns: [0, 2, 3, 4, 5, 6] } },
+                { extend: 'pdfHtml5', text: 'PDF', orientation: 'landscape', exportOptions: { columns: [0, 2, 3, 4, 5, 6] } },
                 { extend: 'colvis', text: 'Column visibility', dropIcon: '' }
             ]
         },
         columnDefs: [
-            { orderable: false, targets: [1, 6] }
+            { orderable: false, targets: [1, 7] }
         ]
     });
 

@@ -1,3 +1,4 @@
+@if($session->isUpcoming())
 <div class="session-register-card">
     <div class="session-register-card__head">
         <span><i class="bi bi-pencil-square text-warning"></i></span>
@@ -36,3 +37,14 @@
         </form>
     @endif
 </div>
+@else
+<div class="session-register-card session-register-card--past">
+    <div class="session-register-card__head">
+        <span><i class="bi bi-camera-reels text-warning"></i></span>
+        <h3>Past Session Recording</h3>
+    </div>
+    <p class="session-register-card__sub mb-0">
+        This session has ended. Registration is closed — explore the session details and speaker profile below.
+    </p>
+</div>
+@endif

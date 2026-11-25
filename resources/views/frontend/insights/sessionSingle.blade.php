@@ -6,6 +6,8 @@
     $sectionLabel = $isWebinar ? 'Webinars' : 'Events';
     $typeTag = $isWebinar ? 'WEBINAR' : 'EVENT';
     $typeIcon = $isWebinar ? 'bi-broadcast' : 'bi-calendar-event';
+    $speakerProfile = $session->speakerProfile();
+    $speakerName = $session->speakerDisplayName();
 @endphp
 
 @extends('frontend.layouts.frontend')
@@ -33,10 +35,13 @@
             <h1 class="insights-banner__title insights-banner__title--sm">{{ $session->title }}</h1>
             <div class="lain"></div>
             <ul class="session-detail-meta">
-                <li><span><i class="bi bi-person-fill"></i></span> {{ $session->speaker }}</li>
+                <li><span><i class="bi bi-person-fill"></i></span> {{ $speakerName }}</li>
                 <li><span><i class="bi bi-calendar-event"></i></span> {{ optional($session->start_date)->format('F d, Y') }}</li>
                 <li><span><i class="bi bi-clock"></i></span> {{ $session->timeRangeLabel() }}</li>
                 <li><span><i class="bi bi-geo-alt-fill"></i></span> {{ $session->location }}</li>
+                @if($session->isPast())
+                    <li><span><i class="bi bi-camera-reels"></i></span> Past Session &amp; Recording</li>
+                @endif
             </ul>
             @if($session->isUpcoming())
                 <div class="session-countdown" data-session-countdown data-start="{{ $session->startsAt()->toIso8601String() }}">
@@ -55,6 +60,12 @@
     <section class="section insights-body">
         <div class="container blog-detail-layout">
             <article class="blog-detail-main">
+                @if(session('error'))
+                    <div class="session-register-error mb-3" style="padding:12px 14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
                 @if($session->imageUrl())
                     <img src="{{ $session->imageUrl() }}" alt="{{ $session->title }}" class="blog-detail-hero">
                 @endif
@@ -67,20 +78,39 @@
                     <div class="prose-blog">{!! $session->description !!}</div>
                 </div>
 
-                <div class="session-speaker-card">
-                    <div class="session-content-block__head">
-                        <span class="session-content-block__icon"><i class="bi bi-mic-fill"></i></span>
-                        <h2>Featured Speaker</h2>
-                    </div>
-                    <div class="session-speaker-card__body">
-                        <div class="session-speaker-card__avatar">{{ mb_substr($session->speaker, 0, 1) }}</div>
-                        <div>
-                            <h3>{{ $session->speaker }}</h3>
-                            <p>Keynote Speaker & Industry Specialist</p>
-                            <p class="session-speaker-card__bio">Expert in mentorship, career guidance, and professional development strategy.</p>
+                @if(filled($speakerName))
+                    <div class="session-speaker-card">
+                        <div class="session-content-block__head">
+                            <span class="session-content-block__icon"><i class="bi bi-mic-fill"></i></span>
+                            <h2>Featured Speaker</h2>
+                        </div>
+                        <div class="session-speaker-card__body">
+                            @if($speakerProfile?->avatar_url)
+                                <div class="session-speaker-card__avatar session-speaker-card__avatar--photo">
+                                    <img src="{{ $speakerProfile->avatar_url }}" alt="{{ $speakerName }}">
+                                </div>
+                            @else
+                                <div class="session-speaker-card__avatar">{{ mb_strtoupper(mb_substr($speakerName, 0, 1)) }}</div>
+                            @endif
+                            <div>
+                                <h3>{{ $speakerName }}</h3>
+                                @if($speakerProfile)
+                                    <p>
+                                        {{ collect([$speakerProfile->designation, $speakerProfile->company])->filter()->implode(' · ') ?: ucfirst($speakerProfile->role) }}
+                                    </p>
+                                    @if(filled($speakerProfile->bio_text))
+                                        <p class="session-speaker-card__bio">{{ \Illuminate\Support\Str::limit($speakerProfile->bio_text, 180) }}</p>
+                                    @endif
+                                    <a href="{{ $speakerProfile->profile_url }}" class="session-speaker-card__link">
+                                        View Full Profile <i class="bi bi-arrow-right ms-1"></i>
+                                    </a>
+                                @else
+                                    <p>Session Speaker</p>
+                                @endif
+                            </div>
                         </div>
                     </div>
-                </div>
+                @endif
 
                 @if(trim(strip_tags((string) $session->what_you_will_learn)) !== '')
                     <div class="session-content-block">

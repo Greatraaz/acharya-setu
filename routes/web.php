@@ -163,7 +163,8 @@ Route::prefix('insights')->name('insights.')->group(function () {
     Route::get('/blogs', [InsightController::class, 'blogs'])->name('blogs.index');
     Route::get('/blogs/{slug}', [InsightController::class, 'blogSingle'])->name('blogs.show')->where('slug', '[A-Za-z0-9\-]+');
     Route::get('/white-papers', [InsightController::class, 'whitePapers'])->name('white-papers.index');
-    Route::get('/white-papers/{slug}/download', [InsightController::class, 'whitePaperDownload'])->name('white-papers.download')->where('slug', '[A-Za-z0-9\-]+');
+    Route::get('/white-papers/{slug}', [InsightController::class, 'whitePaperSingle'])->name('white-papers.show')->where('slug', '[A-Za-z0-9\-]+');
+    Route::post('/white-papers/{slug}/download', [InsightController::class, 'whitePaperDownload'])->name('white-papers.download')->where('slug', '[A-Za-z0-9\-]+');
     Route::get('/case-studies', [InsightController::class, 'caseStudies'])->name('case-studies.index');
     Route::get('/case-studies/{slug}', [InsightController::class, 'caseStudySingle'])->name('case-studies.show')->where('slug', '[A-Za-z0-9\-]+');
     Route::get('/testimonials', [InsightController::class, 'testimonials'])->name('testimonials.index');
@@ -203,6 +204,8 @@ Route::get('/podcasts', [InsightController::class, 'podcasts'])->name('podcasts'
 Route::get('/case-studies', [InsightController::class, 'caseStudies'])->name('case-studies');
 Route::get('/blogs', [InsightController::class, 'blogs'])->name('blogs');
 Route::get('/white-papers', [InsightController::class, 'whitePapers'])->name('white-papers');
+Route::get('/white-papers/{slug}', [InsightController::class, 'whitePaperSingle'])->name('white-papers.public.show')->where('slug', '[A-Za-z0-9\-]+');
+Route::post('/white-papers/{slug}/download', [InsightController::class, 'whitePaperDownload'])->name('white-papers.public.download')->where('slug', '[A-Za-z0-9\-]+');
 Route::get('/videos', [InsightController::class, 'videos'])->name('videos');
 Route::get('/download-centre', [InsightController::class, 'downloadCentre'])->name('download-centre');
 
@@ -791,6 +794,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin', 'admin
     Route::put('mentor-videos/{mentorVideo}', [AdminMentorVideoController::class, 'update'])->name('mentor-videos.update')->whereNumber('mentorVideo');
     Route::delete('mentor-videos/{mentorVideo}', [AdminMentorVideoController::class, 'destroy'])->name('mentor-videos.destroy')->whereNumber('mentorVideo');
 
+    Route::get('white-papers/downloads', [WhitePaperController::class, 'downloads'])->name('white-papers.downloads');
     Route::resource('white-papers', WhitePaperController::class)->except(['show']);
     Route::resource('case-studies', CaseStudyController::class)->except(['show']);
     Route::resource('testimonials', TestimonialController::class)->except(['show']);

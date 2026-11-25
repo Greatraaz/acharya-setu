@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\PublicFileStorage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -44,9 +45,21 @@ class WhitePaper extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function downloads(): HasMany
+    {
+        return $this->hasMany(WhitePaperDownload::class);
+    }
+
     public function isActive(): bool
     {
         return ($this->status ?? self::STATUS_ACTIVE) === self::STATUS_ACTIVE;
+    }
+
+    public function readTimeMinutes(): int
+    {
+        $words = str_word_count(strip_tags((string) $this->description));
+
+        return max(1, (int) ceil($words / 200));
     }
 
     public function imageUrl(): ?string

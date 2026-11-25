@@ -128,6 +128,52 @@ class InsightEvent extends Model
         return ! $this->isUpcoming();
     }
 
+    protected ?User $resolvedSpeakerProfile = null;
+
+    protected bool $speakerProfileResolved = false;
+
+    /**
+     * Resolve a mentor/expert profile from the free-text speaker field, when one exists.
+     */
+    public function speakerProfile(): ?User
+    {
+        if ($this->speakerProfileResolved) {
+            return $this->resolvedSpeakerProfile;
+        }
+
+        $this->speakerProfileResolved = true;
+        $raw = trim((string) $this->speaker);
+        if ($raw === '') {
+            return $this->resolvedSpeakerProfile = null;
+        }
+
+        $name = trim((string) preg_replace(
+            '/\s*[·|\-–—]\s*(mentor|expert|speaker|host)\s*$/iu',
+            '',
+            $raw
+        ));
+
+        if ($name === '') {
+            return $this->resolvedSpeakerProfile = null;
+        }
+
+        return $this->resolvedSpeakerProfile = User::query()
+            ->sessionHosts()
+            ->approved()
+            ->active()
+            ->where(function ($q) use ($name, $raw) {
+                $q->where('name', $name)
+                    ->orWhere('name', $raw)
+                    ->orWhereRaw('LOWER(name) = ?', [mb_strtolower($name)]);
+            })
+            ->first();
+    }
+
+    public function speakerDisplayName(): string
+    {
+        return $this->speakerProfile()?->name ?: trim((string) $this->speaker);
+    }
+
     public function scheduleBadge(): string
     {
         return $this->isUpcoming() ? 'UPCOMING' : 'PAST';

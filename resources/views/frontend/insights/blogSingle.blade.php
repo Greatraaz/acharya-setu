@@ -68,7 +68,7 @@
                 <div class="blog-aside-cta">
                     <h3>Need career guidance?</h3>
                     <p>Connect with verified mentors and get structured direction for your next step.</p>
-                    <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-full">Find a Mentor <i class="bi bi-arrow-right ms-1"></i></a>
+                    <a href="{{ route('mentors.search') }}" class="session-register-btn">Find a Mentor <i class="bi bi-arrow-right ms-1"></i></a>
                 </div>
             </aside>
         </div>

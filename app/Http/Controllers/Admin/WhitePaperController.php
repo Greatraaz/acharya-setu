@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\WhitePaper;
+use App\Models\WhitePaperDownload;
 use App\Services\PublicFileStorage;
 use Illuminate\Http\Request;
 
@@ -11,7 +12,9 @@ class WhitePaperController extends Controller
 {
     public function index(Request $request)
     {
-        $query = WhitePaper::query()->latest('id');
+        $query = WhitePaper::query()
+            ->withCount('downloads')
+            ->latest('id');
 
         if ($search = trim((string) $request->input('search', ''))) {
             $query->where('title', 'like', "%{$search}%");
@@ -24,6 +27,32 @@ class WhitePaperController extends Controller
         $whitePapers = $query->paginate(20)->withQueryString();
 
         return view('admin.white-papers.index', compact('whitePapers'));
+    }
+
+    public function downloads(Request $request)
+    {
+        $query = WhitePaperDownload::query()
+            ->with('paper:id,title,slug')
+            ->latest('id');
+
+        if ($search = trim((string) $request->input('search', ''))) {
+            $query->where(function ($q) use ($search) {
+                $q->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('organization', 'like', "%{$search}%")
+                    ->orWhereHas('paper', fn ($g) => $g->where('title', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($request->filled('paper_id')) {
+            $query->where('white_paper_id', $request->integer('paper_id'));
+        }
+
+        $downloads = $query->paginate(30)->withQueryString();
+        $papers = WhitePaper::query()->orderBy('title')->get(['id', 'title']);
+
+        return view('admin.white-papers.downloads', compact('downloads', 'papers'));
     }
 
     public function create()

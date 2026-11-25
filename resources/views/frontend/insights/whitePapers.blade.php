@@ -50,19 +50,23 @@
                 <div class="blog-grid white-paper-grid">
                     @foreach($whitePapers as $paper)
                         <article class="blog-card white-paper-card">
-                            <div class="blog-card__media">
-                                @if($paper->imageUrl())
-                                    <img src="{{ $paper->imageUrl() }}" alt="{{ $paper->title }}" loading="lazy">
-                                @else
-                                    <div class="blog-card__placeholder">
-                                        <i class="bi bi-file-earmark-pdf text-muted"></i>
-                                    </div>
-                                @endif
-                            </div>
+                            <a href="{{ route('insights.white-papers.show', $paper->slug) }}" class="text-decoration-none text-reset">
+                                <div class="blog-card__media">
+                                    @if($paper->imageUrl())
+                                        <img src="{{ $paper->imageUrl() }}" alt="{{ $paper->title }}" loading="lazy">
+                                    @else
+                                        <div class="blog-card__placeholder">
+                                            <i class="bi bi-file-earmark-pdf text-muted"></i>
+                                        </div>
+                                    @endif
+                                </div>
+                            </a>
                             <div class="blog-card__body white-paper-card__body">
-                                <h2 class="blog-card__title">{{ $paper->title }}</h2>
+                                <h2 class="blog-card__title">
+                                    <a href="{{ route('insights.white-papers.show', $paper->slug) }}" class="text-decoration-none">{{ $paper->title }}</a>
+                                </h2>
                                 <p class="blog-card__excerpt">{{ $paper->excerpt(28) }}</p>
-                                <a href="{{ route('insights.white-papers.download', $paper->slug) }}"
+                                <a href="{{ route('insights.white-papers.show', $paper->slug) }}#download-form"
                                    class="white-paper-download-btn">
                                     <i class="bi bi-download me-1"></i> Download White Paper
                                 </a>

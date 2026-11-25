@@ -16,6 +16,7 @@ use App\Models\MentorshipGuide;
 use App\Models\Podcast;
 use App\Models\Testimonial;
 use App\Models\WhitePaper;
+use App\Models\WhitePaperDownload;
 use App\Services\PublicFileStorage;
 use App\Support\GatedInsightKind;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -134,12 +135,48 @@ class InsightController extends Controller
         return view('frontend.insights.whitePapers', compact('whitePapers', 'search'));
     }
 
-    public function whitePaperDownload(string $slug): SymfonyResponse
+    public function whitePaperSingle(string $slug): View
     {
         $paper = WhitePaper::query()
             ->where('slug', $slug)
             ->where('status', WhitePaper::STATUS_ACTIVE)
             ->firstOrFail();
+
+        $recent = WhitePaper::query()
+            ->where('status', WhitePaper::STATUS_ACTIVE)
+            ->where('id', '!=', $paper->id)
+            ->latest('id')
+            ->limit(5)
+            ->get();
+
+        return view('frontend.insights.whitePaperSingle', compact('paper', 'recent'));
+    }
+
+    public function whitePaperDownload(Request $request, string $slug): SymfonyResponse
+    {
+        $paper = WhitePaper::query()
+            ->where('slug', $slug)
+            ->where('status', WhitePaper::STATUS_ACTIVE)
+            ->firstOrFail();
+
+        $data = $request->validate([
+            'full_name' => 'required|string|max:120',
+            'email' => 'required|email|max:190',
+            'phone' => 'required|string|max:40',
+            'organization' => 'nullable|string|max:190',
+            'role' => 'nullable|string|max:80',
+        ]);
+
+        WhitePaperDownload::create([
+            'white_paper_id' => $paper->id,
+            'user_id' => auth()->id(),
+            'full_name' => $data['full_name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'],
+            'organization' => $data['organization'] ?? null,
+            'role' => $data['role'] ?? null,
+            'ip_address' => $request->ip(),
+        ]);
 
         $coverDataUri = $this->localImageDataUri($paper->image);
         $description = $this->prepareDescriptionHtml((string) $paper->description);
@@ -539,6 +576,16 @@ class InsightController extends Controller
             ->where('slug', $slug)
             ->firstOrFail();
 
+        $route = $type === InsightEvent::TYPE_WEBINAR
+            ? 'insights.webinars.show'
+            : 'insights.events.show';
+
+        if ($session->isPast()) {
+            return redirect()
+                ->route($route, $session->slug)
+                ->with('error', 'Registration is closed for past sessions and recordings.');
+        }
+
         $data = $request->validate([
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -551,10 +598,6 @@ class InsightController extends Controller
             'insight_event_id' => $session->id,
             'user_id' => auth()->id(),
         ]);
-
-        $route = $type === InsightEvent::TYPE_WEBINAR
-            ? 'insights.webinars.show'
-            : 'insights.events.show';
 
         return redirect()
             ->route($route, $session->slug)

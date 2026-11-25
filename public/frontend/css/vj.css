@@ -4695,6 +4695,34 @@ html[data-theme="light"] .vj-site-app .vj-footer-logo-light { display: block; }
     font-size: 24px;
     font-weight: 800;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.session-speaker-card__avatar--photo {
+    background: #E2E8F0;
+    padding: 0;
+}
+
+.session-speaker-card__avatar--photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.session-speaker-card__link {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--vj-primary);
+    text-decoration: none;
+}
+
+.session-speaker-card__link:hover {
+    color: var(--vj-navy-700);
+    text-decoration: underline;
 }
 
 .session-speaker-card__body h3 {

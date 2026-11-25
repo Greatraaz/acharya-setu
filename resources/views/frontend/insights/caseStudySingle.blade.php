@@ -79,7 +79,7 @@
                 <div class="case-study-aside-cta">
                     <h3>Need a similar mentorship path?</h3>
                     <p>Connect with verified Vedrix mentors for structured guidance, clearer goals, and measurable progress.</p>
-                    <a href="{{ route('mentors.search') }}" class="btn btn-primary btn-full">Talk to a Mentor <i class="bi bi-arrow-right ms-1"></i></a>
+                    <a href="{{ route('mentors.search') }}" class="session-register-btn">Talk to a Mentor <i class="bi bi-arrow-right ms-1"></i></a>
                 </div>
             </aside>
         </div>
